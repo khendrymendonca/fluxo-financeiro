@@ -16,8 +16,10 @@ import { GoalForm } from '@/components/goals/GoalForm';
 import { WhatIfSimulator } from '@/components/simulator/WhatIfSimulator';
 import { AccountsManager } from '@/components/accounts/AccountsManager';
 import { DebtsManager } from '@/components/debts/DebtsManager';
+import ReportsDashboard from './ReportsDashboard';
+import CardsDashboard from './CardsDashboard';
 
-type ViewType = 'dashboard' | 'transactions' | 'accounts' | 'goals' | 'debts' | 'simulator';
+type ViewType = 'dashboard' | 'transactions' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator';
 
 export default function Index() {
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
@@ -66,9 +68,9 @@ export default function Index() {
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">
-                  {new Date().toLocaleDateString('pt-BR', { 
-                    month: 'long', 
-                    year: 'numeric' 
+                  {new Date().toLocaleDateString('pt-BR', {
+                    month: 'long',
+                    year: 'numeric'
                   })}
                 </p>
               </div>
@@ -116,8 +118,8 @@ export default function Index() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <RecentTransactions transactions={transactions} />
               <GoalProgress goals={savingsGoals} />
-              <AccountsOverview 
-                accounts={accounts} 
+              <AccountsOverview
+                accounts={accounts}
                 creditCards={creditCards}
                 getCardExpenses={getCardExpenses}
               />
@@ -134,7 +136,7 @@ export default function Index() {
                 <p className="text-muted-foreground">Gerencie suas receitas e despesas</p>
               </div>
             </div>
-            <TransactionList 
+            <TransactionList
               transactions={transactions}
               onDelete={deleteTransaction}
             />
@@ -176,7 +178,7 @@ export default function Index() {
                 Nova Meta
               </button>
             </div>
-            
+
             {savingsGoals.length === 0 ? (
               <div className="card-elevated p-12 text-center">
                 <PiggyBank className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
@@ -206,6 +208,9 @@ export default function Index() {
           </div>
         );
 
+      case 'reports':
+        return <ReportsDashboard />;
+
       case 'debts':
         return (
           <div className="space-y-6">
@@ -228,6 +233,9 @@ export default function Index() {
             />
           </div>
         );
+
+      case 'cards':
+        return <CardsDashboard />;
 
       default:
         return null;

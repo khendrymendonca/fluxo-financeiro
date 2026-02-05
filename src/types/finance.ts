@@ -1,15 +1,15 @@
 export type TransactionType = 'income' | 'expense';
 
 export type IncomeCategory = 'salary' | 'benefits' | 'extras' | 'investments' | 'other';
-export type ExpenseCategory = 
-  | 'housing' 
-  | 'food' 
-  | 'transport' 
-  | 'health' 
-  | 'education' 
-  | 'leisure' 
-  | 'shopping' 
-  | 'bills' 
+export type ExpenseCategory =
+  | 'housing'
+  | 'food'
+  | 'transport'
+  | 'health'
+  | 'education'
+  | 'leisure'
+  | 'shopping'
+  | 'bills'
   | 'subscriptions'
   | 'other';
 
@@ -23,6 +23,15 @@ export interface Transaction {
   accountId?: string;
   cardId?: string;
   isRecurring?: boolean;
+  installments?: {
+    current: number;
+    total: number;
+    id: string; // Group ID for related installment transactions
+  };
+  debtId?: string;
+  recurrence?: 'monthly' | 'weekly' | 'custom';
+  invoiceDate?: string; // Format: YYYY-MM
+  isInvoicePayment?: boolean;
 }
 
 export interface Account {
@@ -34,6 +43,12 @@ export interface Account {
   icon?: string;
 }
 
+export interface InvoiceConfig {
+  dueDay: number;
+  closingDay: number;
+  effectiveDate: string; // ISO Date (YYYY-MM-DD) from when this config applies
+}
+
 export interface CreditCard {
   id: string;
   name: string;
@@ -42,6 +57,7 @@ export interface CreditCard {
   closingDay: number;
   dueDay: number;
   color: string;
+  history?: InvoiceConfig[];
 }
 
 export interface Debt {
@@ -53,6 +69,7 @@ export interface Debt {
   interestRate: number;
   startDate: string;
   endDate?: string;
+  linkedTransactionIds?: string[]; // IDs of generated expense transactions
 }
 
 export interface SavingsGoal {

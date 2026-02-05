@@ -1,8 +1,8 @@
-import { 
-  LayoutDashboard, 
-  ArrowUpDown, 
-  CreditCard, 
-  Target, 
+import {
+  LayoutDashboard,
+  ArrowUpDown,
+  CreditCard,
+  Target,
   Calculator,
   TrendingDown
 } from 'lucide-react';
@@ -28,15 +28,15 @@ export function MobileNav({ currentView, onNavigate }: MobileNavProps) {
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentView === item.id;
-          
+
           return (
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
               className={cn(
                 "flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px]",
-                isActive 
-                  ? "text-primary" 
+                isActive
+                  ? "text-primary"
                   : "text-muted-foreground"
               )}
             >

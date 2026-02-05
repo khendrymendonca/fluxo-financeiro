@@ -1,10 +1,12 @@
-import { 
-  LayoutDashboard, 
-  ArrowUpDown, 
-  CreditCard, 
-  Target, 
+import {
+  LayoutDashboard,
+  ArrowUpDown,
+  CreditCard,
+  Target,
   Calculator,
-  TrendingDown
+  TrendingDown,
+  Wallet,
+  LineChart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -14,12 +16,14 @@ interface NavigationRailProps {
 }
 
 const navItems = [
-  { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos' },
-  { id: 'accounts', icon: CreditCard, label: 'Contas' },
-  { id: 'goals', icon: Target, label: 'Metas' },
-  { id: 'debts', icon: TrendingDown, label: 'Dívidas' },
-  { id: 'simulator', icon: Calculator, label: 'Simulador' },
+  { id: 'dashboard', icon: LayoutDashboard, label: 'Painel', path: '/' },
+  { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos', path: '/transactions' }, // Added path
+  { id: 'cards', icon: CreditCard, label: 'Cartões', path: '/cards' }, // New item
+  { id: 'accounts', icon: Wallet, label: 'Contas', path: '/accounts' }, // Changed icon to Wallet, added path
+  { id: 'reports', icon: LineChart, label: 'Relatórios', path: '/reports' }, // New item
+  { id: 'goals', icon: Target, label: 'Metas', path: '/goals' }, // Added path
+  { id: 'debts', icon: TrendingDown, label: 'Dívidas', path: '/debts' }, // Added path
+  { id: 'simulator', icon: Calculator, label: 'Simulador', path: '/simulator' }, // Added path
 ];
 
 export function NavigationRail({ currentView, onNavigate }: NavigationRailProps) {
@@ -30,12 +34,12 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
           <span className="text-primary-foreground font-bold text-lg">F</span>
         </div>
       </div>
-      
+
       <div className="flex flex-col gap-2 flex-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentView === item.id;
-          
+
           return (
             <button
               key={item.id}
@@ -48,7 +52,7 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
             >
               <Icon className="w-5 h-5" />
               <span className="text-[10px] font-medium">{item.label}</span>
-              
+
               {/* Tooltip on hover */}
               <div className="absolute left-full ml-2 px-2 py-1 bg-foreground text-background text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                 {item.label}
