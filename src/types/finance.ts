@@ -22,6 +22,7 @@ export interface Transaction {
   date: string;
   accountId?: string;
   cardId?: string;
+  savingsGoalId?: string;
   isRecurring?: boolean;
   installments?: {
     current: number;

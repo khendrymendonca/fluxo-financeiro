@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { ArrowUpRight, ArrowDownRight, Trash2, Filter } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Trash2, Filter, Pencil } from 'lucide-react';
 import { Transaction, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '@/types/finance';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface TransactionListProps {
   transactions: Transaction[];
   onDelete: (id: string) => void;
+  onEdit: (transaction: Transaction) => void;
 }
 
-export function TransactionList({ transactions, onDelete }: TransactionListProps) {
+export function TransactionList({ transactions, onDelete, onEdit }: TransactionListProps) {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [searchDate, setSearchDate] = useState('');
 
@@ -61,8 +63,8 @@ export function TransactionList({ transactions, onDelete }: TransactionListProps
               onClick={() => setFilter(f)}
               className={cn(
                 "py-2 px-4 rounded-lg font-medium text-sm transition-all",
-                filter === f 
-                  ? "bg-card shadow-sm text-foreground" 
+                filter === f
+                  ? "bg-card shadow-sm text-foreground"
                   : "text-muted-foreground"
               )}
             >
@@ -70,7 +72,7 @@ export function TransactionList({ transactions, onDelete }: TransactionListProps
             </button>
           ))}
         </div>
-        
+
         <div className="flex items-center gap-2 ml-auto">
           <Filter className="w-4 h-4 text-muted-foreground" />
           <Input
@@ -98,9 +100,9 @@ export function TransactionList({ transactions, onDelete }: TransactionListProps
               {dayTransactions.map((transaction) => {
                 const category = getCategory(transaction);
                 const isIncome = transaction.type === 'income';
-                
+
                 return (
-                  <div 
+                  <div
                     key={transaction.id}
                     className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group"
                   >
@@ -129,12 +131,24 @@ export function TransactionList({ transactions, onDelete }: TransactionListProps
                       )}>
                         {isIncome ? '+' : '-'} {formatCurrency(transaction.amount)}
                       </span>
-                      <button
-                        onClick={() => onDelete(transaction.id)}
-                        className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-danger-light text-danger transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex opacity-0 group-hover:opacity-100 transition-all gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onEdit(transaction)}
+                          className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onDelete(transaction.id)}
+                          className="h-8 w-8 hover:bg-danger/10 hover:text-danger"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 );
