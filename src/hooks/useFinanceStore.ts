@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { FinanceState, Transaction, Account, CreditCard, Debt, SavingsGoal } from '@/types/finance';
+import { FinanceState, Transaction, Account, CreditCard, Debt, SavingsGoal, ExpenseCategory } from '@/types/finance';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 
@@ -9,6 +9,7 @@ const initialState: FinanceState = {
   creditCards: [],
   debts: [],
   savingsGoals: [],
+  emergencyMonths: Number(localStorage.getItem('emergencyMonths')) || 12,
 };
 
 export function useFinanceStore() {
@@ -45,6 +46,7 @@ export function useFinanceStore() {
           ...t,
           accountId: t.account_id,
           cardId: t.card_id,
+          isPaid: t.is_paid,
           isRecurring: t.is_recurring,
           isInvoicePayment: t.is_invoice_payment,
           invoiceDate: t.invoice_date,
@@ -103,6 +105,9 @@ export function useFinanceStore() {
       const groupId = (transaction.installments || customInstallments) ? crypto.randomUUID() : null;
 
       const pushTx = (txData: any) => {
+        const isFuture = new Date(txData.date) > new Date();
+        const isPaid = txData.isPaid !== undefined ? txData.isPaid : !isFuture;
+
         transactionsToAdd.push({
           user_id: user.id,
           description: txData.description,
@@ -116,6 +121,7 @@ export function useFinanceStore() {
           invoice_date: txData.invoiceDate,
           is_invoice_payment: txData.isInvoicePayment || false,
           is_recurring: txData.isRecurring || false,
+          is_paid: isPaid,
           installments: txData.installments,
           recurrence: txData.recurrence,
           debt_id: txData.debtId
@@ -173,14 +179,15 @@ export function useFinanceStore() {
         transactions: [...prev.transactions, ...newTransactions]
       }));
 
-      if (transaction.accountId) {
-        const totalChange = transactionsToAdd.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0);
-        updateAccountBalance(transaction.accountId, totalChange);
-      }
-
-      if (transaction.savingsGoalId) {
-        const totalSaved = transactionsToAdd.reduce((sum, t) => sum + t.amount, 0); // Assuming saving is always positive alloc
-        updateGoalProgress(transaction.savingsGoalId, totalSaved);
+      // Somente altera saldo se a transação for marcada como Paga
+      for (const tx of newTransactions) {
+        if (tx.isPaid && tx.accountId) {
+          const change = tx.type === 'income' ? tx.amount : -tx.amount;
+          updateAccountBalance(tx.accountId, change);
+        }
+        if (tx.isPaid && tx.savingsGoalId) {
+          updateGoalProgress(tx.savingsGoalId, tx.amount);
+        }
       }
 
       toast({ title: 'Lançamento salvo com sucesso' });
@@ -203,6 +210,7 @@ export function useFinanceStore() {
         card_id: updatedTx.cardId,
         savings_goal_id: updatedTx.savingsGoalId,
         invoice_date: updatedTx.invoiceDate,
+        is_paid: updatedTx.isPaid
       }).eq('id', updatedTx.id);
 
       if (error) throw error;
@@ -228,6 +236,36 @@ export function useFinanceStore() {
     }
   }, []);
 
+
+  const togglePaid = useCallback(async (id: string, isPaid: boolean) => {
+    try {
+      const tx = state.transactions.find(t => t.id === id);
+      if (!tx) return;
+
+      const { error } = await supabase.from('transactions').update({ is_paid: isPaid }).eq('id', id);
+      if (error) throw error;
+
+      setState(prev => ({
+        ...prev,
+        transactions: prev.transactions.map(t => t.id === id ? { ...t, isPaid } : t)
+      }));
+
+      if (tx.accountId) {
+        const baseChange = tx.type === 'income' ? tx.amount : -tx.amount;
+        const actualChange = isPaid ? baseChange : -baseChange;
+        updateAccountBalance(tx.accountId, actualChange);
+      }
+
+      if (tx.savingsGoalId) {
+        const actualChange = isPaid ? tx.amount : -tx.amount;
+        updateGoalProgress(tx.savingsGoalId, actualChange);
+      }
+
+      toast({ title: isPaid ? 'Conta marcada como paga' : 'Pagamento estornado' });
+    } catch (err) {
+      toast({ title: 'Erro ao atualizar status', variant: 'destructive' });
+    }
+  }, [state.transactions]);
 
   const addAccount = useCallback(async (account: Omit<Account, 'id'>) => {
     try {
@@ -420,6 +458,30 @@ export function useFinanceStore() {
     return { dueDay: card.dueDay, closingDay: card.closingDay };
   }, []);
 
+  const setEmergencyMonths = useCallback((months: number) => {
+    localStorage.setItem('emergencyMonths', String(months));
+    setState(prev => ({ ...prev, emergencyMonths: months }));
+  }, []);
+
+  const getEmergencyFundData = useCallback(() => {
+    const fixedCategories: ExpenseCategory[] = ['housing', 'bills', 'subscriptions', 'health', 'education'];
+
+    const fixedExpenses = currentMonthTransactions
+      .filter(t => t.type === 'expense' && fixedCategories.includes(t.category as ExpenseCategory))
+      .reduce((acc, curr) => acc + curr.amount, 0);
+
+    const target = fixedExpenses * state.emergencyMonths;
+    const current = state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+
+    return {
+      monthlyFixed: fixedExpenses,
+      targetAmount: target,
+      currentAmount: current,
+      progress: target > 0 ? (current / target) * 100 : 0,
+      months: state.emergencyMonths
+    };
+  }, [currentMonthTransactions, state.accounts, state.emergencyMonths]);
+
   return {
     ...state,
     loading,
@@ -434,10 +496,13 @@ export function useFinanceStore() {
     getCardExpenses,
     getCategoryExpenses,
     getCardSettingsForDate,
+    getEmergencyFundData,
+    setEmergencyMonths,
     fetchInitialData,
     addTransaction,
     updateTransaction,
     deleteTransaction,
+    togglePaid,
     addAccount,
     updateAccount,
     deleteAccount,

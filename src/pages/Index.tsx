@@ -20,6 +20,9 @@ import ReportsDashboard from './ReportsDashboard';
 import CardsDashboard from './CardsDashboard';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
 import { Button } from '@/components/ui/button';
+import { Transaction, SavingsGoal } from '@/types/finance';
+import { PendingPayments } from '@/components/dashboard/PendingPayments';
+import { EmergencyReserve } from '@/components/dashboard/EmergencyReserve';
 
 type ViewType = 'dashboard' | 'transactions' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator';
 
@@ -28,23 +31,29 @@ export default function Index() {
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
 
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>(undefined);
+  const [editingGoal, setEditingGoal] = useState<SavingsGoal | undefined>(undefined);
+
   const {
-    transactions,
     accounts,
     creditCards,
     debts,
     savingsGoals,
-    totalBalance,
     totalIncome,
     totalExpenses,
     currentMonthTransactions,
     getCardExpenses,
     getCategoryExpenses,
+    getEmergencyFundData,
+    setEmergencyMonths,
     addTransaction,
+    updateTransaction,
     deleteTransaction,
     addAccount,
+    updateAccount,
     deleteAccount,
     addCreditCard,
+    updateCreditCard,
     deleteCreditCard,
     addDebt,
     updateDebt,
@@ -56,109 +65,74 @@ export default function Index() {
 
   const balance = totalIncome - totalExpenses;
   const categoryExpenses = getCategoryExpenses();
+  const emergencyData = getEmergencyFundData();
+
+  const handleEditTransaction = (tx: Transaction) => {
+    setEditingTransaction(tx);
+    setShowTransactionForm(true);
+  };
 
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':
         return (
           <div className="space-y-6 animate-fade-in pb-20">
-            {/* Header with Month Selector */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">Visão Geral</h1>
-                <p className="text-muted-foreground mt-1">Bem-vindo ao seu fluxo financeiro.</p>
+                <h1 className="text-3xl font-bold tracking-tight text-primary font-mono lowercase">Fluxo</h1>
+                <p className="text-muted-foreground mt-1">Bem-vindo ao seu painel financeiro.</p>
               </div>
               <div className="flex items-center gap-3">
                 <MonthSelector />
-                <Button onClick={() => setShowTransactionForm(true)} className="gap-2 rounded-xl shadow-lg hover:shadow-xl transition-all">
+                <Button onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }} className="gap-2 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
                   <Plus className="w-4 h-4" /> Novo Lançamento
                 </Button>
               </div>
             </div>
 
-            {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <StatCard
                 title="Balanço Mensal"
                 value={balance}
-                icon={Wallet}
-                trend={{ value: 12, isPositive: balance >= 0 }}
-                className={balance >= 0 ? "bg-primary/5 border-primary/20" : "bg-danger/5 border-danger/20"}
+                icon={<Wallet className="w-6 h-6" />}
+                variant={balance >= 0 ? 'positive' : 'negative'}
               />
               <StatCard
                 title="Receitas"
                 value={totalIncome}
-                icon={TrendingUp}
-                trend={{ value: 8, isPositive: true }}
-                className="bg-success/5 border-success/20"
+                icon={<TrendingUp className="w-6 h-6 text-success" />}
+                variant="positive"
               />
               <StatCard
                 title="Despesas"
                 value={totalExpenses}
-                icon={TrendingDown}
-                trend={{ value: 4, isPositive: false }}
-                className="bg-danger/5 border-danger/20"
+                icon={<TrendingDown className="w-6 h-6 text-danger" />}
+                variant="negative"
               />
             </div>
-            return (
-            <div className="space-y-6">
-              {/* Header */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-foreground">Olá! 👋</h1>
-                  <p className="text-muted-foreground">Aqui está seu resumo financeiro</p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ExpenseChart data={categoryExpenses} />
+              <BalanceEvolutionChart transactions={currentMonthTransactions} />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <EmergencyReserve data={emergencyData} onMonthsChange={setEmergencyMonths} />
+                  <PendingPayments
+                    transactions={currentMonthTransactions}
+                    accounts={accounts}
+                    creditCards={creditCards}
+                  />
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">
-                    {new Date().toLocaleDateString('pt-BR', {
-                      month: 'long',
-                      year: 'numeric'
-                    })}
-                  </p>
-                </div>
-              </div>
-
-              {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard
-                  title="Saldo Total"
-                  value={totalBalance}
-                  subtitle="Em todas as contas"
-                  icon={<Wallet className="w-5 h-5" />}
-                  variant="neutral"
-                />
-                <StatCard
-                  title="Receitas do Mês"
-                  value={totalIncome}
-                  subtitle="Entradas"
-                  icon={<TrendingUp className="w-5 h-5" />}
-                  variant="positive"
-                />
-                <StatCard
-                  title="Despesas do Mês"
-                  value={totalExpenses}
-                  subtitle="Saídas"
-                  icon={<TrendingDown className="w-5 h-5" />}
-                  variant="negative"
-                />
-                <StatCard
-                  title="Balanço Mensal"
-                  value={balance}
-                  subtitle={balance >= 0 ? "Você está no verde! 🎉" : "Atenção aos gastos"}
-                  icon={<PiggyBank className="w-5 h-5" />}
-                  variant={balance >= 0 ? "positive" : "negative"}
+                <RecentTransactions
+                  transactions={currentMonthTransactions}
+                  accounts={accounts}
+                  creditCards={creditCards}
                 />
               </div>
-
-              {/* Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <ExpenseChart data={categoryExpenses} />
-                <BalanceEvolutionChart transactions={currentMonthTransactions} />
-              </div>
-
-              {/* Bottom Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <RecentTransactions transactions={transactions} />
+              <div className="space-y-6">
                 <GoalProgress goals={savingsGoals} />
                 <AccountsOverview
                   accounts={accounts}
@@ -167,164 +141,157 @@ export default function Index() {
                 />
               </div>
             </div>
-            );
+          </div>
+        );
 
-            case 'transactions':
-            return (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold">Lançamentos</h1>
-                  <p className="text-muted-foreground">Gerencie suas receitas e despesas</p>
-                </div>
-              </div>
-              <TransactionList
-                transactions={transactions}
-                onDelete={deleteTransaction}
-              />
-            </div>
-            );
-
-            case 'accounts':
-            return (
-            <div className="space-y-6">
+      case 'transactions':
+        return (
+          <div className="space-y-6 animate-fade-in pb-20">
+            <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold">Contas e Cartões</h1>
-                <p className="text-muted-foreground">Gerencie suas contas bancárias e cartões</p>
+                <h1 className="text-3xl font-bold tracking-tight">Lançamentos</h1>
+                <p className="text-muted-foreground mt-1">Gerencie suas receitas e despesas.</p>
               </div>
-              <AccountsManager
-                accounts={accounts}
-                creditCards={creditCards}
-                getCardExpenses={getCardExpenses}
-                onAddAccount={addAccount}
-                onDeleteAccount={deleteAccount}
-                onAddCard={addCreditCard}
-                onDeleteCard={deleteCreditCard}
-              />
+              <Button onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }} className="gap-2 rounded-xl">
+                <Plus className="w-4 h-4" /> Nova Transação
+              </Button>
             </div>
-            );
+            <TransactionList
+              transactions={currentMonthTransactions}
+              accounts={accounts}
+              creditCards={creditCards}
+              onDelete={deleteTransaction}
+              onEdit={handleEditTransaction}
+            />
+          </div>
+        );
 
-            case 'goals':
-            return (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold">Metas de Economia</h1>
-                  <p className="text-muted-foreground">Acompanhe seu progresso</p>
-                </div>
-                <button
-                  onClick={() => setShowGoalForm(true)}
-                  className="px-4 py-2 rounded-xl bg-info text-info-foreground font-medium hover:bg-info/90 transition-colors"
-                >
-                  <Plus className="w-4 h-4 inline mr-2" />
-                  Nova Meta
-                </button>
+      case 'cards':
+        return <CardsDashboard />;
+
+      case 'accounts':
+        return (
+          <div className="space-y-6 animate-fade-in pb-20">
+            <AccountsManager
+              accounts={accounts}
+              creditCards={creditCards}
+              getCardExpenses={getCardExpenses}
+              onAddAccount={addAccount}
+              onUpdateAccount={updateAccount}
+              onDeleteAccount={deleteAccount}
+              onAddCard={addCreditCard}
+              onDeleteCard={deleteCreditCard}
+              onUpdateCard={updateCreditCard}
+            />
+          </div>
+        );
+
+      case 'goals':
+        return (
+          <div className="space-y-6 animate-fade-in pb-20">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Metas</h1>
+                <p className="text-muted-foreground mt-1">Acompanhe seu progresso.</p>
               </div>
-
-              {savingsGoals.length === 0 ? (
-                <div className="card-elevated p-12 text-center">
-                  <PiggyBank className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold mb-2">Nenhuma meta criada</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Comece a economizar definindo suas metas financeiras
-                  </p>
-                  <button
-                    onClick={() => setShowGoalForm(true)}
-                    className="px-6 py-3 rounded-xl bg-info text-info-foreground font-medium hover:bg-info/90 transition-colors"
-                  >
-                    Criar Primeira Meta
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {savingsGoals.map((goal) => (
-                    <GoalCard
-                      key={goal.id}
-                      goal={goal}
-                      onUpdate={updateSavingsGoal}
-                      onDelete={deleteSavingsGoal}
-                    />
-                  ))}
-                </div>
-              )}
+              <Button onClick={() => setShowGoalForm(true)} className="gap-2 rounded-xl">
+                <Plus className="w-4 h-4" /> Nova Meta
+              </Button>
             </div>
-            );
-
-            case 'reports':
-            return <ReportsDashboard />;
-
-            case 'debts':
-            return (
-            <div className="space-y-6">
-              <DebtsManager
-                debts={debts}
-                onAddDebt={addDebt}
-                onUpdateDebt={updateDebt}
-                onDeleteDebt={deleteDebt}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {savingsGoals.map(goal => (
+                <GoalCard
+                  key={goal.id}
+                  goal={goal}
+                  onEdit={(g) => { setEditingGoal(g); setShowGoalForm(true); }}
+                  onDelete={() => deleteSavingsGoal(goal.id)}
+                  onUpdate={(updates) => updateSavingsGoal(goal.id, updates)}
+                />
+              ))}
             </div>
-            );
+          </div>
+        );
 
-            case 'simulator':
-            return (
-            <div className="space-y-6">
-              <WhatIfSimulator
-                totalIncome={totalIncome}
-                totalExpenses={totalExpenses}
-                categoryExpenses={categoryExpenses}
-              />
-            </div>
-            );
+      case 'reports':
+        return <ReportsDashboard />;
 
-            case 'cards':
-            return <CardsDashboard />;
+      case 'debts':
+        return (
+          <DebtsManager
+            debts={debts}
+            onAddDebt={addDebt}
+            onUpdateDebt={(id, updates) => updateDebt(id, updates)}
+            onDeleteDebt={deleteDebt}
+          />
+        );
 
-            default:
-            return null;
+      case 'simulator':
+        return (
+          <WhatIfSimulator
+            totalIncome={totalIncome}
+            totalExpenses={totalExpenses}
+            categoryExpenses={categoryExpenses.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {})}
+          />
+        );
+
+      default:
+        return null;
     }
   };
 
-            return (
-            <div className="min-h-screen bg-background flex">
-              {/* Desktop Navigation Rail */}
-              <NavigationRail currentView={currentView} onNavigate={(view) => setCurrentView(view as ViewType)} />
+  return (
+    <div className="flex min-h-screen w-full bg-background text-foreground">
+      <div className="hidden md:flex flex-col border-r border-border bg-card/50 backdrop-blur-xl fixed left-0 top-0 h-full z-40">
+        <NavigationRail currentView={currentView} onViewChange={(view: any) => setCurrentView(view)} />
+      </div>
 
-              {/* Main Content */}
-              <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 overflow-auto">
-                <div className="max-w-7xl mx-auto">
-                  {renderView()}
-                </div>
-              </main>
+      <div className="md:hidden">
+        <MobileNav currentView={currentView} onViewChange={(view: any) => setCurrentView(view)} />
+      </div>
 
-              {/* Mobile Bottom Navigation */}
-              <MobileNav currentView={currentView} onNavigate={(view) => setCurrentView(view as ViewType)} />
+      <main className="flex-1 md:pl-20 px-4 py-8 md:p-8 w-full max-w-7xl mx-auto overflow-x-hidden">
+        {renderView()}
+      </main>
 
-              {/* Floating Action Button */}
-              <button
-                onClick={() => setShowTransactionForm(true)}
-                className="fab"
-                aria-label="Novo lançamento"
-              >
-                <Plus className="w-6 h-6" />
-              </button>
+      {showTransactionForm && (
+        <TransactionForm
+          accounts={accounts}
+          creditCards={creditCards}
+          initialData={editingTransaction}
+          onSubmit={(data, custom) => {
+            if (editingTransaction) {
+              updateTransaction({ ...editingTransaction, ...data });
+            } else {
+              addTransaction(data, custom);
+            }
+            setShowTransactionForm(false);
+            setEditingTransaction(undefined);
+          }}
+          onClose={() => {
+            setShowTransactionForm(false);
+            setEditingTransaction(undefined);
+          }}
+        />
+      )}
 
-              {/* Transaction Form Modal */}
-              {showTransactionForm && (
-                <TransactionForm
-                  accounts={accounts}
-                  creditCards={creditCards}
-                  onSubmit={addTransaction}
-                  onClose={() => setShowTransactionForm(false)}
-                />
-              )}
-
-              {/* Goal Form Modal */}
-              {showGoalForm && (
-                <GoalForm
-                  onSubmit={addSavingsGoal}
-                  onClose={() => setShowGoalForm(false)}
-                />
-              )}
-            </div>
-            );
+      {showGoalForm && (
+        <GoalForm
+          initialData={editingGoal}
+          onSubmit={(data) => {
+            if (editingGoal) {
+              updateSavingsGoal(editingGoal.id, data);
+            } else {
+              addSavingsGoal(data);
+            }
+            setShowGoalForm(false);
+            setEditingGoal(undefined);
+          }}
+          onClose={() => {
+            setShowGoalForm(false);
+            setEditingGoal(undefined);
+          }}
+        />
+      )}
+    </div>
+  );
 }

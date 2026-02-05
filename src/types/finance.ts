@@ -23,6 +23,7 @@ export interface Transaction {
   accountId?: string;
   cardId?: string;
   savingsGoalId?: string;
+  isPaid: boolean;
   isRecurring?: boolean;
   installments?: {
     current: number;
@@ -89,6 +90,7 @@ export interface FinanceState {
   creditCards: CreditCard[];
   debts: Debt[];
   savingsGoals: SavingsGoal[];
+  emergencyMonths: number;
 }
 
 export const INCOME_CATEGORIES: Record<IncomeCategory, { label: string; icon: string }> = {

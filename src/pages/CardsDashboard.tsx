@@ -201,6 +201,13 @@ export default function CardsDashboard() {
                     </div>
                 </div>
             )}
+            {showAddCard && (
+                <AddCardDialog
+                    isOpen={showAddCard}
+                    onClose={() => setShowAddCard(false)}
+                    onAdd={addCreditCard}
+                />
+            )}
         </div>
     );
 }
