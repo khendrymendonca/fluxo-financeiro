@@ -2,95 +2,141 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Fluxo - Material Design 3 / Material You Design System */
+/* All colors in HSL for Tailwind compatibility */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Material You Inspired Pastel Palette */
+    --background: 210 20% 98%;
+    --foreground: 220 20% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 220 20% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 220 20% 15%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary - Soft Teal */
+    --primary: 174 60% 45%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 174 55% 92%;
+    --primary-muted: 174 40% 70%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary - Soft Lavender */
+    --secondary: 260 45% 92%;
+    --secondary-foreground: 260 40% 30%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Success - Pastel Green */
+    --success: 145 55% 48%;
+    --success-foreground: 0 0% 100%;
+    --success-light: 145 50% 92%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Danger - Soft Coral */
+    --danger: 0 70% 60%;
+    --danger-foreground: 0 0% 100%;
+    --danger-light: 0 65% 94%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Warning - Soft Amber */
+    --warning: 38 90% 55%;
+    --warning-foreground: 38 90% 20%;
+    --warning-light: 38 80% 92%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Info - Soft Blue */
+    --info: 210 80% 55%;
+    --info-foreground: 0 0% 100%;
+    --info-light: 210 70% 94%;
 
-    --radius: 0.5rem;
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 10% 45%;
 
-    --sidebar-background: 0 0% 98%;
+    --accent: 174 55% 92%;
+    --accent-foreground: 174 60% 30%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --sidebar-primary: 240 5.9% 10%;
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+    --ring: 174 60% 45%;
 
-    --sidebar-primary-foreground: 0 0% 98%;
+    /* Material Design 3 - Larger radius for that soft feel */
+    --radius: 1rem;
 
-    --sidebar-accent: 240 4.8% 95.9%;
+    /* Elevation shadows - Material Design style */
+    --shadow-sm: 0 1px 2px 0 hsl(220 20% 15% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(220 20% 15% / 0.08), 0 2px 4px -2px hsl(220 20% 15% / 0.05);
+    --shadow-lg: 0 10px 15px -3px hsl(220 20% 15% / 0.1), 0 4px 6px -4px hsl(220 20% 15% / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(220 20% 15% / 0.1), 0 8px 10px -6px hsl(220 20% 15% / 0.05);
 
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 20% 35%;
+    --sidebar-primary: 174 60% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 174 55% 94%;
+    --sidebar-accent-foreground: 174 60% 25%;
+    --sidebar-border: 220 15% 92%;
+    --sidebar-ring: 174 60% 45%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 220 20% 10%;
+    --foreground: 210 20% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 18% 14%;
+    --card-foreground: 210 20% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 18% 14%;
+    --popover-foreground: 210 20% 95%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 174 55% 55%;
+    --primary-foreground: 220 20% 10%;
+    --primary-light: 174 40% 20%;
+    --primary-muted: 174 35% 40%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 260 30% 25%;
+    --secondary-foreground: 260 40% 90%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --success: 145 50% 50%;
+    --success-foreground: 145 50% 10%;
+    --success-light: 145 40% 18%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --danger: 0 60% 55%;
+    --danger-foreground: 0 70% 95%;
+    --danger-light: 0 50% 20%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --warning: 38 80% 50%;
+    --warning-foreground: 38 90% 10%;
+    --warning-light: 38 60% 20%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --info: 210 70% 55%;
+    --info-foreground: 210 70% 10%;
+    --info-light: 210 50% 20%;
+
+    --muted: 220 15% 20%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 174 40% 20%;
+    --accent-foreground: 174 55% 85%;
+
+    --destructive: 0 60% 50%;
+    --destructive-foreground: 0 0% 95%;
+
+    --border: 220 15% 22%;
+    --input: 220 15% 22%;
+    --ring: 174 55% 55%;
+
+    --sidebar-background: 220 18% 12%;
+    --sidebar-foreground: 210 15% 75%;
+    --sidebar-primary: 174 55% 55%;
+    --sidebar-primary-foreground: 220 20% 10%;
+    --sidebar-accent: 174 40% 18%;
+    --sidebar-accent-foreground: 174 55% 85%;
+    --sidebar-border: 220 15% 20%;
+    --sidebar-ring: 174 55% 55%;
   }
 }
 
@@ -100,6 +146,145 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  /* Custom scrollbar for Material feel */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted/30 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/30;
+  }
+}
+
+@layer components {
+  /* Material Design Card Elevation */
+  .card-elevated {
+    @apply bg-card rounded-2xl shadow-md border-0;
+    box-shadow: var(--shadow-md);
+  }
+
+  .card-elevated-lg {
+    @apply bg-card rounded-3xl;
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* FAB - Floating Action Button */
+  .fab {
+    @apply fixed bottom-6 right-6 w-14 h-14 rounded-2xl bg-primary text-primary-foreground shadow-lg flex items-center justify-center transition-all duration-200 hover:shadow-xl hover:scale-105 active:scale-95 z-50;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .fab:hover {
+    box-shadow: var(--shadow-xl);
+  }
+
+  /* Chip styles */
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors;
+  }
+
+  .chip-success {
+    @apply bg-success-light text-success;
+  }
+
+  .chip-danger {
+    @apply bg-danger-light text-danger;
+  }
+
+  .chip-info {
+    @apply bg-info-light text-info;
+  }
+
+  .chip-warning {
+    @apply bg-warning-light text-warning;
+  }
+
+  /* Progress bar with gradient */
+  .progress-gradient {
+    @apply h-2 rounded-full overflow-hidden bg-muted;
+  }
+
+  .progress-gradient-fill {
+    @apply h-full rounded-full transition-all duration-500 ease-out;
+    background: linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--info)) 100%);
+  }
+
+  /* Navigation Rail item */
+  .nav-rail-item {
+    @apply flex flex-col items-center gap-1 p-3 rounded-2xl transition-all duration-200 text-muted-foreground hover:bg-muted hover:text-foreground;
+  }
+
+  .nav-rail-item.active {
+    @apply bg-primary-light text-primary;
+  }
+
+  /* Stat card styling */
+  .stat-card {
+    @apply p-5 rounded-2xl transition-all duration-200;
+  }
+
+  .stat-card-positive {
+    @apply bg-success-light;
+  }
+
+  .stat-card-negative {
+    @apply bg-danger-light;
+  }
+
+  .stat-card-neutral {
+    @apply bg-info-light;
+  }
+}
+
+@layer utilities {
+  /* Custom color utilities */
+  .text-success {
+    color: hsl(var(--success));
+  }
+
+  .text-danger {
+    color: hsl(var(--danger));
+  }
+
+  .text-warning {
+    color: hsl(var(--warning));
+  }
+
+  .text-info {
+    color: hsl(var(--info));
+  }
+
+  .bg-success-light {
+    background-color: hsl(var(--success-light));
+  }
+
+  .bg-danger-light {
+    background-color: hsl(var(--danger-light));
+  }
+
+  .bg-warning-light {
+    background-color: hsl(var(--warning-light));
+  }
+
+  .bg-info-light {
+    background-color: hsl(var(--info-light));
+  }
+
+  .bg-primary-light {
+    background-color: hsl(var(--primary-light));
+  }
+
+  /* Glass effect for modals */
+  .glass {
+    @apply backdrop-blur-xl bg-card/80;
   }
 }
