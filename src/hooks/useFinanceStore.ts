@@ -75,6 +75,7 @@ export function useFinanceStore() {
           installmentsLeft: d.installments_left,
           dueDay: d.due_day
         })),
+        emergencyMonths: initialState.emergencyMonths,
       });
     } catch (error) {
       console.error('Error fetching data:', error);

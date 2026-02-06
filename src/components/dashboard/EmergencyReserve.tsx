@@ -17,7 +17,7 @@ interface EmergencyReserveProps {
 
 export function EmergencyReserve({ data, onMonthsChange }: EmergencyReserveProps) {
     const [isEditing, setIsEditing] = useState(false);
-    const [tempMonths, setTempMonths] = useState(data.months.toString());
+    const [tempMonths, setTempMonths] = useState((data.months || 12).toString());
 
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('pt-BR', {
