@@ -117,7 +117,7 @@ export default function CardsDashboard() {
                                             "transition-all cursor-pointer relative group",
                                             selectedCardId && selectedCardId !== card.id && "opacity-40 grayscale scale-[0.95] hover:opacity-100 hover:grayscale-0 hover:scale-100"
                                         )}
-                                        onClick={() => setSelectedCardId(card.id)}
+                                        onClick={() => setSelectedCardId(prev => prev === card.id ? null : card.id)}
                                     >
                                         <CreditCardVisual
                                             card={card}
@@ -277,7 +277,7 @@ export default function CardsDashboard() {
                     card={selectedCard}
                     isOpen={showEditCard}
                     onClose={() => setShowEditCard(false)}
-                    onSave={(updated) => updateCreditCard(selectedCard.id, updated)}
+                    onSave={(updated) => updateCreditCard(updated)}
                 />
             )}
         </div>
