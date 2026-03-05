@@ -51,6 +51,7 @@ export function BillsManager() {
     const [categoryId, setCategoryId] = useState('');
     const [accountId, setAccountId] = useState('');
     const [isFixed, setIsFixed] = useState(false);
+    const [applyToFuture, setApplyToFuture] = useState(false);
 
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('pt-BR', {
@@ -72,8 +73,9 @@ export function BillsManager() {
                 categoryId: categoryId || undefined,
                 accountId: accountId || undefined,
                 isFixed
-            });
+            }, applyToFuture);
             setEditingBillId(null);
+            setApplyToFuture(false);
         } else {
             addBill({
                 name,
@@ -115,6 +117,7 @@ export function BillsManager() {
         setCategoryId(bill.categoryId || '');
         setAccountId(bill.accountId || '');
         setIsFixed(bill.isFixed);
+        setApplyToFuture(false);
         setShowAddForm(true);
         // Scroll to form
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -128,6 +131,7 @@ export function BillsManager() {
         setCategoryId('');
         setAccountId('');
         setIsFixed(false);
+        setApplyToFuture(false);
     };
 
     // 1. Get virtual bills from debts
@@ -232,11 +236,19 @@ export function BillsManager() {
                                 ))}
                             </select>
                         </div>
-                        <div className="flex items-center gap-2 h-10">
-                            <input type="checkbox" id="isFixed" checked={isFixed} onChange={e => setIsFixed(e.target.checked)} className="w-4 h-4" />
-                            <Label htmlFor="isFixed" className="cursor-pointer">Conta Fixa / Recorrente?</Label>
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2 h-6">
+                                <input type="checkbox" id="isFixed" checked={isFixed} onChange={e => setIsFixed(e.target.checked)} className="w-4 h-4" />
+                                <Label htmlFor="isFixed" className="cursor-pointer">Conta Fixa / Recorrente?</Label>
+                            </div>
+                            {editingBillId && isFixed && (
+                                <div className="flex items-center gap-2 h-6 animate-fade-in">
+                                    <input type="checkbox" id="applyFuture" checked={applyToFuture} onChange={e => setApplyToFuture(e.target.checked)} className="w-4 h-4" />
+                                    <Label htmlFor="applyFuture" className="cursor-pointer text-xs text-primary font-bold">Aplicar a futuras?</Label>
+                                </div>
+                            )}
                         </div>
-                        <Button type="submit" className="w-full rounded-xl">Salvar Conta</Button>
+                        <Button type="submit" className="w-full rounded-xl h-11">{editingBillId ? 'Atualizar Conta' : 'Salvar Conta'}</Button>
                     </div>
                 </form>
             )}

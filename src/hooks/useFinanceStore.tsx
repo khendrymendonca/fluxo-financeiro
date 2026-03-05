@@ -200,7 +200,7 @@ function useFinanceProvider() {
       if (!user) return;
 
       const transactionsToAdd: any[] = [];
-      const installmentGroupId = (transaction.installmentTotal || customInstallments) ? crypto.randomUUID() : null;
+      const installmentGroupId = (transaction.installmentTotal || customInstallments || transaction.isRecurring) ? crypto.randomUUID() : null;
 
       const pushTx = (txData: any, instNum?: number, instTotal?: number) => {
         const categoryName = state.categories.find(c => c.id === txData.categoryId)?.name || 'Outros';
@@ -245,6 +245,19 @@ function useFinanceProvider() {
             date: d.toISOString().split('T')[0],
             amount: val
           }, i, transaction.installmentTotal);
+        }
+      } else if (transaction.isRecurring) {
+        for (let i = 1; i <= 12; i++) {
+          const d = new Date(transaction.date);
+          const targetDay = d.getDate();
+          d.setMonth(d.getMonth() + (i - 1));
+          // Simple day preservation
+          if (d.getDate() !== targetDay && targetDay > 28) d.setDate(0);
+
+          pushTx({
+            ...transaction,
+            date: d.toISOString().split('T')[0]
+          }, i, undefined);
         }
       } else {
         pushTx(transaction);
@@ -690,47 +703,63 @@ function useFinanceProvider() {
   }, [state.budgetRule]);
 
   // --- Bills ---
-  const addBill = useCallback(async (bill: Omit<Bill, 'id' | 'userId'>) => {
+  const addBill = useCallback(async (bill: Omit<Bill, 'id' | 'userId'>, project: boolean = true) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase.from('bills').insert({
-        user_id: user.id,
-        category_id: bill.categoryId,
-        account_id: bill.accountId,
-        name: bill.name,
-        amount: bill.amount,
-        type: bill.type,
-        due_date: bill.dueDate,
-        payment_date: bill.paymentDate,
-        status: bill.status,
-        is_fixed: bill.isFixed,
-        recurrence_rule: bill.recurrenceRule,
-        start_date: bill.startDate || bill.dueDate
-      }).select().single();
+      const billsToAdd = [];
+      const count = (project && bill.isFixed) ? 12 : 1;
+
+      for (let i = 0; i < count; i++) {
+        const d = new Date(bill.dueDate);
+        const targetDay = d.getDate();
+        d.setMonth(d.getMonth() + i);
+        if (d.getDate() !== targetDay && targetDay > 28) d.setDate(0);
+
+        billsToAdd.push({
+          user_id: user.id,
+          category_id: bill.categoryId,
+          account_id: bill.accountId,
+          name: bill.name,
+          amount: bill.amount,
+          type: bill.type,
+          due_date: d.toISOString().split('T')[0],
+          payment_date: bill.paymentDate,
+          status: bill.status,
+          is_fixed: bill.isFixed,
+          recurrence_rule: bill.recurrenceRule,
+          start_date: bill.startDate || bill.dueDate
+        });
+      }
+
+      const { data, error } = await supabase.from('bills').insert(billsToAdd).select();
 
       if (error) throw error;
 
-      const newBill = {
-        ...data,
-        userId: data.user_id,
-        categoryId: data.category_id,
-        accountId: data.account_id,
-        dueDate: data.due_date,
-        paymentDate: data.payment_date,
-        isFixed: data.is_fixed,
-        recurrenceRule: data.recurrence_rule,
-        startDate: data.start_date
-      };
+      const newBills = (data || []).map((b: any) => ({
+        ...b,
+        userId: b.user_id,
+        categoryId: b.category_id,
+        subcategoryId: b.subcategory_id,
+        accountId: b.account_id,
+        dueDate: b.due_date,
+        paymentDate: b.payment_date,
+        isFixed: b.is_fixed,
+        recurrenceRule: b.recurrence_rule,
+        startDate: b.start_date
+      }));
 
-      setState(prev => ({ ...prev, bills: [...prev.bills, newBill] }));
-      toast({ title: 'Conta adicionada com sucesso' });
+      setState(prev => ({ ...prev, bills: [...prev.bills, ...newBills] }));
+      if (project) toast({ title: bill.isFixed ? 'Conta fixa configurada para os próximos 12 meses' : 'Conta adicionada com sucesso' });
     } catch (err) { toast({ title: 'Erro ao adicionar conta', variant: 'destructive' }); }
   }, []);
 
-  const updateBill = useCallback(async (id: string, updates: Partial<Bill>) => {
+  const updateBill = useCallback(async (id: string, updates: Partial<Bill>, applyToFuture: boolean = false) => {
     try {
+      const bill = state.bills.find(b => b.id === id);
+      if (!bill) return;
+
       const dbUpdates: any = { ...updates };
       if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
       if (updates.accountId !== undefined) dbUpdates.account_id = updates.accountId;
@@ -747,6 +776,34 @@ function useFinanceProvider() {
       delete dbUpdates.recurrenceRule;
       delete dbUpdates.userId;
 
+      if (applyToFuture && bill.isFixed) {
+        // Update all future bills with the same name and category
+        const { error } = await supabase.from('bills')
+          .update({
+            name: updates.name || bill.name,
+            amount: updates.amount !== undefined ? updates.amount : bill.amount,
+            category_id: updates.categoryId || bill.categoryId,
+            account_id: updates.accountId || bill.accountId,
+            is_fixed: true
+          })
+          .eq('name', bill.name)
+          .eq('user_id', bill.userId)
+          .gte('due_date', bill.dueDate);
+
+        if (error) throw error;
+
+        setState(prev => ({
+          ...prev,
+          bills: prev.bills.map(b =>
+            (b.name === bill.name && b.dueDate >= bill.dueDate)
+              ? { ...b, ...updates }
+              : b
+          )
+        }));
+        toast({ title: 'Contas futuras atualizadas' });
+        return;
+      }
+
       const { error } = await supabase.from('bills').update(dbUpdates).eq('id', id);
       if (error) throw error;
 
@@ -755,7 +812,7 @@ function useFinanceProvider() {
         bills: prev.bills.map(b => b.id === id ? { ...b, ...updates } : b)
       }));
     } catch (err) { toast({ title: 'Erro ao atualizar conta', variant: 'destructive' }); }
-  }, []);
+  }, [state.bills]);
 
   const deleteBill = useCallback(async (id: string) => {
     try {
@@ -808,7 +865,7 @@ function useFinanceProvider() {
           isFixed: true,
           accountId: accountId,
           startDate: bill.startDate
-        });
+        }, false);
       }
 
       toast({ title: 'Pagamento registrado e fluxo atualizado!' });
