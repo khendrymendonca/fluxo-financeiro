@@ -57,7 +57,7 @@ export function EmergencyReserve({ data, onMonthsChange }: EmergencyReserveProps
                                         onChange={e => setTempMonths(e.target.value)}
                                         className="h-6 w-12 p-1 text-xs"
                                     />
-                                    <Button size="sm" className="h-6 px-2 text-xs" onClick={handleSave}>OK</Button>
+                                    <Button type="button" size="sm" className="h-6 px-2 text-xs" onClick={handleSave}>OK</Button>
                                 </div>
                             ) : (
                                 <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -104,7 +104,7 @@ export function EmergencyReserve({ data, onMonthsChange }: EmergencyReserveProps
                     />
                 </div>
 
-                {remaining > 0 ? (
+                {data.targetAmount <= 0 ? null : remaining > 0 ? (
                     <div className="flex items-center gap-2 p-3 rounded-xl bg-warning/10 border border-warning/30">
                         <AlertCircle className="w-4 h-4 text-warning" />
                         <p className="text-xs font-medium text-foreground">
