@@ -16,6 +16,7 @@ import {
     ArrowDownCircle,
     Filter,
     ShieldAlert,
+    Pencil,
     CreditCard as CardIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -40,6 +41,7 @@ export function BillsManager() {
     const [filter, setFilter] = useState<'all' | 'payable' | 'receivable'>('all');
     const [isPaying, setIsPaying] = useState<string | null>(null);
     const [selectedAccount, setSelectedAccount] = useState('');
+    const [editingBillId, setEditingBillId] = useState<string | null>(null);
 
     // Form State
     const [name, setName] = useState('');
@@ -61,20 +63,36 @@ export function BillsManager() {
         e.preventDefault();
         if (!name || !amount || !dueDate) return;
 
-        addBill({
-            name,
-            amount: parseFloat(amount),
-            type,
-            dueDate,
-            categoryId: categoryId || undefined,
-            accountId: accountId || undefined,
-            status: 'pending',
-            isFixed
-        });
+        if (editingBillId) {
+            updateBill(editingBillId, {
+                name,
+                amount: parseFloat(amount),
+                type,
+                dueDate,
+                categoryId: categoryId || undefined,
+                accountId: accountId || undefined,
+                isFixed
+            });
+            setEditingBillId(null);
+        } else {
+            addBill({
+                name,
+                amount: parseFloat(amount),
+                type,
+                dueDate,
+                categoryId: categoryId || undefined,
+                accountId: accountId || undefined,
+                status: 'pending',
+                isFixed
+            });
+        }
 
         // Reset form
         setName('');
         setAmount('');
+        setCategoryId('');
+        setAccountId('');
+        setIsFixed(false);
         setShowAddForm(false);
     };
 
@@ -86,6 +104,30 @@ export function BillsManager() {
         await payBill(id, selectedAccount, new Date().toISOString());
         setIsPaying(null);
         setSelectedAccount('');
+    };
+
+    const handleEdit = (bill: any) => {
+        setEditingBillId(bill.id);
+        setName(bill.name);
+        setAmount(bill.amount.toString());
+        setType(bill.type);
+        setDueDate(bill.dueDate);
+        setCategoryId(bill.categoryId || '');
+        setAccountId(bill.accountId || '');
+        setIsFixed(bill.isFixed);
+        setShowAddForm(true);
+        // Scroll to form
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleCancel = () => {
+        setShowAddForm(false);
+        setEditingBillId(null);
+        setName('');
+        setAmount('');
+        setCategoryId('');
+        setAccountId('');
+        setIsFixed(false);
     };
 
     // 1. Get virtual bills from debts
@@ -331,6 +373,14 @@ export function BillsManager() {
                                                 )}
                                             </div>
                                         )}
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => handleEdit(bill)}
+                                            className="h-10 w-10 p-0 rounded-xl hover:bg-primary/10 hover:text-primary"
+                                        >
+                                            <Pencil className="w-5 h-5" />
+                                        </Button>
                                         <Button
                                             size="sm"
                                             variant="ghost"

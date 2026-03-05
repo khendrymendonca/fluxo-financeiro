@@ -29,6 +29,7 @@ import { BillsManager } from '@/components/coach/BillsManager';
 import { CategoriesManager } from '@/components/coach/CategoriesManager';
 import { SmartInsights } from '@/components/coach/SmartInsights';
 import { ExportManager } from '@/components/dashboard/ExportManager';
+import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 
 type ViewType = 'dashboard' | 'transactions' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'bills' | 'categories' | 'export';
@@ -87,9 +88,14 @@ export default function Index() {
 
   const showCoachOnboarding = !loading && categories.length === 0;
 
-  const handleEditTransaction = (tx: Transaction) => {
-    setEditingTransaction(tx);
-    setShowTransactionForm(true);
+  const handleEditTransaction = (item: any) => {
+    if (item.isBill) {
+      setCurrentView('bills');
+      toast({ title: 'Redirecionando para Gestão de Contas...' });
+    } else {
+      setEditingTransaction(item);
+      setShowTransactionForm(true);
+    }
   };
 
   const handleToggleSidebar = (expanded: boolean) => {

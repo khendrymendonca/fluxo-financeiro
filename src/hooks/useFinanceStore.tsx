@@ -202,6 +202,8 @@ function useFinanceProvider() {
       const installmentGroupId = (transaction.installmentTotal || customInstallments) ? crypto.randomUUID() : null;
 
       const pushTx = (txData: any, instNum?: number, instTotal?: number) => {
+        const categoryName = state.categories.find(c => c.id === txData.categoryId)?.name || 'Outros';
+
         transactionsToAdd.push({
           user_id: user.id,
           description: txData.description,
@@ -209,6 +211,7 @@ function useFinanceProvider() {
           type: txData.type,
           transaction_type: txData.transactionType || 'punctual',
           category_id: txData.categoryId || null,
+          category: categoryName,
           subcategory_id: txData.subcategoryId || null,
           date: txData.date,
           account_id: txData.accountId || null,
@@ -299,12 +302,15 @@ function useFinanceProvider() {
 
   const updateTransaction = useCallback(async (updatedTx: Transaction) => {
     try {
+      const categoryName = state.categories.find(c => c.id === updatedTx.categoryId)?.name || 'Outros';
+
       const { error } = await supabase.from('transactions').update({
         description: updatedTx.description,
         amount: updatedTx.amount,
         type: updatedTx.type,
         transaction_type: updatedTx.transactionType,
         category_id: updatedTx.categoryId || null,
+        category: categoryName,
         subcategory_id: updatedTx.subcategoryId || null,
         date: updatedTx.date,
         account_id: updatedTx.accountId || null,

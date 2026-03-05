@@ -232,16 +232,26 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                 </Button>
                               </div>
                             ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setIsPaying(item.id)}
-                                disabled={item.isVirtual}
-                                className="w-full md:w-auto h-9 px-4 rounded-xl border-primary/30 text-primary hover:bg-primary/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider transition-all hover:scale-105 active:scale-95"
-                              >
-                                <CheckCircle2 className="w-4 h-4" />
-                                Baixar Agora
-                              </Button>
+                              <div className="flex gap-1 w-full">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setIsPaying(item.id)}
+                                  disabled={item.isVirtual}
+                                  className="w-full md:w-auto h-9 px-4 rounded-xl border-primary/30 text-primary hover:bg-primary/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider transition-all hover:scale-105 active:scale-95"
+                                >
+                                  <CheckCircle2 className="w-4 h-4" />
+                                  Baixar Agora
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => onEdit(item as any)}
+                                  className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary shrink-0"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                              </div>
                             )}
                           </div>
                         ) : (
