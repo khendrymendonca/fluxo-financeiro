@@ -29,6 +29,7 @@ import { BillsManager } from '@/components/coach/BillsManager';
 import { CategoriesManager } from '@/components/coach/CategoriesManager';
 import { SmartInsights } from '@/components/coach/SmartInsights';
 import { ExportManager } from '@/components/dashboard/ExportManager';
+import { cn } from '@/lib/utils';
 
 type ViewType = 'dashboard' | 'transactions' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'bills' | 'categories' | 'export';
 
@@ -36,6 +37,11 @@ export default function Index() {
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
+
+  const [isExpanded, setIsExpanded] = useState(() => {
+    const saved = localStorage.getItem('sidebar-expanded');
+    return saved !== null ? JSON.parse(saved) : false;
+  });
 
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>(undefined);
   const [editingGoal, setEditingGoal] = useState<SavingsGoal | undefined>(undefined);
@@ -84,6 +90,11 @@ export default function Index() {
   const handleEditTransaction = (tx: Transaction) => {
     setEditingTransaction(tx);
     setShowTransactionForm(true);
+  };
+
+  const handleToggleSidebar = (expanded: boolean) => {
+    setIsExpanded(expanded);
+    localStorage.setItem('sidebar-expanded', JSON.stringify(expanded));
   };
 
   const renderView = () => {
@@ -284,16 +295,27 @@ export default function Index() {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-background text-foreground">
-      <div className="hidden md:flex flex-col border-r border-border bg-card/50 backdrop-blur-xl fixed left-0 top-0 h-full z-40">
-        <NavigationRail currentView={currentView} onNavigate={(view: any) => setCurrentView(view)} />
+    <div className="flex min-h-screen w-full bg-background text-foreground overflow-x-hidden">
+      <div className={cn(
+        "hidden md:flex flex-col border-r border-border bg-card/50 backdrop-blur-xl fixed left-0 top-0 h-full z-40 transition-all duration-300 ease-in-out",
+        isExpanded ? "w-64" : "w-20"
+      )}>
+        <NavigationRail
+          currentView={currentView}
+          onNavigate={(view: any) => setCurrentView(view)}
+          isExpanded={isExpanded}
+          onToggle={handleToggleSidebar}
+        />
       </div>
 
       <div className="md:hidden">
         <MobileNav currentView={currentView} onNavigate={(view: any) => setCurrentView(view)} />
       </div>
 
-      <main className="flex-1 md:pl-20 px-4 pt-6 pb-24 md:p-8 w-full max-w-7xl mx-auto overflow-x-hidden">
+      <main className={cn(
+        "flex-1 transition-all duration-300 ease-in-out px-4 pt-6 pb-24 md:p-8 w-full max-w-7xl mx-auto overflow-x-hidden",
+        isExpanded ? "md:pl-72" : "md:pl-28"
+      )}>
         {renderView()}
       </main>
 

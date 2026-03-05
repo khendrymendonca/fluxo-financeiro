@@ -9,44 +9,72 @@ import {
   LineChart,
   Receipt,
   Settings2,
-  Database
+  Database,
+  Menu,
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
+import { useTheme } from '@/hooks/useTheme';
+import { Palette, Sun } from 'lucide-react';
+
+const navItems = [
+  { id: 'dashboard', icon: LayoutDashboard, label: 'Painel' },
+  { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos' },
+  { id: 'bills', icon: Receipt, label: 'Contas Fixas' },
+  { id: 'cards', icon: CreditCard, label: 'Cartões' },
+  { id: 'accounts', icon: Wallet, label: 'Bancos' },
+  { id: 'goals', icon: Target, label: 'Metas' },
+  { id: 'debts', icon: TrendingDown, label: 'Dívidas' },
+  { id: 'reports', icon: LineChart, label: 'Relatórios' },
+  { id: 'categories', icon: Settings2, label: 'Categorias' },
+  { id: 'export', icon: Database, label: 'Dados' },
+  { id: 'simulator', icon: Calculator, label: 'Simulador' },
+];
 
 interface NavigationRailProps {
   currentView: string;
   onNavigate: (view: string) => void;
+  isExpanded: boolean;
+  onToggle: (expanded: boolean) => void;
 }
 
-const navItems = [
-  { id: 'dashboard', icon: LayoutDashboard, label: 'Painel', path: '/' },
-  { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos', path: '/transactions' },
-  { id: 'bills', icon: Receipt, label: 'Contas Fixas', path: '/bills' },
-  { id: 'cards', icon: CreditCard, label: 'Cartões', path: '/cards' },
-  { id: 'accounts', icon: Wallet, label: 'Bancos', path: '/accounts' },
-  { id: 'categories', icon: Settings2, label: 'Categorias', path: '/categories' },
-  { id: 'export', icon: Database, label: 'Dados', path: '/export' },
-  { id: 'goals', icon: Target, label: 'Metas', path: '/goals' },
-  { id: 'debts', icon: TrendingDown, label: 'Dívidas', path: '/debts' },
-  { id: 'reports', icon: LineChart, label: 'Relatórios', path: '/reports' },
-  { id: 'simulator', icon: Calculator, label: 'Simulador', path: '/simulator' },
-];
-
-import { useTheme } from '@/hooks/useTheme';
-import { Palette, Sun, Moon } from 'lucide-react';
-
-export function NavigationRail({ currentView, onNavigate }: NavigationRailProps) {
+export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }: NavigationRailProps) {
   const { theme, setTheme } = useTheme();
 
+  const toggleSidebar = () => onToggle(!isExpanded);
+
   return (
-    <nav className="hidden md:flex flex-col items-center py-6 px-2 bg-card border-r border-border w-20 shrink-0">
-      <div className="mb-8">
-        <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-lg">F</span>
+    <nav
+      className={cn(
+        "hidden md:flex flex-col py-6 px-3 bg-card border-r border-border h-screen transition-all duration-300 ease-in-out shrink-0 sticky top-0 left-0 z-50",
+        isExpanded ? "w-64" : "w-20"
+      )}
+    >
+      {/* Header with Logo and Toggle */}
+      <div className={cn(
+        "flex items-center mb-8 px-2",
+        isExpanded ? "justify-between" : "justify-center"
+      )}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
+            <span className="text-primary-foreground font-bold text-lg">F</span>
+          </div>
+          {isExpanded && <span className="font-bold text-xl tracking-tight text-primary font-mono lowercase">Fluxo</span>}
         </div>
+
+        <button
+          onClick={toggleSidebar}
+          className="p-2 rounded-xl hover:bg-muted text-muted-foreground transition-colors"
+        >
+          {isExpanded ? <ChevronLeft className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
       </div>
 
-      <div className="flex flex-col gap-2 flex-1">
+      {/* Navigation Items */}
+      <div className="flex flex-col gap-1.5 flex-1 overflow-y-auto overflow-x-hidden no-scrollbar py-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentView === item.id;
@@ -56,38 +84,61 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
               key={item.id}
               onClick={() => onNavigate(item.id)}
               className={cn(
-                "nav-rail-item group relative",
-                isActive && "active"
+                "flex items-center rounded-2xl transition-all duration-200 group relative",
+                isExpanded ? "px-4 py-3 gap-3 w-full" : "w-14 h-14 justify-center mx-auto",
+                isActive
+                  ? "bg-primary-light text-primary shadow-sm"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
-              title={item.label}
             >
-              <Icon className="w-5 h-5" />
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <Icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
 
-              {/* Tooltip on hover */}
-              <div className="absolute left-full ml-2 px-2 py-1 bg-foreground text-background text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                {item.label}
-              </div>
+              {isExpanded && (
+                <span className={cn(
+                  "font-medium whitespace-nowrap overflow-hidden transition-all duration-300",
+                  isActive ? "text-primary opacity-100" : "opacity-80 group-hover:opacity-100"
+                )}>
+                  {item.label}
+                </span>
+              )}
+
+              {/* Tooltip on hover (only when collapsed) */}
+              {!isExpanded && (
+                <div className="absolute left-full ml-3 px-3 py-2 bg-foreground text-background text-xs font-semibold rounded-xl opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100 pointer-events-none whitespace-nowrap z-50 shadow-xl border border-border/10">
+                  {item.label}
+                </div>
+              )}
             </button>
           );
         })}
       </div>
 
-      {/* Theme Switcher at bottom */}
-      <div className="mt-auto pt-4 flex flex-col gap-2">
+      {/* Footer Actions */}
+      <div className="mt-auto pt-6 border-t border-border/50 flex flex-col gap-2">
         <button
           onClick={() => setTheme(theme === 'original' ? 'green-black' : 'original')}
-          className="nav-rail-item group relative"
-          title="Mudar Tema"
+          className={cn(
+            "flex items-center rounded-2xl transition-all duration-200 group relative",
+            isExpanded ? "px-4 py-3 gap-3 w-full" : "w-14 h-14 justify-center mx-auto",
+            "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
         >
           {theme === 'original' ? <Palette className="w-5 h-5" /> : <Sun className="w-5 h-5 text-primary" />}
-          <span className="text-[10px] font-medium">Tema</span>
 
-          <div className="absolute left-full ml-2 px-2 py-1 bg-foreground text-background text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-            {theme === 'original' ? 'Tema Verde-Black' : 'Tema Original'}
-          </div>
+          {isExpanded && (
+            <span className="font-medium whitespace-nowrap overflow-hidden">
+              Alterar Tema
+            </span>
+          )}
+
+          {!isExpanded && (
+            <div className="absolute left-full ml-3 px-3 py-2 bg-foreground text-background text-xs font-semibold rounded-xl opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100 pointer-events-none whitespace-nowrap z-50 shadow-xl">
+              {theme === 'original' ? 'Verde-Black' : 'Pastel Original'}
+            </div>
+          )}
         </button>
       </div>
     </nav>
   );
 }
+
