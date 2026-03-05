@@ -55,9 +55,9 @@ export function EmergencyReserve({ data, onMonthsChange }: EmergencyReserveProps
                                         type="number"
                                         value={tempMonths}
                                         onChange={e => setTempMonths(e.target.value)}
-                                        className="h-6 w-12 p-1 text-[10px]"
+                                        className="h-6 w-12 p-1 text-xs"
                                     />
-                                    <Button size="icon" className="h-5 w-5" onClick={handleSave}>OK</Button>
+                                    <Button size="sm" className="h-6 px-2 text-xs" onClick={handleSave}>OK</Button>
                                 </div>
                             ) : (
                                 <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -79,11 +79,11 @@ export function EmergencyReserve({ data, onMonthsChange }: EmergencyReserveProps
 
             <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 rounded-2xl bg-muted/30 border border-transparent hover:border-primary/10 transition-all">
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Custo Fixo Mensal</p>
+                    <p className="text-[11px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Custo Fixo Mensal</p>
                     <p className="text-lg font-bold">{formatCurrency(data.monthlyFixed)}</p>
                 </div>
                 <div className="p-4 rounded-2xl bg-muted/30 border border-transparent hover:border-primary/10 transition-all">
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Alvo ({data.months} Meses)</p>
+                    <p className="text-[11px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Alvo ({data.months} Meses)</p>
                     <p className="text-lg font-bold text-primary">{formatCurrency(data.targetAmount)}</p>
                 </div>
             </div>
@@ -105,16 +105,16 @@ export function EmergencyReserve({ data, onMonthsChange }: EmergencyReserveProps
                 </div>
 
                 {remaining > 0 ? (
-                    <div className="flex items-center gap-2 p-3 rounded-xl bg-warning/5 border border-warning/10 text-warning-foreground animate-pulse">
-                        <AlertCircle className="w-4 h-4" />
-                        <p className="text-xs font-medium">
-                            Faltam {formatCurrency(remaining)} para atingir sua meta.
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-warning/10 border border-warning/30">
+                        <AlertCircle className="w-4 h-4 text-warning" />
+                        <p className="text-xs font-medium text-foreground">
+                            Faltam <span className="font-bold text-warning">{formatCurrency(remaining)}</span> para atingir sua meta.
                         </p>
                     </div>
                 ) : (
-                    <div className="flex items-center gap-2 p-3 rounded-xl bg-success/5 border border-success/10 text-success-foreground">
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success/30">
                         <div className="w-2 h-2 rounded-full bg-success animate-ping" />
-                        <p className="text-xs font-bold uppercase tracking-tight">Regra dos {data.months} meses atingida! 🎉</p>
+                        <p className="text-xs font-bold uppercase tracking-tight text-success">Regra dos {data.months} meses atingida! 🎉</p>
                     </div>
                 )}
             </div>

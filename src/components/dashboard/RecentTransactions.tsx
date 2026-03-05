@@ -86,7 +86,7 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
                   <div className="flex items-center gap-2">
                     <p className="font-semibold text-sm">{transaction.description}</p>
                     {sourceLabel && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
+                      <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
                         {sourceLabel}
                       </span>
                     )}

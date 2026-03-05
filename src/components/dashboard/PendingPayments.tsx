@@ -62,7 +62,7 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
                             </div>
                             <div>
                                 <p className="font-semibold text-sm">{t.description}</p>
-                                <p className="text-[10px] text-muted-foreground">{getSourceLabel(t)}</p>
+                                <p className="text-xs text-muted-foreground">{getSourceLabel(t)}</p>
                             </div>
                         </div>
 
