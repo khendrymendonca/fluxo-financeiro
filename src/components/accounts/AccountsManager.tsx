@@ -12,9 +12,7 @@ interface AccountsManagerProps {
   onDeleteAccount: (id: string) => void;
 }
 
-const COLORS = [
-  '#8B5CF6', '#F97316', '#10B981', '#3B82F6', '#EC4899', '#14B8A6'
-];
+import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
 
 export function AccountsManager({
   accounts,
@@ -28,7 +26,7 @@ export function AccountsManager({
   const [accountBank, setAccountBank] = useState('');
   const [accountBalance, setAccountBalance] = useState('');
   const [accountType, setAccountType] = useState<'checking' | 'savings' | 'benefit_vr' | 'benefit_va' | 'benefit_flex'>('checking');
-  const [accountColor, setAccountColor] = useState(COLORS[0]);
+  const [accountColor, setAccountColor] = useState(APP_COLORS[0]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -196,23 +194,11 @@ export function AccountsManager({
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1 text-center block">Escolha uma Cor de Identificação</Label>
-                <div className="flex justify-between items-center bg-muted/30 p-4 rounded-3xl">
-                  {COLORS.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => setAccountColor(color)}
-                      className={cn(
-                        "w-10 h-10 rounded-xl transition-all hover:scale-110 active:scale-90",
-                        accountColor === color ? "ring-4 ring-primary ring-offset-4 ring-offset-background scale-110 shadow-lg" : "opacity-70"
-                      )}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              </div>
+              <ColorSelector
+                label="Escolha uma Cor de Identificação"
+                selectedColor={accountColor}
+                onSelect={setAccountColor}
+              />
 
               <Button type="submit" className="w-full h-16 rounded-[1.5rem] text-lg font-black uppercase tracking-widest shadow-xl shadow-primary/20 mt-4 transition-all hover:translate-y-[-2px] active:translate-y-[0px]">
                 Confirmar Cadastro

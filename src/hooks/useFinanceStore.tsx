@@ -365,16 +365,22 @@ function useFinanceProvider() {
     }
   }, [state.transactions]);
 
-  const addAccount = useCallback(async (account: Omit<Account, 'id'>) => {
+  const addAccount = useCallback(async (account: Omit<Account, 'id' | 'userId'>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const { data, error } = await supabase.from('accounts').insert({
-        user_id: user.id, ...account
+        user_id: user.id,
+        name: account.name,
+        bank: account.bank,
+        balance: account.balance,
+        color: account.color,
+        account_type: account.accountType
       }).select().single();
 
       if (error) throw error;
-      setState(prev => ({ ...prev, accounts: [...prev.accounts, data] }));
+      const newAccount = { ...data, accountType: data.account_type };
+      setState(prev => ({ ...prev, accounts: [...prev.accounts, newAccount] }));
     } catch (err) { toast({ title: 'Erro ao criar conta', variant: 'destructive' }); }
   }, []);
 
@@ -407,7 +413,7 @@ function useFinanceProvider() {
   }, []);
 
 
-  const addCreditCard = useCallback(async (card: Omit<CreditCard, 'id'>) => {
+  const addCreditCard = useCallback(async (card: Omit<CreditCard, 'id' | 'userId'>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -420,7 +426,7 @@ function useFinanceProvider() {
         closing_day: card.closingDay,
         color: card.color,
         is_closing_date_fixed: card.isClosingDateFixed,
-        history: card.history || []
+        history: (card as any).history || []
       }).select().single();
       if (error) throw error;
       const newCard = { ...data, dueDay: data.due_day, closingDay: data.closing_day, isClosingDateFixed: data.is_closing_date_fixed };
@@ -452,7 +458,7 @@ function useFinanceProvider() {
   }, []);
 
 
-  const addSavingsGoal = useCallback(async (goal: Omit<SavingsGoal, 'id'>) => {
+  const addSavingsGoal = useCallback(async (goal: Omit<SavingsGoal, 'id' | 'userId'>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;

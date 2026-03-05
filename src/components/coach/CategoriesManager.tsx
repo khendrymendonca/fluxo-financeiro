@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Plus, Trash2, Edit2, Settings2, FolderTree, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
+import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
 
 export function CategoriesManager() {
     const { categories, subcategories, categoryGroups, budgetRule, addCategory, deleteCategory, addSubcategory, deleteSubcategory, updateBudgetRule } = useFinanceStore();
@@ -19,6 +20,7 @@ export function CategoriesManager() {
     const [newCatName, setNewCatName] = useState('');
     const [newCatType, setNewCatType] = useState<'expense' | 'income'>('expense');
     const [newCatGroup, setNewCatGroup] = useState<string>('');
+    const [newCatColor, setNewCatColor] = useState(APP_COLORS[0]);
 
     // New Subcategory State
     const [newSubName, setNewSubName] = useState('');
@@ -123,41 +125,49 @@ export function CategoriesManager() {
             </div>
 
             {/* Criar Nova Categoria */}
-            <div className="card-elevated p-6 space-y-4">
+            <div className="card-elevated p-6 space-y-6">
                 <div className="flex items-center gap-2 mb-4">
                     <Plus className="w-5 h-5 text-primary" />
                     <h3 className="text-lg font-bold">Nova Categoria</h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                    <div className="space-y-2">
-                        <Label>Tipo</Label>
-                        <select className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" value={newCatType} onChange={e => setNewCatType(e.target.value as any)}>
-                            <option value="expense">Despesa</option>
-                            <option value="income">Receita</option>
-                        </select>
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Nome</Label>
-                        <Input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Ex: Farmácia" />
-                    </div>
-
-                    {newCatType === 'expense' && (
-                        <div className="space-y-2 md:col-span-1">
-                            <Label>Grupo do Orçamento</Label>
-                            <select className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" value={newCatGroup} onChange={e => setNewCatGroup(e.target.value)}>
-                                <option value="">Selecione...</option>
-                                {categoryGroups.map(g => (
-                                    <option key={g.id} value={g.id}>
-                                        {g.name === 'needs' ? 'Essencial (Necessidade)' : g.name === 'wants' ? 'Desejos (Estilo de Vida)' : 'Metas (Investimentos)'}
-                                    </option>
-                                ))}
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                            <Label>Tipo</Label>
+                            <select className="w-full h-12 rounded-xl border-2 border-input bg-background px-4 text-sm font-bold" value={newCatType} onChange={e => setNewCatType(e.target.value as any)}>
+                                <option value="expense">Despesa</option>
+                                <option value="income">Receita</option>
                             </select>
                         </div>
-                    )}
+                        <div className="space-y-2">
+                            <Label>Nome da Categoria</Label>
+                            <Input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Ex: Farmácia" className="h-12 rounded-xl border-2" />
+                        </div>
 
-                    <Button onClick={handleAddCategory} className="w-full rounded-xl md:col-span-1">
-                        Adicionar
+                        {newCatType === 'expense' && (
+                            <div className="space-y-2">
+                                <Label>Grupo do Orçamento</Label>
+                                <select className="w-full h-12 rounded-xl border-2 border-input bg-background px-4 text-sm font-bold" value={newCatGroup} onChange={e => setNewCatGroup(e.target.value)}>
+                                    <option value="">Selecione...</option>
+                                    {categoryGroups.map(g => (
+                                        <option key={g.id} value={g.id}>
+                                            {g.name === 'needs' ? 'Essencial (Necessidade)' : g.name === 'wants' ? 'Desejos (Estilo de Vida)' : 'Metas (Investimentos)'}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                    </div>
+
+                    <ColorSelector
+                        label="Cor da Categoria"
+                        selectedColor={newCatColor}
+                        onSelect={setNewCatColor}
+                    />
+
+                    <Button onClick={handleAddCategory} className="w-full h-14 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-primary/20">
+                        Adicionar Categoria
                     </Button>
                 </div>
             </div>

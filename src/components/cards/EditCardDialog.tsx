@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CreditCard } from '@/types/finance';
 import { X, CalendarClock } from 'lucide-react';
+import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
 
 interface EditCardDialogProps {
     card: CreditCard;
@@ -106,18 +107,16 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
                             <Input value={bank} onChange={e => setBank(e.target.value)} />
                         </div>
                         <div className="space-y-2">
-                            <Label>Cor (Hex)</Label>
-                            <div className="flex gap-2">
-                                <Input type="color" value={color} onChange={e => setColor(e.target.value)} className="w-12 h-10 p-1" />
-                                <Input value={color} onChange={e => setColor(e.target.value)} className="flex-1" />
-                            </div>
+                            <Label>Limite (R$)</Label>
+                            <Input type="number" value={limit} onChange={e => setLimit(e.target.value)} />
                         </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label>Limite (R$)</Label>
-                        <Input type="number" value={limit} onChange={e => setLimit(e.target.value)} />
-                    </div>
+                    <ColorSelector
+                        label="Cor do Cartão"
+                        selectedColor={color}
+                        onSelect={setColor}
+                    />
 
                     <div className="p-4 bg-muted/30 rounded-xl space-y-4 border border-border">
                         <div className="flex items-center gap-2 mb-2">

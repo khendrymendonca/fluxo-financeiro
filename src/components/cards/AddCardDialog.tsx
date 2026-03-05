@@ -12,15 +12,13 @@ interface AddCardDialogProps {
     onAdd: (card: Omit<CreditCard, 'id' | 'userId'>) => void;
 }
 
-const COLORS = [
-    '#8B5CF6', '#F97316', '#10B981', '#3B82F6', '#EC4899', '#14B8A6'
-];
+import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
 
 export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
     const [name, setName] = useState('');
     const [bank, setBank] = useState('');
     const [limit, setLimit] = useState('');
-    const [color, setColor] = useState(COLORS[0]);
+    const [color, setColor] = useState(APP_COLORS[0]);
     const [dueDay, setDueDay] = useState('10');
     const [closingDay, setClosingDay] = useState('3');
     const [isClosingDateFixed, setIsClosingDateFixed] = useState(true);
@@ -119,23 +117,11 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
                         </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label>Cor</Label>
-                        <div className="flex gap-2">
-                            {COLORS.map((c) => (
-                                <button
-                                    key={c}
-                                    type="button"
-                                    onClick={() => setColor(c)}
-                                    className={cn(
-                                        "w-8 h-8 rounded-lg transition-all",
-                                        color === c && "ring-2 ring-offset-2 ring-foreground"
-                                    )}
-                                    style={{ backgroundColor: c }}
-                                />
-                            ))}
-                        </div>
-                    </div>
+                    <ColorSelector
+                        label="Cor do Cartão"
+                        selectedColor={color}
+                        onSelect={setColor}
+                    />
 
                     <Button type="submit" className="w-full rounded-xl py-6 font-semibold mt-4">
                         Criar Cartão

@@ -7,7 +7,7 @@ import { SavingsGoal } from '@/types/finance';
 import { cn } from '@/lib/utils';
 
 interface GoalFormProps {
-  onSubmit: (goal: Omit<SavingsGoal, 'id'>) => void;
+  onSubmit: (goal: Omit<SavingsGoal, 'id' | 'userId'>) => void;
   onClose: () => void;
 }
 
@@ -21,14 +21,7 @@ const icons = [
   { name: 'GraduationCap', icon: GraduationCap },
 ];
 
-const colors = [
-  '#10B981', // green
-  '#3B82F6', // blue
-  '#8B5CF6', // purple
-  '#F97316', // orange
-  '#EC4899', // pink
-  '#14B8A6', // teal
-];
+import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
 
 export function GoalForm({ onSubmit, onClose }: GoalFormProps) {
   const [name, setName] = useState('');
@@ -36,11 +29,11 @@ export function GoalForm({ onSubmit, onClose }: GoalFormProps) {
   const [currentAmount, setCurrentAmount] = useState('0');
   const [deadline, setDeadline] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('Target');
-  const [selectedColor, setSelectedColor] = useState(colors[0]);
+  const [selectedColor, setSelectedColor] = useState(APP_COLORS[0]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name || !targetAmount) return;
 
     onSubmit({
@@ -60,7 +53,7 @@ export function GoalForm({ onSubmit, onClose }: GoalFormProps) {
       <div className="bg-card rounded-3xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto animate-scale-in">
         <div className="flex items-center justify-between p-6 border-b border-border">
           <h2 className="text-xl font-semibold">Nova Meta</h2>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 rounded-xl hover:bg-muted transition-colors"
           >
@@ -136,8 +129,8 @@ export function GoalForm({ onSubmit, onClose }: GoalFormProps) {
                   onClick={() => setSelectedIcon(name)}
                   className={cn(
                     "p-3 rounded-xl transition-all",
-                    selectedIcon === name 
-                      ? "bg-primary text-primary-foreground" 
+                    selectedIcon === name
+                      ? "bg-primary text-primary-foreground"
                       : "bg-muted hover:bg-muted/80"
                   )}
                 >
@@ -148,27 +141,15 @@ export function GoalForm({ onSubmit, onClose }: GoalFormProps) {
           </div>
 
           {/* Color Selection */}
-          <div className="space-y-2">
-            <Label>Cor</Label>
-            <div className="flex gap-2">
-              {colors.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => setSelectedColor(color)}
-                  className={cn(
-                    "w-10 h-10 rounded-xl transition-all",
-                    selectedColor === color && "ring-2 ring-offset-2 ring-foreground"
-                  )}
-                  style={{ backgroundColor: color }}
-                />
-              ))}
-            </div>
-          </div>
+          <ColorSelector
+            label="Cor"
+            selectedColor={selectedColor}
+            onSelect={setSelectedColor}
+          />
 
           {/* Submit Button */}
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             className="w-full rounded-xl py-6 font-semibold bg-info hover:bg-info/90"
           >
             Criar Meta
