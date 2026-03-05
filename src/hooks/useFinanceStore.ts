@@ -408,9 +408,45 @@ export function useFinanceStore() {
   }, []);
 
   // Debts (Simplified for now - can be expanded)
-  const addDebt = useCallback(async (debt: Omit<Debt, 'id'>) => { }, []);
-  const updateDebt = useCallback(async (debt: Debt) => { }, []);
-  const deleteDebt = useCallback(async (id: string) => { }, []);
+  const addDebt = useCallback(async (debt: Omit<Debt, 'id'>) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabase.from('debts').insert({
+        user_id: user.id,
+        name: debt.name,
+        total_amount: debt.totalAmount,
+        remaining_amount: debt.remainingAmount,
+        monthly_payment: debt.monthlyPayment,
+        interest_rate: debt.interestRate,
+        start_date: debt.startDate,
+      }).select().single();
+      if (error) throw error;
+      const newDebt = { ...data, totalAmount: data.total_amount, remainingAmount: data.remaining_amount, monthlyPayment: data.monthly_payment, interestRate: data.interest_rate };
+      setState(prev => ({ ...prev, debts: [...prev.debts, newDebt] }));
+      toast({ title: 'Dívida adicionada' });
+    } catch (err) { toast({ title: 'Erro ao adicionar dívida', variant: 'destructive' }); }
+  }, []);
+
+  const updateDebt = useCallback(async (id: string, updates: Partial<Debt>) => {
+    try {
+      const payload: any = {};
+      if (updates.remainingAmount !== undefined) payload.remaining_amount = updates.remainingAmount;
+      if (updates.monthlyPayment !== undefined) payload.monthly_payment = updates.monthlyPayment;
+      if (updates.name !== undefined) payload.name = updates.name;
+      await supabase.from('debts').update(payload).eq('id', id);
+      setState(prev => ({ ...prev, debts: prev.debts.map(d => d.id === id ? { ...d, ...updates } : d) }));
+    } catch (err) { toast({ title: 'Erro ao atualizar dívida', variant: 'destructive' }); }
+  }, []);
+
+  const deleteDebt = useCallback(async (id: string) => {
+    try {
+      await supabase.from('debts').delete().eq('id', id);
+      setState(prev => ({ ...prev, debts: prev.debts.filter(d => d.id !== id) }));
+      toast({ title: 'Dívida removida' });
+    } catch (err) { toast({ title: 'Erro ao remover dívida', variant: 'destructive' }); }
+  }, []);
+
   const createDebtWithInstallments = useCallback(async (debt: Omit<Debt, 'id'>, start: string) => { }, []);
 
   // --- View Control ---

@@ -112,7 +112,7 @@ export default function Index() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ExpenseChart data={categoryExpenses} />
+              <ExpenseChart data={categoryExpenses.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)} />
               <BalanceEvolutionChart transactions={currentMonthTransactions} />
             </div>
 
@@ -158,8 +158,6 @@ export default function Index() {
             </div>
             <TransactionList
               transactions={currentMonthTransactions}
-              accounts={accounts}
-              creditCards={creditCards}
               onDelete={deleteTransaction}
               onEdit={handleEditTransaction}
             />
@@ -177,11 +175,9 @@ export default function Index() {
               creditCards={creditCards}
               getCardExpenses={getCardExpenses}
               onAddAccount={addAccount}
-              onUpdateAccount={updateAccount}
               onDeleteAccount={deleteAccount}
               onAddCard={addCreditCard}
               onDeleteCard={deleteCreditCard}
-              onUpdateCard={updateCreditCard}
             />
           </div>
         );
@@ -203,9 +199,8 @@ export default function Index() {
                 <GoalCard
                   key={goal.id}
                   goal={goal}
-                  onEdit={(g) => { setEditingGoal(g); setShowGoalForm(true); }}
                   onDelete={() => deleteSavingsGoal(goal.id)}
-                  onUpdate={(updates) => updateSavingsGoal(goal.id, updates)}
+                  onUpdate={(id, updates) => updateSavingsGoal(id, updates)}
                 />
               ))}
             </div>
@@ -230,7 +225,7 @@ export default function Index() {
           <WhatIfSimulator
             totalIncome={totalIncome}
             totalExpenses={totalExpenses}
-            categoryExpenses={categoryExpenses.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {})}
+            categoryExpenses={categoryExpenses.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)}
           />
         );
 
@@ -242,11 +237,11 @@ export default function Index() {
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
       <div className="hidden md:flex flex-col border-r border-border bg-card/50 backdrop-blur-xl fixed left-0 top-0 h-full z-40">
-        <NavigationRail currentView={currentView} onViewChange={(view: any) => setCurrentView(view)} />
+        <NavigationRail currentView={currentView} onNavigate={(view: any) => setCurrentView(view)} />
       </div>
 
       <div className="md:hidden">
-        <MobileNav currentView={currentView} onViewChange={(view: any) => setCurrentView(view)} />
+        <MobileNav currentView={currentView} onNavigate={(view: any) => setCurrentView(view)} />
       </div>
 
       <main className="flex-1 md:pl-20 px-4 py-8 md:p-8 w-full max-w-7xl mx-auto overflow-x-hidden">
@@ -257,7 +252,6 @@ export default function Index() {
         <TransactionForm
           accounts={accounts}
           creditCards={creditCards}
-          initialData={editingTransaction}
           onSubmit={(data, custom) => {
             if (editingTransaction) {
               updateTransaction({ ...editingTransaction, ...data });
@@ -276,7 +270,6 @@ export default function Index() {
 
       {showGoalForm && (
         <GoalForm
-          initialData={editingGoal}
           onSubmit={(data) => {
             if (editingGoal) {
               updateSavingsGoal(editingGoal.id, data);
