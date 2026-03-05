@@ -8,13 +8,16 @@ import { Plus, Receipt, Calendar, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, addMonths, subMonths, isSameMonth, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { EditCardDialog } from '@/components/cards/EditCardDialog';
+import { Pencil } from 'lucide-react';
 
 export default function CardsDashboard() {
     const { creditCards, transactions, accounts, categories, updateCreditCard, addCreditCard } = useFinanceStore();
-    const [selectedCardId, setSelectedCardId] = useState<string | null>(creditCards.length > 0 ? creditCards[0].id : null);
+    const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
     const [viewDate, setViewDate] = useState(new Date());
 
     const [showAddCard, setShowAddCard] = useState(false);
+    const [showEditCard, setShowEditCard] = useState(false);
     const selectedCard = creditCards.find(c => c.id === selectedCardId);
 
     // Calculate Card Stats
@@ -111,8 +114,8 @@ export default function CardsDashboard() {
                                     <div
                                         key={card.id}
                                         className={cn(
-                                            "transition-all cursor-pointer",
-                                            selectedCardId !== card.id && "opacity-50 grayscale scale-[0.98] hover:opacity-100 hover:grayscale-0 hover:scale-100"
+                                            "transition-all cursor-pointer relative group",
+                                            selectedCardId && selectedCardId !== card.id && "opacity-40 grayscale scale-[0.95] hover:opacity-100 hover:grayscale-0 hover:scale-100"
                                         )}
                                         onClick={() => setSelectedCardId(card.id)}
                                     >
@@ -121,6 +124,19 @@ export default function CardsDashboard() {
                                             usedLimit={cardStats.used}
                                             availableLimit={cardStats.available}
                                         />
+                                        {selectedCardId === card.id && (
+                                            <Button
+                                                size="icon"
+                                                variant="secondary"
+                                                className="absolute top-4 right-4 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setShowEditCard(true);
+                                                }}
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </Button>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -253,6 +269,15 @@ export default function CardsDashboard() {
                     isOpen={showAddCard}
                     onClose={() => setShowAddCard(false)}
                     onAdd={addCreditCard}
+                />
+            )}
+
+            {showEditCard && selectedCard && (
+                <EditCardDialog
+                    card={selectedCard}
+                    isOpen={showEditCard}
+                    onClose={() => setShowEditCard(false)}
+                    onSave={(updated) => updateCreditCard(selectedCard.id, updated)}
                 />
             )}
         </div>
