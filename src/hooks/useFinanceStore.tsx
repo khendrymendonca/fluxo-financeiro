@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, createContext, useContext } from 'react';
 import { FinanceState, Transaction, Account, CreditCard, Debt, SavingsGoal, ExpenseCategory } from '@/types/finance';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
@@ -12,7 +12,24 @@ const initialState: FinanceState = {
   emergencyMonths: Number(localStorage.getItem('emergencyMonths')) || 12,
 };
 
+export type FinanceContextData = ReturnType<typeof useFinanceProvider>;
+
+const FinanceContext = createContext<FinanceContextData | undefined>(undefined);
+
+export function FinanceProvider({ children }: { children: React.ReactNode }) {
+  const data = useFinanceProvider();
+  return <FinanceContext.Provider value={ data }> { children } </FinanceContext.Provider>;
+}
+
 export function useFinanceStore() {
+  const context = useContext(FinanceContext);
+  if (context === undefined) {
+    throw new Error('useFinanceStore must be used within a FinanceProvider');
+  }
+  return context;
+}
+
+function useFinanceProvider() {
   const [state, setState] = useState<FinanceState>(initialState);
   const [loading, setLoading] = useState(true);
   const [viewDate, setViewDate] = useState(new Date());

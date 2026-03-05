@@ -9,6 +9,7 @@ import ReportsDashboard from "./pages/ReportsDashboard";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { FinanceProvider } from "./hooks/useFinanceStore";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -44,9 +45,11 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
+        <FinanceProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </FinanceProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
