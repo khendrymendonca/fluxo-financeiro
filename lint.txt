@@ -1,0 +1,89 @@
+
+> vite_react_shadcn_ts@0.0.0 lint
+> eslint .
+
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\components\cards\EditCardDialog.tsx
+  44:13  error  'updatedHistory' is never reassigned. Use 'const' instead  prefer-const
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\components\dashboard\BalanceEvolutionChart.tsx
+  50:54  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\components\dashboard\ExpenseChart.tsx
+  45:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\components\dashboard\GoalProgress.tsx
+  9:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\components\dashboard\MonthSelector.tsx
+  49:86  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\components\goals\GoalCard.tsx
+  14:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\components\transactions\TransactionForm.tsx
+  386:68  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\components\ui\badge.tsx
+  29:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\components\ui\button.tsx
+  47:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\components\ui\command.tsx
+  24:11  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\components\ui\form.tsx
+  129:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\components\ui\navigation-menu.tsx
+  111:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\components\ui\sidebar.tsx
+  636:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\components\ui\sonner.tsx
+  27:19  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\components\ui\textarea.tsx
+  5:18  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\components\ui\toggle.tsx
+  37:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\contexts\AuthContext.tsx
+  53:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\hooks\useFinanceStore.tsx
+   30:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+   88:60  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  104:52  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  109:52  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  116:53  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  122:46  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  133:56  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  139:62  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  145:46  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  163:48  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  169:54  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  201:32  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  204:31  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  251:44  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  298:6   warning  React Hook useCallback has a missing dependency: 'state.debts'. Either include it or remove the dependency array                react-hooks/exhaustive-deps
+  481:28  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  582:22  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\pages\AuthPage.tsx
+  38:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\src\pages\Index.tsx
+  271:70  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  275:65  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  289:71  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\khendry.mendonca\OneDrive - TORP INDUSTRIA TEXTIL LTDA\Projeto\fluxo-financeiro\tailwind.config.ts
+  135:13  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+✖ 39 problems (29 errors, 10 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+

@@ -1,5 +1,5 @@
-import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { Transaction, INCOME_CATEGORIES, EXPENSE_CATEGORIES, Account, CreditCard as CreditCardType } from '@/types/finance';
+import { Transaction, Account, CreditCard as CreditCardType } from '@/types/finance';
+import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { cn } from '@/lib/utils';
 
 interface RecentTransactionsProps {
@@ -23,11 +23,11 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
     });
   };
 
+  const { categories } = useFinanceStore();
+
   const getCategory = (transaction: Transaction) => {
-    if (transaction.type === 'income') {
-      return INCOME_CATEGORIES[transaction.category as keyof typeof INCOME_CATEGORIES];
-    }
-    return EXPENSE_CATEGORIES[transaction.category as keyof typeof EXPENSE_CATEGORIES];
+    const cat = categories.find(c => c.id === transaction.categoryId);
+    return { label: cat?.name || 'Outros' };
   };
 
   const getSourceLabel = (transaction: Transaction) => {
@@ -76,11 +76,7 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
                   "p-2 rounded-xl transition-all group-hover:scale-110",
                   isIncome ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
                 )}>
-                  {isIncome ? (
-                    <ArrowUpRight className="w-4 h-4" />
-                  ) : (
-                    <ArrowDownRight className="w-4 h-4" />
-                  )}
+                  <div dangerouslySetInnerHTML={{ __html: isIncome ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="m7 7 10 10"></path><path d="M17 7v10H7"></path></svg>' }} />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">

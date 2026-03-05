@@ -6,7 +6,10 @@ import {
   Calculator,
   TrendingDown,
   Wallet,
-  LineChart
+  LineChart,
+  Receipt,
+  Settings2,
+  Database
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,13 +20,16 @@ interface NavigationRailProps {
 
 const navItems = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Painel', path: '/' },
-  { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos', path: '/transactions' }, // Added path
-  { id: 'cards', icon: CreditCard, label: 'Cartões', path: '/cards' }, // New item
-  { id: 'accounts', icon: Wallet, label: 'Contas', path: '/accounts' }, // Changed icon to Wallet, added path
-  { id: 'reports', icon: LineChart, label: 'Relatórios', path: '/reports' }, // New item
-  { id: 'goals', icon: Target, label: 'Metas', path: '/goals' }, // Added path
-  { id: 'debts', icon: TrendingDown, label: 'Dívidas', path: '/debts' }, // Added path
-  { id: 'simulator', icon: Calculator, label: 'Simulador', path: '/simulator' }, // Added path
+  { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos', path: '/transactions' },
+  { id: 'bills', icon: Receipt, label: 'Contas Fixas', path: '/bills' },
+  { id: 'cards', icon: CreditCard, label: 'Cartões', path: '/cards' },
+  { id: 'accounts', icon: Wallet, label: 'Bancos', path: '/accounts' },
+  { id: 'categories', icon: Settings2, label: 'Categorias', path: '/categories' },
+  { id: 'export', icon: Database, label: 'Dados', path: '/export' },
+  { id: 'goals', icon: Target, label: 'Metas', path: '/goals' },
+  { id: 'debts', icon: TrendingDown, label: 'Dívidas', path: '/debts' },
+  { id: 'reports', icon: LineChart, label: 'Relatórios', path: '/reports' },
+  { id: 'simulator', icon: Calculator, label: 'Simulador', path: '/simulator' },
 ];
 
 export function NavigationRail({ currentView, onNavigate }: NavigationRailProps) {

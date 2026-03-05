@@ -4,7 +4,10 @@ import {
   CreditCard,
   Target,
   Calculator,
-  TrendingDown
+  TrendingDown,
+  Receipt,
+  Settings2,
+  Database
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -15,9 +18,10 @@ interface MobileNavProps {
 
 const navItems = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Home' },
+  { id: 'bills', icon: Receipt, label: 'Contas' },
   { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos' },
-  { id: 'accounts', icon: CreditCard, label: 'Contas' },
-  { id: 'goals', icon: Target, label: 'Metas' },
+  { id: 'categories', icon: Settings2, label: 'Categorias' },
+  { id: 'export', icon: Database, label: 'Dados' },
   { id: 'simulator', icon: Calculator, label: 'Simulador' },
 ];
 

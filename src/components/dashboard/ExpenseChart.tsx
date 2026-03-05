@@ -54,35 +54,72 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
     return null;
   };
 
+  const totalValue = chartData.reduce((sum, item) => sum + item.value, 0);
+  const topCategory = chartData[0];
+  const top3Value = chartData.slice(0, 3).reduce((sum, item) => sum + item.value, 0);
+  const top3Percent = (top3Value / totalValue) * 100;
+
   return (
-    <div className="card-elevated p-6 animate-fade-in">
-      <h3 className="text-lg font-semibold mb-4">Gastos por Categoria</h3>
-      <div className="h-72">
-        <ResponsiveContainer width="100%" height="100%">
+    <div className="card-elevated p-6 animate-fade-in flex flex-col h-full">
+      <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+        <div className="w-2 h-6 bg-primary rounded-full" />
+        Distribuição de Gastos
+      </h3>
+
+      <div className="flex-1 min-h-[280px]">
+        <ResponsiveContainer width="100%" height="85%">
           <PieChart>
             <Pie
               data={chartData}
               cx="50%"
               cy="50%"
-              innerRadius={60}
+              innerRadius={70}
               outerRadius={100}
-              paddingAngle={3}
+              paddingAngle={4}
               dataKey="value"
               stroke="none"
+              animationBegin={0}
+              animationDuration={1500}
             >
               {chartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>
             <Tooltip content={<CustomTooltip />} />
-            <Legend
-              layout="vertical"
-              align="right"
-              verticalAlign="middle"
-            />
           </PieChart>
         </ResponsiveContainer>
+
+        {/* Legend / Diagnostics */}
+        <div className="mt-4 space-y-4">
+          <div className="grid grid-cols-2 gap-2">
+            {chartData.slice(0, 4).map((item, idx) => (
+              <div key={idx} className="flex items-center gap-2 text-[10px] font-bold uppercase text-muted-foreground whitespace-nowrap overflow-hidden">
+                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                <span className="truncate">{item.name}</span>
+                <span className="ml-auto text-foreground">{((item.value / totalValue) * 100).toFixed(0)}%</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-4 border-t border-dashed">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-2">Diagnóstico Visual</h4>
+            <div className="bg-muted/30 rounded-xl p-3 space-y-2">
+              <p className="text-xs leading-relaxed">
+                <span className="font-bold text-foreground">Concentração:</span>{' '}
+                {top3Percent > 70
+                  ? 'Seus gastos estão muito concentrados em poucas categorias. Tente diversificar ou revisar estes custos fixos.'
+                  : 'Sua distribuição de gastos está equilibrada entre diversas categorias.'}
+              </p>
+              {topCategory && (
+                <div className="flex items-center gap-2 text-[10px] bg-primary/10 text-primary p-2 rounded-lg font-black uppercase">
+                  <span>Maior Gasto: {topCategory.name} ({((topCategory.value / totalValue) * 100).toFixed(0)}%)</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+

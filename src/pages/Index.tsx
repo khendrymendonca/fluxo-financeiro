@@ -25,8 +25,12 @@ import { PendingPayments } from '@/components/dashboard/PendingPayments';
 import { EmergencyReserve } from '@/components/dashboard/EmergencyReserve';
 import { BudgetCoach } from '@/components/coach/BudgetCoach';
 import { HabitTracker } from '@/components/coach/HabitTracker';
+import { BillsManager } from '@/components/coach/BillsManager';
+import { CategoriesManager } from '@/components/coach/CategoriesManager';
+import { SmartInsights } from '@/components/coach/SmartInsights';
+import { ExportManager } from '@/components/dashboard/ExportManager';
 
-type ViewType = 'dashboard' | 'transactions' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator';
+type ViewType = 'dashboard' | 'transactions' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'bills' | 'categories' | 'export';
 
 export default function Index() {
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
@@ -112,6 +116,8 @@ export default function Index() {
                 </Button>
               </div>
             )}
+
+            <SmartInsights />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <StatCard
@@ -259,6 +265,15 @@ export default function Index() {
             categoryExpenses={categoryExpenses.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)}
           />
         );
+
+      case 'bills':
+        return <BillsManager />;
+
+      case 'categories':
+        return <CategoriesManager />;
+
+      case 'export':
+        return <ExportManager />;
 
       default:
         return null;

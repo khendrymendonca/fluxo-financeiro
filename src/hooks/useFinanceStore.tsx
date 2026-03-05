@@ -498,6 +498,206 @@ function useFinanceProvider() {
     } catch (err) { toast({ title: 'Erro ao deletar meta', variant: 'destructive' }); }
   }, []);
 
+  // --- Categories & Budget Rules ---
+  const addCategory = useCallback(async (category: Omit<Category, 'id' | 'userId' | 'isActive'>) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase.from('categories').insert({
+        user_id: user.id,
+        group_id: category.groupId,
+        name: category.name,
+        type: category.type,
+        icon: category.icon,
+        color: category.color,
+        is_active: true
+      }).select().single();
+
+      if (error) throw error;
+
+      const newCategory: Category = {
+        ...data,
+        userId: data.user_id,
+        groupId: data.group_id,
+        isActive: data.is_active
+      };
+
+      setState(prev => ({ ...prev, categories: [...prev.categories, newCategory] }));
+      toast({ title: 'Categoria criada com sucesso' });
+    } catch (err) { toast({ title: 'Erro ao criar categoria', variant: 'destructive' }); }
+  }, []);
+
+  const updateCategory = useCallback(async (id: string, updates: Partial<Category>) => {
+    try {
+      const dbUpdates: any = { ...updates };
+      if (updates.groupId !== undefined) dbUpdates.group_id = updates.groupId;
+      if (updates.userId !== undefined) delete dbUpdates.userId;
+      delete dbUpdates.groupId;
+
+      const { error } = await supabase.from('categories').update(dbUpdates).eq('id', id);
+      if (error) throw error;
+
+      setState(prev => ({
+        ...prev,
+        categories: prev.categories.map(c => c.id === id ? { ...c, ...updates } : c)
+      }));
+    } catch (err) { toast({ title: 'Erro ao atualizar categoria', variant: 'destructive' }); }
+  }, []);
+
+  const deleteCategory = useCallback(async (id: string) => {
+    try {
+      const { error } = await supabase.from('categories').delete().eq('id', id);
+      if (error) throw error;
+      setState(prev => ({
+        ...prev,
+        categories: prev.categories.filter(c => c.id !== id),
+        subcategories: prev.subcategories.filter(s => s.categoryId !== id)
+      }));
+      toast({ title: 'Categoria removida' });
+    } catch (err) { toast({ title: 'Erro ao deletar categoria', variant: 'destructive' }); }
+  }, []);
+
+  const addSubcategory = useCallback(async (subcategory: Omit<Subcategory, 'id' | 'isActive'>) => {
+    try {
+      const { data, error } = await supabase.from('subcategories').insert({
+        category_id: subcategory.categoryId,
+        name: subcategory.name,
+        is_active: true
+      }).select().single();
+
+      if (error) throw error;
+
+      setState(prev => ({
+        ...prev,
+        subcategories: [...prev.subcategories, {
+          ...data,
+          categoryId: data.category_id,
+          isActive: data.is_active
+        }]
+      }));
+    } catch (err) { toast({ title: 'Erro ao adicionar subcategoria', variant: 'destructive' }); }
+  }, []);
+
+  const deleteSubcategory = useCallback(async (id: string) => {
+    try {
+      await supabase.from('subcategories').delete().eq('id', id);
+      setState(prev => ({ ...prev, subcategories: prev.subcategories.filter(s => s.id !== id) }));
+    } catch (err) { toast({ title: 'Erro ao deletar subcategoria', variant: 'destructive' }); }
+  }, []);
+
+  const updateBudgetRule = useCallback(async (needs: number, wants: number, savings: number) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const ruleId = state.budgetRule?.id;
+
+      if (ruleId) {
+        await supabase.from('budget_rules').update({
+          needs_percent: needs,
+          wants_percent: wants,
+          savings_percent: savings
+        }).eq('id', ruleId);
+      } else {
+        const { data } = await supabase.from('budget_rules').insert({
+          user_id: user.id,
+          needs_percent: needs,
+          wants_percent: wants,
+          savings_percent: savings
+        }).select().single();
+        if (data) {
+          setState(prev => ({ ...prev, budgetRule: { ...data, userId: data.user_id, needsPercent: data.needs_percent, wantsPercent: data.wants_percent, savingsPercent: data.savings_percent } }));
+          return;
+        }
+      }
+
+      setState(prev => prev.budgetRule ? ({
+        ...prev,
+        budgetRule: { ...prev.budgetRule, needsPercent: needs, wantsPercent: wants, savingsPercent: savings }
+      }) : prev);
+
+      toast({ title: 'Regra de orçamento atualizada!' });
+    } catch (err) {
+      toast({ title: 'Erro ao atualizar regra', variant: 'destructive' });
+    }
+  }, [state.budgetRule]);
+
+  // --- Bills ---
+  const addBill = useCallback(async (bill: Omit<Bill, 'id' | 'userId'>) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase.from('bills').insert({
+        user_id: user.id,
+        category_id: bill.categoryId,
+        account_id: bill.accountId,
+        name: bill.name,
+        amount: bill.amount,
+        type: bill.type,
+        due_date: bill.dueDate,
+        payment_date: bill.paymentDate,
+        status: bill.status,
+        is_fixed: bill.isFixed,
+        recurrence_rule: bill.recurrenceRule
+      }).select().single();
+
+      if (error) throw error;
+
+      const newBill = {
+        ...data,
+        userId: data.user_id,
+        categoryId: data.category_id,
+        accountId: data.account_id,
+        dueDate: data.due_date,
+        paymentDate: data.payment_date,
+        isFixed: data.is_fixed,
+        recurrenceRule: data.recurrence_rule
+      };
+
+      setState(prev => ({ ...prev, bills: [...prev.bills, newBill] }));
+      toast({ title: 'Conta adicionada com sucesso' });
+    } catch (err) { toast({ title: 'Erro ao adicionar conta', variant: 'destructive' }); }
+  }, []);
+
+  const updateBill = useCallback(async (id: string, updates: Partial<Bill>) => {
+    try {
+      const dbUpdates: any = { ...updates };
+      if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
+      if (updates.accountId !== undefined) dbUpdates.account_id = updates.accountId;
+      if (updates.dueDate !== undefined) dbUpdates.due_date = updates.dueDate;
+      if (updates.paymentDate !== undefined) dbUpdates.payment_date = updates.paymentDate;
+      if (updates.isFixed !== undefined) dbUpdates.is_fixed = updates.isFixed;
+      if (updates.recurrenceRule !== undefined) dbUpdates.recurrence_rule = updates.recurrenceRule;
+
+      delete dbUpdates.categoryId;
+      delete dbUpdates.accountId;
+      delete dbUpdates.dueDate;
+      delete dbUpdates.paymentDate;
+      delete dbUpdates.isFixed;
+      delete dbUpdates.recurrenceRule;
+      delete dbUpdates.userId;
+
+      const { error } = await supabase.from('bills').update(dbUpdates).eq('id', id);
+      if (error) throw error;
+
+      setState(prev => ({
+        ...prev,
+        bills: prev.bills.map(b => b.id === id ? { ...b, ...updates } : b)
+      }));
+    } catch (err) { toast({ title: 'Erro ao atualizar conta', variant: 'destructive' }); }
+  }, []);
+
+  const deleteBill = useCallback(async (id: string) => {
+    try {
+      const { error } = await supabase.from('bills').delete().eq('id', id);
+      if (error) throw error;
+      setState(prev => ({ ...prev, bills: prev.bills.filter(b => b.id !== id) }));
+      toast({ title: 'Conta removida' });
+    } catch (err) { toast({ title: 'Erro ao remover conta', variant: 'destructive' }); }
+  }, []);
+
   const seedCoach = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -691,6 +891,15 @@ function useFinanceProvider() {
     getCardSettingsForDate,
     getEmergencyFundData,
     setEmergencyMonths,
+    updateBudgetRule,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    addSubcategory,
+    deleteSubcategory,
+    addBill,
+    updateBill,
+    deleteBill,
     fetchInitialData,
     addTransaction,
     updateTransaction,

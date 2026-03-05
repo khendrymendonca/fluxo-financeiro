@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { X, Calendar, CreditCard, RotateCw, Coins } from 'lucide-react';
+import { X, Calendar, CreditCard, RotateCw, Coins, Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import {
   Transaction,
   Account,
@@ -57,6 +59,9 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [invoiceReference, setInvoiceReference] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
 
   const { debts, createDebtWithInstallments, categories, subcategories } = useFinanceStore();
+
+  const [openCategory, setOpenCategory] = useState(false);
+  const [openSubcategory, setOpenSubcategory] = useState(false);
 
   const filteredCategories = categories.filter(c => c.type === type);
   const currentCategorySubcategories = subcategories.filter(s => s.categoryId === categoryId);
@@ -135,6 +140,30 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         }
       }
     }
+
+    // Auto-suggestion logic
+    useEffect(() => {
+      if (!categoryId && description.length > 3 && categories.length > 0) {
+        const desc = description.toLowerCase();
+        // Simple mapping for common items
+        const suggestion = categories.find(c => {
+          const catName = c.name.toLowerCase();
+          if (desc.includes(catName)) return true;
+
+          // Contextual mapping
+          if (c.name === 'Alimentação' && (desc.includes('ifood') || desc.includes('restaurante') || desc.includes('mercado'))) return true;
+          if (c.name === 'Transporte' && (desc.includes('uber') || desc.includes('99') || desc.includes('posto') || desc.includes('combustivel'))) return true;
+          if (c.name === 'Assinaturas' && (desc.includes('netflix') || desc.includes('spotify') || desc.includes('disney') || desc.includes('prime'))) return true;
+          if (c.name === 'Moradia' && (desc.includes('aluguel') || desc.includes('condominio') || desc.includes('energia') || desc.includes('agua'))) return true;
+
+          return false;
+        });
+
+        if (suggestion) {
+          setCategoryId(suggestion.id);
+        }
+      }
+    }, [description, categories, categoryId]);
 
     onSubmit({
       type,
@@ -271,52 +300,108 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
               {/* Category */}
               <div className="space-y-4">
-                <div className="space-y-2">
+                <div className="space-y-2 flex flex-col">
                   <Label>Categoria</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {filteredCategories.map((cat) => (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => { setCategoryId(cat.id); setSubcategoryId(''); }}
+                  <Popover open={openCategory} onOpenChange={setOpenCategory}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openCategory}
                         className={cn(
-                          "py-2 px-3 rounded-xl text-xs font-medium transition-all border",
-                          categoryId === cat.id
-                            ? type === 'income' ? "bg-success text-success-foreground border-success" : "bg-danger text-danger-foreground border-danger"
-                            : "bg-muted/50 border-transparent hover:bg-muted"
+                          "w-full justify-between rounded-xl h-11",
+                          !categoryId && "text-muted-foreground",
+                          type === 'income' && categoryId ? "border-success text-success bg-success/5" : type === 'expense' && categoryId ? "border-danger text-danger bg-danger/5" : ""
                         )}
                       >
-                        {cat.name}
-                      </button>
-                    ))}
-                    {filteredCategories.length === 0 && (
-                      <p className="col-span-3 text-xs text-muted-foreground text-center py-2">
-                        Nenhuma categoria cadastrada para {type === 'income' ? 'receitas' : 'despesas'}.
-                      </p>
-                    )}
-                  </div>
+                        {categoryId
+                          ? filteredCategories.find((cat) => cat.id === categoryId)?.name
+                          : "Selecione uma categoria..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-xl" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar categoria..." />
+                        <CommandList>
+                          <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
+                          <CommandGroup>
+                            {filteredCategories.map((cat) => (
+                              <CommandItem
+                                key={cat.id}
+                                value={cat.name}
+                                onSelect={() => {
+                                  setCategoryId(cat.id);
+                                  setSubcategoryId('');
+                                  setOpenCategory(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    categoryId === cat.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {cat.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {categoryId && currentCategorySubcategories.length > 0 && (
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex flex-col animate-fade-in">
                     <Label>Subcategoria</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {currentCategorySubcategories.map((sub) => (
-                        <button
-                          key={sub.id}
-                          type="button"
-                          onClick={() => setSubcategoryId(sub.id)}
+                    <Popover open={openSubcategory} onOpenChange={setOpenSubcategory}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openSubcategory}
                           className={cn(
-                            "py-2 px-3 rounded-xl text-xs font-medium transition-all border",
-                            subcategoryId === sub.id
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-muted/50 border-transparent hover:bg-muted"
+                            "w-full justify-between rounded-xl h-11",
+                            !subcategoryId && "text-muted-foreground",
+                            subcategoryId && "border-primary text-primary bg-primary/5"
                           )}
                         >
-                          {sub.name}
-                        </button>
-                      ))}
-                    </div>
+                          {subcategoryId
+                            ? currentCategorySubcategories.find((sub) => sub.id === subcategoryId)?.name
+                            : "Selecione (opcional)..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-xl" align="start">
+                        <Command>
+                          <CommandInput placeholder="Buscar subcategoria..." />
+                          <CommandList>
+                            <CommandEmpty>Nenhuma subcategoria.</CommandEmpty>
+                            <CommandGroup>
+                              {currentCategorySubcategories.map((sub) => (
+                                <CommandItem
+                                  key={sub.id}
+                                  value={sub.name}
+                                  onSelect={() => {
+                                    setSubcategoryId(sub.id);
+                                    setOpenSubcategory(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      subcategoryId === sub.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {sub.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 )}
               </div>

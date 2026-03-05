@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Calculator, TrendingUp, Minus, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { EXPENSE_CATEGORIES, ExpenseCategory } from '@/types/finance';
+import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { cn } from '@/lib/utils';
 
 interface WhatIfSimulatorProps {
@@ -12,6 +12,7 @@ interface WhatIfSimulatorProps {
 }
 
 export function WhatIfSimulator({ totalIncome, totalExpenses, categoryExpenses }: WhatIfSimulatorProps) {
+  const { categories } = useFinanceStore();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [adjustmentType, setAdjustmentType] = useState<'remove' | 'reduce'>('remove');
   const [reductionPercentage, setReductionPercentage] = useState(50);
@@ -31,10 +32,10 @@ export function WhatIfSimulator({ totalIncome, totalExpenses, categoryExpenses }
     }
 
     const categoryAmount = categoryExpenses[selectedCategory];
-    const savings = adjustmentType === 'remove' 
-      ? categoryAmount 
+    const savings = adjustmentType === 'remove'
+      ? categoryAmount
       : (categoryAmount * reductionPercentage) / 100;
-    
+
     const newExpenses = totalExpenses - savings;
     const newBalance = totalIncome - newExpenses;
 
@@ -93,12 +94,12 @@ export function WhatIfSimulator({ totalIncome, totalExpenses, categoryExpenses }
               onClick={() => setSelectedCategory(category)}
               className={cn(
                 "py-2 px-4 rounded-xl text-sm font-medium transition-all border",
-                selectedCategory === category 
+                selectedCategory === category
                   ? "bg-primary text-primary-foreground border-primary"
                   : "bg-muted/50 border-transparent hover:bg-muted"
               )}
             >
-              {EXPENSE_CATEGORIES[category as ExpenseCategory]?.label || category}
+              {categories.find(c => c.id === category)?.name || category}
               <span className="ml-2 opacity-70">
                 {formatCurrency(amount)}
               </span>
@@ -117,7 +118,7 @@ export function WhatIfSimulator({ totalIncome, totalExpenses, categoryExpenses }
                 onClick={() => setAdjustmentType('remove')}
                 className={cn(
                   "flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-all border flex items-center justify-center gap-2",
-                  adjustmentType === 'remove' 
+                  adjustmentType === 'remove'
                     ? "bg-danger text-danger-foreground border-danger"
                     : "bg-muted/50 border-transparent"
                 )}
@@ -129,7 +130,7 @@ export function WhatIfSimulator({ totalIncome, totalExpenses, categoryExpenses }
                 onClick={() => setAdjustmentType('reduce')}
                 className={cn(
                   "flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-all border flex items-center justify-center gap-2",
-                  adjustmentType === 'reduce' 
+                  adjustmentType === 'reduce'
                     ? "bg-warning text-warning-foreground border-warning"
                     : "bg-muted/50 border-transparent"
                 )}
@@ -165,7 +166,7 @@ export function WhatIfSimulator({ totalIncome, totalExpenses, categoryExpenses }
                 <Plus className="w-5 h-5 text-success" />
                 <h3 className="font-semibold text-success">Resultado da Simulação</h3>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Economia</p>
@@ -182,9 +183,9 @@ export function WhatIfSimulator({ totalIncome, totalExpenses, categoryExpenses }
               </div>
 
               <p className="text-sm text-muted-foreground">
-                {adjustmentType === 'remove' 
-                  ? `Eliminando completamente os gastos com ${EXPENSE_CATEGORIES[selectedCategory as ExpenseCategory]?.label}, você teria ${formatCurrency(simulation.savings)} a mais por mês.`
-                  : `Reduzindo ${reductionPercentage}% dos gastos com ${EXPENSE_CATEGORIES[selectedCategory as ExpenseCategory]?.label}, você economizaria ${formatCurrency(simulation.savings)} por mês.`
+                {adjustmentType === 'remove'
+                  ? `Eliminando completamente os gastos com ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}, você teria ${formatCurrency(simulation.savings)} a mais por mês.`
+                  : `Reduzindo ${reductionPercentage}% dos gastos com ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}, você economizaria ${formatCurrency(simulation.savings)} por mês.`
                 }
               </p>
             </div>
