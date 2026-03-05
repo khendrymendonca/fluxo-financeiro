@@ -115,14 +115,14 @@ export function useFinanceStore() {
           type: txData.type,
           category: txData.category,
           date: txData.date,
-          account_id: txData.accountId,
-          card_id: txData.cardId,
-          invoice_date: txData.invoiceDate,
+          account_id: txData.accountId || null,
+          card_id: txData.cardId || null,
+          invoice_date: txData.invoiceDate || null,
           is_invoice_payment: txData.isInvoicePayment || false,
           is_recurring: txData.isRecurring || false,
-          installments: txData.installments,
-          recurrence: txData.recurrence,
-          debt_id: txData.debtId
+          installments: txData.installments || null,
+          recurrence: txData.recurrence || null,
+          debt_id: txData.debtId || null
         });
       };
 
@@ -201,9 +201,9 @@ export function useFinanceStore() {
         type: updatedTx.type,
         category: updatedTx.category,
         date: updatedTx.date,
-        account_id: updatedTx.accountId,
-        card_id: updatedTx.cardId,
-        invoice_date: updatedTx.invoiceDate,
+        account_id: updatedTx.accountId || null,
+        card_id: updatedTx.cardId || null,
+        invoice_date: updatedTx.invoiceDate || null,
       }).eq('id', updatedTx.id);
 
       if (error) throw error;
