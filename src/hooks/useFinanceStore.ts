@@ -385,17 +385,18 @@ export function useFinanceStore() {
     } catch (err) { console.error(err); }
   };
 
-  const updateSavingsGoal = useCallback(async (goal: SavingsGoal) => {
+  const updateSavingsGoal = useCallback(async (id: string, updates: Partial<SavingsGoal>) => {
     try {
-      await supabase.from('savings_goals').update({
-        name: goal.name,
-        target_amount: goal.targetAmount,
-        current_amount: goal.currentAmount,
-        deadline: goal.deadline,
-        color: goal.color,
-        icon: goal.icon
-      }).eq('id', goal.id);
-      setState(prev => ({ ...prev, savingsGoals: prev.savingsGoals.map(g => g.id === goal.id ? goal : g) }));
+      const updatePayload: any = {};
+      if (updates.name !== undefined) updatePayload.name = updates.name;
+      if (updates.targetAmount !== undefined) updatePayload.target_amount = updates.targetAmount;
+      if (updates.currentAmount !== undefined) updatePayload.current_amount = updates.currentAmount;
+      if (updates.deadline !== undefined) updatePayload.deadline = updates.deadline;
+      if (updates.color !== undefined) updatePayload.color = updates.color;
+      if (updates.icon !== undefined) updatePayload.icon = updates.icon;
+
+      await supabase.from('savings_goals').update(updatePayload).eq('id', id);
+      setState(prev => ({ ...prev, savingsGoals: prev.savingsGoals.map(g => g.id === id ? { ...g, ...updates } : g) }));
     } catch (err) { toast({ title: 'Erro ao atualizar meta', variant: 'destructive' }); }
   }, []);
 
