@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, createContext, useContext } from 'react';
-import { FinanceState, Transaction, Account, CreditCard, Debt, SavingsGoal, ExpenseCategory } from '@/types/finance';
+import { FinanceState, Transaction, Account, CreditCard, Debt, SavingsGoal, Category, Subcategory, Bill, HabitLog, UserHabit, BudgetRule } from '@/types/finance';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 
@@ -9,6 +9,12 @@ const initialState: FinanceState = {
   creditCards: [],
   debts: [],
   savingsGoals: [],
+  categories: [],
+  subcategories: [],
+  categoryGroups: [],
+  bills: [],
+  habits: [],
+  habitLogs: [],
   emergencyMonths: Number(localStorage.getItem('emergencyMonths')) || 12,
 };
 
@@ -18,7 +24,7 @@ const FinanceContext = createContext<FinanceContextData | undefined>(undefined);
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const data = useFinanceProvider();
-  return <FinanceContext.Provider value={ data }> { children } </FinanceContext.Provider>;
+  return <FinanceContext.Provider value={data}> {children} </FinanceContext.Provider>;
 }
 
 export function useFinanceStore() {
@@ -44,12 +50,32 @@ function useFinanceProvider() {
         return;
       }
 
-      const [transactionsRes, accountsRes, cardsRes, goalsRes, debtsRes] = await Promise.all([
+      const [
+        transactionsRes,
+        accountsRes,
+        cardsRes,
+        goalsRes,
+        debtsRes,
+        categoriesRes,
+        subcategoriesRes,
+        groupsRes,
+        billsRes,
+        budgetRes,
+        habitsRes,
+        habitLogsRes
+      ] = await Promise.all([
         supabase.from('transactions').select('*'),
         supabase.from('accounts').select('*'),
         supabase.from('credit_cards').select('*'),
         supabase.from('savings_goals').select('*'),
-        supabase.from('debts').select('*'),
+        supabase.from('debts').select('*').order('strategy_priority', { ascending: true }),
+        supabase.from('categories').select('*'),
+        supabase.from('subcategories').select('*'),
+        supabase.from('category_groups').select('*'),
+        supabase.from('bills').select('*'),
+        supabase.from('budget_rules').select('*').eq('user_id', user.id).maybeSingle(),
+        supabase.from('user_habits').select('*'),
+        supabase.from('habit_logs').select('*'),
       ]);
 
       if (transactionsRes.error) throw transactionsRes.error;
@@ -59,39 +85,93 @@ function useFinanceProvider() {
       if (debtsRes.error) throw debtsRes.error;
 
       setState({
-        transactions: transactionsRes.data.map((t: any) => ({
+        transactions: (transactionsRes.data || []).map((t: any) => ({
           ...t,
+          userId: t.user_id,
+          transactionType: t.transaction_type,
+          categoryId: t.category_id,
+          subcategoryId: t.subcategory_id,
           accountId: t.account_id,
           cardId: t.card_id,
-          isPaid: new Date(t.date) <= new Date(), // derived locally from date
+          isPaid: new Date(t.date) <= new Date(),
           isRecurring: t.is_recurring,
-          isInvoicePayment: t.is_invoice_payment,
-          invoiceDate: t.invoice_date,
-          installments: t.installments,
+          installmentGroupId: t.installment_group_id,
+          installmentNumber: t.installment_number,
+          installmentTotal: t.installment_total,
+          invoiceMonthYear: t.invoice_month_year,
           debtId: t.debt_id
         })),
-        accounts: accountsRes.data,
-        creditCards: cardsRes.data.map((c: any) => ({
+        accounts: (accountsRes.data || []).map((a: any) => ({
+          ...a,
+          userId: a.user_id,
+          accountType: a.account_type
+        })),
+        creditCards: (cardsRes.data || []).map((c: any) => ({
           ...c,
+          userId: c.user_id,
           dueDay: c.due_day,
           closingDay: c.closing_day,
           history: c.history
         })),
-        savingsGoals: goalsRes.data.map((g: any) => ({
+        savingsGoals: (goalsRes.data || []).map((g: any) => ({
           ...g,
+          userId: g.user_id,
           targetAmount: g.target_amount,
           currentAmount: g.current_amount
         })),
-        debts: debtsRes.data.map((d: any) => ({
+        debts: (debtsRes.data || []).map((d: any) => ({
           ...d,
+          userId: d.user_id,
           totalAmount: d.total_amount,
           remainingAmount: d.remaining_amount,
           monthlyPayment: d.monthly_payment,
-          interestRate: d.interest_rate,
-          installmentsLeft: d.installments_left,
-          dueDay: d.due_day
+          interestRateMonthly: d.interest_rate_monthly,
+          minimumPayment: d.minimum_payment,
+          dueDay: d.due_day,
+          strategyPriority: d.strategy_priority
         })),
-        emergencyMonths: initialState.emergencyMonths,
+        categories: (categoriesRes.data || []).map((c: any) => ({
+          ...c,
+          userId: c.user_id,
+          groupId: c.group_id,
+          isActive: c.is_active
+        })),
+        subcategories: (subcategoriesRes.data || []).map((s: any) => ({
+          ...s,
+          categoryId: s.category_id,
+          isActive: s.is_active
+        })),
+        categoryGroups: (groupsRes.data || []),
+        bills: (billsRes.data || []).map((b: any) => ({
+          ...b,
+          userId: b.user_id,
+          categoryId: b.category_id,
+          subcategoryId: b.subcategory_id,
+          accountId: b.account_id,
+          dueDate: b.due_date,
+          paymentDate: b.payment_date,
+          isFixed: b.is_fixed,
+          recurrenceRule: b.recurrence_rule
+        })),
+        budgetRule: budgetRes.data ? {
+          id: budgetRes.data.id,
+          userId: budgetRes.data.user_id,
+          needsPercent: budgetRes.data.needs_percent,
+          wantsPercent: budgetRes.data.wants_percent,
+          savingsPercent: budgetRes.data.savings_percent
+        } : undefined,
+        habits: (habitsRes.data || []).map((h: any) => ({
+          ...h,
+          userId: h.user_id,
+          habitType: h.habit_type,
+          isActive: h.is_active
+        })),
+        habitLogs: (habitLogsRes.data || []).map((l: any) => ({
+          ...l,
+          habitId: l.habit_id,
+          loggedDate: l.logged_date
+        })),
+        emergencyMonths: Number(localStorage.getItem('emergencyMonths')) || initialState.emergencyMonths,
       });
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -119,26 +199,25 @@ function useFinanceProvider() {
       if (!user) return;
 
       const transactionsToAdd: any[] = [];
-      const groupId = (transaction.installments || customInstallments) ? crypto.randomUUID() : null;
+      const installmentGroupId = (transaction.installmentTotal || customInstallments) ? crypto.randomUUID() : null;
 
-      const pushTx = (txData: any) => {
-        const isFuture = new Date(txData.date) > new Date();
-        const isPaid = txData.isPaid !== undefined ? txData.isPaid : !isFuture;
-
+      const pushTx = (txData: any, instNum?: number, instTotal?: number) => {
         transactionsToAdd.push({
           user_id: user.id,
           description: txData.description,
           amount: txData.amount,
           type: txData.type,
-          category: txData.category,
+          transaction_type: txData.transactionType || 'punctual',
+          category_id: txData.categoryId || null,
+          subcategory_id: txData.subcategoryId || null,
           date: txData.date,
           account_id: txData.accountId || null,
           card_id: txData.cardId || null,
-          invoice_date: txData.invoiceDate || null,
-          is_invoice_payment: txData.isInvoicePayment || false,
+          invoice_month_year: txData.invoiceMonthYear || null,
           is_recurring: txData.isRecurring || false,
-          installments: txData.installments || null,
-          recurrence: txData.recurrence || null,
+          installment_group_id: installmentGroupId,
+          installment_number: instNum || txData.installmentNumber || null,
+          installment_total: instTotal || txData.installmentTotal || null,
           debt_id: txData.debtId || null
         });
       };
@@ -148,27 +227,19 @@ function useFinanceProvider() {
           pushTx({
             ...transaction,
             date: inst.date,
-            amount: inst.amount,
-            installments: groupId ? { current: index + 1, total: customInstallments.length, id: groupId } : undefined
-          });
+            amount: inst.amount
+          }, index + 1, customInstallments.length);
         });
-      } else if (transaction.installments && transaction.installments.total > 1) {
-        const val = transaction.amount / transaction.installments.total;
-        for (let i = 1; i <= transaction.installments.total; i++) {
+      } else if (transaction.installmentTotal && transaction.installmentTotal > 1) {
+        const val = transaction.amount / transaction.installmentTotal;
+        for (let i = 1; i <= transaction.installmentTotal; i++) {
           const d = new Date(transaction.date);
           d.setMonth(d.getMonth() + (i - 1));
           pushTx({
             ...transaction,
             date: d.toISOString().split('T')[0],
-            amount: val,
-            installments: groupId ? { current: i, total: transaction.installments.total, id: groupId } : undefined
-          });
-        }
-      } else if (transaction.recurrence === 'monthly') {
-        for (let i = 0; i < 12; i++) {
-          const d = new Date(transaction.date);
-          d.setMonth(d.getMonth() + i);
-          pushTx({ ...transaction, date: d.toISOString().split('T')[0] });
+            amount: val
+          }, i, transaction.installmentTotal);
         }
       } else {
         pushTx(transaction);
@@ -179,14 +250,19 @@ function useFinanceProvider() {
 
       const newTransactions = data.map((t: any) => ({
         ...t,
+        userId: t.user_id,
+        transactionType: t.transaction_type,
+        categoryId: t.category_id,
+        subcategoryId: t.subcategory_id,
         accountId: t.account_id,
         cardId: t.card_id,
+        installmentGroupId: t.installment_group_id,
+        installmentNumber: t.installment_number,
+        installmentTotal: t.installment_total,
+        invoiceMonthYear: t.invoice_month_year,
         isRecurring: t.is_recurring,
-        isInvoicePayment: t.is_invoice_payment,
-        invoiceDate: t.invoice_date,
-        installments: t.installments,
         debtId: t.debt_id,
-        isPaid: new Date(t.date) <= new Date(), // derived locally
+        isPaid: new Date(t.date) <= new Date(),
       }));
 
       setState(prev => ({
@@ -194,11 +270,22 @@ function useFinanceProvider() {
         transactions: [...prev.transactions, ...newTransactions]
       }));
 
-      // Atualiza saldo ao adicionar transação
       for (const tx of newTransactions) {
         if (tx.isPaid && tx.accountId) {
           const change = tx.type === 'income' ? tx.amount : -tx.amount;
           updateAccountBalance(tx.accountId, change);
+        }
+        if (tx.debtId) {
+          // Abater saldo da dívida
+          const debt = state.debts.find(d => d.id === tx.debtId);
+          if (debt) {
+            const newRemaining = Math.max(0, debt.remainingAmount - tx.amount);
+            await supabase.from('debts').update({ remaining_amount: newRemaining }).eq('id', tx.debtId);
+            setState(prev => ({
+              ...prev,
+              debts: prev.debts.map(d => d.id === tx.debtId ? { ...d, remainingAmount: newRemaining } : d)
+            }));
+          }
         }
       }
 
@@ -216,11 +303,13 @@ function useFinanceProvider() {
         description: updatedTx.description,
         amount: updatedTx.amount,
         type: updatedTx.type,
-        category: updatedTx.category,
+        transaction_type: updatedTx.transactionType,
+        category_id: updatedTx.categoryId || null,
+        subcategory_id: updatedTx.subcategoryId || null,
         date: updatedTx.date,
         account_id: updatedTx.accountId || null,
         card_id: updatedTx.cardId || null,
-        invoice_date: updatedTx.invoiceDate || null,
+        invoice_month_year: updatedTx.invoiceMonthYear || null,
       }).eq('id', updatedTx.id);
 
       if (error) throw error;
@@ -409,6 +498,51 @@ function useFinanceProvider() {
     } catch (err) { toast({ title: 'Erro ao deletar meta', variant: 'destructive' }); }
   }, []);
 
+  const seedCoach = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const needsGroup = state.categoryGroups.find(g => g.name === 'needs');
+      const wantsGroup = state.categoryGroups.find(g => g.name === 'wants');
+      const savingsGroup = state.categoryGroups.find(g => g.name === 'savings');
+
+      if (!needsGroup || !wantsGroup || !savingsGroup) return;
+
+      const defaultCategories = [
+        { user_id: user.id, group_id: needsGroup.id, name: 'Moradia', type: 'expense', icon: 'Home' },
+        { user_id: user.id, group_id: needsGroup.id, name: 'Alimentação', type: 'expense', icon: 'Utensils' },
+        { user_id: user.id, group_id: needsGroup.id, name: 'Transporte', type: 'expense', icon: 'Car' },
+        { user_id: user.id, group_id: needsGroup.id, name: 'Saúde', type: 'expense', icon: 'Heart' },
+        { user_id: user.id, group_id: wantsGroup.id, name: 'Lazer', type: 'expense', icon: 'PartyPopper' },
+        { user_id: user.id, group_id: wantsGroup.id, name: 'Delivery', type: 'expense', icon: 'ShoppingBag' },
+        { user_id: user.id, group_id: wantsGroup.id, name: 'Assinaturas', type: 'expense', icon: 'Repeat' },
+        { user_id: user.id, group_id: savingsGroup.id, name: 'Investimentos', type: 'expense', icon: 'TrendingUp' },
+        { user_id: user.id, group_id: savingsGroup.id, name: 'Reserva', type: 'expense', icon: 'PiggyBank' },
+        { user_id: user.id, group_id: needsGroup.id, name: 'Salário', type: 'income', icon: 'Briefcase' },
+      ];
+
+      const defaultHabits = [
+        { user_id: user.id, habit_type: 'daily_log', description: 'Registrar gastos do dia', frequency: 'daily' },
+        { user_id: user.id, habit_type: 'weekly_review', description: 'Revisão semanal de saldo', frequency: 'weekly' },
+        { user_id: user.id, habit_type: 'monthly_savings', description: 'Poupar 20% da renda', frequency: 'monthly' },
+      ];
+
+      const [catRes, habRes] = await Promise.all([
+        supabase.from('categories').insert(defaultCategories),
+        supabase.from('user_habits').insert(defaultHabits)
+      ]);
+
+      if (catRes.error) throw catRes.error;
+      if (habRes.error) throw habRes.error;
+
+      await fetchInitialData();
+      toast({ title: 'Coach Ativado! Categorias e Missões prontas. 🚀' });
+    } catch (err) {
+      toast({ title: 'Erro ao ativar Coach', variant: 'destructive' });
+    }
+  }, [state.categoryGroups, fetchInitialData]);
+
   // Debts (Simplified for now - can be expanded)
   const addDebt = useCallback(async (debt: Omit<Debt, 'id'>) => {
     try {
@@ -420,11 +554,24 @@ function useFinanceProvider() {
         total_amount: debt.totalAmount,
         remaining_amount: debt.remainingAmount,
         monthly_payment: debt.monthlyPayment,
-        interest_rate: debt.interestRate,
+        interest_rate_monthly: debt.interestRateMonthly,
         start_date: debt.startDate,
+        minimum_payment: debt.minimumPayment,
+        due_day: debt.dueDay,
+        strategy_priority: debt.strategyPriority
       }).select().single();
       if (error) throw error;
-      const newDebt = { ...data, totalAmount: data.total_amount, remainingAmount: data.remaining_amount, monthlyPayment: data.monthly_payment, interestRate: data.interest_rate };
+      const newDebt = {
+        ...data,
+        userId: data.user_id,
+        totalAmount: data.total_amount,
+        remainingAmount: data.remaining_amount,
+        monthlyPayment: data.monthly_payment,
+        interestRateMonthly: data.interest_rate_monthly,
+        minimumPayment: data.minimum_payment,
+        dueDay: data.due_day,
+        strategyPriority: data.strategy_priority
+      };
       setState(prev => ({ ...prev, debts: [...prev.debts, newDebt] }));
       toast({ title: 'Dívida adicionada' });
     } catch (err) { toast({ title: 'Erro ao adicionar dívida', variant: 'destructive' }); }
@@ -484,10 +631,12 @@ function useFinanceProvider() {
   const getCategoryExpenses = useCallback(() => {
     const expenses: Record<string, number> = {};
     currentMonthTransactions.filter(t => t.type === 'expense').forEach(t => {
-      expenses[t.category] = (expenses[t.category] || 0) + t.amount;
+      const cat = state.categories.find(c => c.id === t.categoryId);
+      const name = cat ? cat.name : 'Outros';
+      expenses[name] = (expenses[name] || 0) + t.amount;
     });
     return Object.entries(expenses).map(([name, value]) => ({ name, value }));
-  }, [currentMonthTransactions]);
+  }, [currentMonthTransactions, state.categories]);
 
   const getCardSettingsForDate = useCallback((card: CreditCard, targetDate: Date) => {
     if (!card.history || card.history.length === 0) return { dueDay: card.dueDay, closingDay: card.closingDay };
@@ -504,10 +653,14 @@ function useFinanceProvider() {
   }, []);
 
   const getEmergencyFundData = useCallback(() => {
-    const fixedCategories: ExpenseCategory[] = ['housing', 'bills', 'subscriptions', 'health', 'education'];
+    // Agora o cálculo é baseado no GRUPO 'needs' das categorias criadas dinamicamente
+    const needsGroup = state.categoryGroups.find(g => g.name === 'needs');
+    const needsCategoryIds = state.categories
+      .filter(c => c.groupId === needsGroup?.id)
+      .map(c => c.id);
 
     const fixedExpenses = currentMonthTransactions
-      .filter(t => t.type === 'expense' && fixedCategories.includes(t.category as ExpenseCategory))
+      .filter(t => t.type === 'expense' && (t.categoryId && needsCategoryIds.includes(t.categoryId)))
       .reduce((acc, curr) => acc + curr.amount, 0);
 
     const target = fixedExpenses * state.emergencyMonths;
@@ -520,7 +673,7 @@ function useFinanceProvider() {
       progress: target > 0 ? (current / target) * 100 : 0,
       months: state.emergencyMonths
     };
-  }, [currentMonthTransactions, state.accounts, state.emergencyMonths]);
+  }, [currentMonthTransactions, state.accounts, state.emergencyMonths, state.categories, state.categoryGroups]);
 
   return {
     ...state,
@@ -555,6 +708,7 @@ function useFinanceProvider() {
     addDebt,
     updateDebt,
     deleteDebt,
-    createDebtWithInstallments
+    createDebtWithInstallments,
+    seedCoach
   };
 }

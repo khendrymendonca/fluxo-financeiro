@@ -23,6 +23,8 @@ import { Button } from '@/components/ui/button';
 import { Transaction, SavingsGoal } from '@/types/finance';
 import { PendingPayments } from '@/components/dashboard/PendingPayments';
 import { EmergencyReserve } from '@/components/dashboard/EmergencyReserve';
+import { BudgetCoach } from '@/components/coach/BudgetCoach';
+import { HabitTracker } from '@/components/coach/HabitTracker';
 
 type ViewType = 'dashboard' | 'transactions' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator';
 
@@ -61,11 +63,16 @@ export default function Index() {
     addSavingsGoal,
     updateSavingsGoal,
     deleteSavingsGoal,
+    categories,
+    seedCoach,
+    loading
   } = useFinanceStore();
 
   const balance = totalIncome - totalExpenses;
   const categoryExpenses = getCategoryExpenses();
   const emergencyData = getEmergencyFundData();
+
+  const showCoachOnboarding = !loading && categories.length === 0;
 
   const handleEditTransaction = (tx: Transaction) => {
     setEditingTransaction(tx);
@@ -90,6 +97,22 @@ export default function Index() {
               </div>
             </div>
 
+            {showCoachOnboarding && (
+              <div className="bg-primary/10 border border-primary/20 rounded-3xl p-8 mb-6 animate-scale-in text-center space-y-4">
+                <div className="bg-primary/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Plus className="w-8 h-8 text-primary" />
+                </div>
+                <h2 className="text-2xl font-bold">Bem-vindo ao Coach Financeiro!</h2>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Para começar a usar a regra 50-30-20 e ter inteligência sobre seus gastos,
+                  precisamos configurar suas categorias iniciais.
+                </p>
+                <Button onClick={seedCoach} className="rounded-xl px-8 py-6 text-lg h-auto shadow-xl shadow-primary/20">
+                  Ativar Coach Agora
+                </Button>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <StatCard
                 title="Balanço Mensal"
@@ -112,7 +135,11 @@ export default function Index() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <BudgetCoach />
               <ExpenseChart data={categoryExpenses.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)} />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <BalanceEvolutionChart transactions={currentMonthTransactions} />
             </div>
 
@@ -133,6 +160,7 @@ export default function Index() {
                 />
               </div>
               <div className="space-y-6">
+                <HabitTracker />
                 <GoalProgress goals={savingsGoals} />
                 <AccountsOverview
                   accounts={accounts}
@@ -255,9 +283,10 @@ export default function Index() {
         <TransactionForm
           accounts={accounts}
           creditCards={creditCards}
+          initialData={editingTransaction}
           onSubmit={(data, custom) => {
             if (editingTransaction) {
-              updateTransaction({ ...editingTransaction, ...data });
+              updateTransaction({ ...editingTransaction, ...data } as any);
             } else {
               addTransaction(data, custom);
             }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { TrendingDown, Plus, Trash2, X, AlertTriangle } from 'lucide-react';
+import { TrendingDown, Plus, Trash2, X, AlertTriangle, Calculator, ArrowUpDown } from 'lucide-react';
+import { DebtPayoffPlanner } from './DebtPayoffPlanner';
 import { Debt } from '@/types/finance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,8 @@ export function DebtsManager({
   const [remainingAmount, setRemainingAmount] = useState('');
   const [monthlyPayment, setMonthlyPayment] = useState('');
   const [interestRate, setInterestRate] = useState('');
+  const [minimumPayment, setMinimumPayment] = useState('');
+  const [dueDay, setDueDay] = useState('');
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -42,8 +45,11 @@ export function DebtsManager({
       totalAmount: parseFloat(totalAmount),
       remainingAmount: parseFloat(remainingAmount),
       monthlyPayment: parseFloat(monthlyPayment),
-      interestRate: parseFloat(interestRate) || 0,
+      interestRateMonthly: parseFloat(interestRate) || 0,
+      minimumPayment: parseFloat(minimumPayment) || undefined,
+      dueDay: parseInt(dueDay) || undefined,
       startDate: new Date().toISOString(),
+      userId: '', // handled by store
     });
 
     setName('');
@@ -51,6 +57,8 @@ export function DebtsManager({
     setRemainingAmount('');
     setMonthlyPayment('');
     setInterestRate('');
+    setMinimumPayment('');
+    setDueDay('');
     setShowForm(false);
   };
 
@@ -64,6 +72,7 @@ export function DebtsManager({
 
   return (
     <div className="space-y-6">
+      <DebtPayoffPlanner debts={debts} />
       {/* Summary */}
       <div className="card-elevated p-6 animate-fade-in">
         <div className="flex items-center gap-3 mb-4">
@@ -95,7 +104,7 @@ export function DebtsManager({
       </div>
 
       {/* Add Button */}
-      <Button 
+      <Button
         onClick={() => setShowForm(true)}
         className="w-full rounded-xl py-6"
         variant="outline"
@@ -118,9 +127,9 @@ export function DebtsManager({
           debts.map((debt) => {
             const progress = ((debt.totalAmount - debt.remainingAmount) / debt.totalAmount) * 100;
             const monthsRemaining = Math.ceil(debt.remainingAmount / debt.monthlyPayment);
-            
+
             return (
-              <div 
+              <div
                 key={debt.id}
                 className="card-elevated p-5 space-y-4 group animate-fade-in"
               >
@@ -128,7 +137,8 @@ export function DebtsManager({
                   <div>
                     <h3 className="font-semibold text-lg">{debt.name}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {debt.interestRate > 0 && `${debt.interestRate}% a.m. • `}
+                      {debt.interestRateMonthly > 0 && `${debt.interestRateMonthly}% a.m. • `}
+                      {debt.dueDay && `Vence dia ${debt.dueDay} • `}
                       ~{monthsRemaining} meses restantes
                     </p>
                   </div>
@@ -151,7 +161,7 @@ export function DebtsManager({
                     </span>
                   </div>
                   <div className="h-3 rounded-full bg-muted overflow-hidden">
-                    <div 
+                    <div
                       className="h-full rounded-full bg-success transition-all duration-500"
                       style={{ width: `${progress}%` }}
                     />
@@ -182,7 +192,7 @@ export function DebtsManager({
           <div className="bg-card rounded-3xl shadow-xl w-full max-w-md animate-scale-in">
             <div className="flex items-center justify-between p-6 border-b border-border">
               <h2 className="text-lg font-semibold">Nova Dívida</h2>
-              <button 
+              <button
                 onClick={() => setShowForm(false)}
                 className="p-2 rounded-xl hover:bg-muted transition-colors"
               >
@@ -236,16 +246,19 @@ export function DebtsManager({
                   required
                 />
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Taxa Juros Mensal (%)</Label>
+                  <Input type="number" step="0.01" value={interestRate} onChange={e => setInterestRate(e.target.value)} placeholder="0.0" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Dia Vencimento</Label>
+                  <Input type="number" min="1" max="31" value={dueDay} onChange={e => setDueDay(e.target.value)} placeholder="10" />
+                </div>
+              </div>
               <div className="space-y-2">
-                <Label>Taxa de Juros Mensal (%) - opcional</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={interestRate}
-                  onChange={(e) => setInterestRate(e.target.value)}
-                  placeholder="1.5"
-                  className="rounded-xl"
-                />
+                <Label>Pagamento Mínimo (R$)</Label>
+                <Input type="number" step="0.01" value={minimumPayment} onChange={e => setMinimumPayment(e.target.value)} placeholder="0.00" />
               </div>
               <Button type="submit" className="w-full rounded-xl bg-danger hover:bg-danger/90">
                 Adicionar Dívida

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowUpRight, ArrowDownRight, Trash2, Filter, Pencil } from 'lucide-react';
-import { Transaction, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '@/types/finance';
+import { Transaction } from '@/types/finance';
+import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -29,11 +30,11 @@ export function TransactionList({ transactions, onDelete, onEdit }: TransactionL
     });
   };
 
-  const getCategory = (transaction: Transaction) => {
-    if (transaction.type === 'income') {
-      return INCOME_CATEGORIES[transaction.category as keyof typeof INCOME_CATEGORIES];
-    }
-    return EXPENSE_CATEGORIES[transaction.category as keyof typeof EXPENSE_CATEGORIES];
+  const { categories } = useFinanceStore();
+
+  const getCategoryName = (transaction: Transaction) => {
+    const cat = categories.find(c => c.id === transaction.categoryId);
+    return cat ? cat.name : 'Outros';
   };
 
   const filteredTransactions = transactions
@@ -86,7 +87,6 @@ export function TransactionList({ transactions, onDelete, onEdit }: TransactionL
             </p>
             <div className="card-elevated divide-y divide-border">
               {dayTransactions.map((transaction) => {
-                const category = getCategory(transaction);
                 const isIncome = transaction.type === 'income';
 
                 return (
@@ -108,7 +108,7 @@ export function TransactionList({ transactions, onDelete, onEdit }: TransactionL
                       <div>
                         <p className="font-medium">{transaction.description}</p>
                         <p className="text-sm text-muted-foreground">
-                          {category?.label}
+                          {getCategoryName(transaction)}
                         </p>
                       </div>
                     </div>

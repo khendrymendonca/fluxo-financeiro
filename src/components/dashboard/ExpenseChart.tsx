@@ -1,5 +1,4 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { EXPENSE_CATEGORIES, ExpenseCategory } from '@/types/finance';
 
 interface ExpenseChartProps {
   data: Record<string, number>;
@@ -21,8 +20,8 @@ const COLORS = [
 export function ExpenseChart({ data }: ExpenseChartProps) {
   const chartData = Object.entries(data)
     .filter(([_, value]) => value > 0)
-    .map(([category, value], index) => ({
-      name: EXPENSE_CATEGORIES[category as ExpenseCategory]?.label || category,
+    .map(([categoryName, value], index) => ({
+      name: categoryName,
       value,
       color: COLORS[index % COLORS.length],
     }))
@@ -76,11 +75,10 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
               ))}
             </Pie>
             <Tooltip content={<CustomTooltip />} />
-            <Legend 
-              layout="vertical" 
+            <Legend
+              layout="vertical"
               align="right"
               verticalAlign="middle"
-              formatter={(value) => <span className="text-sm text-foreground">{value}</span>}
             />
           </PieChart>
         </ResponsiveContainer>

@@ -1,58 +1,70 @@
 export type TransactionType = 'income' | 'expense';
+export type TransactionStatus = 'punctual' | 'installment' | 'recurring' | 'adjustment';
+export type AccountType = 'checking' | 'savings' | 'benefit_vr' | 'benefit_va' | 'benefit_flex';
+export type BillStatus = 'pending' | 'paid' | 'late' | 'cancelled';
+export type CategoryGroupName = 'needs' | 'wants' | 'savings';
 
-export type IncomeCategory = 'salary' | 'benefits' | 'extras' | 'investments' | 'other';
-export type ExpenseCategory =
-  | 'housing'
-  | 'food'
-  | 'transport'
-  | 'health'
-  | 'education'
-  | 'leisure'
-  | 'shopping'
-  | 'bills'
-  | 'subscriptions'
-  | 'other';
+export interface CategoryGroup {
+  id: string;
+  name: CategoryGroupName;
+  description: string;
+}
+
+export interface Category {
+  id: string;
+  userId: string;
+  groupId: string;
+  name: string;
+  type: TransactionType;
+  icon?: string;
+  color?: string;
+  isActive: boolean;
+}
+
+export interface Subcategory {
+  id: string;
+  categoryId: string;
+  name: string;
+  isActive: boolean;
+}
 
 export interface Transaction {
   id: string;
+  userId: string;
   type: TransactionType;
-  category: IncomeCategory | ExpenseCategory;
+  transactionType: TransactionStatus;
+  categoryId?: string;
+  subcategoryId?: string;
   description: string;
   amount: number;
   date: string;
   accountId?: string;
   cardId?: string;
-  savingsGoalId?: string;
   isPaid: boolean;
+  installmentGroupId?: string;
+  installmentNumber?: number;
+  installmentTotal?: number;
+  invoiceMonthYear?: string; // YYYY-MM
   isRecurring?: boolean;
-  installments?: {
-    current: number;
-    total: number;
-    id: string; // Group ID for related installment transactions
-  };
+  recurrence?: string;
   debtId?: string;
-  recurrence?: 'monthly' | 'weekly' | 'custom';
-  invoiceDate?: string; // Format: YYYY-MM
   isInvoicePayment?: boolean;
 }
 
 export interface Account {
   id: string;
+  userId: string;
   name: string;
   bank: string;
   balance: number;
   color: string;
   icon?: string;
-}
-
-export interface InvoiceConfig {
-  dueDay: number;
-  closingDay: number;
-  effectiveDate: string; // ISO Date (YYYY-MM-DD) from when this config applies
+  accountType: AccountType;
 }
 
 export interface CreditCard {
   id: string;
+  userId: string;
   name: string;
   bank: string;
   limit: number;
@@ -62,20 +74,30 @@ export interface CreditCard {
   history?: InvoiceConfig[];
 }
 
+export interface InvoiceConfig {
+  dueDay: number;
+  closingDay: number;
+  effectiveDate: string;
+}
+
 export interface Debt {
   id: string;
+  userId: string;
   name: string;
   totalAmount: number;
   remainingAmount: number;
   monthlyPayment: number;
-  interestRate: number;
+  interestRateMonthly: number;
   startDate: string;
   endDate?: string;
-  linkedTransactionIds?: string[]; // IDs of generated expense transactions
+  dueDay?: number;
+  strategyPriority?: number;
+  minimumPayment?: number;
 }
 
 export interface SavingsGoal {
   id: string;
+  userId: string;
   name: string;
   targetAmount: number;
   currentAmount: number;
@@ -84,16 +106,64 @@ export interface SavingsGoal {
   icon?: string;
 }
 
+export interface Bill {
+  id: string;
+  userId: string;
+  name: string;
+  categoryId?: string;
+  subcategoryId?: string;
+  amount: number;
+  type: 'payable' | 'receivable';
+  accountId?: string;
+  dueDate: string;
+  paymentDate?: string;
+  status: BillStatus;
+  isFixed: boolean;
+  recurrenceRule?: string;
+}
+
+export interface BudgetRule {
+  id: string;
+  userId: string;
+  needsPercent: number;
+  wantsPercent: number;
+  savingsPercent: number;
+}
+
+export interface UserHabit {
+  id: string;
+  userId: string;
+  habitType: string;
+  description?: string;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  isActive: boolean;
+}
+
+export interface HabitLog {
+  id: string;
+  habitId: string;
+  loggedDate: string;
+  status: 'completed' | 'missed' | 'skipped';
+}
+
 export interface FinanceState {
   transactions: Transaction[];
   accounts: Account[];
   creditCards: CreditCard[];
   debts: Debt[];
   savingsGoals: SavingsGoal[];
+  categories: Category[];
+  subcategories: Subcategory[];
+  categoryGroups: CategoryGroup[];
+  bills: Bill[];
+  budgetRule?: BudgetRule;
+  habits: UserHabit[];
+  habitLogs: HabitLog[];
   emergencyMonths: number;
 }
 
-export const INCOME_CATEGORIES: Record<IncomeCategory, { label: string; icon: string }> = {
+// Keep these for UI mapping until fully migrated to DB-driven categories
+export const INCOME_CATEGORIES_LEGACY = {
   salary: { label: 'Salário', icon: 'Briefcase' },
   benefits: { label: 'Benefícios', icon: 'Gift' },
   extras: { label: 'Extras', icon: 'Sparkles' },
@@ -101,7 +171,7 @@ export const INCOME_CATEGORIES: Record<IncomeCategory, { label: string; icon: st
   other: { label: 'Outros', icon: 'MoreHorizontal' },
 };
 
-export const EXPENSE_CATEGORIES: Record<ExpenseCategory, { label: string; icon: string }> = {
+export const EXPENSE_CATEGORIES_LEGACY = {
   housing: { label: 'Moradia', icon: 'Home' },
   food: { label: 'Alimentação', icon: 'UtensilsCrossed' },
   transport: { label: 'Transporte', icon: 'Car' },

@@ -7,10 +7,8 @@ import {
   Transaction,
   Account,
   CreditCard as CreditCardType,
-  INCOME_CATEGORIES,
-  EXPENSE_CATEGORIES,
-  IncomeCategory,
-  ExpenseCategory,
+  Category,
+  Subcategory,
   Debt
 } from '@/types/finance';
 import { cn } from '@/lib/utils';
@@ -19,25 +17,27 @@ import { useFinanceStore } from '@/hooks/useFinanceStore';
 interface TransactionFormProps {
   accounts: Account[];
   creditCards: CreditCardType[];
+  initialData?: Transaction;
   onSubmit: (transaction: Omit<Transaction, 'id'>, customInstallments?: { date: string, amount: number }[]) => void;
   onClose: () => void;
 }
 
 type TabType = 'pontual' | 'parcelamento' | 'fixo' | 'divida';
 
-export function TransactionForm({ accounts, creditCards, onSubmit, onClose }: TransactionFormProps) {
+export function TransactionForm({ accounts, creditCards, initialData, onSubmit, onClose }: TransactionFormProps) {
   const [activeTab, setActiveTab] = useState<TabType>('pontual');
-  const [type, setType] = useState<'income' | 'expense'>('expense');
+  const [type, setType] = useState<'income' | 'expense'>(initialData?.type || 'expense');
 
   // Common Fields
-  const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState<string>('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [accountId, setAccountId] = useState<string>('');
-  const [cardId, setCardId] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<'account' | 'card'>('account');
-  const [selectedDebtId, setSelectedDebtId] = useState<string>('');
+  const [description, setDescription] = useState(initialData?.description || '');
+  const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
+  const [categoryId, setCategoryId] = useState<string>(initialData?.categoryId || '');
+  const [subcategoryId, setSubcategoryId] = useState<string>(initialData?.subcategoryId || '');
+  const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
+  const [accountId, setAccountId] = useState<string>(initialData?.accountId || '');
+  const [cardId, setCardId] = useState<string>(initialData?.cardId || '');
+  const [paymentMethod, setPaymentMethod] = useState<'account' | 'card'>(initialData?.cardId ? 'card' : 'account');
+  const [selectedDebtId, setSelectedDebtId] = useState<string>(initialData?.debtId || '');
 
   // Installment Specifics
   const [installmentsCount, setInstallmentsCount] = useState('2');
@@ -56,9 +56,10 @@ export function TransactionForm({ accounts, creditCards, onSubmit, onClose }: Tr
   // Invoice Specifics
   const [invoiceReference, setInvoiceReference] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
 
-  const { debts, createDebtWithInstallments } = useFinanceStore();
+  const { debts, createDebtWithInstallments, categories, subcategories } = useFinanceStore();
 
-  const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const filteredCategories = categories.filter(c => c.type === type);
+  const currentCategorySubcategories = subcategories.filter(s => s.categoryId === categoryId);
 
   // Helper to generate initial custom installments
   const generateCustomInstallments = () => {
@@ -98,14 +99,15 @@ export function TransactionForm({ accounts, creditCards, onSubmit, onClose }: Tr
         totalAmount: parseFloat(debtTotal),
         remainingAmount: parseFloat(debtTotal), // Starts full
         monthlyPayment: parseFloat(debtTotal) / parseInt(debtInstallments),
-        interestRate: 0, // Simplified for this view
+        interestRateMonthly: 0, // Simplified for this view
         startDate: new Date().toISOString(),
+        userId: '',
       }, debtFirstPaymentDate);
       onClose();
       return;
     }
 
-    if (!description || !amount || !category) return;
+    if (!description || !amount || !categoryId) return;
 
     let finalCustomInstallments = undefined;
 
@@ -136,20 +138,21 @@ export function TransactionForm({ accounts, creditCards, onSubmit, onClose }: Tr
 
     onSubmit({
       type,
+      transactionType: activeTab === 'parcelamento' ? 'installment' : activeTab === 'fixo' ? 'recurring' : 'punctual',
       description,
       amount: parseFloat(amount),
-      category: category as IncomeCategory | ExpenseCategory,
+      categoryId,
+      subcategoryId: subcategoryId || undefined,
       date,
       accountId: paymentMethod === 'account' ? accountId : undefined,
       cardId: paymentMethod === 'card' ? cardId : undefined,
-      installments: (activeTab === 'parcelamento' && areInstallmentsEqual && fixedPaymentDay) ? {
-        current: 1,
-        total: parseInt(installmentsCount),
-        id: ''
-      } : undefined,
+      installmentTotal: activeTab === 'parcelamento' ? parseInt(installmentsCount) : undefined,
+      isRecurring: activeTab === 'fixo',
       recurrence: activeTab === 'fixo' ? recurrence : undefined,
       debtId: selectedDebtId || undefined,
-      invoiceDate: (paymentMethod === 'card' && type === 'expense') ? invoiceReference : undefined,
+      invoiceMonthYear: (paymentMethod === 'card' && type === 'expense') ? invoiceReference : undefined,
+      isPaid: new Date(date) <= new Date(),
+      userId: initialData?.userId || '' // Will be handled by store
     }, finalCustomInstallments);
 
     onClose();
@@ -160,7 +163,7 @@ export function TransactionForm({ accounts, creditCards, onSubmit, onClose }: Tr
       <div className="bg-card rounded-3xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-scale-in flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
-          <h2 className="text-xl font-semibold">Novo Lançamento</h2>
+          <h2 className="text-xl font-semibold">{initialData ? 'Editar Lançamento' : 'Novo Lançamento'}</h2>
           <button onClick={onClose} className="p-2 rounded-xl hover:bg-muted transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -224,7 +227,7 @@ export function TransactionForm({ accounts, creditCards, onSubmit, onClose }: Tr
               <div className="flex gap-2 p-1 bg-muted rounded-2xl">
                 <button
                   type="button"
-                  onClick={() => { setType('income'); setCategory(''); }}
+                  onClick={() => { setType('income'); setCategoryId(''); setSubcategoryId(''); }}
                   className={cn(
                     "flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all",
                     type === 'income' ? "bg-success text-success-foreground shadow-sm" : "text-muted-foreground"
@@ -234,7 +237,7 @@ export function TransactionForm({ accounts, creditCards, onSubmit, onClose }: Tr
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setType('expense'); setCategory(''); }}
+                  onClick={() => { setType('expense'); setCategoryId(''); setSubcategoryId(''); }}
                   className={cn(
                     "flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all",
                     type === 'expense' ? "bg-danger text-danger-foreground shadow-sm" : "text-muted-foreground"
@@ -267,25 +270,55 @@ export function TransactionForm({ accounts, creditCards, onSubmit, onClose }: Tr
               </div>
 
               {/* Category */}
-              <div className="space-y-2">
-                <Label>Categoria</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {Object.entries(categories).map(([key, { label }]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setCategory(key)}
-                      className={cn(
-                        "py-2 px-3 rounded-xl text-xs font-medium transition-all border",
-                        category === key
-                          ? type === 'income' ? "bg-success text-success-foreground border-success" : "bg-danger text-danger-foreground border-danger"
-                          : "bg-muted/50 border-transparent hover:bg-muted"
-                      )}
-                    >
-                      {label}
-                    </button>
-                  ))}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Categoria</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {filteredCategories.map((cat) => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => { setCategoryId(cat.id); setSubcategoryId(''); }}
+                        className={cn(
+                          "py-2 px-3 rounded-xl text-xs font-medium transition-all border",
+                          categoryId === cat.id
+                            ? type === 'income' ? "bg-success text-success-foreground border-success" : "bg-danger text-danger-foreground border-danger"
+                            : "bg-muted/50 border-transparent hover:bg-muted"
+                        )}
+                      >
+                        {cat.name}
+                      </button>
+                    ))}
+                    {filteredCategories.length === 0 && (
+                      <p className="col-span-3 text-xs text-muted-foreground text-center py-2">
+                        Nenhuma categoria cadastrada para {type === 'income' ? 'receitas' : 'despesas'}.
+                      </p>
+                    )}
+                  </div>
                 </div>
+
+                {categoryId && currentCategorySubcategories.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Subcategoria</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {currentCategorySubcategories.map((sub) => (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => setSubcategoryId(sub.id)}
+                          className={cn(
+                            "py-2 px-3 rounded-xl text-xs font-medium transition-all border",
+                            subcategoryId === sub.id
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-muted/50 border-transparent hover:bg-muted"
+                          )}
+                        >
+                          {sub.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Tab Specific logic */}
