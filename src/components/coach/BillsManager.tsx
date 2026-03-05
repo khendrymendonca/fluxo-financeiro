@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,17 +14,32 @@ import {
     AlertCircle,
     ArrowUpCircle,
     ArrowDownCircle,
-    Filter
+    Filter,
+    ShieldAlert,
+    CreditCard as CardIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export function BillsManager() {
-    const { bills, categories, accounts, addBill, updateBill, deleteBill } = useFinanceStore();
+    const {
+        bills,
+        categories,
+        accounts,
+        creditCards,
+        debts,
+        addBill,
+        updateBill,
+        deleteBill,
+        payBill,
+        getCardExpenses
+    } = useFinanceStore();
 
     const [showAddForm, setShowAddForm] = useState(false);
     const [filter, setFilter] = useState<'all' | 'payable' | 'receivable'>('all');
+    const [isPaying, setIsPaying] = useState<string | null>(null);
+    const [selectedAccount, setSelectedAccount] = useState('');
 
     // Form State
     const [name, setName] = useState('');
@@ -62,11 +78,50 @@ export function BillsManager() {
         setShowAddForm(false);
     };
 
-    const handleMarkAsPaid = (id: string) => {
-        updateBill(id, { status: 'paid', paymentDate: new Date().toISOString() });
+    const handleMarkAsPaid = async (id: string) => {
+        if (!selectedAccount) {
+            toast({ title: 'Selecione uma conta para o pagamento', variant: 'destructive' });
+            return;
+        }
+        await payBill(id, selectedAccount, new Date().toISOString());
+        setIsPaying(null);
+        setSelectedAccount('');
     };
 
-    const filteredBills = bills.filter(b => {
+    // 1. Get virtual bills from debts
+    const debtBills = debts.map(debt => ({
+        id: `debt-${debt.id}`,
+        name: `Dívida: ${debt.name}`,
+        amount: debt.monthlyPayment,
+        type: 'payable' as const,
+        dueDate: new Date(new Date().setDate(debt.dueDay)).toISOString().split('T')[0],
+        status: 'pending' as const,
+        isFixed: true,
+        categoryId: 'debt-payment',
+        isVirtual: true,
+        icon: ShieldAlert
+    }));
+
+    // 2. Get virtual bills from credit cards
+    const cardBills = creditCards.map(card => {
+        const amount = getCardExpenses(card.id);
+        return {
+            id: `card-${card.id}`,
+            name: `Fatura: ${card.name}`,
+            amount: amount,
+            type: 'payable' as const,
+            dueDate: new Date(new Date().setDate(card.dueDay)).toISOString().split('T')[0],
+            status: 'pending' as const,
+            isFixed: true,
+            categoryId: 'card-payment',
+            isVirtual: true,
+            icon: CardIcon
+        };
+    }).filter(c => c.amount > 0);
+
+    const allBills = [...bills, ...debtBills, ...cardBills];
+
+    const filteredBills = allBills.filter(b => {
         if (filter === 'all') return true;
         return b.type === filter;
     }).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
@@ -75,7 +130,7 @@ export function BillsManager() {
     const totalPendingPayable = pendingPayable.reduce((acc, b) => acc + b.amount, 0);
 
     return (
-        <div className="space-y-6 animate-fade-in max-w-5xl mx-auto pb-12">
+        <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
 
             {/* Header & Stats */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -145,7 +200,7 @@ export function BillsManager() {
             )}
 
             {/* Filters */}
-            <div className="flex items-center gap-2 p-1 bg-muted rounded-2xl w-fit">
+            <div className="flex items-center gap-2 p-1 bg-muted rounded-2xl w-full overflow-x-auto no-scrollbar md:w-fit">
                 {[
                     { id: 'all', label: 'Todas', icon: Filter },
                     { id: 'payable', label: 'A Pagar', icon: ArrowDownCircle },
@@ -232,14 +287,49 @@ export function BillsManager() {
 
                                     <div className="flex gap-2">
                                         {bill.status === 'pending' && (
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => handleMarkAsPaid(bill.id)}
-                                                className="h-10 w-10 p-0 rounded-xl hover:bg-success/10 hover:text-success"
-                                            >
-                                                <CheckCircle2 className="w-5 h-5" />
-                                            </Button>
+                                            <div className="flex items-center gap-2">
+                                                {isPaying === bill.id ? (
+                                                    <div className="flex flex-col md:flex-row items-end gap-2 animate-scale-in">
+                                                        <select
+                                                            className="h-9 rounded-lg border border-input bg-background px-2 py-1 text-[10px] font-bold uppercase w-32"
+                                                            value={selectedAccount}
+                                                            onChange={(e) => setSelectedAccount(e.target.value)}
+                                                        >
+                                                            <option value="">Qual Conta?</option>
+                                                            {accounts.map(acc => (
+                                                                <option key={acc.id} value={acc.id}>{acc.name}</option>
+                                                            ))}
+                                                        </select>
+                                                        <div className="flex gap-1">
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={() => handleMarkAsPaid(bill.id)}
+                                                                className="h-9 px-3 rounded-lg bg-success hover:bg-success/90 text-[10px] font-black uppercase"
+                                                            >
+                                                                Confirmar
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={() => { setIsPaying(null); setSelectedAccount(''); }}
+                                                                className="h-9 px-2 rounded-lg text-[10px] uppercase"
+                                                            >
+                                                                X
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => setIsPaying(bill.id)}
+                                                        className="h-11 px-4 rounded-2xl bg-success/5 text-success hover:bg-success/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider"
+                                                    >
+                                                        <CheckCircle2 className="w-5 h-5" />
+                                                        Baixar Conta
+                                                    </Button>
+                                                )}
+                                            </div>
                                         )}
                                         <Button
                                             size="sm"

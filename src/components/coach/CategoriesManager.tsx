@@ -65,7 +65,7 @@ export function CategoriesManager() {
     };
 
     return (
-        <div className="space-y-6 animate-fade-in max-w-4xl mx-auto pb-12">
+        <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
 
             {/* Header */}
             <div className="flex items-center gap-3 mb-6">
@@ -191,7 +191,7 @@ export function CategoriesManager() {
                                             <div key={cat.id} className="group">
                                                 <div className="flex items-center justify-between p-2 rounded-xl hover:bg-muted/50 transition-colors">
                                                     <span className="font-medium text-sm">{cat.name}</span>
-                                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                                         <button onClick={() => setActiveCategoryId(cat.id)} className="p-1.5 text-info hover:bg-info/10 rounded-lg"><Plus className="w-3.5 h-3.5" /></button>
                                                         <button onClick={() => deleteCategory(cat.id)} className="p-1.5 text-danger hover:bg-danger/10 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
                                                     </div>
@@ -211,7 +211,7 @@ export function CategoriesManager() {
                                                     {subcategories.filter(s => s.categoryId === cat.id).map(sub => (
                                                         <div key={sub.id} className="flex items-center justify-between p-1.5 text-xs text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/30 group/sub">
                                                             <span>↳ {sub.name}</span>
-                                                            <button onClick={() => deleteSubcategory(sub.id)} className="opacity-0 group-hover/sub:opacity-100 text-danger/70 hover:text-danger pr-2"><Trash2 className="w-3 h-3" /></button>
+                                                            <button onClick={() => deleteSubcategory(sub.id)} className="opacity-100 md:opacity-0 md:group-hover/sub:opacity-100 text-danger/70 hover:text-danger pr-2 px-2"><Trash2 className="w-3 h-3" /></button>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -232,7 +232,7 @@ export function CategoriesManager() {
                             {categories.filter(c => c.type === 'income').map(cat => (
                                 <div key={cat.id} className="flex items-center justify-between p-2 rounded-xl border hover:border-success/30 transition-colors group">
                                     <span className="font-medium text-sm">{cat.name}</span>
-                                    <button onClick={() => deleteCategory(cat.id)} className="opacity-0 group-hover:opacity-100 p-1.5 text-danger hover:bg-danger/10 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
+                                    <button onClick={() => deleteCategory(cat.id)} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 text-danger hover:bg-danger/10 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
                                 </div>
                             ))}
                         </div>

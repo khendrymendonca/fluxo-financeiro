@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Building2, CreditCard as CreditCardIcon, Plus, Trash2, X } from 'lucide-react';
-import { Account, CreditCard } from '@/types/finance';
+import { Building2, Plus, Trash2, X, Wallet } from 'lucide-react';
+import { Account } from '@/types/finance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,12 +8,8 @@ import { cn } from '@/lib/utils';
 
 interface AccountsManagerProps {
   accounts: Account[];
-  creditCards: CreditCard[];
-  getCardExpenses: (cardId: string) => number;
-  onAddAccount: (account: Omit<Account, 'id'>) => void;
+  onAddAccount: (account: Omit<Account, 'id' | 'userId'>) => void;
   onDeleteAccount: (id: string) => void;
-  onAddCard: (card: Omit<CreditCard, 'id'>) => void;
-  onDeleteCard: (id: string) => void;
 }
 
 const COLORS = [
@@ -22,29 +18,17 @@ const COLORS = [
 
 export function AccountsManager({
   accounts,
-  creditCards,
-  getCardExpenses,
   onAddAccount,
   onDeleteAccount,
-  onAddCard,
-  onDeleteCard,
 }: AccountsManagerProps) {
   const [showAccountForm, setShowAccountForm] = useState(false);
-  const [showCardForm, setShowCardForm] = useState(false);
-  
+
   // Account form state
   const [accountName, setAccountName] = useState('');
   const [accountBank, setAccountBank] = useState('');
   const [accountBalance, setAccountBalance] = useState('');
+  const [accountType, setAccountType] = useState<'checking' | 'savings' | 'benefit_vr' | 'benefit_va' | 'benefit_flex'>('checking');
   const [accountColor, setAccountColor] = useState(COLORS[0]);
-
-  // Card form state
-  const [cardName, setCardName] = useState('');
-  const [cardBank, setCardBank] = useState('');
-  const [cardLimit, setCardLimit] = useState('');
-  const [cardClosingDay, setCardClosingDay] = useState('15');
-  const [cardDueDay, setCardDueDay] = useState('22');
-  const [cardColor, setCardColor] = useState(COLORS[0]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -56,37 +40,19 @@ export function AccountsManager({
   const handleAddAccount = (e: React.FormEvent) => {
     e.preventDefault();
     if (!accountName || !accountBank || !accountBalance) return;
-    
+
     onAddAccount({
       name: accountName,
       bank: accountBank,
       balance: parseFloat(accountBalance),
       color: accountColor,
+      accountType: accountType,
     });
-    
+
     setAccountName('');
     setAccountBank('');
     setAccountBalance('');
     setShowAccountForm(false);
-  };
-
-  const handleAddCard = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!cardName || !cardBank || !cardLimit) return;
-    
-    onAddCard({
-      name: cardName,
-      bank: cardBank,
-      limit: parseFloat(cardLimit),
-      closingDay: parseInt(cardClosingDay),
-      dueDay: parseInt(cardDueDay),
-      color: cardColor,
-    });
-    
-    setCardName('');
-    setCardBank('');
-    setCardLimit('');
-    setShowCardForm(false);
   };
 
   const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
@@ -94,295 +60,167 @@ export function AccountsManager({
   return (
     <div className="space-y-6">
       {/* Summary Card */}
-      <div className="card-elevated p-6 animate-fade-in">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Patrimônio Total</h2>
-          <span className="text-3xl font-bold text-primary">
-            {formatCurrency(totalBalance)}
-          </span>
+      <div className="card-elevated p-8 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20 animate-fade-in relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-5">
+          <Wallet className="w-32 h-32" />
+        </div>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <p className="text-sm font-bold text-primary/70 uppercase tracking-widest mb-1">Patrimônio Total em Contas</p>
+            <h2 className="text-4xl font-black tracking-tight">
+              {formatCurrency(totalBalance)}
+            </h2>
+          </div>
+          <Button
+            onClick={() => setShowAccountForm(true)}
+            size="lg"
+            className="rounded-2xl h-14 px-8 gap-2 shadow-xl shadow-primary/20 font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95"
+          >
+            <Plus className="w-5 h-5" /> Adicionar Conta
+          </Button>
         </div>
       </div>
 
-      {/* Bank Accounts */}
-      <div className="card-elevated p-6 animate-fade-in">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Contas Bancárias</h3>
-          <Button 
-            onClick={() => setShowAccountForm(true)}
-            size="sm"
-            className="rounded-xl"
+      {/* Bank Accounts Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+        {accounts.map((account) => (
+          <div
+            key={account.id}
+            className="card-elevated p-6 group hover:border-primary/50 transition-all flex flex-col justify-between h-48 relative overflow-hidden"
           >
-            <Plus className="w-4 h-4 mr-1" /> Adicionar
-          </Button>
-        </div>
-
-        <div className="space-y-3">
-          {accounts.map((account) => (
-            <div 
-              key={account.id}
-              className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 group"
-            >
-              <div className="flex items-center gap-3">
-                <div 
-                  className="p-2.5 rounded-xl"
-                  style={{ backgroundColor: `${account.color}20` }}
-                >
-                  <Building2 className="w-5 h-5" style={{ color: account.color }} />
-                </div>
-                <div>
-                  <p className="font-medium">{account.name}</p>
-                  <p className="text-sm text-muted-foreground">{account.bank}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="font-semibold text-lg">
-                  {formatCurrency(account.balance)}
-                </span>
-                <button
-                  onClick={() => onDeleteAccount(account.id)}
-                  className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-danger-light text-danger transition-all"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+              <Building2 className="w-16 h-16" />
             </div>
-          ))}
-        </div>
 
-        {/* Account Form Modal */}
-        {showAccountForm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/20 backdrop-blur-sm">
-            <div className="bg-card rounded-3xl shadow-xl w-full max-w-md animate-scale-in">
-              <div className="flex items-center justify-between p-6 border-b border-border">
-                <h2 className="text-lg font-semibold">Nova Conta</h2>
-                <button 
-                  onClick={() => setShowAccountForm(false)}
-                  className="p-2 rounded-xl hover:bg-muted transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+            <div className="flex justify-between items-start relative z-10">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: account.color }}
+                  />
+                  <p className="text-xs font-black uppercase text-muted-foreground tracking-tighter">{account.bank}</p>
+                </div>
+                <h3 className="text-xl font-bold truncate max-w-[180px]">{account.name}</h3>
               </div>
-              <form onSubmit={handleAddAccount} className="p-6 space-y-4">
-                <div className="space-y-2">
-                  <Label>Nome da Conta</Label>
-                  <Input
-                    value={accountName}
-                    onChange={(e) => setAccountName(e.target.value)}
-                    placeholder="Ex: Conta Principal"
-                    className="rounded-xl"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Banco</Label>
-                  <Input
-                    value={accountBank}
-                    onChange={(e) => setAccountBank(e.target.value)}
-                    placeholder="Ex: Nubank"
-                    className="rounded-xl"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Saldo Atual (R$)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={accountBalance}
-                    onChange={(e) => setAccountBalance(e.target.value)}
-                    placeholder="0.00"
-                    className="rounded-xl"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Cor</Label>
-                  <div className="flex gap-2">
-                    {COLORS.map((color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => setAccountColor(color)}
-                        className={cn(
-                          "w-8 h-8 rounded-lg transition-all",
-                          accountColor === color && "ring-2 ring-offset-2 ring-foreground"
-                        )}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <Button type="submit" className="w-full rounded-xl">
-                  Adicionar Conta
-                </Button>
-              </form>
+              <button
+                onClick={() => onDeleteAccount(account.id)}
+                className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-danger/10 text-danger transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
+
+            <div className="mt-auto relative z-10">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Saldo Disponível</p>
+              <p className="text-2xl font-black">
+                {formatCurrency(account.balance)}
+              </p>
+            </div>
+          </div>
+        ))}
+
+        {accounts.length === 0 && !showAccountForm && (
+          <div className="col-span-full py-20 text-center card-elevated border-dashed border-2 bg-muted/20">
+            <p className="text-muted-foreground font-medium">Nenhuma conta ou carteira cadastrada.</p>
+            <Button variant="ghost" onClick={() => setShowAccountForm(true)} className="mt-4">Começar agora</Button>
           </div>
         )}
       </div>
 
-      {/* Credit Cards */}
-      <div className="card-elevated p-6 animate-fade-in">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Cartões de Crédito</h3>
-          <Button 
-            onClick={() => setShowCardForm(true)}
-            size="sm"
-            className="rounded-xl"
-          >
-            <Plus className="w-4 h-4 mr-1" /> Adicionar
-          </Button>
-        </div>
-
-        <div className="space-y-3">
-          {creditCards.map((card) => {
-            const expenses = getCardExpenses(card.id);
-            const usagePercent = (expenses / card.limit) * 100;
-            
-            return (
-              <div 
-                key={card.id}
-                className="p-4 rounded-2xl bg-muted/30 space-y-3 group"
+      {/* Account Form Modal */}
+      {showAccountForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/20 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card rounded-[2.5rem] shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 overflow-hidden border border-border">
+            <div className="flex items-center justify-between p-8 border-b border-border bg-muted/10">
+              <div>
+                <h2 className="text-2xl font-black tracking-tight">Nova Conta</h2>
+                <p className="text-sm text-muted-foreground">Cadastre um banco ou carteira digital.</p>
+              </div>
+              <button
+                onClick={() => setShowAccountForm(false)}
+                className="p-3 rounded-2xl hover:bg-muted transition-colors"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="p-2.5 rounded-xl"
-                      style={{ backgroundColor: `${card.color}20` }}
-                    >
-                      <CreditCardIcon className="w-5 h-5" style={{ color: card.color }} />
-                    </div>
-                    <div>
-                      <p className="font-medium">{card.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {card.bank} • Venc. dia {card.dueDay}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className="font-semibold text-danger">{formatCurrency(expenses)}</p>
-                      <p className="text-xs text-muted-foreground">de {formatCurrency(card.limit)}</p>
-                    </div>
-                    <button
-                      onClick={() => onDeleteCard(card.id)}
-                      className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-danger-light text-danger transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div 
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ 
-                      width: `${Math.min(usagePercent, 100)}%`,
-                      backgroundColor: usagePercent > 80 ? 'hsl(0, 70%, 60%)' : card.color,
-                    }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Card Form Modal */}
-        {showCardForm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/20 backdrop-blur-sm">
-            <div className="bg-card rounded-3xl shadow-xl w-full max-w-md animate-scale-in">
-              <div className="flex items-center justify-between p-6 border-b border-border">
-                <h2 className="text-lg font-semibold">Novo Cartão</h2>
-                <button 
-                  onClick={() => setShowCardForm(false)}
-                  className="p-2 rounded-xl hover:bg-muted transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <form onSubmit={handleAddCard} className="p-6 space-y-4">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <form onSubmit={handleAddAccount} className="p-8 space-y-6">
+              <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-2">
-                  <Label>Nome do Cartão</Label>
+                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Nome da Conta / Apelido</Label>
                   <Input
-                    value={cardName}
-                    onChange={(e) => setCardName(e.target.value)}
-                    placeholder="Ex: Nubank"
-                    className="rounded-xl"
+                    value={accountName}
+                    onChange={(e) => setAccountName(e.target.value)}
+                    placeholder="Ex: Conta Corrente Itaú"
+                    className="h-14 rounded-2xl border-2 focus:border-primary/50 transition-colors px-6"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Banco/Bandeira</Label>
+                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Instituição Bancária</Label>
                   <Input
-                    value={cardBank}
-                    onChange={(e) => setCardBank(e.target.value)}
-                    placeholder="Ex: Nubank"
-                    className="rounded-xl"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Limite (R$)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={cardLimit}
-                    onChange={(e) => setCardLimit(e.target.value)}
-                    placeholder="5000.00"
-                    className="rounded-xl"
+                    value={accountBank}
+                    onChange={(e) => setAccountBank(e.target.value)}
+                    placeholder="Ex: Banco Itaú"
+                    className="h-14 rounded-2xl border-2 focus:border-primary/50 transition-colors px-6"
                     required
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Dia Fechamento</Label>
+                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Saldo Inicial (R$)</Label>
                     <Input
                       type="number"
-                      min="1"
-                      max="31"
-                      value={cardClosingDay}
-                      onChange={(e) => setCardClosingDay(e.target.value)}
-                      className="rounded-xl"
+                      step="0.01"
+                      value={accountBalance}
+                      onChange={(e) => setAccountBalance(e.target.value)}
+                      placeholder="0.00"
+                      className="h-14 rounded-2xl border-2 focus:border-primary/50 transition-colors px-6 font-bold"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Dia Vencimento</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="31"
-                      value={cardDueDay}
-                      onChange={(e) => setCardDueDay(e.target.value)}
-                      className="rounded-xl"
-                      required
+                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Tipo de Conta</Label>
+                    <select
+                      value={accountType}
+                      onChange={(e) => setAccountType(e.target.value as any)}
+                      className="w-full h-14 rounded-2xl border-2 border-input bg-background px-4 py-2 text-sm font-bold focus:border-primary/50 outline-none"
+                    >
+                      <option value="checking">Corrente</option>
+                      <option value="savings">Poupança</option>
+                      <option value="benefit_va">VA (Ali.)</option>
+                      <option value="benefit_vr">VR (Ref.)</option>
+                      <option value="benefit_flex">Flexível</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1 text-center block">Escolha uma Cor de Identificação</Label>
+                <div className="flex justify-between items-center bg-muted/30 p-4 rounded-3xl">
+                  {COLORS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setAccountColor(color)}
+                      className={cn(
+                        "w-10 h-10 rounded-xl transition-all hover:scale-110 active:scale-90",
+                        accountColor === color ? "ring-4 ring-primary ring-offset-4 ring-offset-background scale-110 shadow-lg" : "opacity-70"
+                      )}
+                      style={{ backgroundColor: color }}
                     />
-                  </div>
+                  ))}
                 </div>
-                <div className="space-y-2">
-                  <Label>Cor</Label>
-                  <div className="flex gap-2">
-                    {COLORS.map((color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => setCardColor(color)}
-                        className={cn(
-                          "w-8 h-8 rounded-lg transition-all",
-                          cardColor === color && "ring-2 ring-offset-2 ring-foreground"
-                        )}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <Button type="submit" className="w-full rounded-xl">
-                  Adicionar Cartão
-                </Button>
-              </form>
-            </div>
+              </div>
+
+              <Button type="submit" className="w-full h-16 rounded-[1.5rem] text-lg font-black uppercase tracking-widest shadow-xl shadow-primary/20 mt-4 transition-all hover:translate-y-[-2px] active:translate-y-[0px]">
+                Confirmar Cadastro
+              </Button>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

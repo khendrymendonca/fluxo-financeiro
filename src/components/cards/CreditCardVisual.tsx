@@ -50,9 +50,9 @@ export function CreditCardVisual({ card, usedLimit, availableLimit, onClick, cla
 
                     <div className="flex justify-between items-end">
                         <div>
-                            <p className="text-xs opacity-75 mb-1">Titular</p>
-                            <p className="font-medium tracking-wide uppercase truncate max-w-[200px]">
-                                SEU NOME
+                            <p className="text-xs opacity-75 mb-1">Cartão</p>
+                            <p className="font-bold tracking-wider uppercase truncate max-w-[200px]">
+                                {card.name}
                             </p>
                         </div>
 

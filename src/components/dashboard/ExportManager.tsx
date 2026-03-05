@@ -102,7 +102,7 @@ export function ExportManager() {
     };
 
     return (
-        <div className="card-elevated p-8 space-y-6">
+        <div className="card-elevated p-4 md:p-8 space-y-6">
             <div className="flex items-center gap-4 mb-2">
                 <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                     <FileText className="w-6 h-6" />

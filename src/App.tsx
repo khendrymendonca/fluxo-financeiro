@@ -39,18 +39,22 @@ const AppRoutes = () => {
   );
 };
 
+import { ThemeProvider } from "./hooks/useTheme";
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AuthProvider>
-        <FinanceProvider>
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </FinanceProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <Toaster />
+        <Sonner />
+        <AuthProvider>
+          <FinanceProvider>
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </FinanceProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

@@ -32,7 +32,12 @@ const navItems = [
   { id: 'simulator', icon: Calculator, label: 'Simulador', path: '/simulator' },
 ];
 
+import { useTheme } from '@/hooks/useTheme';
+import { Palette, Sun, Moon } from 'lucide-react';
+
 export function NavigationRail({ currentView, onNavigate }: NavigationRailProps) {
+  const { theme, setTheme } = useTheme();
+
   return (
     <nav className="hidden md:flex flex-col items-center py-6 px-2 bg-card border-r border-border w-20 shrink-0">
       <div className="mb-8">
@@ -66,6 +71,22 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
             </button>
           );
         })}
+      </div>
+
+      {/* Theme Switcher at bottom */}
+      <div className="mt-auto pt-4 flex flex-col gap-2">
+        <button
+          onClick={() => setTheme(theme === 'original' ? 'green-black' : 'original')}
+          className="nav-rail-item group relative"
+          title="Mudar Tema"
+        >
+          {theme === 'original' ? <Palette className="w-5 h-5" /> : <Sun className="w-5 h-5 text-primary" />}
+          <span className="text-[10px] font-medium">Tema</span>
+
+          <div className="absolute left-full ml-2 px-2 py-1 bg-foreground text-background text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+            {theme === 'original' ? 'Tema Verde-Black' : 'Tema Original'}
+          </div>
+        </button>
       </div>
     </nav>
   );

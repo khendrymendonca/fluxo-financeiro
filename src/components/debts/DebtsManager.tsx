@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 interface DebtsManagerProps {
   debts: Debt[];
-  onAddDebt: (debt: Omit<Debt, 'id'>) => void;
+  onAddDebt: (debt: Omit<Debt, 'id' | 'userId'>) => void;
   onUpdateDebt: (id: string, updates: Partial<Debt>) => void;
   onDeleteDebt: (id: string) => void;
 }
@@ -49,7 +49,6 @@ export function DebtsManager({
       minimumPayment: parseFloat(minimumPayment) || undefined,
       dueDay: parseInt(dueDay) || undefined,
       startDate: new Date().toISOString(),
-      userId: '', // handled by store
     });
 
     setName('');

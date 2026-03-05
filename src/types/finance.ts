@@ -71,6 +71,7 @@ export interface CreditCard {
   closingDay: number;
   dueDay: number;
   color: string;
+  isClosingDateFixed: boolean;
   history?: InvoiceConfig[];
 }
 

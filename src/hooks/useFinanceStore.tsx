@@ -413,10 +413,11 @@ function useFinanceProvider() {
         due_day: card.dueDay,
         closing_day: card.closingDay,
         color: card.color,
+        is_closing_date_fixed: card.isClosingDateFixed,
         history: card.history || []
       }).select().single();
       if (error) throw error;
-      const newCard = { ...data, dueDay: data.due_day, closingDay: data.closing_day };
+      const newCard = { ...data, dueDay: data.due_day, closingDay: data.closing_day, isClosingDateFixed: data.is_closing_date_fixed };
       setState(prev => ({ ...prev, creditCards: [...prev.creditCards, newCard] }));
     } catch (err) { toast({ title: 'Erro ao criar cartão', variant: 'destructive' }); }
   }, []);
@@ -430,6 +431,7 @@ function useFinanceProvider() {
         due_day: card.dueDay,
         closing_day: card.closingDay,
         color: card.color,
+        is_closing_date_fixed: card.isClosingDateFixed,
         history: card.history
       }).eq('id', card.id);
       setState(prev => ({ ...prev, creditCards: prev.creditCards.map(c => c.id === card.id ? card : c) }));
@@ -462,19 +464,30 @@ function useFinanceProvider() {
     } catch (err) { toast({ title: 'Erro ao criar meta', variant: 'destructive' }); }
   }, []);
 
-  const updateGoalProgress = async (id: string, amountAdded: number) => {
+  const depositToGoal = useCallback(async (goalId: string, amount: number, accountId: string) => {
     try {
-      const { data: goal } = await supabase.from('savings_goals').select('current_amount').eq('id', id).single();
-      if (goal) {
-        const newAmount = Number(goal.current_amount) + Number(amountAdded);
-        await supabase.from('savings_goals').update({ current_amount: newAmount }).eq('id', id);
-        setState(prev => ({
-          ...prev,
-          savingsGoals: prev.savingsGoals.map(g => g.id === id ? { ...g, currentAmount: newAmount } : g)
-        }));
-      }
-    } catch (err) { console.error(err); }
-  };
+      const { data: goal } = await supabase.from('savings_goals').select('current_amount, name').eq('id', goalId).single();
+      if (!goal) return;
+
+      const newAmount = Number(goal.current_amount) + Number(amount);
+
+      // Update Goal
+      const { error: goalError } = await supabase.from('savings_goals').update({ current_amount: newAmount }).eq('id', goalId);
+      if (goalError) throw goalError;
+
+      // Update Account Balance (Debit)
+      await updateAccountBalance(accountId, -amount);
+
+      setState(prev => ({
+        ...prev,
+        savingsGoals: prev.savingsGoals.map(g => g.id === goalId ? { ...g, currentAmount: newAmount } : g)
+      }));
+
+      toast({ title: `R$ ${amount.toFixed(2)} guardados na meta ${goal.name}` });
+    } catch (err) {
+      toast({ title: 'Erro ao processar depósito', variant: 'destructive' });
+    }
+  }, [updateAccountBalance]);
 
   const updateSavingsGoal = useCallback(async (id: string, updates: Partial<SavingsGoal>) => {
     try {
@@ -698,6 +711,57 @@ function useFinanceProvider() {
     } catch (err) { toast({ title: 'Erro ao remover conta', variant: 'destructive' }); }
   }, []);
 
+  const payBill = useCallback(async (billId: string, accountId: string, paymentDate: string) => {
+    try {
+      const bill = state.bills.find(b => b.id === billId);
+      if (!bill) return;
+
+      // 1. Update the bill status
+      await updateBill(billId, {
+        status: 'paid',
+        paymentDate,
+        accountId
+      });
+
+      // 2. Create the associated transaction
+      await addTransaction({
+        date: paymentDate,
+        description: `Pgto: ${bill.name}`,
+        amount: bill.amount,
+        type: bill.type === 'payable' ? 'expense' : 'income',
+        transactionType: 'punctual',
+        categoryId: bill.categoryId,
+        subcategoryId: bill.subcategoryId,
+        accountId: accountId,
+        isPaid: true,
+        userId: bill.userId
+      });
+
+      // 3. If fixed, create next month
+      if (bill.isFixed) {
+        const nextDate = new Date(bill.dueDate);
+        nextDate.setMonth(nextDate.getMonth() + 1);
+
+        await addBill({
+          name: bill.name,
+          amount: bill.amount,
+          type: bill.type,
+          dueDate: nextDate.toISOString().split('T')[0],
+          status: 'pending',
+          categoryId: bill.categoryId,
+          subcategoryId: bill.subcategoryId,
+          isFixed: true,
+          accountId: accountId
+        });
+      }
+
+      toast({ title: 'Pagamento registrado e fluxo atualizado!' });
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Erro ao processar pagamento', variant: 'destructive' });
+    }
+  }, [state.bills, updateBill, addTransaction, addBill]);
+
   const seedCoach = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -900,6 +964,7 @@ function useFinanceProvider() {
     addBill,
     updateBill,
     deleteBill,
+    payBill,
     fetchInitialData,
     addTransaction,
     updateTransaction,
@@ -914,6 +979,7 @@ function useFinanceProvider() {
     addSavingsGoal,
     updateSavingsGoal,
     deleteSavingsGoal,
+    depositToGoal,
     addDebt,
     updateDebt,
     deleteDebt,

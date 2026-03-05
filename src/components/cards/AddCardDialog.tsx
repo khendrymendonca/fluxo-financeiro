@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 interface AddCardDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onAdd: (card: Omit<CreditCard, 'id'>) => void;
+    onAdd: (card: Omit<CreditCard, 'id' | 'userId'>) => void;
 }
 
 const COLORS = [
@@ -23,6 +23,7 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
     const [color, setColor] = useState(COLORS[0]);
     const [dueDay, setDueDay] = useState('10');
     const [closingDay, setClosingDay] = useState('3');
+    const [isClosingDateFixed, setIsClosingDateFixed] = useState(true);
 
     if (!isOpen) return null;
 
@@ -38,6 +39,7 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
             color,
             dueDay: parseInt(dueDay),
             closingDay: parseInt(closingDay),
+            isClosingDateFixed,
         });
 
         // Reset form

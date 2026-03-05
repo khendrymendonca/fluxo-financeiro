@@ -8,70 +8,51 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
+
+  /* Common variables (Radius, Elevation, etc) */
   :root {
-    /* Material You Inspired Pastel Palette */
-    --background: 210 20% 98%;
-    --foreground: 220 20% 15%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 220 20% 15%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 15%;
-
-    /* Primary - Soft Teal */
-    --primary: 174 60% 45%;
-    --primary-foreground: 0 0% 100%;
-    --primary-light: 174 55% 92%;
-    --primary-muted: 174 40% 70%;
-
-    /* Secondary - Soft Lavender */
-    --secondary: 260 45% 92%;
-    --secondary-foreground: 260 40% 30%;
-
-    /* Success - Pastel Green */
-    --success: 145 55% 48%;
-    --success-foreground: 0 0% 100%;
-    --success-light: 145 50% 92%;
-
-    /* Danger - Soft Coral */
-    --danger: 0 70% 60%;
-    --danger-foreground: 0 0% 100%;
-    --danger-light: 0 65% 94%;
-
-    /* Warning - Soft Amber */
-    --warning: 38 90% 55%;
-    --warning-foreground: 38 90% 20%;
-    --warning-light: 38 80% 92%;
-
-    /* Info - Soft Blue */
-    --info: 210 80% 55%;
-    --info-foreground: 0 0% 100%;
-    --info-light: 210 70% 94%;
-
-    --muted: 220 15% 94%;
-    --muted-foreground: 220 10% 45%;
-
-    --accent: 174 55% 92%;
-    --accent-foreground: 174 60% 30%;
-
-    --destructive: 0 70% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 15% 90%;
-    --input: 220 15% 90%;
-    --ring: 174 60% 45%;
-
-    /* Material Design 3 - Larger radius for that soft feel */
     --radius: 1rem;
-
-    /* Elevation shadows - Material Design style */
     --shadow-sm: 0 1px 2px 0 hsl(220 20% 15% / 0.05);
     --shadow-md: 0 4px 6px -1px hsl(220 20% 15% / 0.08), 0 2px 4px -2px hsl(220 20% 15% / 0.05);
     --shadow-lg: 0 10px 15px -3px hsl(220 20% 15% / 0.1), 0 4px 6px -4px hsl(220 20% 15% / 0.05);
     --shadow-xl: 0 20px 25px -5px hsl(220 20% 15% / 0.1), 0 8px 10px -6px hsl(220 20% 15% / 0.05);
+  }
 
-    /* Sidebar */
+  /* Theme Original (Material You Pastel) */
+  .theme-original {
+    --background: 210 20% 98%;
+    --foreground: 220 20% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 15%;
+    --primary: 174 60% 45%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 174 55% 92%;
+    --primary-muted: 174 40% 70%;
+    --secondary: 260 45% 92%;
+    --secondary-foreground: 260 40% 30%;
+    --success: 145 55% 48%;
+    --success-foreground: 0 0% 100%;
+    --success-light: 145 50% 92%;
+    --danger: 0 70% 60%;
+    --danger-foreground: 0 0% 100%;
+    --danger-light: 0 65% 94%;
+    --warning: 38 90% 55%;
+    --warning-foreground: 38 90% 20%;
+    --warning-light: 38 80% 92%;
+    --info: 210 80% 55%;
+    --info-foreground: 0 0% 100%;
+    --info-light: 210 70% 94%;
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 10% 45%;
+    --accent: 174 55% 92%;
+    --accent-foreground: 174 60% 30%;
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+    --ring: 174 60% 45%;
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 20% 35%;
     --sidebar-primary: 174 60% 45%;
@@ -82,62 +63,61 @@
     --sidebar-ring: 174 60% 45%;
   }
 
-  .dark {
-    /* Chumbo / Lead Dark Mode - Avoids pure black */
-    --background: 220 18% 18%; /* Chumbo escuro / Dark Lead */
-    --foreground: 210 20% 95%;
-
-    --card: 220 18% 22%; /* Slightly lighter lead for cards */
-    --card-foreground: 210 20% 95%;
-
-    --popover: 220 18% 14%;
-    --popover-foreground: 210 20% 95%;
-
-    --primary: 174 55% 55%;
-    --primary-foreground: 220 20% 10%;
-    --primary-light: 174 40% 20%;
-    --primary-muted: 174 35% 40%;
-
-    --secondary: 260 30% 25%;
-    --secondary-foreground: 260 40% 90%;
-
-    --success: 145 50% 50%;
-    --success-foreground: 145 50% 10%;
-    --success-light: 145 40% 18%;
-
-    --danger: 0 60% 55%;
-    --danger-foreground: 0 70% 95%;
-    --danger-light: 0 50% 20%;
-
-    --warning: 38 80% 50%;
-    --warning-foreground: 38 90% 10%;
-    --warning-light: 38 60% 20%;
-
-    --info: 210 70% 55%;
-    --info-foreground: 210 70% 10%;
-    --info-light: 210 50% 20%;
-
-    --muted: 220 15% 20%;
-    --muted-foreground: 220 10% 60%;
-
-    --accent: 174 40% 20%;
-    --accent-foreground: 174 55% 85%;
-
+  /* Theme Verde-Black (Premium Matrix Style) */
+  .theme-green-black {
+    --background: 45 17% 6%;
+    /* #0F0E0B - Quase Preto */
+    --foreground: 84 50% 95%;
+    /* Off-white esverdeado */
+    --card: 104 95% 8%;
+    /* #082901 - Verde Profundo */
+    --card-foreground: 84 50% 95%;
+    --popover: 104 95% 5%;
+    --popover-foreground: 84 50% 95%;
+    --primary: 84 51% 51%;
+    /* #8FBF45 - Verde Lima Vibrante */
+    --primary-foreground: 104 95% 5%;
+    --primary-light: 84 51% 15%;
+    --primary-muted: 84 40% 30%;
+    --secondary: 98 100% 12%;
+    /* #184000 - Verde Escuro Meta */
+    --secondary-foreground: 84 50% 95%;
+    --success: 84 51% 51%;
+    --success-foreground: 104 95% 5%;
+    --success-light: 84 51% 10%;
+    --danger: 0 70% 55%;
+    --danger-foreground: 0 0% 100%;
+    --danger-light: 0 50% 15%;
+    --warning: 45 90% 50%;
+    --warning-foreground: 45 90% 10%;
+    --warning-light: 45 60% 15%;
+    --info: 190 80% 50%;
+    --info-foreground: 190 80% 10%;
+    --info-light: 190 60% 15%;
+    --muted: 104 30% 15%;
+    --muted-foreground: 84 20% 65%;
+    --accent: 84 51% 20%;
+    --accent-foreground: 84 51% 90%;
     --destructive: 0 60% 50%;
     --destructive-foreground: 0 0% 95%;
+    --border: 91 47% 37%;
+    /* #5C8B32 - Verde Médio */
+    --input: 104 40% 12%;
+    --ring: 84 51% 51%;
+    --sidebar-background: 104 95% 6%;
+    --sidebar-foreground: 84 30% 85%;
+    --sidebar-primary: 84 51% 51%;
+    --sidebar-primary-foreground: 104 95% 5%;
+    --sidebar-accent: 84 51% 12%;
+    --sidebar-accent-foreground: 84 51% 95%;
+    --sidebar-border: 91 40% 20%;
+    --sidebar-ring: 84 51% 51%;
+  }
 
-    --border: 220 15% 22%;
-    --input: 220 15% 22%;
-    --ring: 174 55% 55%;
-
-    --sidebar-background: 220 18% 12%;
-    --sidebar-foreground: 210 15% 75%;
-    --sidebar-primary: 174 55% 55%;
-    --sidebar-primary-foreground: 220 20% 10%;
-    --sidebar-accent: 174 40% 18%;
-    --sidebar-accent-foreground: 174 55% 85%;
-    --sidebar-border: 220 15% 20%;
-    --sidebar-ring: 174 55% 55%;
+  /* Dynamic shadows for Verde-Black */
+  .theme-green-black {
+    --shadow-md: 0 4px 12px -2px hsl(84 51% 5% / 0.5);
+    --shadow-lg: 0 10px 25px -5px hsl(84 51% 5% / 0.6);
   }
 }
 
@@ -167,6 +147,7 @@
 }
 
 @layer components {
+
   /* Material Design Card Elevation */
   .card-elevated {
     @apply bg-card rounded-2xl shadow-md border-0;
@@ -247,6 +228,7 @@
 }
 
 @layer utilities {
+
   /* Custom color utilities */
   .text-success {
     color: hsl(var(--success));
@@ -291,18 +273,39 @@
 
   /* Animations */
   @keyframes fade-in {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   @keyframes scale-in {
-    from { opacity: 0; transform: scale(0.9); }
-    to { opacity: 1; transform: scale(1); }
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 
   @keyframes slide-up {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .animate-fade-in {

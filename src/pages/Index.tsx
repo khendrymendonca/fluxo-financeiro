@@ -67,7 +67,10 @@ export default function Index() {
     addSavingsGoal,
     updateSavingsGoal,
     deleteSavingsGoal,
+    depositToGoal,
     categories,
+    bills,
+    payBill,
     seedCoach,
     loading
   } = useFinanceStore();
@@ -87,7 +90,7 @@ export default function Index() {
     switch (currentView) {
       case 'dashboard':
         return (
-          <div className="space-y-6 animate-fade-in pb-20">
+          <div className="space-y-6 animate-fade-in">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight text-primary font-mono lowercase">Fluxo</h1>
@@ -180,7 +183,7 @@ export default function Index() {
 
       case 'transactions':
         return (
-          <div className="space-y-6 animate-fade-in pb-20">
+          <div className="space-y-6 animate-fade-in">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Lançamentos</h1>
@@ -195,8 +198,10 @@ export default function Index() {
             </div>
             <TransactionList
               transactions={currentMonthTransactions}
+              bills={bills}
               onDelete={deleteTransaction}
               onEdit={handleEditTransaction}
+              onPayBill={payBill}
             />
           </div>
         );
@@ -206,22 +211,18 @@ export default function Index() {
 
       case 'accounts':
         return (
-          <div className="space-y-6 animate-fade-in pb-20">
+          <div className="space-y-6 animate-fade-in">
             <AccountsManager
               accounts={accounts}
-              creditCards={creditCards}
-              getCardExpenses={getCardExpenses}
               onAddAccount={addAccount}
               onDeleteAccount={deleteAccount}
-              onAddCard={addCreditCard}
-              onDeleteCard={deleteCreditCard}
             />
           </div>
         );
 
       case 'goals':
         return (
-          <div className="space-y-6 animate-fade-in pb-20">
+          <div className="space-y-6 animate-fade-in">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Metas</h1>
@@ -236,8 +237,10 @@ export default function Index() {
                 <GoalCard
                   key={goal.id}
                   goal={goal}
+                  accounts={accounts}
                   onDelete={() => deleteSavingsGoal(goal.id)}
                   onUpdate={(id, updates) => updateSavingsGoal(id, updates)}
+                  onDeposit={depositToGoal}
                 />
               ))}
             </div>
@@ -290,7 +293,7 @@ export default function Index() {
         <MobileNav currentView={currentView} onNavigate={(view: any) => setCurrentView(view)} />
       </div>
 
-      <main className="flex-1 md:pl-20 px-4 py-8 md:p-8 w-full max-w-7xl mx-auto overflow-x-hidden">
+      <main className="flex-1 md:pl-20 px-4 pt-6 pb-24 md:p-8 w-full max-w-7xl mx-auto overflow-x-hidden">
         {renderView()}
       </main>
 
