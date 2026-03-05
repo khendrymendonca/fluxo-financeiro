@@ -93,18 +93,37 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     setCustomInstallmentDates(newInst);
   };
 
+  // Auto-suggestion logic
+  useEffect(() => {
+    if (!categoryId && description.length > 3 && categories.length > 0) {
+      const desc = description.toLowerCase();
+      const suggestion = categories.find(c => {
+        const catName = c.name.toLowerCase();
+        if (desc.includes(catName)) return true;
+        if (c.name === 'Alimentação' && (desc.includes('ifood') || desc.includes('restaurante') || desc.includes('mercado'))) return true;
+        if (c.name === 'Transporte' && (desc.includes('uber') || desc.includes('99') || desc.includes('posto') || desc.includes('combustivel'))) return true;
+        if (c.name === 'Assinaturas' && (desc.includes('netflix') || desc.includes('spotify') || desc.includes('disney') || desc.includes('prime'))) return true;
+        if (c.name === 'Moradia' && (desc.includes('aluguel') || desc.includes('condominio') || desc.includes('energia') || desc.includes('agua'))) return true;
+        return false;
+      });
+
+      if (suggestion) {
+        setCategoryId(suggestion.id);
+      }
+    }
+  }, [description, categories, categoryId]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validations based on tabs
     if (activeTab === 'divida') {
       if (!description || !debtTotal || !debtInstallments) return;
       createDebtWithInstallments({
         name: description,
         totalAmount: parseFloat(debtTotal),
-        remainingAmount: parseFloat(debtTotal), // Starts full
+        remainingAmount: parseFloat(debtTotal),
         monthlyPayment: parseFloat(debtTotal) / parseInt(debtInstallments),
-        interestRateMonthly: 0, // Simplified for this view
+        interestRateMonthly: 0,
         startDate: new Date().toISOString(),
         userId: '',
       }, debtFirstPaymentDate);
@@ -116,12 +135,9 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
     let finalCustomInstallments = undefined;
 
-    // Logic for Manual Installments
     if (activeTab === 'parcelamento') {
       if (!areInstallmentsEqual || !fixedPaymentDay) {
-        // Use custom logic
         if (customInstallmentDates.length === 0) {
-          // Should have been generated, but if not:
           const count = parseInt(installmentsCount) || 2;
           const baseAmount = parseFloat(amount) || 0;
           const val = baseAmount / count;
@@ -141,30 +157,6 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       }
     }
 
-    // Auto-suggestion logic
-    useEffect(() => {
-      if (!categoryId && description.length > 3 && categories.length > 0) {
-        const desc = description.toLowerCase();
-        // Simple mapping for common items
-        const suggestion = categories.find(c => {
-          const catName = c.name.toLowerCase();
-          if (desc.includes(catName)) return true;
-
-          // Contextual mapping
-          if (c.name === 'Alimentação' && (desc.includes('ifood') || desc.includes('restaurante') || desc.includes('mercado'))) return true;
-          if (c.name === 'Transporte' && (desc.includes('uber') || desc.includes('99') || desc.includes('posto') || desc.includes('combustivel'))) return true;
-          if (c.name === 'Assinaturas' && (desc.includes('netflix') || desc.includes('spotify') || desc.includes('disney') || desc.includes('prime'))) return true;
-          if (c.name === 'Moradia' && (desc.includes('aluguel') || desc.includes('condominio') || desc.includes('energia') || desc.includes('agua'))) return true;
-
-          return false;
-        });
-
-        if (suggestion) {
-          setCategoryId(suggestion.id);
-        }
-      }
-    }, [description, categories, categoryId]);
-
     onSubmit({
       type,
       transactionType: activeTab === 'parcelamento' ? 'installment' : activeTab === 'fixo' ? 'recurring' : 'punctual',
@@ -181,7 +173,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       debtId: selectedDebtId || undefined,
       invoiceMonthYear: (paymentMethod === 'card' && type === 'expense') ? invoiceReference : undefined,
       isPaid: new Date(date) <= new Date(),
-      userId: initialData?.userId || '' // Will be handled by store
+      userId: initialData?.userId || ''
     }, finalCustomInstallments);
 
     onClose();

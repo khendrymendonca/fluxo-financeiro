@@ -8,6 +8,14 @@ import { toast } from '@/components/ui/use-toast';
 export function HabitTracker() {
     const { habits, habitLogs, fetchInitialData } = useFinanceStore();
 
+    const getStartOfWeek = () => {
+        const d = new Date();
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Monday start
+        return new Date(d.setDate(diff)).toISOString().split('T')[0];
+    };
+
+    const startOfWeek = getStartOfWeek();
     const today = new Date().toISOString().split('T')[0];
 
     const logHabit = async (habitId: string) => {
@@ -29,14 +37,23 @@ export function HabitTracker() {
     };
 
     const getHabitStatus = (habitId: string) => {
-        return habitLogs.some(log => log.habitId === habitId && log.loggedDate === today);
+        // Find if any log exists for this week
+        return habitLogs.some(log => log.habitId === habitId && log.loggedDate >= startOfWeek);
     };
 
-    // Cálculo de Streak (simplificado para demonstração)
     const calculateStreak = (habitId: string) => {
-        // Aqui viria uma lógica real de contagem de dias seguidos no habitLogs
-        const count = habitLogs.filter(l => l.habitId === habitId && l.status === 'completed').length;
-        return count;
+        // Simplified: count unique weeks logged
+        // Real streak would check consecutive weeks
+        const uniqueWeeks = new Set(
+            habitLogs
+                .filter(l => l.habitId === habitId && l.status === 'completed')
+                .map(l => {
+                    const d = new Date(l.loggedDate);
+                    const start = d.getDate() - d.getDay() + (d.getDay() === 0 ? -6 : 1);
+                    return new Date(d.setDate(start)).toISOString().split('T')[0];
+                })
+        );
+        return uniqueWeeks.size;
     };
 
     const levels = [
@@ -71,7 +88,7 @@ export function HabitTracker() {
             <div className="space-y-4">
                 <p className="text-sm font-semibold flex items-center gap-2">
                     <Target className="w-4 h-4 text-primary" />
-                    Missões de Hoje
+                    Missões da Semana
                 </p>
 
                 {habits.length === 0 ? (
@@ -106,7 +123,7 @@ export function HabitTracker() {
                                         </p>
                                         <div className="flex items-center gap-1.5 mt-0.5">
                                             <Flame className={cn("w-3 h-3", streak > 0 ? "text-orange-500" : "text-muted-foreground")} />
-                                            <span className="text-[10px] font-bold text-muted-foreground">{streak} dias seguidos</span>
+                                            <span className="text-[10px] font-bold text-muted-foreground">{streak} semanas seguidas</span>
                                         </div>
                                     </div>
                                 </div>
@@ -143,6 +160,6 @@ export function HabitTracker() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
