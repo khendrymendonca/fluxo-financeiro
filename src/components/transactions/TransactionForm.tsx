@@ -20,7 +20,7 @@ interface TransactionFormProps {
   accounts: Account[];
   creditCards: CreditCardType[];
   initialData?: Transaction;
-  onSubmit: (transaction: Omit<Transaction, 'id'>, customInstallments?: { date: string, amount: number }[]) => void;
+  onSubmit: (transaction: Omit<Transaction, 'id'>, customInstallments?: { date: string, amount: number }[], applyToFuture?: boolean) => void;
   onClose: () => void;
 }
 
@@ -57,6 +57,9 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
   // Invoice Specifics
   const [invoiceReference, setInvoiceReference] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+
+  const [applyToFuture, setApplyToFuture] = useState(false);
+  const [isPaidLocally, setIsPaidLocally] = useState(initialData?.isPaid || false);
 
   const { debts, createDebtWithInstallments, categories, subcategories } = useFinanceStore();
 
@@ -172,9 +175,9 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       recurrence: activeTab === 'fixo' ? recurrence : undefined,
       debtId: selectedDebtId || undefined,
       invoiceMonthYear: (paymentMethod === 'card' && type === 'expense') ? invoiceReference : undefined,
-      isPaid: new Date(date) <= new Date(),
+      isPaid: initialData ? isPaidLocally : (new Date(date) <= new Date()),
       userId: initialData?.userId || ''
-    }, finalCustomInstallments);
+    }, finalCustomInstallments, applyToFuture);
 
     onClose();
   };
@@ -562,6 +565,21 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     </div>
                   )}
                 </>
+              )}
+              {/* Bulk Edit Option */}
+              {initialData?.installmentGroupId && (
+                <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-xl border border-primary/20">
+                  <input
+                    type="checkbox"
+                    id="apply-future"
+                    checked={applyToFuture}
+                    onChange={e => setApplyToFuture(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <Label htmlFor="apply-future" className="text-xs cursor-pointer">
+                    Atualizar também todas as parcelas futuras ({initialData.installmentNumber}/{initialData.installmentTotal})
+                  </Label>
+                </div>
               )}
             </>
           )}

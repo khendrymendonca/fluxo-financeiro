@@ -72,6 +72,7 @@ export interface CreditCard {
   dueDay: number;
   color: string;
   isClosingDateFixed: boolean;
+  isActive: boolean;
   history?: InvoiceConfig[];
 }
 
@@ -121,6 +122,7 @@ export interface Bill {
   status: BillStatus;
   isFixed: boolean;
   recurrenceRule?: string;
+  startDate?: string;
 }
 
 export interface BudgetRule {

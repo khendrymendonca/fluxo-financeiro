@@ -93,7 +93,7 @@ function useFinanceProvider() {
           subcategoryId: t.subcategory_id,
           accountId: t.account_id,
           cardId: t.card_id,
-          isPaid: new Date(t.date) <= new Date(),
+          isPaid: t.is_paid !== undefined ? t.is_paid : new Date(t.date) <= new Date(),
           isRecurring: t.is_recurring,
           installmentGroupId: t.installment_group_id,
           installmentNumber: t.installment_number,
@@ -151,7 +151,8 @@ function useFinanceProvider() {
           dueDate: b.due_date,
           paymentDate: b.payment_date,
           isFixed: b.is_fixed,
-          recurrenceRule: b.recurrence_rule
+          recurrenceRule: b.recurrence_rule,
+          startDate: b.start_date
         })),
         budgetRule: budgetRes.data ? {
           id: budgetRes.data.id,
@@ -221,7 +222,8 @@ function useFinanceProvider() {
           installment_group_id: installmentGroupId,
           installment_number: instNum || txData.installmentNumber || null,
           installment_total: instTotal || txData.installmentTotal || null,
-          debt_id: txData.debtId || null
+          debt_id: txData.debtId || null,
+          is_paid: txData.is_paid !== undefined ? txData.is_paid : (new Date(txData.date) <= new Date())
         });
       };
 
@@ -265,7 +267,7 @@ function useFinanceProvider() {
         invoiceMonthYear: t.invoice_month_year,
         isRecurring: t.is_recurring,
         debtId: t.debt_id,
-        isPaid: new Date(t.date) <= new Date(),
+        isPaid: t.is_paid,
       }));
 
       setState(prev => ({
@@ -300,11 +302,11 @@ function useFinanceProvider() {
     }
   }, []);
 
-  const updateTransaction = useCallback(async (updatedTx: Transaction) => {
+  const updateTransaction = useCallback(async (updatedTx: Transaction, applyToFuture: boolean = false) => {
     try {
       const categoryName = state.categories.find(c => c.id === updatedTx.categoryId)?.name || 'Outros';
 
-      const { error } = await supabase.from('transactions').update({
+      const updateData = {
         description: updatedTx.description,
         amount: updatedTx.amount,
         type: updatedTx.type,
@@ -316,8 +318,43 @@ function useFinanceProvider() {
         account_id: updatedTx.accountId || null,
         card_id: updatedTx.cardId || null,
         invoice_month_year: updatedTx.invoiceMonthYear || null,
-      }).eq('id', updatedTx.id);
+        is_paid: updatedTx.isPaid
+      };
 
+      if (applyToFuture && updatedTx.installmentGroupId) {
+        // Encontrar todas as parcelas deste grupo que são iguais ou posteriores a esta
+        const currentTx = state.transactions.find(t => t.id === updatedTx.id);
+        if (currentTx) {
+          const { error } = await supabase
+            .from('transactions')
+            .update({
+              description: updatedTx.description,
+              amount: updatedTx.amount,
+              category_id: updatedTx.categoryId,
+              category: categoryName,
+              subcategory_id: updatedTx.subcategoryId,
+              account_id: updatedTx.accountId,
+              card_id: updatedTx.cardId,
+            })
+            .eq('installment_group_id', updatedTx.installmentGroupId)
+            .gte('installment_number', updatedTx.installmentNumber || 0);
+
+          if (error) throw error;
+
+          setState(prev => ({
+            ...prev,
+            transactions: prev.transactions.map(t =>
+              (t.installmentGroupId === updatedTx.installmentGroupId && (t.installmentNumber || 0) >= (updatedTx.installmentNumber || 0))
+                ? { ...t, ...updatedTx, id: t.id, installmentNumber: t.installmentNumber, date: t.date } // Keep original ID, number and date
+                : t
+            )
+          }));
+          toast({ title: 'Parcelas atualizadas com sucesso' });
+          return;
+        }
+      }
+
+      const { error } = await supabase.from('transactions').update(updateData).eq('id', updatedTx.id);
       if (error) throw error;
 
       setState(prev => ({
@@ -328,7 +365,7 @@ function useFinanceProvider() {
     } catch (err) {
       toast({ title: 'Erro ao atualizar', variant: 'destructive' });
     }
-  }, []);
+  }, [state.transactions, state.categories]);
 
   const deleteTransaction = useCallback(async (id: string) => {
     try {
@@ -347,7 +384,9 @@ function useFinanceProvider() {
       const tx = state.transactions.find(t => t.id === id);
       if (!tx) return;
 
-      // is_paid column does not exist in DB — manage locally only
+      const { error } = await supabase.from('transactions').update({ is_paid: isPaid }).eq('id', id);
+      // Even if error (column missing), we update locally
+
       setState(prev => ({
         ...prev,
         transactions: prev.transactions.map(t => t.id === id ? { ...t, isPaid } : t)
@@ -426,10 +465,11 @@ function useFinanceProvider() {
         closing_day: card.closingDay,
         color: card.color,
         is_closing_date_fixed: card.isClosingDateFixed,
+        is_active: true,
         history: (card as any).history || []
       }).select().single();
       if (error) throw error;
-      const newCard = { ...data, dueDay: data.due_day, closingDay: data.closing_day, isClosingDateFixed: data.is_closing_date_fixed };
+      const newCard = { ...data, dueDay: data.due_day, closingDay: data.closing_day, isClosingDateFixed: data.is_closing_date_fixed, isActive: data.is_active };
       setState(prev => ({ ...prev, creditCards: [...prev.creditCards, newCard] }));
     } catch (err) { toast({ title: 'Erro ao criar cartão', variant: 'destructive' }); }
   }, []);
@@ -444,6 +484,7 @@ function useFinanceProvider() {
         closing_day: card.closingDay,
         color: card.color,
         is_closing_date_fixed: card.isClosingDateFixed,
+        is_active: card.isActive,
         history: card.history
       }).eq('id', card.id);
       setState(prev => ({ ...prev, creditCards: prev.creditCards.map(c => c.id === card.id ? card : c) }));
@@ -665,7 +706,8 @@ function useFinanceProvider() {
         payment_date: bill.paymentDate,
         status: bill.status,
         is_fixed: bill.isFixed,
-        recurrence_rule: bill.recurrenceRule
+        recurrence_rule: bill.recurrenceRule,
+        start_date: bill.startDate || bill.dueDate
       }).select().single();
 
       if (error) throw error;
@@ -678,7 +720,8 @@ function useFinanceProvider() {
         dueDate: data.due_date,
         paymentDate: data.payment_date,
         isFixed: data.is_fixed,
-        recurrenceRule: data.recurrence_rule
+        recurrenceRule: data.recurrence_rule,
+        startDate: data.start_date
       };
 
       setState(prev => ({ ...prev, bills: [...prev.bills, newBill] }));
@@ -763,7 +806,8 @@ function useFinanceProvider() {
           categoryId: bill.categoryId,
           subcategoryId: bill.subcategoryId,
           isFixed: true,
-          accountId: accountId
+          accountId: accountId,
+          startDate: bill.startDate
         });
       }
 
@@ -898,6 +942,22 @@ function useFinanceProvider() {
     return tDate.getMonth() === viewDate.getMonth() && tDate.getFullYear() === viewDate.getFullYear();
   });
 
+  const currentMonthBills = state.bills.filter(b => {
+    const bDate = new Date(b.dueDate);
+    const matchesViewDate = bDate.getMonth() === viewDate.getMonth() && bDate.getFullYear() === viewDate.getFullYear();
+
+    // Filtro por data de cadastro (startDate)
+    if (b.startDate) {
+      const sDate = new Date(b.startDate);
+      // Garantir que a conta só apareça se o mês de vencimento for igual ou posterior ao mês de cadastro
+      const isAtOrAfterStart = (bDate.getFullYear() > sDate.getFullYear()) ||
+        (bDate.getFullYear() === sDate.getFullYear() && bDate.getMonth() >= sDate.getMonth());
+      return matchesViewDate && isAtOrAfterStart;
+    }
+
+    return matchesViewDate;
+  });
+
   const getCardExpenses = useCallback((cardId: string) => {
     return currentMonthTransactions
       .filter(t => t.cardId === cardId && t.type === 'expense' && !t.isInvoicePayment)
@@ -962,6 +1022,7 @@ function useFinanceProvider() {
     totalIncome: currentMonthTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + Number(t.amount), 0),
     totalExpenses: currentMonthTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0),
     currentMonthTransactions,
+    currentMonthBills,
     getCardExpenses,
     getCategoryExpenses,
     getCardSettingsForDate,

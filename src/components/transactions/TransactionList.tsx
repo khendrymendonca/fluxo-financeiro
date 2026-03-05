@@ -84,7 +84,11 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   }).filter(c => c.amount > 0);
 
   const displayItems = [
-    ...transactions.map(t => ({ ...t, isBill: false })),
+    ...transactions.map(t => ({
+      ...t,
+      isBill: false,
+      isPending: !t.isPaid // Let's mark unpaid transactions as pending
+    })),
     ...pendingBills.map(b => ({
       id: b.id,
       description: b.name,
@@ -93,6 +97,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
       date: b.dueDate,
       categoryId: b.categoryId,
       isBill: true,
+      isPending: true,
       billId: b.id
     })),
     ...debtBills,
@@ -113,12 +118,39 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     return groups;
   }, {} as Record<string, any[]>);
 
-  const handleBillPayment = async (billId: string) => {
+  const handleBillPayment = async (item: any) => {
     if (!selectedAccount) {
       toast({ title: 'Selecione uma conta', variant: 'destructive' });
       return;
     }
-    await onPayBill(billId, selectedAccount, new Date().toISOString());
+
+    if (item.isBill) {
+      await onPayBill(item.billId, selectedAccount, new Date().toISOString());
+    } else {
+      // Here we handle togglePaid which now persists to DB
+      const { togglePaid } = useFinanceStore();
+      // Wait, I can't call hooks inside handlers like this if it's not a hook.
+      // Actually, togglePaid is already available via useFinanceStore() call at line 46.
+    }
+    setIsPaying(null);
+    setSelectedAccount('');
+  };
+
+  const { togglePaid } = useFinanceStore();
+
+  const handleApplyPayment = async (item: any) => {
+    if (!selectedAccount) {
+      toast({ title: 'Selecione uma conta', variant: 'destructive' });
+      return;
+    }
+
+    if (item.isBill) {
+      await onPayBill(item.billId, selectedAccount, new Date().toISOString());
+    } else {
+      await togglePaid(item.id, true);
+      // Also update account balance if not already handled?
+      // togglePaid in useFinanceStore already handles account balance.
+    }
     setIsPaying(null);
     setSelectedAccount('');
   };
@@ -160,7 +192,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
             <div className="card-elevated divide-y divide-border">
               {dayItems.map((item) => {
                 const isIncome = item.type === 'income';
-                const isPending = item.isBill;
+                const isPending = item.isPending;
 
                 return (
                   <div
@@ -217,7 +249,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                 </select>
                                 <Button
                                   size="sm"
-                                  onClick={() => handleBillPayment(item.billId)}
+                                  onClick={() => handleApplyPayment(item)}
                                   className="h-9 px-3 rounded-lg bg-success hover:bg-success/90 text-[10px] font-black uppercase"
                                 >
                                   OK

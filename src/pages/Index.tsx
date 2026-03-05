@@ -77,6 +77,7 @@ export default function Index() {
     depositToGoal,
     categories,
     bills,
+    currentMonthBills,
     payBill,
     seedCoach,
     loading
@@ -215,7 +216,7 @@ export default function Index() {
             </div>
             <TransactionList
               transactions={currentMonthTransactions}
-              bills={bills}
+              bills={currentMonthBills}
               onDelete={deleteTransaction}
               onEdit={handleEditTransaction}
               onPayBill={payBill}
@@ -330,9 +331,9 @@ export default function Index() {
           accounts={accounts}
           creditCards={creditCards}
           initialData={editingTransaction}
-          onSubmit={(data, custom) => {
+          onSubmit={(data, custom, applyToFuture) => {
             if (editingTransaction) {
-              updateTransaction({ ...editingTransaction, ...data } as any);
+              updateTransaction({ ...editingTransaction, ...data } as any, applyToFuture);
             } else {
               addTransaction(data, custom);
             }
