@@ -46,11 +46,10 @@ export function useFinanceStore() {
           ...t,
           accountId: t.account_id,
           cardId: t.card_id,
-          isPaid: t.is_paid,
+          isPaid: new Date(t.date) <= new Date(), // derived locally from date
           isRecurring: t.is_recurring,
           isInvoicePayment: t.is_invoice_payment,
           invoiceDate: t.invoice_date,
-          savingsGoalId: t.savings_goal_id,
           installments: t.installments,
           debtId: t.debt_id
         })),
@@ -118,11 +117,9 @@ export function useFinanceStore() {
           date: txData.date,
           account_id: txData.accountId,
           card_id: txData.cardId,
-          savings_goal_id: txData.savingsGoalId,
           invoice_date: txData.invoiceDate,
           is_invoice_payment: txData.isInvoicePayment || false,
           is_recurring: txData.isRecurring || false,
-          is_paid: isPaid,
           installments: txData.installments,
           recurrence: txData.recurrence,
           debt_id: txData.debtId
@@ -170,9 +167,9 @@ export function useFinanceStore() {
         isRecurring: t.is_recurring,
         isInvoicePayment: t.is_invoice_payment,
         invoiceDate: t.invoice_date,
-        savingsGoalId: t.savings_goal_id,
         installments: t.installments,
-        debtId: t.debt_id
+        debtId: t.debt_id,
+        isPaid: new Date(t.date) <= new Date(), // derived locally
       }));
 
       setState(prev => ({
@@ -180,14 +177,11 @@ export function useFinanceStore() {
         transactions: [...prev.transactions, ...newTransactions]
       }));
 
-      // Somente altera saldo se a transação for marcada como Paga
+      // Atualiza saldo ao adicionar transação
       for (const tx of newTransactions) {
         if (tx.isPaid && tx.accountId) {
           const change = tx.type === 'income' ? tx.amount : -tx.amount;
           updateAccountBalance(tx.accountId, change);
-        }
-        if (tx.isPaid && tx.savingsGoalId) {
-          updateGoalProgress(tx.savingsGoalId, tx.amount);
         }
       }
 
@@ -209,9 +203,7 @@ export function useFinanceStore() {
         date: updatedTx.date,
         account_id: updatedTx.accountId,
         card_id: updatedTx.cardId,
-        savings_goal_id: updatedTx.savingsGoalId,
         invoice_date: updatedTx.invoiceDate,
-        is_paid: updatedTx.isPaid
       }).eq('id', updatedTx.id);
 
       if (error) throw error;
@@ -243,9 +235,7 @@ export function useFinanceStore() {
       const tx = state.transactions.find(t => t.id === id);
       if (!tx) return;
 
-      const { error } = await supabase.from('transactions').update({ is_paid: isPaid }).eq('id', id);
-      if (error) throw error;
-
+      // is_paid column does not exist in DB — manage locally only
       setState(prev => ({
         ...prev,
         transactions: prev.transactions.map(t => t.id === id ? { ...t, isPaid } : t)
@@ -255,11 +245,6 @@ export function useFinanceStore() {
         const baseChange = tx.type === 'income' ? tx.amount : -tx.amount;
         const actualChange = isPaid ? baseChange : -baseChange;
         updateAccountBalance(tx.accountId, actualChange);
-      }
-
-      if (tx.savingsGoalId) {
-        const actualChange = isPaid ? tx.amount : -tx.amount;
-        updateGoalProgress(tx.savingsGoalId, actualChange);
       }
 
       toast({ title: isPaid ? 'Conta marcada como paga' : 'Pagamento estornado' });
