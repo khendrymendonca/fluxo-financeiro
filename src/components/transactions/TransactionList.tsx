@@ -13,7 +13,6 @@ interface TransactionListProps {
 
 export function TransactionList({ transactions, onDelete, onEdit }: TransactionListProps) {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
-  const [searchDate, setSearchDate] = useState('');
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -39,7 +38,6 @@ export function TransactionList({ transactions, onDelete, onEdit }: TransactionL
 
   const filteredTransactions = transactions
     .filter(t => filter === 'all' || t.type === filter)
-    .filter(t => !searchDate || t.date.includes(searchDate))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // Group by date
@@ -73,16 +71,6 @@ export function TransactionList({ transactions, onDelete, onEdit }: TransactionL
           ))}
         </div>
 
-        <div className="flex items-center gap-2 ml-auto">
-          <Filter className="w-4 h-4 text-muted-foreground" />
-          <Input
-            type="month"
-            value={searchDate}
-            onChange={(e) => setSearchDate(e.target.value)}
-            className="rounded-xl w-auto"
-            placeholder="Filtrar por mês"
-          />
-        </div>
       </div>
 
       {/* Transaction Groups */}

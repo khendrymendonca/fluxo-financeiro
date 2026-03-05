@@ -147,14 +147,17 @@ export default function Index() {
       case 'transactions':
         return (
           <div className="space-y-6 animate-fade-in pb-20">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Lançamentos</h1>
                 <p className="text-muted-foreground mt-1">Gerencie suas receitas e despesas.</p>
               </div>
-              <Button onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }} className="gap-2 rounded-xl">
-                <Plus className="w-4 h-4" /> Nova Transação
-              </Button>
+              <div className="flex items-center gap-3">
+                <MonthSelector />
+                <Button onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }} className="gap-2 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
+                  <Plus className="w-4 h-4" /> Nova Transação
+                </Button>
+              </div>
             </div>
             <TransactionList
               transactions={currentMonthTransactions}
