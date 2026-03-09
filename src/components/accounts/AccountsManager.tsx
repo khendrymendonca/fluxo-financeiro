@@ -252,7 +252,7 @@ export function AccountsManager({
                     <div className="flex justify-between items-center">
                       <p className="text-[9px] font-bold text-muted-foreground uppercase">Limite da Conta</p>
                       <span className="font-semibold text-sm">
-                        {formatCurrency(getAccountViewBalance(account.id))}
+                        {formatCurrency(account.overdraftLimit || 0)}
                       </span>
                     </div>
                     {isNegative && (

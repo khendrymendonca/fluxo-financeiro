@@ -71,7 +71,7 @@ export default function CardsDashboard() {
             // Priority 2: Fallback to Date Calculation
             const tDate = parseISO(t.date);
             return tDate >= startOfInvoice && tDate <= endOfInvoice;
-        });
+        }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     };
 
     const currentInvoiceTransactions = selectedCardId ? getInvoiceTransactions(selectedCardId) : [];

@@ -35,40 +35,44 @@ export default function ReportsDashboard() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                <div className="card-elevated p-6">
-                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Taxa de Economia</h3>
-                    <div className="text-3xl font-bold text-primary">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                <div className="card-elevated p-4 md:p-6">
+                    <h3 className="text-xs md:text-sm font-medium text-muted-foreground mb-2">Taxa de Economia</h3>
+                    <div className="text-2xl md:text-3xl font-bold text-primary">
                         {savingsRate.toFixed(1)}%
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">da sua receita mensal</p>
+                    <p className="text-[10px] md:text-xs text-muted-foreground mt-1">da sua receita mensal</p>
                 </div>
-                <div className="card-elevated p-6">
-                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Média de Gastos Diários</h3>
-                    <div className="text-3xl font-bold text-danger">
+                <div className="card-elevated p-4 md:p-6">
+                    <h3 className="text-xs md:text-sm font-medium text-muted-foreground mb-2">Média de Gastos Diários</h3>
+                    <div className="text-2xl md:text-3xl font-bold text-danger">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalExpenses / 30)}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">neste mês</p>
+                    <p className="text-[10px] md:text-xs text-muted-foreground mt-1">neste mês</p>
                 </div>
-                <div className="card-elevated p-6">
-                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Balanço Líquido</h3>
-                    <div className={`text-3xl font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <div className="card-elevated p-4 md:p-6 sm:col-span-2 lg:col-span-1">
+                    <h3 className="text-xs md:text-sm font-medium text-muted-foreground mb-2">Balanço Líquido</h3>
+                    <div className={`text-2xl md:text-3xl font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(balance)}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">receitas - despesas</p>
+                    <p className="text-[10px] md:text-xs text-muted-foreground mt-1">receitas - despesas</p>
                 </div>
             </div>
 
             {/* Main Charts area */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
                 <div className="space-y-4">
-                    <h2 className="text-xl font-semibold">Distribuição de Despesas</h2>
-                    <ExpenseChart data={getCategoryExpenses().reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)} />
+                    <h2 className="text-xl font-bold tracking-tight">Distribuição de Despesas</h2>
+                    <div className="min-h-[300px] h-full">
+                        <ExpenseChart data={getCategoryExpenses().reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)} />
+                    </div>
                 </div>
 
                 <div className="space-y-4">
-                    <h2 className="text-xl font-semibold">Evolução Patrimonial</h2>
-                    <BalanceEvolutionChart transactions={transactions} />
+                    <h2 className="text-xl font-bold tracking-tight">Evolução Patrimonial</h2>
+                    <div className="min-h-[300px] h-full">
+                        <BalanceEvolutionChart transactions={transactions} />
+                    </div>
                 </div>
             </div>
 
