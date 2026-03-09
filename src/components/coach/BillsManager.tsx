@@ -181,7 +181,7 @@ export function BillsManager() {
         d.setDate(card.dueDay || 1);
         return {
             id: `card-${card.id}`,
-            name: `Fatura: ${card.name}`,
+            name: `Fatura: ${card.bank} - ${card.name}`,
             amount: amount,
             type: 'payable' as const,
             dueDate: d.toISOString().split('T')[0],

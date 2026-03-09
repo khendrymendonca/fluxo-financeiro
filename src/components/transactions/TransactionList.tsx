@@ -105,7 +105,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     const amount = getCardExpenses(card.id);
     return {
       id: `card-${card.id}`,
-      description: `Fatura: ${card.name}`,
+      description: `Fatura: ${card.bank} - ${card.name}`,
       amount: amount,
       type: 'expense' as const,
       date: new Date(new Date().setDate(card.dueDay || 1)).toISOString().split('T')[0],
