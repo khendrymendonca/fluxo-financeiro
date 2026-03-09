@@ -145,7 +145,7 @@ export function BillsManager() {
     // 1. Get virtual bills from debts
     const debtBills = debts.map(debt => {
         const d = new Date(viewDate);
-        d.setDate(debt.dueDay);
+        d.setDate(debt.dueDay || 1);
         return {
             id: `debt-${debt.id}`,
             name: `Dívida: ${debt.name}`,
@@ -164,7 +164,7 @@ export function BillsManager() {
     const cardBills = creditCards.map(card => {
         const amount = getCardExpenses(card.id);
         const d = new Date(viewDate);
-        d.setDate(card.dueDay);
+        d.setDate(card.dueDay || 1);
         return {
             id: `card-${card.id}`,
             name: `Fatura: ${card.name}`,

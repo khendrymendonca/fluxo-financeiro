@@ -70,8 +70,8 @@ function useFinanceProvider() {
 
       // Projetar para o período atual (viewDate)
       // Se a viewDate está entre 'start' e '2030-12-31', e não existe uma conta "real" para este mês
-      const [, , dStr] = bill.dueDate.split('T')[0].split('-');
-      const targetDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), parseInt(dStr, 10));
+      const [, , dStr] = (bill.dueDate || '').split('T')[0].split('-');
+      const targetDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), parseInt(dStr || '1', 10) || 1);
       // Ajuste para meses curtos (ex: 31 de Março -> 30 de Abril se April tiver 30 dias)
       if (targetDate.getMonth() !== viewDate.getMonth()) {
         targetDate.setDate(0);
