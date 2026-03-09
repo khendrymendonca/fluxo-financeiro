@@ -237,7 +237,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
           <p className="text-muted-foreground">Nenhuma transação ou pendência encontrada</p>
         </div>
       ) : (
-        Object.keys(groupedItems).sort((a, b) => new Date(b).getTime() - new Date(a).getTime()).map(date => {
+        Object.keys(groupedItems).sort((a, b) => b.localeCompare(a)).map(date => {
           const dayItems = groupedItems[date];
           return (
             <div key={date} className="space-y-2">
@@ -278,11 +278,6 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                               {item.installmentNumber && item.installmentTotal && (
                                 <span className="text-[10px] bg-info/20 text-info px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">
                                   {item.installmentNumber}/{item.installmentTotal}
-                                </span>
-                              )}
-                              {item.paymentDate && item.paymentDate !== item.date && (
-                                <span className="text-[10px] bg-success/20 text-success px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">
-                                  {isIncome ? 'Recebido em' : 'Pago em'} {formatShortDate(item.paymentDate)}
                                 </span>
                               )}
                             </div>
