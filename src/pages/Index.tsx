@@ -79,6 +79,7 @@ export default function Index() {
     bills,
     currentMonthBills,
     payBill,
+    transferBetweenAccounts,
     seedCoach,
     loading
   } = useFinanceStore();
