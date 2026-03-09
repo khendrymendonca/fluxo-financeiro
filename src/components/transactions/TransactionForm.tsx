@@ -607,19 +607,21 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                         </div>
                       </div>
 
-                      {/* Invoice Reference Toggle */}
-                      <div className="space-y-2 p-3 bg-muted/50 rounded-xl border border-dashed text-sm">
-                        <div className="flex items-center justify-between">
-                          <Label>Referência da Fatura</Label>
-                          <Input
-                            type="month"
-                            value={invoiceReference}
-                            onChange={e => setInvoiceReference(e.target.value)}
-                            className="w-32 h-8 text-xs bg-background"
-                          />
+                      {/* Invoice Reference View Only For Edits */}
+                      {initialData && (
+                        <div className="space-y-2 p-3 bg-muted/50 rounded-xl border border-dashed text-sm">
+                          <div className="flex items-center justify-between">
+                            <Label>Referência da Fatura</Label>
+                            <Input
+                              type="month"
+                              value={invoiceReference}
+                              onChange={e => setInvoiceReference(e.target.value)}
+                              className="w-32 h-8 text-xs bg-background"
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">O mês correspondente desta cobrança específica. Editar altera apenas este lançamento.</p>
                         </div>
-                        <p className="text-xs text-muted-foreground">O sistema agrupa gastos por esta data. Altere se o fechamento mudar.</p>
-                      </div>
+                      )}
                     </div>
                   )}
 
