@@ -129,6 +129,7 @@ export interface Bill {
   recurrenceRule?: string;
   startDate?: string;
   targetAmount?: number; // Meta de valor para esta conta específica
+  originalBillId?: string; // ID da conta "mãe" para contas fixas/recorrentes
 }
 
 export interface BudgetRule {

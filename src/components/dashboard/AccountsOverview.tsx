@@ -7,7 +7,10 @@ interface AccountsOverviewProps {
   getCardExpenses: (cardId: string) => number;
 }
 
+import { useFinanceStore } from '@/hooks/useFinanceStore';
+
 export function AccountsOverview({ accounts, creditCards, getCardExpenses }: AccountsOverviewProps) {
+  const { getAccountViewBalance } = useFinanceStore();
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -18,17 +21,17 @@ export function AccountsOverview({ accounts, creditCards, getCardExpenses }: Acc
   return (
     <div className="card-elevated p-6 animate-fade-in">
       <h3 className="text-lg font-semibold mb-4">Contas e Cartões</h3>
-      
+
       {/* Bank Accounts */}
       <div className="space-y-3 mb-6">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Contas</p>
         {accounts.map((account) => (
-          <div 
+          <div
             key={account.id}
             className="flex items-center justify-between p-3 rounded-xl bg-muted/30"
           >
             <div className="flex items-center gap-3">
-              <div 
+              <div
                 className="p-2 rounded-xl"
                 style={{ backgroundColor: `${account.color}20` }}
               >
@@ -40,7 +43,7 @@ export function AccountsOverview({ accounts, creditCards, getCardExpenses }: Acc
               </div>
             </div>
             <span className="font-semibold text-sm">
-              {formatCurrency(account.balance)}
+              {formatCurrency(getAccountViewBalance(account.id))}
             </span>
           </div>
         ))}
@@ -53,15 +56,15 @@ export function AccountsOverview({ accounts, creditCards, getCardExpenses }: Acc
           {creditCards.map((card) => {
             const currentExpenses = getCardExpenses(card.id);
             const usagePercentage = (currentExpenses / card.limit) * 100;
-            
+
             return (
-              <div 
+              <div
                 key={card.id}
                 className="p-3 rounded-xl bg-muted/30 space-y-2"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div 
+                    <div
                       className="p-2 rounded-xl"
                       style={{ backgroundColor: `${card.color}20` }}
                     >
@@ -84,9 +87,9 @@ export function AccountsOverview({ accounts, creditCards, getCardExpenses }: Acc
                   </div>
                 </div>
                 <div className="progress-gradient">
-                  <div 
+                  <div
                     className="h-full rounded-full transition-all duration-500"
-                    style={{ 
+                    style={{
                       width: `${Math.min(usagePercentage, 100)}%`,
                       backgroundColor: usagePercentage > 80 ? 'hsl(0, 70%, 60%)' : card.color,
                     }}

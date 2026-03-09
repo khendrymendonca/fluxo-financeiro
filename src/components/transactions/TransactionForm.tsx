@@ -36,7 +36,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
   const [categoryId, setCategoryId] = useState<string>(initialData?.categoryId || '');
   const [subcategoryId, setSubcategoryId] = useState<string>(initialData?.subcategoryId || '');
-  const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState((initialData?.date || new Date().toISOString()).split('T')[0]);
   const [accountId, setAccountId] = useState<string>(initialData?.accountId || '');
   const [cardId, setCardId] = useState<string>(initialData?.cardId || '');
   const [paymentMethod, setPaymentMethod] = useState<'account' | 'card'>(initialData?.cardId ? 'card' : 'account');

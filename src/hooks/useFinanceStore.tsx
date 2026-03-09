@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, createContext, useContext } from 'react';
+import { useState, useCallback, useEffect, useMemo, createContext, useContext } from 'react';
 import { FinanceState, Transaction, Account, CreditCard, Debt, SavingsGoal, Category, Subcategory, Bill, HabitLog, UserHabit, BudgetRule, FilterMode } from '@/types/finance';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
@@ -40,6 +40,96 @@ function useFinanceProvider() {
   const [loading, setLoading] = useState(true);
   const [viewDate, setViewDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<FilterMode>('month');
+
+  // --- Computed ---
+
+  const currentMonthTransactions = state.transactions.filter(t => {
+    const tDate = new Date(t.date);
+    if (viewMode === 'day') {
+      return tDate.getDate() === viewDate.getDate() &&
+        tDate.getMonth() === viewDate.getMonth() &&
+        tDate.getFullYear() === viewDate.getFullYear();
+    }
+    if (viewMode === 'month') {
+      return tDate.getMonth() === viewDate.getMonth() &&
+        tDate.getFullYear() === viewDate.getFullYear();
+    }
+    // year
+    return tDate.getFullYear() === viewDate.getFullYear();
+  });
+
+  const currentMonthBills = useMemo(() => {
+    const maxDate = new Date(2030, 11, 31);
+    const virtualBills: Bill[] = [];
+
+    // 1. Identificar contas fixas que precisam ser projetadas
+    state.bills.filter(b => b.isFixed).forEach(bill => {
+      const start = new Date(bill.startDate || bill.dueDate);
+
+      // Projetar para o período atual (viewDate)
+      // Se a viewDate está entre 'start' e '2030-12-31', e não existe uma conta "real" para este mês
+
+      const targetDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), new Date(bill.dueDate).getDate());
+      // Ajuste para meses curtos (ex: 31 de Março -> 30 de Abril se April tiver 30 dias)
+      if (targetDate.getMonth() !== viewDate.getMonth()) {
+        targetDate.setDate(0);
+      }
+
+      if (targetDate >= start && targetDate <= maxDate) {
+        // Verificar se já existe uma conta real para este mês vinda desta conta fixa
+        const exists = state.bills.find(b =>
+          !b.isFixed &&
+          b.originalBillId === bill.id &&
+          new Date(b.dueDate).getMonth() === viewDate.getMonth() &&
+          new Date(b.dueDate).getFullYear() === viewDate.getFullYear()
+        );
+
+        // Se a conta original for do próprio mês selecionado, ela já será filtrada como "real" abaixo
+        const isOriginalInThisMonth =
+          new Date(bill.dueDate).getMonth() === viewDate.getMonth() &&
+          new Date(bill.dueDate).getFullYear() === viewDate.getFullYear();
+
+        if (!exists && !isOriginalInThisMonth) {
+          virtualBills.push({
+            ...bill,
+            id: `virtual-${bill.id}-${viewDate.getFullYear()}-${viewDate.getMonth()}`,
+            dueDate: targetDate.toISOString(),
+            status: 'pending',
+            isFixed: true,
+            // Adicionamos uma flag interna para o UI saber que é virtual se necessário
+            originalBillId: bill.id
+          } as Bill);
+        }
+      }
+    });
+
+    const filteredBills = [...state.bills, ...virtualBills].filter(b => {
+      const bDate = new Date(b.dueDate);
+      let matchesViewDate = false;
+
+      if (viewMode === 'day') {
+        matchesViewDate = bDate.getDate() === viewDate.getDate() &&
+          bDate.getMonth() === viewDate.getMonth() &&
+          bDate.getFullYear() === viewDate.getFullYear();
+      } else if (viewMode === 'month') {
+        matchesViewDate = bDate.getMonth() === viewDate.getMonth() &&
+          bDate.getFullYear() === viewDate.getFullYear();
+      } else {
+        matchesViewDate = bDate.getFullYear() === viewDate.getFullYear();
+      }
+
+      // Filtro por data de cadastro (startDate)
+      if (b.startDate) {
+        const sDate = new Date(b.startDate);
+        const isAtOrAfterStart = bDate.getTime() >= sDate.getTime();
+        return matchesViewDate && isAtOrAfterStart;
+      }
+
+      return matchesViewDate;
+    });
+
+    return filteredBills;
+  }, [state.bills, viewDate, viewMode]);
 
   const fetchInitialData = useCallback(async () => {
     try {
@@ -630,8 +720,7 @@ function useFinanceProvider() {
         closing_day: card.closingDay,
         color: card.color,
         is_closing_date_fixed: card.isClosingDateFixed,
-        is_active: true,
-        history: (card as any).history || []
+        is_active: true
       }).select().single();
       if (error) throw error;
       const newCard = { ...data, dueDay: data.due_day, closingDay: data.closing_day, isClosingDateFixed: data.is_closing_date_fixed, isActive: data.is_active };
@@ -977,20 +1066,45 @@ function useFinanceProvider() {
 
   const payBill = useCallback(async (billId: string, accountId: string | undefined, paymentDate: string, cardId?: string) => {
     try {
-      const bill = state.bills.find(b => b.id === billId);
+      let bill = state.bills.find(b => b.id === billId);
+
+      // Se não for uma conta real, verificar se é virtual
+      if (!bill && billId.startsWith('virtual-')) {
+        bill = currentMonthBills.find(b => b.id === billId);
+      }
+
       if (!bill) return;
 
-      // 1. Update the bill status
-      await updateBill(billId, {
-        status: 'paid',
-        paymentDate,
-        accountId: accountId || undefined
-      });
+      const isVirtual = billId.startsWith('virtual-');
+
+      // 1. Update the bill status or create a new real record if virtual
+      if (isVirtual) {
+        // Criar uma nova conta real marcada como paga, vinculada à original
+        await addBill({
+          name: bill.name,
+          amount: bill.amount,
+          type: bill.type,
+          dueDate: bill.dueDate,
+          paymentDate: paymentDate,
+          status: 'paid',
+          categoryId: bill.categoryId,
+          subcategoryId: bill.subcategoryId,
+          isFixed: false, // A instância paga não é o template fixo
+          accountId: accountId || undefined,
+          originalBillId: (bill as any).originalBillId
+        }, false);
+      } else {
+        await updateBill(billId, {
+          status: 'paid',
+          paymentDate,
+          accountId: accountId || undefined
+        });
+      }
 
       // 2. Create the associated transaction
       await addTransaction({
-        date: bill.dueDate, // Mantém a data de competência (vencimento)
-        paymentDate: paymentDate, // Define a data de fluxo de caixa (pagamento)
+        date: bill.dueDate,
+        paymentDate: paymentDate,
         description: `Pgto: ${bill.name}`,
         amount: bill.amount,
         type: bill.type === 'payable' ? 'expense' : 'income',
@@ -1002,6 +1116,15 @@ function useFinanceProvider() {
         isPaid: true,
         userId: bill.userId
       });
+
+      // 3. If fixed and NOT virtual, create next month (Legacy mode)
+      // Se era uma conta real fixa, ela já criou o 'vínculo'. 
+      // Com a virtualização, não precisamos mais criar a próxima manualmente no payBill.
+      // Mas vamos manter se o usuário preferir registros físicos.
+      if (!isVirtual && bill.isFixed) {
+        // Opcional: remover a criação manual do próximo mês para evitar duplicidade com o virtualizador
+        // Mas a lógica do virtualizador já ignora se existir uma conta real no mês.
+      }
 
       // 3. If fixed, create next month
       if (bill.isFixed) {
@@ -1027,7 +1150,7 @@ function useFinanceProvider() {
       console.error(err);
       toast({ title: 'Erro ao processar pagamento', variant: 'destructive' });
     }
-  }, [state.bills, updateBill, addTransaction, addBill]);
+  }, [state.bills, updateBill, addTransaction, addBill, currentMonthBills]);
 
   const seedCoach = useCallback(async () => {
     try {
@@ -1220,48 +1343,6 @@ function useFinanceProvider() {
     });
   }, []);
 
-  // --- Computed ---
-
-  const currentMonthTransactions = state.transactions.filter(t => {
-    const tDate = new Date(t.date);
-    if (viewMode === 'day') {
-      return tDate.getDate() === viewDate.getDate() &&
-        tDate.getMonth() === viewDate.getMonth() &&
-        tDate.getFullYear() === viewDate.getFullYear();
-    }
-    if (viewMode === 'month') {
-      return tDate.getMonth() === viewDate.getMonth() &&
-        tDate.getFullYear() === viewDate.getFullYear();
-    }
-    // year
-    return tDate.getFullYear() === viewDate.getFullYear();
-  });
-
-  const currentMonthBills = state.bills.filter(b => {
-    const bDate = new Date(b.dueDate);
-    let matchesViewDate = false;
-
-    if (viewMode === 'day') {
-      matchesViewDate = bDate.getDate() === viewDate.getDate() &&
-        bDate.getMonth() === viewDate.getMonth() &&
-        bDate.getFullYear() === viewDate.getFullYear();
-    } else if (viewMode === 'month') {
-      matchesViewDate = bDate.getMonth() === viewDate.getMonth() &&
-        bDate.getFullYear() === viewDate.getFullYear();
-    } else {
-      matchesViewDate = bDate.getFullYear() === viewDate.getFullYear();
-    }
-
-    // Filtro por data de cadastro (startDate)
-    if (b.startDate) {
-      const sDate = new Date(b.startDate);
-      // Garantir que a conta só apareça se a data de vencimento for igual ou posterior à data de cadastro
-      const isAtOrAfterStart = bDate.getTime() >= sDate.getTime();
-      return matchesViewDate && isAtOrAfterStart;
-    }
-
-    return matchesViewDate;
-  });
 
   const getCardExpenses = useCallback((cardId: string) => {
     return currentMonthTransactions
@@ -1318,6 +1399,67 @@ function useFinanceProvider() {
     };
   }, [currentMonthTransactions, state.accounts, state.emergencyMonths, state.categories, state.categoryGroups]);
 
+  const getViewBalance = useCallback(() => {
+    const currentTotalBalance = state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+
+    // Encontrar o fim do período selecionado
+    let periodEnd: Date;
+    const now = new Date();
+
+    if (viewMode === 'day') {
+      periodEnd = new Date(viewDate);
+      periodEnd.setHours(23, 59, 59, 999);
+    } else if (viewMode === 'month') {
+      periodEnd = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else {
+      periodEnd = new Date(viewDate.getFullYear(), 11, 31, 23, 59, 59, 999);
+    }
+
+    // Se o período termina no futuro, o saldo "histórico" é o saldo atual (simplificação)
+    if (periodEnd > now) return currentTotalBalance;
+
+    // Subtrair delta de transações que ocorreram APÓS o período selecionado
+    // Para voltar no tempo: se for receita após o período, subtraímos do saldo atual. Se for despesa, somamos.
+    const delta = state.transactions.filter(t => {
+      const tDate = new Date(t.date);
+      return tDate > periodEnd;
+    }).reduce((acc, t) => {
+      return acc + (t.type === 'income' ? -t.amount : t.amount);
+    }, 0);
+
+    return currentTotalBalance + delta;
+  }, [state.accounts, state.transactions, viewDate, viewMode]);
+
+  const getAccountViewBalance = useCallback((accountId: string) => {
+    const account = state.accounts.find(a => a.id === accountId);
+    if (!account) return 0;
+
+    const currentBalance = Number(account.balance);
+
+    let periodEnd: Date;
+    const now = new Date();
+
+    if (viewMode === 'day') {
+      periodEnd = new Date(viewDate);
+      periodEnd.setHours(23, 59, 59, 999);
+    } else if (viewMode === 'month') {
+      periodEnd = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else {
+      periodEnd = new Date(viewDate.getFullYear(), 11, 31, 23, 59, 59, 999);
+    }
+
+    if (periodEnd > now) return currentBalance;
+
+    const delta = state.transactions
+      .filter(t => t.accountId === accountId)
+      .filter(t => new Date(t.date) > periodEnd)
+      .reduce((acc, t) => acc + (t.type === 'income' ? -t.amount : t.amount), 0);
+
+    return currentBalance + delta;
+  }, [state.accounts, state.transactions, viewDate, viewMode]);
+
+  const viewBalance = getViewBalance();
+
   return {
     ...state,
     loading,
@@ -1332,6 +1474,8 @@ function useFinanceProvider() {
     setViewDate,
     setViewMode,
     totalBalance: state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0),
+    viewBalance,
+    getAccountViewBalance,
     totalIncome: currentMonthTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + Number(t.amount), 0),
     totalExpenses: currentMonthTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0),
     currentMonthTransactions,

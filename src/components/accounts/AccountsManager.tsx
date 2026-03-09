@@ -23,7 +23,7 @@ export function AccountsManager({
   onUpdateAccount,
   onDeleteAccount,
 }: AccountsManagerProps) {
-  const { transferBetweenAccounts } = useFinanceStore();
+  const { transferBetweenAccounts, getAccountViewBalance, viewBalance } = useFinanceStore();
   const [showAccountForm, setShowAccountForm] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
@@ -132,7 +132,7 @@ export function AccountsManager({
     setTransferDescription('Transferência entre contas');
   };
 
-  const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+  const totalBalanceToDisplay = viewBalance;
   const isEditing = !!editingAccount;
 
   const getAccountTypeLabel = (type: string) => {
@@ -160,7 +160,7 @@ export function AccountsManager({
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <p className="text-sm font-bold text-primary/70 uppercase tracking-widest mb-1">Patrimônio Total em Contas</p>
-            <h2 className="text-4xl font-black tracking-tight">{formatCurrency(totalBalance)}</h2>
+            <h2 className="text-4xl font-black tracking-tight">{formatCurrency(totalBalanceToDisplay)}</h2>
           </div>
           <div className="flex gap-3 flex-wrap">
             {accounts.length >= 2 && (
@@ -235,9 +235,9 @@ export function AccountsManager({
 
               <div className="mt-auto relative z-10 space-y-2">
                 <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Saldo Disponível</p>
-                  <p className={cn("text-2xl font-black", isNegative && "text-danger")}>
-                    {formatCurrency(account.balance)}
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Saldo em Periodo</p>
+                  <p className={cn("text-2xl font-black", getAccountViewBalance(account.id) < 0 && "text-danger")}>
+                    {formatCurrency(getAccountViewBalance(account.id))}
                   </p>
                 </div>
 
@@ -251,7 +251,9 @@ export function AccountsManager({
                   <div className="pt-2 border-t border-border/50 space-y-1">
                     <div className="flex justify-between items-center">
                       <p className="text-[9px] font-bold text-muted-foreground uppercase">Limite da Conta</p>
-                      <p className="text-[9px] font-bold text-amber-600">{formatCurrency(account.overdraftLimit || 0)}</p>
+                      <span className="font-semibold text-sm">
+                        {formatCurrency(getAccountViewBalance(account.id))}
+                      </span>
                     </div>
                     {isNegative && (
                       <div className="space-y-1">

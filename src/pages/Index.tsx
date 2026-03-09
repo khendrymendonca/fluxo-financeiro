@@ -82,7 +82,8 @@ export default function Index() {
     payBill,
     transferBetweenAccounts,
     seedCoach,
-    loading
+    loading,
+    viewBalance
   } = useFinanceStore();
 
   const balance = totalIncome - totalExpenses;
@@ -144,10 +145,10 @@ export default function Index() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard
-                title="Balanço Mensal"
-                value={balance}
+                title="Patrimônio Total"
+                value={viewBalance}
                 icon={<Wallet className="w-5 h-5" />}
-                variant={balance >= 0 ? 'positive' : 'negative'}
+                variant={viewBalance >= 0 ? 'positive' : 'negative'}
               />
               <StatCard
                 title="Receitas"
