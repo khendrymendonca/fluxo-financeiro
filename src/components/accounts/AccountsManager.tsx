@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Building2, Plus, Trash2, X, Wallet, Pencil } from 'lucide-react';
+import { Building2, Plus, Trash2, X, Wallet, Pencil, ShieldCheck } from 'lucide-react';
 import { Account } from '@/types/finance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,8 @@ export function AccountsManager({
   const [accountBalance, setAccountBalance] = useState('');
   const [accountType, setAccountType] = useState<'checking' | 'savings' | 'benefit_vr' | 'benefit_va' | 'benefit_flex'>('checking');
   const [accountColor, setAccountColor] = useState(APP_COLORS[0]);
+  const [hasOverdraft, setHasOverdraft] = useState(false);
+  const [overdraftLimit, setOverdraftLimit] = useState('');
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -44,6 +46,8 @@ export function AccountsManager({
     setAccountBalance('');
     setAccountType('checking');
     setAccountColor(APP_COLORS[0]);
+    setHasOverdraft(false);
+    setOverdraftLimit('');
     setEditingAccount(null);
   };
 
@@ -59,6 +63,8 @@ export function AccountsManager({
     setAccountBalance(account.balance.toString());
     setAccountType(account.accountType);
     setAccountColor(account.color);
+    setHasOverdraft(account.hasOverdraft || false);
+    setOverdraftLimit(account.overdraftLimit?.toString() || '');
     setShowAccountForm(true);
   };
 
@@ -71,22 +77,20 @@ export function AccountsManager({
     e.preventDefault();
     if (!accountName || !accountBank || !accountBalance) return;
 
+    const accountData = {
+      name: accountName,
+      bank: accountBank,
+      balance: parseFloat(accountBalance),
+      color: accountColor,
+      accountType: accountType,
+      hasOverdraft: hasOverdraft,
+      overdraftLimit: hasOverdraft ? parseFloat(overdraftLimit || '0') : 0,
+    };
+
     if (editingAccount) {
-      onUpdateAccount(editingAccount.id, {
-        name: accountName,
-        bank: accountBank,
-        balance: parseFloat(accountBalance),
-        color: accountColor,
-        accountType: accountType,
-      });
+      onUpdateAccount(editingAccount.id, accountData);
     } else {
-      onAddAccount({
-        name: accountName,
-        bank: accountBank,
-        balance: parseFloat(accountBalance),
-        color: accountColor,
-        accountType: accountType,
-      });
+      onAddAccount(accountData);
     }
 
     closeForm();
@@ -122,53 +126,92 @@ export function AccountsManager({
 
       {/* Bank Accounts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-        {accounts.map((account) => (
-          <div
-            key={account.id}
-            className="card-elevated p-6 group hover:border-primary/50 transition-all flex flex-col justify-between h-48 relative overflow-hidden cursor-pointer"
-            onClick={() => openEditForm(account)}
-          >
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <Building2 className="w-16 h-16" />
-            </div>
+        {accounts.map((account) => {
+          const availableTotal = account.balance + (account.hasOverdraft ? (account.overdraftLimit || 0) : 0);
+          const isNegative = account.balance < 0;
+          const overdraftUsed = isNegative ? Math.abs(account.balance) : 0;
 
-            <div className="flex justify-between items-start relative z-10">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: account.color }}
-                  />
-                  <p className="text-xs font-black uppercase text-muted-foreground tracking-tighter">{account.bank}</p>
+          return (
+            <div
+              key={account.id}
+              className="card-elevated p-6 group hover:border-primary/50 transition-all flex flex-col justify-between h-auto min-h-[12rem] relative overflow-hidden cursor-pointer"
+              onClick={() => openEditForm(account)}
+            >
+              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                <Building2 className="w-16 h-16" />
+              </div>
+
+              <div className="flex justify-between items-start relative z-10">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: account.color }}
+                    />
+                    <p className="text-xs font-black uppercase text-muted-foreground tracking-tighter">{account.bank}</p>
+                    {account.hasOverdraft && (
+                      <span className="text-[8px] bg-amber-500/15 text-amber-600 px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter flex items-center gap-0.5">
+                        <ShieldCheck className="w-2.5 h-2.5" />
+                        Limite
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-bold truncate max-w-[180px]">{account.name}</h3>
                 </div>
-                <h3 className="text-xl font-bold truncate max-w-[180px]">{account.name}</h3>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); openEditForm(account); }}
+                    className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-primary/10 text-primary transition-all"
+                    title="Editar conta"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDeleteAccount(account.id); }}
+                    className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-danger/10 text-danger transition-all"
+                    title="Excluir conta"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={(e) => { e.stopPropagation(); openEditForm(account); }}
-                  className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-primary/10 text-primary transition-all"
-                  title="Editar conta"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); onDeleteAccount(account.id); }}
-                  className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-danger/10 text-danger transition-all"
-                  title="Excluir conta"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
 
-            <div className="mt-auto relative z-10">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Saldo Disponível</p>
-              <p className="text-2xl font-black">
-                {formatCurrency(account.balance)}
-              </p>
+              <div className="mt-auto relative z-10 space-y-2">
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Saldo Disponível</p>
+                  <p className={cn("text-2xl font-black", isNegative && "text-danger")}>
+                    {formatCurrency(account.balance)}
+                  </p>
+                </div>
+
+                {account.hasOverdraft && (account.overdraftLimit || 0) > 0 && (
+                  <div className="pt-2 border-t border-border/50 space-y-1">
+                    <div className="flex justify-between items-center">
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase">Limite da Conta</p>
+                      <p className="text-[9px] font-bold text-amber-600">{formatCurrency(account.overdraftLimit || 0)}</p>
+                    </div>
+                    {isNegative && (
+                      <div className="space-y-1">
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                            style={{ width: `${Math.min(100, (overdraftUsed / (account.overdraftLimit || 1)) * 100)}%` }}
+                          />
+                        </div>
+                        <p className="text-[9px] text-amber-600 font-bold">
+                          {formatCurrency(overdraftUsed)} usado do limite
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-[9px] text-muted-foreground">
+                      Disponível total: <span className="font-bold text-foreground">{formatCurrency(availableTotal)}</span>
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {accounts.length === 0 && !showAccountForm && (
           <div className="col-span-full py-20 text-center card-elevated border-dashed border-2 bg-muted/20">
@@ -252,6 +295,49 @@ export function AccountsManager({
                       <option value="benefit_flex">Flexível</option>
                     </select>
                   </div>
+                </div>
+
+                {/* Overdraft / Limite da Conta */}
+                <div className="space-y-3 p-4 rounded-xl bg-muted/30 border border-border/50">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Limite da Conta</Label>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Permite saldo negativo (tipo cheque especial)</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setHasOverdraft(!hasOverdraft)}
+                      className={cn(
+                        "relative w-12 h-7 rounded-full transition-colors duration-200 focus:outline-none",
+                        hasOverdraft ? "bg-primary" : "bg-muted-foreground/30"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-200",
+                          hasOverdraft && "translate-x-5"
+                        )}
+                      />
+                    </button>
+                  </div>
+
+                  {hasOverdraft && (
+                    <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-200">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-amber-600">Valor do Limite (R$)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={overdraftLimit}
+                        onChange={(e) => setOverdraftLimit(e.target.value)}
+                        placeholder="Ex: 1000.00"
+                        className="h-10 rounded-xl border-2 border-amber-500/30 focus:border-amber-500/50 transition-colors px-4 font-bold"
+                      />
+                      <p className="text-[9px] text-muted-foreground">
+                        Seu saldo poderá ir até <strong className="text-amber-600">-{formatCurrency(parseFloat(overdraftLimit || '0'))}</strong>
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <ColorSelector

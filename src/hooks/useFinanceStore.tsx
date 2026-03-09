@@ -105,7 +105,9 @@ function useFinanceProvider() {
         accounts: (accountsRes.data || []).map((a: any) => ({
           ...a,
           userId: a.user_id,
-          accountType: a.account_type
+          accountType: a.account_type,
+          hasOverdraft: a.has_overdraft || false,
+          overdraftLimit: a.overdraft_limit || 0
         })),
         creditCards: (cardsRes.data || []).map((c: any) => ({
           ...c,
@@ -470,11 +472,13 @@ function useFinanceProvider() {
         bank: account.bank,
         balance: account.balance,
         color: account.color,
-        account_type: account.accountType
+        account_type: account.accountType,
+        has_overdraft: account.hasOverdraft || false,
+        overdraft_limit: account.overdraftLimit || 0
       }).select().single();
 
       if (error) throw error;
-      const newAccount = { ...data, accountType: data.account_type };
+      const newAccount = { ...data, accountType: data.account_type, hasOverdraft: data.has_overdraft || false, overdraftLimit: data.overdraft_limit || 0 };
       setState(prev => ({ ...prev, accounts: [...prev.accounts, newAccount] }));
     } catch (err) { toast({ title: 'Erro ao criar conta', variant: 'destructive' }); }
   }, []);
@@ -502,7 +506,15 @@ function useFinanceProvider() {
 
   const updateAccount = useCallback(async (id: string, updates: Partial<Account>) => {
     try {
-      await supabase.from('accounts').update(updates).eq('id', id);
+      const dbUpdates: any = {};
+      if (updates.name !== undefined) dbUpdates.name = updates.name;
+      if (updates.bank !== undefined) dbUpdates.bank = updates.bank;
+      if (updates.balance !== undefined) dbUpdates.balance = updates.balance;
+      if (updates.color !== undefined) dbUpdates.color = updates.color;
+      if (updates.accountType !== undefined) dbUpdates.account_type = updates.accountType;
+      if (updates.hasOverdraft !== undefined) dbUpdates.has_overdraft = updates.hasOverdraft;
+      if (updates.overdraftLimit !== undefined) dbUpdates.overdraft_limit = updates.overdraftLimit;
+      await supabase.from('accounts').update(dbUpdates).eq('id', id);
       setState(prev => ({ ...prev, accounts: prev.accounts.map(a => a.id === id ? { ...a, ...updates } : a) }));
     } catch (err) { toast({ title: 'Erro ao atualizar conta', variant: 'destructive' }); }
   }, []);

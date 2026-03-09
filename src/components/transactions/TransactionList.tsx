@@ -14,6 +14,7 @@ import {
   CreditCard as CardIcon
 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import { Portal } from '@/components/ui/Portal';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -25,8 +26,7 @@ interface TransactionListProps {
 
 export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBill }: TransactionListProps) {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
-  const [isPaying, setIsPaying] = useState<string | null>(null);
-  const [selectedAccount, setSelectedAccount] = useState('');
+  const [payingItem, setPayingItem] = useState<any>(null);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [anticipatingIds, setAnticipatingIds] = useState<Set<string>>(new Set());
   const [anticipateAccount, setAnticipateAccount] = useState('');
@@ -129,19 +129,15 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     return groups;
   }, {} as Record<string, any[]>);
 
-  const handleApplyPayment = async (item: any) => {
-    if (!selectedAccount) {
-      toast({ title: 'Selecione uma conta', variant: 'destructive' });
-      return;
-    }
+  const handleSelectAccountForPayment = async (accountId: string) => {
+    if (!payingItem) return;
 
-    if (item.isBill) {
-      await onPayBill(item.billId, selectedAccount, new Date().toISOString());
+    if (payingItem.isBill) {
+      await onPayBill(payingItem.billId, accountId, new Date().toISOString());
     } else {
-      await togglePaid(item.id, true, selectedAccount);
+      await togglePaid(payingItem.id, true, accountId);
     }
-    setIsPaying(null);
-    setSelectedAccount('');
+    setPayingItem(null);
   };
 
   // Get future installments for a given group
@@ -283,68 +279,38 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                         <div className="flex items-center gap-2 w-full md:w-auto">
                           {isPending ? (
                             <div className="flex items-center gap-2 w-full">
-                              {isPaying === item.id ? (
-                                <div className="flex items-center gap-1 animate-scale-in w-full">
-                                  <select
-                                    className="h-9 rounded-lg border border-input bg-background px-2 py-1 text-[10px] font-bold uppercase flex-1 md:w-32"
-                                    value={selectedAccount}
-                                    onChange={(e) => setSelectedAccount(e.target.value)}
-                                  >
-                                    <option value="">Pagar com?</option>
-                                    {accounts.map(acc => (
-                                      <option key={acc.id} value={acc.id}>{acc.name}</option>
-                                    ))}
-                                  </select>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleApplyPayment(item)}
-                                    className="h-9 px-3 rounded-lg bg-success hover:bg-success/90 text-[10px] font-black uppercase"
-                                  >
-                                    OK
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => { setIsPaying(null); setSelectedAccount(''); }}
-                                    className="h-9 px-2 rounded-lg text-[10px] uppercase font-bold"
-                                  >
-                                    X
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="flex gap-1 w-full flex-wrap">
+                              <div className="flex gap-1 w-full flex-wrap">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setPayingItem(item)}
+                                  disabled={item.isVirtual}
+                                  className="flex-1 md:flex-none h-9 px-4 rounded-xl border-primary/30 text-primary hover:bg-primary/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider transition-all hover:scale-105 active:scale-95"
+                                >
+                                  <CheckCircle2 className="w-4 h-4" />
+                                  Baixar Agora
+                                </Button>
+                                {hasInstallmentGroup && futureInstallments.length > 0 && (
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => setIsPaying(item.id)}
-                                    disabled={item.isVirtual}
-                                    className="flex-1 md:flex-none h-9 px-4 rounded-xl border-primary/30 text-primary hover:bg-primary/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider transition-all hover:scale-105 active:scale-95"
+                                    onClick={() => setExpandedGroup(isGroupExpanded ? null : item.installmentGroupId)}
+                                    className="h-9 px-3 rounded-xl border-info/30 text-info hover:bg-info/10 flex items-center gap-1 font-black uppercase text-[10px] tracking-wider transition-all"
                                   >
-                                    <CheckCircle2 className="w-4 h-4" />
-                                    Baixar Agora
+                                    <FastForward className="w-4 h-4" />
+                                    Antecipar
+                                    {isGroupExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                   </Button>
-                                  {hasInstallmentGroup && futureInstallments.length > 0 && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => setExpandedGroup(isGroupExpanded ? null : item.installmentGroupId)}
-                                      className="h-9 px-3 rounded-xl border-info/30 text-info hover:bg-info/10 flex items-center gap-1 font-black uppercase text-[10px] tracking-wider transition-all"
-                                    >
-                                      <FastForward className="w-4 h-4" />
-                                      Antecipar
-                                      {isGroupExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                                    </Button>
-                                  )}
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => onEdit(item as any)}
-                                    className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary shrink-0"
-                                  >
-                                    <Pencil className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              )}
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => onEdit(item as any)}
+                                  className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary shrink-0"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </div>
                           ) : (
                             <div className="flex opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all gap-1 justify-end w-full">
@@ -492,6 +458,100 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
             </div>
           </div>
         ))
+      )}
+
+      {/* Payment Account Selection Popup */}
+      {payingItem && (
+        <Portal>
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={() => setPayingItem(null)}
+          >
+            <div
+              className="bg-card rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-border max-h-[80vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="px-5 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
+                <h2 className="text-lg font-black tracking-tight">
+                  {payingItem.type === 'income' ? 'Receber com qual conta?' : 'Pagar com qual conta?'}
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  <span className={cn("font-bold", payingItem.type === 'income' ? "text-success" : "text-danger")}>
+                    {formatCurrency(payingItem.amount)}
+                  </span>
+                  {' — '}
+                  {payingItem.description}
+                </p>
+              </div>
+
+              {/* Accounts List */}
+              <div className="p-3 space-y-2">
+                {accounts.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8 text-sm">Nenhuma conta cadastrada.</p>
+                ) : (
+                  accounts.map(acc => {
+                    const availableTotal = acc.balance + (acc.hasOverdraft ? (acc.overdraftLimit || 0) : 0);
+                    const wouldGoNegative = payingItem.type === 'expense' && acc.balance < payingItem.amount;
+                    const hasEnoughWithOverdraft = acc.hasOverdraft && availableTotal >= payingItem.amount;
+                    const insufficientFunds = wouldGoNegative && !hasEnoughWithOverdraft;
+
+                    return (
+                      <button
+                        key={acc.id}
+                        onClick={() => handleSelectAccountForPayment(acc.id)}
+                        disabled={insufficientFunds}
+                        className={cn(
+                          "w-full p-4 rounded-xl border-2 text-left transition-all",
+                          insufficientFunds
+                            ? "border-border/30 opacity-40 cursor-not-allowed"
+                            : "border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] cursor-pointer"
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-4 h-4 rounded-full shadow-sm"
+                              style={{ backgroundColor: acc.color }}
+                            />
+                            <div>
+                              <p className="font-bold text-sm">{acc.name}</p>
+                              <p className="text-[10px] text-muted-foreground font-bold uppercase">{acc.bank}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={cn("font-black text-sm", acc.balance < 0 && "text-danger")}>
+                              {formatCurrency(acc.balance)}
+                            </p>
+                            {acc.hasOverdraft && (acc.overdraftLimit || 0) > 0 && (
+                              <p className="text-[9px] text-amber-600 font-bold">
+                                Limite: {formatCurrency(acc.overdraftLimit || 0)}
+                              </p>
+                            )}
+                            {insufficientFunds && (
+                              <p className="text-[9px] text-danger font-bold">Saldo insuficiente</p>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 py-3 border-t border-border">
+                <Button
+                  variant="ghost"
+                  onClick={() => setPayingItem(null)}
+                  className="w-full rounded-xl text-sm font-bold"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Portal>
       )}
     </div>
   );

@@ -61,6 +61,8 @@ export interface Account {
   color: string;
   icon?: string;
   accountType: AccountType;
+  hasOverdraft?: boolean;
+  overdraftLimit?: number;
 }
 
 export interface CreditCard {
