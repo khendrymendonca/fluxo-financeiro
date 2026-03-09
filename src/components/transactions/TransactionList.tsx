@@ -117,13 +117,20 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     ...cardBills
   ];
 
+  const getGroupDate = (item: any) => {
+    if (!item.isPending && item.paymentDate) {
+      return item.paymentDate.split('T')[0];
+    }
+    return item.date;
+  };
+
   const filteredItems = displayItems
     .filter(t => filter === 'all' || t.type === filter)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .sort((a, b) => new Date(getGroupDate(b)).getTime() - new Date(getGroupDate(a)).getTime());
 
   // Group by date
   const groupedItems = filteredItems.reduce((groups, item) => {
-    const date = item.date;
+    const date = getGroupDate(item);
     if (!groups[date]) {
       groups[date] = [];
     }

@@ -303,7 +303,13 @@ export function BillsManager() {
                                         <h4 className="font-bold">{bill.name}</h4>
                                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                             <Calendar className="w-3 h-3" />
-                                            {format(new Date(bill.dueDate), "dd 'de' MMMM", { locale: ptBR })}
+                                            {bill.status === 'paid' && (bill.paymentDate || bill.dueDate) ? (
+                                                <span className="text-success font-bold">
+                                                    Pago em {format(new Date(bill.paymentDate || bill.dueDate), "dd 'de' MMMM", { locale: ptBR })}
+                                                </span>
+                                            ) : (
+                                                <>{format(new Date(bill.dueDate), "dd 'de' MMMM", { locale: ptBR })}</>
+                                            )}
                                             {category && (
                                                 <>
                                                     <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />

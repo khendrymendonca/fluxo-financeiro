@@ -129,7 +129,6 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         monthlyPayment: parseFloat(debtTotal) / parseInt(debtInstallments),
         interestRateMonthly: 0,
         startDate: new Date().toISOString(),
-        userId: '',
       }, debtFirstPaymentDate);
       onClose();
       return;
@@ -177,6 +176,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       debtId: selectedDebtId || undefined,
       invoiceMonthYear: (paymentMethod === 'card' && type === 'expense') ? invoiceReference : undefined,
       isPaid: initialData ? isPaidLocally : (new Date(date) <= new Date()),
+      paymentDate: (initialData ? isPaidLocally : (new Date(date) <= new Date())) ? date : undefined,
       userId: initialData?.userId || ''
     }, finalCustomInstallments, applyScope);
 
