@@ -143,7 +143,7 @@ export default function Index() {
 
             <SmartInsights onNavigate={(view) => setCurrentView(view as any)} />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
                 title="Patrimônio Total"
                 value={viewBalance}
@@ -161,6 +161,12 @@ export default function Index() {
                 value={totalExpenses}
                 icon={<TrendingDown className="w-5 h-5 text-danger" />}
                 variant="negative"
+              />
+              <StatCard
+                title="Saldo do Período"
+                value={balance}
+                icon={<PiggyBank className="w-5 h-5" />}
+                variant={balance >= 0 ? 'positive' : 'negative'}
               />
             </div>
 
