@@ -13,7 +13,9 @@ export default function ReportsDashboard() {
         totalIncome,
         totalExpenses,
         getCategoryExpenses,
-        currentMonthTransactions
+        currentMonthTransactions,
+        accounts,
+        viewDate
     } = useFinanceStore();
 
     const [dateRange, setDateRange] = useState('current'); // 'current', '3months', 'year'
@@ -21,6 +23,7 @@ export default function ReportsDashboard() {
     // Calculations for specific insights could go here
     const balance = totalIncome - totalExpenses;
     const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
+    const initialBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
 
     return (
         <div className="space-y-8 animate-fade-in pb-20">
@@ -71,7 +74,11 @@ export default function ReportsDashboard() {
                 <div className="space-y-4">
                     <h2 className="text-xl font-bold tracking-tight">Evolução Patrimonial</h2>
                     <div className="min-h-[300px] h-full">
-                        <BalanceEvolutionChart transactions={transactions} />
+                        <BalanceEvolutionChart
+                            transactions={transactions}
+                            viewDate={viewDate}
+                            initialBalance={initialBalance}
+                        />
                     </div>
                 </div>
             </div>
