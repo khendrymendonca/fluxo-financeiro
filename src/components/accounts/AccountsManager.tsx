@@ -128,69 +128,70 @@ export function AccountsManager({
 
       {/* Account Form Modal */}
       {showAccountForm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-foreground/20 backdrop-blur-sm animate-in fade-in duration-200" style={{ margin: 0 }}>
-          <div className="bg-card rounded-[2.5rem] shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 overflow-y-auto max-h-[90vh] no-scrollbar border border-border">
-            <div className="flex items-center justify-between p-8 border-b border-border bg-muted/10">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowAccountForm(false)}>
+          <div
+            className="bg-card rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 border border-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <div>
-                <h2 className="text-2xl font-black tracking-tight">Nova Conta</h2>
-                <p className="text-sm text-muted-foreground">Cadastre um banco ou carteira digital.</p>
+                <h2 className="text-lg font-black tracking-tight">Nova Conta</h2>
+                <p className="text-xs text-muted-foreground">Cadastre um banco ou carteira digital.</p>
               </div>
               <button
                 onClick={() => setShowAccountForm(false)}
-                className="p-3 rounded-2xl hover:bg-muted transition-colors"
+                className="p-2 rounded-xl hover:bg-muted transition-colors"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleAddAccount} className="p-8 space-y-6">
-              <div className="grid grid-cols-1 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Nome da Conta / Apelido</Label>
+            <form onSubmit={handleAddAccount} className="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nome da Conta / Apelido</Label>
+                <Input
+                  value={accountName}
+                  onChange={(e) => setAccountName(e.target.value)}
+                  placeholder="Ex: Conta Corrente Itaú"
+                  className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Instituição Bancária</Label>
+                <Input
+                  value={accountBank}
+                  onChange={(e) => setAccountBank(e.target.value)}
+                  placeholder="Ex: Banco Itaú"
+                  className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Saldo Inicial (R$)</Label>
                   <Input
-                    value={accountName}
-                    onChange={(e) => setAccountName(e.target.value)}
-                    placeholder="Ex: Conta Corrente Itaú"
-                    className="h-14 rounded-2xl border-2 focus:border-primary/50 transition-colors px-6"
+                    type="number"
+                    step="0.01"
+                    value={accountBalance}
+                    onChange={(e) => setAccountBalance(e.target.value)}
+                    placeholder="0.00"
+                    className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4 font-bold"
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Instituição Bancária</Label>
-                  <Input
-                    value={accountBank}
-                    onChange={(e) => setAccountBank(e.target.value)}
-                    placeholder="Ex: Banco Itaú"
-                    className="h-14 rounded-2xl border-2 focus:border-primary/50 transition-colors px-6"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Saldo Inicial (R$)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={accountBalance}
-                      onChange={(e) => setAccountBalance(e.target.value)}
-                      placeholder="0.00"
-                      className="h-14 rounded-2xl border-2 focus:border-primary/50 transition-colors px-6 font-bold"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Tipo de Conta</Label>
-                    <select
-                      value={accountType}
-                      onChange={(e) => setAccountType(e.target.value as any)}
-                      className="w-full h-14 rounded-2xl border-2 border-input bg-background px-4 py-2 text-sm font-bold focus:border-primary/50 outline-none"
-                    >
-                      <option value="checking">Corrente</option>
-                      <option value="savings">Poupança</option>
-                      <option value="benefit_va">VA (Ali.)</option>
-                      <option value="benefit_vr">VR (Ref.)</option>
-                      <option value="benefit_flex">Flexível</option>
-                    </select>
-                  </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tipo de Conta</Label>
+                  <select
+                    value={accountType}
+                    onChange={(e) => setAccountType(e.target.value as any)}
+                    className="w-full h-10 rounded-xl border-2 border-input bg-background px-3 py-2 text-sm font-bold focus:border-primary/50 outline-none"
+                  >
+                    <option value="checking">Corrente</option>
+                    <option value="savings">Poupança</option>
+                    <option value="benefit_va">VA (Ali.)</option>
+                    <option value="benefit_vr">VR (Ref.)</option>
+                    <option value="benefit_flex">Flexível</option>
+                  </select>
                 </div>
               </div>
 
@@ -200,7 +201,7 @@ export function AccountsManager({
                 onSelect={setAccountColor}
               />
 
-              <Button type="submit" className="w-full h-16 rounded-[1.5rem] text-lg font-black uppercase tracking-widest shadow-xl shadow-primary/20 mt-4 transition-all hover:translate-y-[-2px] active:translate-y-[0px]">
+              <Button type="submit" className="w-full h-12 rounded-xl text-sm font-black uppercase tracking-wider shadow-lg shadow-primary/20 transition-all hover:translate-y-[-1px] active:translate-y-[0px]">
                 Confirmar Cadastro
               </Button>
             </form>
