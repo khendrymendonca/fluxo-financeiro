@@ -41,6 +41,7 @@ export interface Transaction {
   accountId?: string;
   cardId?: string;
   isPaid: boolean;
+  paymentDate?: string; // data efetiva de pagamento (pode diferir da data de vencimento)
   installmentGroupId?: string;
   installmentNumber?: number;
   installmentTotal?: number;

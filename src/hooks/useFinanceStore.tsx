@@ -99,7 +99,8 @@ function useFinanceProvider() {
           installmentNumber: t.installment_number,
           installmentTotal: t.installment_total,
           invoiceMonthYear: t.invoice_month_year,
-          debtId: t.debt_id
+          debtId: t.debt_id,
+          paymentDate: t.payment_date
         })),
         accounts: (accountsRes.data || []).map((a: any) => ({
           ...a,
@@ -281,6 +282,7 @@ function useFinanceProvider() {
         isRecurring: t.is_recurring,
         debtId: t.debt_id,
         isPaid: t.is_paid,
+        paymentDate: t.payment_date,
       }));
 
       setState(prev => ({
@@ -420,26 +422,38 @@ function useFinanceProvider() {
   }, [state.transactions]);
 
 
-  const togglePaid = useCallback(async (id: string, isPaid: boolean) => {
+  const togglePaid = useCallback(async (id: string, isPaid: boolean, paymentAccountId?: string, paymentDate?: string) => {
     try {
       const tx = state.transactions.find(t => t.id === id);
       if (!tx) return;
 
-      const { error } = await supabase.from('transactions').update({ is_paid: isPaid }).eq('id', id);
+      const effectivePaymentDate = paymentDate || new Date().toISOString().split('T')[0];
+      const effectiveAccountId = paymentAccountId || tx.accountId;
+
+      const updatePayload: any = {
+        is_paid: isPaid,
+        payment_date: isPaid ? effectivePaymentDate : null
+      };
+
+      const { error } = await supabase.from('transactions').update(updatePayload).eq('id', id);
       // Even if error (column missing), we update locally
 
       setState(prev => ({
         ...prev,
-        transactions: prev.transactions.map(t => t.id === id ? { ...t, isPaid } : t)
+        transactions: prev.transactions.map(t => t.id === id ? {
+          ...t,
+          isPaid,
+          paymentDate: isPaid ? effectivePaymentDate : undefined
+        } : t)
       }));
 
-      if (tx.accountId) {
+      if (effectiveAccountId) {
         const baseChange = tx.type === 'income' ? tx.amount : -tx.amount;
         const actualChange = isPaid ? baseChange : -baseChange;
-        updateAccountBalance(tx.accountId, actualChange);
+        updateAccountBalance(effectiveAccountId, actualChange);
       }
 
-      toast({ title: isPaid ? 'Conta marcada como paga' : 'Pagamento estornado' });
+      toast({ title: isPaid ? 'Pagamento registrado' : 'Pagamento estornado' });
     } catch (err) {
       toast({ title: 'Erro ao atualizar status', variant: 'destructive' });
     }
