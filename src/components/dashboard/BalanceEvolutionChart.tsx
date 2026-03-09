@@ -14,7 +14,9 @@ interface BalanceEvolutionChartProps {
 
 export function BalanceEvolutionChart({ transactions, initialBalance, viewDate }: BalanceEvolutionChartProps) {
   const monthStart = startOfMonth(viewDate);
+  const monthEnd = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0);
   const monthStartLabel = format(monthStart, 'dd MMM', { locale: ptBR });
+  const monthEndLabel = format(monthEnd, 'dd MMM', { locale: ptBR });
 
   const sortedTransactions = [...transactions].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -34,6 +36,14 @@ export function BalanceEvolutionChart({ transactions, initialBalance, viewDate }
     runningBalance += t.type === 'income' ? t.amount : -t.amount;
     dailyBalances[date] = runningBalance;
   });
+
+  // Ensure line extends properly even if there's only 1 point or few points
+  const today = new Date();
+  const isCurrentMonth = viewDate.getMonth() === today.getMonth() && viewDate.getFullYear() === today.getFullYear();
+  const finalLabel = isCurrentMonth ? format(today, 'dd MMM', { locale: ptBR }) : monthEndLabel;
+  if (!dailyBalances[finalLabel]) {
+    dailyBalances[finalLabel] = runningBalance;
+  }
 
   const chartData = Object.entries(dailyBalances).map(([date, balance]) => ({
     date,

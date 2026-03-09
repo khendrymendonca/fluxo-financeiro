@@ -384,22 +384,26 @@ export function BillsManager() {
                                                 </Button>
                                             </div>
                                         )}
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => handleEdit(bill)}
-                                            className="h-10 w-10 p-0 rounded-xl hover:bg-primary/10 hover:text-primary"
-                                        >
-                                            <Pencil className="w-5 h-5" />
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => deleteBill(bill.id)}
-                                            className="h-10 w-10 p-0 rounded-xl hover:bg-danger/10 hover:text-danger"
-                                        >
-                                            <Trash2 className="w-5 h-5" />
-                                        </Button>
+                                        {!bill.isVirtual && (
+                                            <>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => handleEdit(bill)}
+                                                    className="h-10 w-10 p-0 rounded-xl hover:bg-primary/10 hover:text-primary"
+                                                >
+                                                    <Pencil className="w-5 h-5" />
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => deleteBill(bill.id)}
+                                                    className="h-10 w-10 p-0 rounded-xl hover:bg-danger/10 hover:text-danger"
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
+                                                </Button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
