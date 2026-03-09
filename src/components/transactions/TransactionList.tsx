@@ -237,7 +237,11 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
           <p className="text-muted-foreground">Nenhuma transação ou pendência encontrada</p>
         </div>
       ) : (
-        Object.keys(groupedItems).sort((a, b) => b.localeCompare(a)).map(date => {
+        Object.keys(groupedItems).sort((a, b) => {
+          const dateA = new Date(a).getTime();
+          const dateB = new Date(b).getTime();
+          return dateB - dateA;
+        }).map(date => {
           const dayItems = groupedItems[date];
           return (
             <div key={date} className="space-y-2">

@@ -15,7 +15,7 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
 
     const pending = transactions
         .filter(t => !t.isPaid && t.type === 'expense')
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('pt-BR', {

@@ -23,6 +23,8 @@ import { Portal } from '@/components/ui/Portal';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { MonthSelector } from '@/components/dashboard/MonthSelector';
+
 
 export function BillsManager() {
     const {
@@ -35,7 +37,8 @@ export function BillsManager() {
         updateBill,
         deleteBill,
         payBill,
-        getCardExpenses
+        getCardExpenses,
+        viewDate
     } = useFinanceStore();
 
     const [showAddForm, setShowAddForm] = useState(false);
@@ -140,28 +143,34 @@ export function BillsManager() {
     };
 
     // 1. Get virtual bills from debts
-    const debtBills = debts.map(debt => ({
-        id: `debt-${debt.id}`,
-        name: `Dívida: ${debt.name}`,
-        amount: debt.monthlyPayment,
-        type: 'payable' as const,
-        dueDate: new Date(new Date().setDate(debt.dueDay)).toISOString().split('T')[0],
-        status: 'pending' as const,
-        isFixed: true,
-        categoryId: 'debt-payment',
-        isVirtual: true,
-        icon: ShieldAlert
-    }));
+    const debtBills = debts.map(debt => {
+        const d = new Date(viewDate);
+        d.setDate(debt.dueDay);
+        return {
+            id: `debt-${debt.id}`,
+            name: `Dívida: ${debt.name}`,
+            amount: debt.monthlyPayment,
+            type: 'payable' as const,
+            dueDate: d.toISOString().split('T')[0],
+            status: 'pending' as const,
+            isFixed: true,
+            categoryId: 'debt-payment',
+            isVirtual: true,
+            icon: ShieldAlert
+        };
+    });
 
     // 2. Get virtual bills from credit cards
     const cardBills = creditCards.map(card => {
         const amount = getCardExpenses(card.id);
+        const d = new Date(viewDate);
+        d.setDate(card.dueDay);
         return {
             id: `card-${card.id}`,
             name: `Fatura: ${card.name}`,
             amount: amount,
             type: 'payable' as const,
-            dueDate: new Date(new Date().setDate(card.dueDay)).toISOString().split('T')[0],
+            dueDate: d.toISOString().split('T')[0],
             status: 'pending' as const,
             isFixed: true,
             categoryId: 'card-payment',
@@ -173,6 +182,10 @@ export function BillsManager() {
     const allBills = [...bills, ...debtBills, ...cardBills];
 
     const filteredBills = allBills.filter(b => {
+        const bDate = new Date(b.dueDate);
+        const matchesDate = bDate.getMonth() === viewDate.getMonth() && bDate.getFullYear() === viewDate.getFullYear();
+        if (!matchesDate) return false;
+
         if (filter === 'all') return true;
         return b.type === filter;
     }).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
@@ -195,14 +208,17 @@ export function BillsManager() {
                     </div>
                 </div>
 
-                <div className="flex gap-2">
-                    <div className="px-4 py-2 rounded-xl bg-danger/5 border border-danger/10">
-                        <p className="text-[10px] uppercase font-bold text-danger/70">A Pagar Pendente</p>
-                        <p className="text-lg font-bold text-danger">{formatCurrency(totalPendingPayable)}</p>
+                <div className="flex flex-wrap items-center gap-3">
+                    <MonthSelector />
+                    <div className="flex gap-2">
+                        <div className="px-4 py-2 rounded-xl bg-danger/5 border border-danger/10">
+                            <p className="text-[10px] uppercase font-bold text-danger/70">A Pagar Pendente</p>
+                            <p className="text-lg font-bold text-danger">{formatCurrency(totalPendingPayable)}</p>
+                        </div>
+                        <Button onClick={() => setShowAddForm(!showAddForm)} className="rounded-xl h-full px-6 gap-2">
+                            {showAddForm ? 'Cancelar' : <><Plus className="w-4 h-4" /> Nova Conta</>}
+                        </Button>
                     </div>
-                    <Button onClick={() => setShowAddForm(!showAddForm)} className="rounded-xl h-full px-6 gap-2">
-                        {showAddForm ? 'Cancelar' : <><Plus className="w-4 h-4" /> Nova Conta</>}
-                    </Button>
                 </div>
             </div>
 
