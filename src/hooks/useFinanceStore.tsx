@@ -104,41 +104,43 @@ function useFinanceProvider() {
     const maxDate = new Date(2030, 11, 31);
     const virtualBills: Bill[] = [];
 
-    // 1. Identificar contas fixas que precisam ser projetadas
-    state.bills.filter(b => b.isFixed).forEach(bill => {
+    // 1. Identificar contas fixas únicas que precisam ser projetadas
+    // Agrupamos por nome + categoria para evitar que 12 meses reais gerem 12 projeções cada
+    const fixedBillTemplates = state.bills
+      .filter(b => b.isFixed)
+      .reduce((acc, bill) => {
+        const key = `${bill.name}-${bill.categoryId}`;
+        if (!acc[key]) acc[key] = bill;
+        return acc;
+      }, {} as Record<string, Bill>);
+
+    Object.values(fixedBillTemplates).forEach(bill => {
       const start = parseISO(bill.startDate || bill.dueDate);
 
       // Projetar para o período atual (viewDate)
-      // Se a viewDate está entre 'start' e '2030-12-31', e não existe uma conta "real" para este mês
       const [, , dStr] = (bill.dueDate || '').split('T')[0].split('-');
       const targetDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), parseInt(dStr || '1', 10) || 1);
-      // Ajuste para meses curtos (ex: 31 de Março -> 30 de Abril se April tiver 30 dias)
+
       if (targetDate.getMonth() !== viewDate.getMonth()) {
         targetDate.setDate(0);
       }
 
       if (targetDate >= start && targetDate <= maxDate) {
-        // Verificar se já existe uma conta real para este mês vinda desta conta fixa
+        // Verificar se já existe QUALQUER conta real (fixa ou não) para este mês com o mesmo nome
         const exists = state.bills.find(b =>
-          !b.isFixed &&
-          b.originalBillId === bill.id &&
+          b.name === bill.name &&
           new Date(b.dueDate).getMonth() === viewDate.getMonth() &&
           new Date(b.dueDate).getFullYear() === viewDate.getFullYear()
         );
 
-        // Se a conta original for do próprio mês selecionado, ela já será filtrada como "real" abaixo
-        const isOriginalInThisMonth =
-          new Date(bill.dueDate).getMonth() === viewDate.getMonth() &&
-          new Date(bill.dueDate).getFullYear() === viewDate.getFullYear();
-
-        if (!exists && !isOriginalInThisMonth) {
+        if (!exists) {
           virtualBills.push({
             ...bill,
             id: `virtual-${bill.id}-${viewDate.getFullYear()}-${viewDate.getMonth()}`,
             dueDate: targetDate.toISOString(),
             status: 'pending',
             isFixed: true,
-            // Adicionamos uma flag interna para o UI saber que é virtual se necessário
+            isVirtual: true,
             originalBillId: bill.id
           } as Bill);
         }
