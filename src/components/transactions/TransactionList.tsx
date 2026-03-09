@@ -331,14 +331,16 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                       {isGroupExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                     </Button>
                                   )}
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => onEdit(item as any)}
-                                    className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary shrink-0"
-                                  >
-                                    <Pencil className="w-4 h-4" />
-                                  </Button>
+                                  {!item.isBill && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => onEdit(item as any)}
+                                      className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary shrink-0"
+                                    >
+                                      <Pencil className="w-4 h-4" />
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             ) : (
@@ -356,14 +358,16 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                     {isGroupExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                   </Button>
                                 )}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => onEdit(item as any)}
-                                  className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary"
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                </Button>
+                                {!item.isBill && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => onEdit(item as any)}
+                                    className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="icon"

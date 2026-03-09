@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo, createContext, useContext } 
 import { FinanceState, Transaction, Account, CreditCard, Debt, SavingsGoal, Category, Subcategory, Bill, HabitLog, UserHabit, BudgetRule, FilterMode } from '@/types/finance';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
-import { format, subDays, startOfMonth, endOfMonth, isAfter, isBefore } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth, isAfter, isBefore, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const initialState: FinanceState = {
@@ -66,12 +66,12 @@ function useFinanceProvider() {
 
     // 1. Identificar contas fixas que precisam ser projetadas
     state.bills.filter(b => b.isFixed).forEach(bill => {
-      const start = new Date(bill.startDate || bill.dueDate);
+      const start = parseISO(bill.startDate || bill.dueDate);
 
       // Projetar para o período atual (viewDate)
       // Se a viewDate está entre 'start' e '2030-12-31', e não existe uma conta "real" para este mês
-
-      const targetDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), new Date(bill.dueDate).getDate());
+      const [, , dStr] = bill.dueDate.split('T')[0].split('-');
+      const targetDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), parseInt(dStr, 10));
       // Ajuste para meses curtos (ex: 31 de Março -> 30 de Abril se April tiver 30 dias)
       if (targetDate.getMonth() !== viewDate.getMonth()) {
         targetDate.setDate(0);
@@ -357,13 +357,9 @@ function useFinanceProvider() {
         });
       } else if (transaction.installmentTotal && transaction.installmentTotal > 1) {
         const val = transaction.amount / transaction.installmentTotal;
-        const baseDate = new Date(transaction.date);
-        const y = baseDate.getFullYear();
-        const m = baseDate.getMonth();
-        const d = baseDate.getDate();
-
         for (let i = 1; i <= transaction.installmentTotal; i++) {
-          const instDate = new Date(y, m + (i - 1), d);
+          const [yy, mm, dd] = transaction.date.split('-').map(Number);
+          const instDate = new Date(yy, mm - 1 + (i - 1), dd);
           pushTx({
             ...transaction,
             date: format(instDate, 'yyyy-MM-dd'),
@@ -371,13 +367,9 @@ function useFinanceProvider() {
           }, i, transaction.installmentTotal);
         }
       } else if (transaction.isRecurring) {
-        const baseDate = new Date(transaction.date);
-        const y = baseDate.getFullYear();
-        const m = baseDate.getMonth();
-        const d = baseDate.getDate();
-
         for (let i = 1; i <= 12; i++) {
-          const instDate = new Date(y, m + (i - 1), d);
+          const [yy, mm, dd] = transaction.date.split('-').map(Number);
+          const instDate = new Date(yy, mm - 1 + (i - 1), dd);
 
           pushTx({
             ...transaction,
