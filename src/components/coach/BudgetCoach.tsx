@@ -49,7 +49,7 @@ export function BudgetCoach() {
             <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                     <div className="w-1.5 h-4 bg-primary rounded-full" />
-                    Coach 50/30/20
+                    Saúde Financeira
                 </h3>
                 <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-bold">
                     Base: {formatCompact(totalIncome)}

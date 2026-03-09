@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect, useMemo, createContext, useContext } 
 import { FinanceState, Transaction, Account, CreditCard, Debt, SavingsGoal, Category, Subcategory, Bill, HabitLog, UserHabit, BudgetRule, FilterMode } from '@/types/finance';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
+import { format, subDays, startOfMonth, endOfMonth, isAfter, isBefore } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const initialState: FinanceState = {
   transactions: [],
@@ -299,6 +301,18 @@ function useFinanceProvider() {
 
       const pushTx = (txData: any, instNum?: number, instTotal?: number) => {
         const categoryName = state.categories.find(c => c.id === txData.categoryId)?.name || 'Outros';
+        const card = txData.cardId ? state.creditCards.find(c => c.id === txData.cardId) : null;
+        let invoiceMonthYear = txData.invoiceMonthYear || null;
+
+        if (card && !txData.isInvoicePayment) {
+          const tDate = new Date(txData.date);
+          const { closingDay } = getCardSettingsForDate(card, tDate);
+          let invoiceDate = new Date(tDate);
+          if (tDate.getDate() > closingDay) {
+            invoiceDate.setMonth(invoiceDate.getMonth() + 1);
+          }
+          invoiceMonthYear = format(invoiceDate, 'yyyy-MM');
+        }
 
         transactionsToAdd.push({
           user_id: user.id,
@@ -312,7 +326,7 @@ function useFinanceProvider() {
           date: txData.date,
           account_id: txData.accountId || null,
           card_id: txData.cardId || null,
-          invoice_month_year: txData.invoiceMonthYear || null,
+          invoice_month_year: invoiceMonthYear,
           is_recurring: txData.isRecurring || false,
           installment_group_id: installmentGroupId,
           installment_number: instNum || txData.installmentNumber || null,
@@ -1437,6 +1451,34 @@ function useFinanceProvider() {
     return state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0) + delta;
   }, [state.accounts, state.transactions, viewDate, viewMode]);
 
+  const getPeriodStartBalance = useCallback(() => {
+    let periodStart: Date;
+    if (viewMode === 'day') {
+      periodStart = new Date(viewDate);
+      periodStart.setHours(0, 0, 0, 0);
+    } else if (viewMode === 'month') {
+      periodStart = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1, 0, 0, 0, 0);
+    } else {
+      periodStart = new Date(viewDate.getFullYear(), 0, 1, 0, 0, 0, 0);
+    }
+
+    const dayBefore = subDays(periodStart, 1);
+    dayBefore.setHours(23, 59, 59, 999);
+
+    const now = new Date();
+    const currentBalance = state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+
+    // Historical Balance = Current Balance - (Sum of all transactions since dayBefore)
+    const delta = state.transactions.filter(t => {
+      const tDate = new Date(t.date);
+      return tDate > dayBefore;
+    }).reduce((acc, t) => {
+      return acc + (t.type === 'income' ? -t.amount : t.amount);
+    }, 0);
+
+    return currentBalance + delta;
+  }, [state.accounts, state.transactions, viewDate, viewMode]);
+
   const getAccountViewBalance = useCallback((accountId: string) => {
     const account = state.accounts.find(a => a.id === accountId);
     if (!account) return 0;
@@ -1521,6 +1563,7 @@ function useFinanceProvider() {
     updateDebt,
     deleteDebt,
     createDebtWithInstallments,
+    getPeriodStartBalance,
     seedCoach
   };
 }

@@ -18,14 +18,27 @@ const COLORS = [
 ];
 
 export function ExpenseChart({ data }: ExpenseChartProps) {
-  const chartData = Object.entries(data)
+  const initialChartData = Object.entries(data)
     .filter(([_, value]) => value > 0)
-    .map(([categoryName, value], index) => ({
+    .map(([categoryName, value]) => ({
       name: categoryName,
       value,
-      color: COLORS[index % COLORS.length],
     }))
     .sort((a, b) => b.value - a.value);
+
+  const top4 = initialChartData.slice(0, 4);
+  const rest = initialChartData.slice(4);
+  const othersValue = rest.reduce((sum, item) => sum + item.value, 0);
+
+  const chartData = [...top4];
+  if (othersValue > 0) {
+    chartData.push({ name: 'Outros', value: othersValue });
+  }
+
+  const finalChartData = chartData.map((item, index) => ({
+    ...item,
+    color: COLORS[index % COLORS.length],
+  }));
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -69,7 +82,7 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={chartData}
+                data={finalChartData}
                 cx="50%"
                 cy="50%"
                 innerRadius={28}
@@ -79,7 +92,7 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
                 stroke="none"
                 animationDuration={800}
               >
-                {chartData.map((entry, index) => (
+                {finalChartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
@@ -90,7 +103,7 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
 
         {/* Legend */}
         <div className="flex-1 space-y-1 min-w-0">
-          {chartData.slice(0, 5).map((item, idx) => (
+          {finalChartData.map((item, idx) => (
             <div key={idx} className="flex items-center gap-1.5 text-[10px]">
               <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
               <span className="truncate text-muted-foreground font-medium">{item.name}</span>
@@ -99,9 +112,6 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
               </span>
             </div>
           ))}
-          {chartData.length > 5 && (
-            <p className="text-[9px] text-muted-foreground/50 font-bold">+{chartData.length - 5} categorias</p>
-          )}
         </div>
       </div>
     </div>
