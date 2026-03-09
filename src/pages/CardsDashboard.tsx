@@ -13,7 +13,7 @@ import { Portal } from '@/components/ui/Portal';
 import { Pencil } from 'lucide-react';
 
 export default function CardsDashboard() {
-    const { creditCards, transactions, accounts, categories, updateCreditCard, addCreditCard } = useFinanceStore();
+    const { creditCards, transactions, accounts, categories, updateCreditCard, addCreditCard, getCardUsedLimit } = useFinanceStore();
     const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
     const [viewDate, setViewDate] = useState(new Date());
 
@@ -23,19 +23,7 @@ export default function CardsDashboard() {
 
     // Calculate Card Stats
     const getCardStats = (cardId: string) => {
-        const cardTransactions = transactions.filter(t => t.cardId === cardId);
-
-        // O valor consumido no cartão é a soma de todas as despesas no crédito
-        // menos tudo que já foi pago via fatura
-        const totalSpent = cardTransactions
-            .filter(t => t.type === 'expense' && !t.isInvoicePayment)
-            .reduce((sum, t) => sum + t.amount, 0);
-
-        const totalPaid = cardTransactions
-            .filter(t => t.isInvoicePayment)
-            .reduce((sum, t) => sum + t.amount, 0);
-
-        const currentUsedResult = Math.max(0, totalSpent - totalPaid);
+        const currentUsedResult = getCardUsedLimit(cardId);
         const card = creditCards.find(c => c.id === cardId);
         const limit = card?.limit || 0;
         const available = Math.max(0, limit - currentUsedResult);

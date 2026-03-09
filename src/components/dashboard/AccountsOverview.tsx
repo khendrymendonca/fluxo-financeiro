@@ -4,13 +4,12 @@ import { Account, CreditCard } from '@/types/finance';
 interface AccountsOverviewProps {
   accounts: Account[];
   creditCards: CreditCard[];
-  getCardExpenses: (cardId: string) => number;
 }
 
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 
-export function AccountsOverview({ accounts, creditCards, getCardExpenses }: AccountsOverviewProps) {
-  const { getAccountViewBalance } = useFinanceStore();
+export function AccountsOverview({ accounts, creditCards }: AccountsOverviewProps) {
+  const { getAccountViewBalance, getCardUsedLimit } = useFinanceStore();
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -54,7 +53,7 @@ export function AccountsOverview({ accounts, creditCards, getCardExpenses }: Acc
         <div className="space-y-3">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Cartões</p>
           {creditCards.map((card) => {
-            const currentExpenses = getCardExpenses(card.id);
+            const currentExpenses = getCardUsedLimit(card.id);
             const usagePercentage = (currentExpenses / card.limit) * 100;
 
             return (

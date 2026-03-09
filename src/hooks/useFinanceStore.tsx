@@ -1453,6 +1453,30 @@ function useFinanceProvider() {
       .reduce((acc, curr) => acc + curr.amount, 0);
   }, [currentMonthTransactions]);
 
+  const getCardUsedLimit = useCallback((cardId: string) => {
+    const cardTransactions = state.transactions.filter(t => t.cardId === cardId);
+    const now = new Date();
+
+    const totalSpent = cardTransactions
+      .filter(t => t.type === 'expense' && !t.isInvoicePayment)
+      .filter(t => {
+        // Se for recorrência, só conta se a data já passou ou é hoje
+        if (t.isRecurring) {
+          const tDate = new Date(t.date);
+          return tDate <= now;
+        }
+        // Se for parcelamento ou pontual, conta tudo (reserva o limite)
+        return true;
+      })
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalPaid = cardTransactions
+      .filter(t => t.isInvoicePayment)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    return Math.max(0, totalSpent - totalPaid);
+  }, [state.transactions]);
+
   const getCategoryExpenses = useCallback(() => {
     const expenses: Record<string, number> = {};
     currentMonthTransactions.filter(t => t.type === 'expense').forEach(t => {
@@ -1617,6 +1641,7 @@ function useFinanceProvider() {
     currentMonthTransactions,
     currentMonthBills,
     getCardExpenses,
+    getCardUsedLimit,
     getCategoryExpenses,
     getCardSettingsForDate,
     getEmergencyFundData,

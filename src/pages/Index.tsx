@@ -193,7 +193,6 @@ export default function Index() {
               <AccountsOverview
                 accounts={accounts}
                 creditCards={creditCards}
-                getCardExpenses={getCardExpenses}
               />
             </div>
 
