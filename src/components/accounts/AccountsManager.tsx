@@ -250,7 +250,7 @@ export function AccountsManager({
                 {account.hasOverdraft && (account.overdraftLimit || 0) > 0 && (
                   <div className="pt-2 border-t border-border/50 space-y-1">
                     <div className="flex justify-between items-center">
-                      <p className="text-[9px] font-bold text-muted-foreground uppercase">Limite da Conta</p>
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase">Limite Total da Conta</p>
                       <span className="font-semibold text-sm">
                         {formatCurrency(account.overdraftLimit || 0)}
                       </span>
@@ -260,11 +260,19 @@ export function AccountsManager({
                         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                           <div className="h-full rounded-full bg-amber-500 transition-all duration-500" style={{ width: `${Math.min(100, (overdraftUsed / (account.overdraftLimit || 1)) * 100)}%` }} />
                         </div>
-                        <p className="text-[9px] text-amber-600 font-bold">{formatCurrency(overdraftUsed)} usado do limite</p>
+                        <div className="flex justify-between items-center text-[9px] font-bold">
+                          <p className="text-amber-600">{formatCurrency(overdraftUsed)} usado</p>
+                          <p className="text-muted-foreground">Restante: {formatCurrency(Math.max(0, (account.overdraftLimit || 0) - overdraftUsed))}</p>
+                        </div>
                       </div>
                     )}
+                    {!isNegative && (
+                      <p className="text-[9px] text-muted-foreground">
+                        Limite disponível: <span className="font-bold text-success">{formatCurrency(account.overdraftLimit || 0)}</span>
+                      </p>
+                    )}
                     <p className="text-[9px] text-muted-foreground">
-                      Disponível total: <span className="font-bold text-foreground">{formatCurrency(availableTotal)}</span>
+                      Disponível total (Saldo + Limite): <span className="font-bold text-foreground">{formatCurrency(availableTotal)}</span>
                     </p>
                   </div>
                 )}
