@@ -168,7 +168,12 @@ export default function Index() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <EmergencyReserve data={emergencyData} onMonthsChange={setEmergencyMonths} />
+              <EmergencyReserve
+                data={emergencyData}
+                onMonthsChange={setEmergencyMonths}
+                accounts={accounts}
+                onTransfer={transferBetweenAccounts}
+              />
               <PendingPayments
                 transactions={currentMonthTransactions}
                 accounts={accounts}
@@ -182,15 +187,14 @@ export default function Index() {
               />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-2">
+            <div className="grid grid-cols-1 gap-4">
+              <div>
                 <RecentTransactions
                   transactions={currentMonthTransactions}
                   accounts={accounts}
                   creditCards={creditCards}
                 />
               </div>
-              <HabitTracker />
             </div>
           </div>
         );

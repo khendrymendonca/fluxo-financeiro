@@ -24,18 +24,18 @@ export default function ReportsDashboard() {
 
     return (
         <div className="space-y-8 animate-fade-in pb-20">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Relatórios Detalhados</h1>
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Relatórios Detalhados</h1>
                     <p className="text-muted-foreground mt-1">Análise profunda das suas finanças.</p>
                 </div>
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" className="gap-2 w-full md:w-auto">
                     <Download className="w-4 h-4" /> Exportar Dados
                 </Button>
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                 <div className="card-elevated p-6">
                     <h3 className="text-sm font-medium text-muted-foreground mb-2">Taxa de Economia</h3>
                     <div className="text-3xl font-bold text-primary">
@@ -63,7 +63,7 @@ export default function ReportsDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-4">
                     <h2 className="text-xl font-semibold">Distribuição de Despesas</h2>
-                    <ExpenseChart data={getCategoryExpenses()} />
+                    <ExpenseChart data={getCategoryExpenses().reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)} />
                 </div>
 
                 <div className="space-y-4">

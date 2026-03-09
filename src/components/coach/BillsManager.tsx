@@ -19,6 +19,7 @@ import {
     Pencil,
     CreditCard as CardIcon
 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -39,8 +40,9 @@ export function BillsManager() {
 
     const [showAddForm, setShowAddForm] = useState(false);
     const [filter, setFilter] = useState<'all' | 'payable' | 'receivable'>('all');
-    const [isPaying, setIsPaying] = useState<string | null>(null);
-    const [selectedAccount, setSelectedAccount] = useState('');
+    const [isPaying, setIsPaying] = useState<any>(null);
+    const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
     const [editingBillId, setEditingBillId] = useState<string | null>(null);
 
     // Form State
@@ -98,14 +100,10 @@ export function BillsManager() {
         setShowAddForm(false);
     };
 
-    const handleMarkAsPaid = async (id: string) => {
-        if (!selectedAccount) {
-            toast({ title: 'Selecione uma conta para o pagamento', variant: 'destructive' });
-            return;
-        }
-        await payBill(id, selectedAccount, new Date().toISOString());
+    const handleMarkAsPaid = async (targetId: string, isCard: boolean) => {
+        if (!isPaying) return;
+        await payBill(isPaying.id, isCard ? undefined : targetId, paymentDate, isCard ? targetId : undefined);
         setIsPaying(null);
-        setSelectedAccount('');
     };
 
     const handleEdit = (bill: any) => {
@@ -342,47 +340,19 @@ export function BillsManager() {
                                     <div className="flex gap-2">
                                         {bill.status === 'pending' && (
                                             <div className="flex items-center gap-2">
-                                                {isPaying === bill.id ? (
-                                                    <div className="flex flex-col md:flex-row items-end gap-2 animate-scale-in">
-                                                        <select
-                                                            className="h-9 rounded-lg border border-input bg-background px-2 py-1 text-[10px] font-bold uppercase w-32"
-                                                            value={selectedAccount}
-                                                            onChange={(e) => setSelectedAccount(e.target.value)}
-                                                        >
-                                                            <option value="">Qual Conta?</option>
-                                                            {accounts.map(acc => (
-                                                                <option key={acc.id} value={acc.id}>{acc.name}</option>
-                                                            ))}
-                                                        </select>
-                                                        <div className="flex gap-1">
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={() => handleMarkAsPaid(bill.id)}
-                                                                className="h-9 px-3 rounded-lg bg-success hover:bg-success/90 text-[10px] font-black uppercase"
-                                                            >
-                                                                Confirmar
-                                                            </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={() => { setIsPaying(null); setSelectedAccount(''); }}
-                                                                className="h-9 px-2 rounded-lg text-[10px] uppercase"
-                                                            >
-                                                                X
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={() => setIsPaying(bill.id)}
-                                                        className="h-11 px-4 rounded-2xl bg-success/5 text-success hover:bg-success/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider"
-                                                    >
-                                                        <CheckCircle2 className="w-5 h-5" />
-                                                        Baixar Conta
-                                                    </Button>
-                                                )}
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => {
+                                                        setIsPaying(bill);
+                                                        setPaymentDate(new Date().toISOString().split('T')[0]);
+                                                        setPaymentMethod('account');
+                                                    }}
+                                                    className="h-11 px-4 rounded-2xl bg-success/5 text-success hover:bg-success/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider"
+                                                >
+                                                    <CheckCircle2 className="w-5 h-5" />
+                                                    Baixar Conta
+                                                </Button>
                                             </div>
                                         )}
                                         <Button
@@ -408,6 +378,168 @@ export function BillsManager() {
                     })
                 )}
             </div>
+
+            {/* Payment Account Selection Popup */}
+            {isPaying && (
+                <Portal>
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+                        onClick={() => setIsPaying(null)}
+                    >
+                        <div
+                            className="bg-card rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-border max-h-[80vh] overflow-y-auto"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="px-5 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
+                                <h2 className="text-lg font-black tracking-tight">
+                                    {isPaying.type === 'receivable' ? 'Receber com qual conta?' : 'Pagar com qual conta?'}
+                                </h2>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    <span className={cn("font-bold", isPaying.type === 'receivable' ? "text-success" : "text-danger")}>
+                                        {formatCurrency(isPaying.amount)}
+                                    </span>
+                                    {' — '}
+                                    {isPaying.name}
+                                </p>
+                            </div>
+
+                            {/* Advanced Payment Options */}
+                            <div className="p-4 space-y-4">
+                                {/* Date Selection */}
+                                <div className="space-y-2 relative">
+                                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Data do Pagamento</label>
+                                    <label className="relative flex items-center bg-muted/30 border border-input rounded-xl p-3 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all cursor-pointer">
+                                        <Calendar className="absolute left-3 w-4 h-4 text-primary" />
+                                        <input
+                                            type="date"
+                                            value={paymentDate}
+                                            onChange={(e) => setPaymentDate(e.target.value)}
+                                            className="w-full pl-8 pr-2 bg-transparent text-sm font-bold focus:outline-none appearance-none cursor-pointer text-foreground"
+                                        />
+                                    </label>
+                                </div>
+
+                                {/* Account / Card Tabs */}
+                                <div className="flex rounded-xl bg-muted/40 p-1">
+                                    <button
+                                        onClick={() => setPaymentMethod('account')}
+                                        className={cn(
+                                            "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
+                                            paymentMethod === 'account' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        Conta Bancária
+                                    </button>
+                                    <button
+                                        onClick={() => setPaymentMethod('credit_card')}
+                                        className={cn(
+                                            "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
+                                            paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        Cartão de Crédito
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Targets List */}
+                            <div className="p-3 pt-0 space-y-2">
+                                {paymentMethod === 'account' && (
+                                    accounts.length === 0 ? (
+                                        <p className="text-center text-muted-foreground py-8 text-sm">Nenhuma conta cadastrada.</p>
+                                    ) : (
+                                        accounts.map(acc => {
+                                            const availableTotal = acc.balance + (acc.hasOverdraft ? (acc.overdraftLimit || 0) : 0);
+                                            const wouldGoNegative = isPaying.type === 'payable' && acc.balance < isPaying.amount;
+                                            const hasEnoughWithOverdraft = acc.hasOverdraft && availableTotal >= isPaying.amount;
+                                            const insufficientFunds = wouldGoNegative && !hasEnoughWithOverdraft;
+
+                                            return (
+                                                <button
+                                                    key={acc.id}
+                                                    onClick={() => handleMarkAsPaid(acc.id, false)}
+                                                    disabled={insufficientFunds}
+                                                    className={cn(
+                                                        "w-full p-4 rounded-xl border-2 text-left transition-all",
+                                                        insufficientFunds
+                                                            ? "border-border/30 opacity-40 cursor-not-allowed"
+                                                            : "border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] cursor-pointer"
+                                                    )}
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <div
+                                                                className="w-4 h-4 rounded-full shadow-sm"
+                                                                style={{ backgroundColor: acc.color }}
+                                                            />
+                                                            <div>
+                                                                <p className="font-bold text-sm">{acc.name}</p>
+                                                                <p className="text-[10px] text-muted-foreground font-bold uppercase">{acc.bank}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className={cn("font-black text-sm", acc.balance < 0 && "text-danger")}>
+                                                                {formatCurrency(acc.balance)}
+                                                            </p>
+                                                            {acc.hasOverdraft && (acc.overdraftLimit || 0) > 0 && (
+                                                                <p className="text-[9px] text-amber-600 font-bold">
+                                                                    Limite: {formatCurrency(acc.overdraftLimit || 0)}
+                                                                </p>
+                                                            )}
+                                                            {insufficientFunds && (
+                                                                <p className="text-[9px] text-danger font-bold">Saldo inadequado</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })
+                                    )
+                                )}
+
+                                {paymentMethod === 'credit_card' && (
+                                    creditCards.length === 0 ? (
+                                        <p className="text-center text-muted-foreground py-8 text-sm">Nenhum cartão cadastrado.</p>
+                                    ) : (
+                                        creditCards.map(card => {
+                                            return (
+                                                <button
+                                                    key={card.id}
+                                                    onClick={() => handleMarkAsPaid(card.id, true)}
+                                                    className="w-full p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] transition-all text-left cursor-pointer"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div
+                                                            className="w-4 h-4 rounded-full shadow-sm"
+                                                            style={{ backgroundColor: card.color }}
+                                                        />
+                                                        <div>
+                                                            <p className="font-bold text-sm">{card.name}</p>
+                                                            <p className="text-[10px] text-muted-foreground font-bold uppercase">{card.bank}</p>
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })
+                                    )
+                                )}
+                            </div>
+
+                            {/* Footer */}
+                            <div className="px-5 py-3 border-t border-border">
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setIsPaying(null)}
+                                    className="w-full rounded-xl text-sm font-bold"
+                                >
+                                    Cancelar
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </Portal>
+            )}
 
         </div>
     );

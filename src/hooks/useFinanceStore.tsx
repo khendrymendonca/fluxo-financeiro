@@ -425,17 +425,20 @@ function useFinanceProvider() {
   }, [state.transactions]);
 
 
-  const togglePaid = useCallback(async (id: string, isPaid: boolean, paymentAccountId?: string, paymentDate?: string) => {
+  const togglePaid = useCallback(async (id: string, isPaid: boolean, paymentAccountId?: string, paymentDate?: string, paymentCardId?: string) => {
     try {
       const tx = state.transactions.find(t => t.id === id);
       if (!tx) return;
 
       const effectivePaymentDate = paymentDate || new Date().toISOString().split('T')[0];
       const effectiveAccountId = paymentAccountId || tx.accountId;
+      const effectiveCardId = paymentCardId || tx.cardId;
 
       const updatePayload: any = {
         is_paid: isPaid,
-        payment_date: isPaid ? effectivePaymentDate : null
+        payment_date: isPaid ? effectivePaymentDate : null,
+        account_id: isPaid ? (effectiveAccountId || null) : tx.accountId,
+        card_id: isPaid ? (effectiveCardId || null) : tx.cardId
       };
 
       const { error } = await supabase.from('transactions').update(updatePayload).eq('id', id);
@@ -446,7 +449,9 @@ function useFinanceProvider() {
         transactions: prev.transactions.map(t => t.id === id ? {
           ...t,
           isPaid,
-          paymentDate: isPaid ? effectivePaymentDate : undefined
+          paymentDate: isPaid ? effectivePaymentDate : undefined,
+          accountId: isPaid ? (effectiveAccountId || undefined) : tx.accountId,
+          cardId: isPaid ? (effectiveCardId || undefined) : tx.cardId
         } : t)
       }));
 
@@ -935,7 +940,7 @@ function useFinanceProvider() {
     } catch (err) { toast({ title: 'Erro ao remover conta', variant: 'destructive' }); }
   }, []);
 
-  const payBill = useCallback(async (billId: string, accountId: string, paymentDate: string) => {
+  const payBill = useCallback(async (billId: string, accountId: string | undefined, paymentDate: string, cardId?: string) => {
     try {
       const bill = state.bills.find(b => b.id === billId);
       if (!bill) return;
@@ -944,7 +949,7 @@ function useFinanceProvider() {
       await updateBill(billId, {
         status: 'paid',
         paymentDate,
-        accountId
+        accountId: accountId || undefined
       });
 
       // 2. Create the associated transaction
@@ -956,7 +961,8 @@ function useFinanceProvider() {
         transactionType: 'punctual',
         categoryId: bill.categoryId,
         subcategoryId: bill.subcategoryId,
-        accountId: accountId,
+        accountId: accountId || undefined,
+        cardId: cardId || undefined,
         isPaid: true,
         userId: bill.userId
       });
@@ -975,7 +981,7 @@ function useFinanceProvider() {
           categoryId: bill.categoryId,
           subcategoryId: bill.subcategoryId,
           isFixed: true,
-          accountId: accountId,
+          accountId: bill.accountId, // mantém as configurações originais da conta para as próximas
           startDate: bill.startDate
         }, false);
       }
@@ -1033,22 +1039,26 @@ function useFinanceProvider() {
   }, [state.categoryGroups, fetchInitialData]);
 
   // Debts (Simplified for now - can be expanded)
-  const addDebt = useCallback(async (debt: Omit<Debt, 'id'>) => {
+  const addDebt = useCallback(async (debt: Omit<Debt, 'id' | 'userId'>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data, error } = await supabase.from('debts').insert({
+
+      const payload: any = {
         user_id: user.id,
         name: debt.name,
         total_amount: debt.totalAmount,
         remaining_amount: debt.remainingAmount,
         monthly_payment: debt.monthlyPayment,
-        interest_rate_monthly: debt.interestRateMonthly,
-        start_date: debt.startDate,
-        minimum_payment: debt.minimumPayment,
-        due_day: debt.dueDay,
-        strategy_priority: debt.strategyPriority
-      }).select().single();
+        interest_rate_monthly: debt.interestRateMonthly || 0,
+        start_date: debt.startDate || new Date().toISOString(),
+      };
+
+      if (debt.minimumPayment !== undefined && !isNaN(debt.minimumPayment)) payload.minimum_payment = debt.minimumPayment;
+      if (debt.dueDay !== undefined && !isNaN(debt.dueDay)) payload.due_day = debt.dueDay;
+      if (debt.strategyPriority !== undefined) payload.strategy_priority = debt.strategyPriority;
+
+      const { data, error } = await supabase.from('debts').insert(payload).select().single();
       if (error) throw error;
       const newDebt = {
         ...data,
@@ -1085,7 +1095,45 @@ function useFinanceProvider() {
     } catch (err) { toast({ title: 'Erro ao remover dívida', variant: 'destructive' }); }
   }, []);
 
-  const createDebtWithInstallments = useCallback(async (debt: Omit<Debt, 'id'>, start: string) => { }, []);
+  const createDebtWithInstallments = useCallback(async (debt: Omit<Debt, 'id' | 'userId'>, start: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const payload: any = {
+        user_id: user.id,
+        name: debt.name,
+        total_amount: debt.totalAmount,
+        remaining_amount: debt.remainingAmount,
+        monthly_payment: debt.monthlyPayment,
+        interest_rate_monthly: debt.interestRateMonthly || 0,
+        start_date: start || new Date().toISOString(),
+      };
+
+      if (debt.minimumPayment !== undefined && !isNaN(debt.minimumPayment)) payload.minimum_payment = debt.minimumPayment;
+      if (debt.dueDay !== undefined && !isNaN(debt.dueDay)) payload.due_day = debt.dueDay;
+      if (debt.strategyPriority !== undefined) payload.strategy_priority = debt.strategyPriority;
+
+      const { data, error } = await supabase.from('debts').insert(payload).select().single();
+      if (error) throw error;
+
+      const newDebt = {
+        ...data,
+        userId: data.user_id,
+        totalAmount: data.total_amount,
+        remainingAmount: data.remaining_amount,
+        monthlyPayment: data.monthly_payment,
+        interestRateMonthly: data.interest_rate_monthly,
+        minimumPayment: data.minimum_payment,
+        dueDay: data.due_day,
+        strategyPriority: data.strategy_priority
+      };
+      setState(prev => ({ ...prev, debts: [...prev.debts, newDebt] }));
+      toast({ title: 'Dívida criada com sucesso' });
+    } catch (err) {
+      toast({ title: 'Erro ao criar dívida a partir do modal', variant: 'destructive' });
+    }
+  }, []);
 
   // --- View Control ---
   const nextMonth = useCallback(() => {
@@ -1169,14 +1217,16 @@ function useFinanceProvider() {
       .reduce((acc, curr) => acc + curr.amount, 0);
 
     const target = fixedExpenses * state.emergencyMonths;
-    const current = state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+    const reserveAccounts = state.accounts.filter(acc => ['savings', 'caixinha', 'investment'].includes(acc.accountType));
+    const current = reserveAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
 
     return {
       monthlyFixed: fixedExpenses,
       targetAmount: target,
       currentAmount: current,
       progress: target > 0 ? (current / target) * 100 : 0,
-      months: state.emergencyMonths
+      months: state.emergencyMonths,
+      reserveAccounts
     };
   }, [currentMonthTransactions, state.accounts, state.emergencyMonths, state.categories, state.categoryGroups]);
 

@@ -21,12 +21,14 @@ interface TransactionListProps {
   bills: Bill[];
   onDelete: (id: string) => void;
   onEdit: (transaction: Transaction) => void;
-  onPayBill: (billId: string, accountId: string, paymentDate: string) => Promise<void>;
+  onPayBill: (billId: string, accountId: string | undefined, paymentDate: string, cardId?: string) => Promise<void>;
 }
 
 export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBill }: TransactionListProps) {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [payingItem, setPayingItem] = useState<any>(null);
+  const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [anticipatingIds, setAnticipatingIds] = useState<Set<string>>(new Set());
   const [anticipateAccount, setAnticipateAccount] = useState('');
@@ -129,13 +131,13 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     return groups;
   }, {} as Record<string, any[]>);
 
-  const handleSelectAccountForPayment = async (accountId: string) => {
+  const handleSubmitPayment = async (targetId: string, isCard: boolean) => {
     if (!payingItem) return;
 
     if (payingItem.isBill) {
-      await onPayBill(payingItem.billId, accountId, new Date().toISOString());
+      await onPayBill(payingItem.billId, isCard ? undefined : targetId, paymentDate, isCard ? targetId : undefined);
     } else {
-      await togglePaid(payingItem.id, true, accountId);
+      await togglePaid(payingItem.id, true, isCard ? undefined : targetId, paymentDate, isCard ? targetId : undefined);
     }
     setPayingItem(null);
   };
@@ -485,57 +487,125 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                 </p>
               </div>
 
-              {/* Accounts List */}
-              <div className="p-3 space-y-2">
-                {accounts.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8 text-sm">Nenhuma conta cadastrada.</p>
-                ) : (
-                  accounts.map(acc => {
-                    const availableTotal = acc.balance + (acc.hasOverdraft ? (acc.overdraftLimit || 0) : 0);
-                    const wouldGoNegative = payingItem.type === 'expense' && acc.balance < payingItem.amount;
-                    const hasEnoughWithOverdraft = acc.hasOverdraft && availableTotal >= payingItem.amount;
-                    const insufficientFunds = wouldGoNegative && !hasEnoughWithOverdraft;
+              {/* Advanced Payment Options */}
+              <div className="p-4 space-y-4">
+                {/* Date Selection */}
+                <div className="space-y-2 relative">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Data do Pagamento</label>
+                  <label className="relative flex items-center bg-muted/30 border border-input rounded-xl p-3 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all cursor-pointer">
+                    <Calendar className="absolute left-3 w-4 h-4 text-primary" />
+                    <input
+                      type="date"
+                      value={paymentDate}
+                      onChange={(e) => setPaymentDate(e.target.value)}
+                      className="w-full pl-8 pr-2 bg-transparent text-sm font-bold focus:outline-none appearance-none cursor-pointer text-foreground"
+                    />
+                  </label>
+                </div>
 
-                    return (
-                      <button
-                        key={acc.id}
-                        onClick={() => handleSelectAccountForPayment(acc.id)}
-                        disabled={insufficientFunds}
-                        className={cn(
-                          "w-full p-4 rounded-xl border-2 text-left transition-all",
-                          insufficientFunds
-                            ? "border-border/30 opacity-40 cursor-not-allowed"
-                            : "border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] cursor-pointer"
-                        )}
-                      >
-                        <div className="flex items-center justify-between">
+                {/* Account / Card Tabs */}
+                <div className="flex rounded-xl bg-muted/40 p-1">
+                  <button
+                    onClick={() => setPaymentMethod('account')}
+                    className={cn(
+                      "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
+                      paymentMethod === 'account' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Conta Bancária
+                  </button>
+                  <button
+                    onClick={() => setPaymentMethod('credit_card')}
+                    className={cn(
+                      "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
+                      paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Cartão de Crédito
+                  </button>
+                </div>
+              </div>
+
+              {/* Targets List */}
+              <div className="p-3 pt-0 space-y-2">
+                {paymentMethod === 'account' && (
+                  accounts.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8 text-sm">Nenhuma conta cadastrada.</p>
+                  ) : (
+                    accounts.map(acc => {
+                      const availableTotal = acc.balance + (acc.hasOverdraft ? (acc.overdraftLimit || 0) : 0);
+                      const wouldGoNegative = payingItem.type === 'expense' && acc.balance < payingItem.amount;
+                      const hasEnoughWithOverdraft = acc.hasOverdraft && availableTotal >= payingItem.amount;
+                      const insufficientFunds = wouldGoNegative && !hasEnoughWithOverdraft;
+
+                      return (
+                        <button
+                          key={acc.id}
+                          onClick={() => handleSubmitPayment(acc.id, false)}
+                          disabled={insufficientFunds}
+                          className={cn(
+                            "w-full p-4 rounded-xl border-2 text-left transition-all",
+                            insufficientFunds
+                              ? "border-border/30 opacity-40 cursor-not-allowed"
+                              : "border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] cursor-pointer"
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="w-4 h-4 rounded-full shadow-sm"
+                                style={{ backgroundColor: acc.color }}
+                              />
+                              <div>
+                                <p className="font-bold text-sm">{acc.name}</p>
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase">{acc.bank}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className={cn("font-black text-sm", acc.balance < 0 && "text-danger")}>
+                                {formatCurrency(acc.balance)}
+                              </p>
+                              {acc.hasOverdraft && (acc.overdraftLimit || 0) > 0 && (
+                                <p className="text-[9px] text-amber-600 font-bold">
+                                  Limite: {formatCurrency(acc.overdraftLimit || 0)}
+                                </p>
+                              )}
+                              {insufficientFunds && (
+                                <p className="text-[9px] text-danger font-bold">Saldo inadequado</p>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )
+                )}
+
+                {paymentMethod === 'credit_card' && (
+                  creditCards.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8 text-sm">Nenhum cartão cadastrado.</p>
+                  ) : (
+                    creditCards.map(card => {
+                      return (
+                        <button
+                          key={card.id}
+                          onClick={() => handleSubmitPayment(card.id, true)}
+                          className="w-full p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] transition-all text-left cursor-pointer"
+                        >
                           <div className="flex items-center gap-3">
                             <div
                               className="w-4 h-4 rounded-full shadow-sm"
-                              style={{ backgroundColor: acc.color }}
+                              style={{ backgroundColor: card.color }}
                             />
                             <div>
-                              <p className="font-bold text-sm">{acc.name}</p>
-                              <p className="text-[10px] text-muted-foreground font-bold uppercase">{acc.bank}</p>
+                              <p className="font-bold text-sm">{card.name}</p>
+                              <p className="text-[10px] text-muted-foreground font-bold uppercase">{card.bank}</p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className={cn("font-black text-sm", acc.balance < 0 && "text-danger")}>
-                              {formatCurrency(acc.balance)}
-                            </p>
-                            {acc.hasOverdraft && (acc.overdraftLimit || 0) > 0 && (
-                              <p className="text-[9px] text-amber-600 font-bold">
-                                Limite: {formatCurrency(acc.overdraftLimit || 0)}
-                              </p>
-                            )}
-                            {insufficientFunds && (
-                              <p className="text-[9px] text-danger font-bold">Saldo insuficiente</p>
-                            )}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })
+                        </button>
+                      );
+                    })
+                  )
                 )}
               </div>
 

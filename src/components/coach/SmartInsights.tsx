@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import {
     Sparkles,
@@ -8,7 +8,8 @@ import {
     CheckCircle2,
     Info,
     Lightbulb,
-    ArrowRight
+    ArrowRight,
+    X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
@@ -30,6 +31,20 @@ interface SmartInsightsProps {
 
 export function SmartInsights({ onNavigate }: SmartInsightsProps) {
     const { transactions, categories, totalIncome, totalExpenses, budgetRule } = useFinanceStore();
+    const [dismissedInsights, setDismissedInsights] = useState<string[]>([]);
+
+    useEffect(() => {
+        const saved = localStorage.getItem('finance_dismissed_insights');
+        if (saved) {
+            setDismissedInsights(JSON.parse(saved));
+        }
+    }, []);
+
+    const dismissInsight = (id: string) => {
+        const updated = [...dismissedInsights, id];
+        setDismissedInsights(updated);
+        localStorage.setItem('finance_dismissed_insights', JSON.stringify(updated));
+    };
 
     const insights = useMemo(() => {
         const list: Insight[] = [];
@@ -123,27 +138,39 @@ export function SmartInsights({ onNavigate }: SmartInsightsProps) {
         return list.slice(0, 3);
     }, [transactions, categories, totalIncome, totalExpenses, budgetRule, onNavigate]);
 
-    if (insights.length === 0) return null;
+    const visibleInsights = insights.filter(i => !dismissedInsights.includes(i.id));
+
+    if (visibleInsights.length === 0) return null;
 
     return (
         <div className="space-y-4 animate-fade-in">
-            <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="w-5 h-5 text-primary" />
-                <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground">Insights Inteligentes</h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground">Insights Inteligentes</h3>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {insights.map((insight) => (
+                {visibleInsights.map((insight) => (
                     <div
                         key={insight.id}
                         className={cn(
-                            "card-elevated p-5 relative overflow-hidden group transition-all hover:scale-[1.02] border-l-4",
-                            insight.type === 'success' ? "border-success bg-success/5" :
-                                insight.type === 'warning' ? "border-danger bg-danger/5" :
-                                    insight.type === 'info' ? "border-info bg-info/5" :
-                                        "border-primary bg-primary/5"
+                            "card-elevated p-5 relative overflow-hidden group transition-all border-l-4",
+                            insight.type === 'success' ? "border-success bg-success/5 hover:border-success/60" :
+                                insight.type === 'warning' ? "border-danger bg-danger/5 hover:border-danger/60" :
+                                    insight.type === 'info' ? "border-info bg-info/5 hover:border-info/60" :
+                                        "border-primary bg-primary/5 hover:border-primary/60"
                         )}
                     >
+                        {/* Dismiss button */}
+                        <button
+                            onClick={() => dismissInsight(insight.id)}
+                            className="absolute top-2 right-2 p-1.5 rounded-full bg-background/50 text-muted-foreground hover:text-foreground hover:bg-background transition-colors opacity-0 group-hover:opacity-100"
+                            title="Ocultar este aviso"
+                        >
+                            <X className="w-3.5 h-3.5" />
+                        </button>
                         <div className="flex items-start gap-4">
                             <div className={cn(
                                 "p-2 rounded-xl",
