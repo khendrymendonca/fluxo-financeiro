@@ -169,7 +169,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       categoryId,
       subcategoryId: subcategoryId || undefined,
       date,
-      accountId: paymentMethod === 'account' ? accountId : undefined,
+      accountId: type === 'income' ? (accountId || undefined) : (paymentMethod === 'account' ? accountId : undefined),
       cardId: paymentMethod === 'card' ? cardId : undefined,
       installmentTotal: activeTab === 'parcelamento' ? parseInt(installmentsCount) : undefined,
       isRecurring: activeTab === 'fixo',
@@ -511,7 +511,35 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 </div>
               )}
 
-              {/* Payment Method & Debt Link (Same as before) */}
+              {/* Account selector for income */}
+              {type === 'income' && accounts.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Conta de Destino</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {accounts.map((acc) => (
+                      <button
+                        key={acc.id}
+                        type="button"
+                        onClick={() => setAccountId(acc.id)}
+                        className={cn(
+                          "py-3 px-3 rounded-xl text-sm font-medium transition-all border flex items-center gap-2",
+                          accountId === acc.id
+                            ? "bg-success text-success-foreground border-success shadow-sm"
+                            : "bg-muted/50 border-transparent hover:bg-muted"
+                        )}
+                      >
+                        <div
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: acc.color }}
+                        />
+                        <span className="truncate">{acc.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Payment Method & Debt Link (Expenses Only) */}
               {type === 'expense' && (
                 <>
                   <div className="space-y-2">
@@ -546,7 +574,23 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                       <Label>Conta</Label>
                       <div className="grid grid-cols-2 gap-2">
                         {accounts.map((acc) => (
-                          <button key={acc.id} type="button" onClick={() => setAccountId(acc.id)} className={cn("py-2 px-3 rounded-xl text-sm font-medium transition-all border", accountId === acc.id ? "bg-primary text-primary-foreground border-primary" : "bg-muted/50 border-transparent hover:bg-muted")}>{acc.name}</button>
+                          <button
+                            key={acc.id}
+                            type="button"
+                            onClick={() => setAccountId(acc.id)}
+                            className={cn(
+                              "py-3 px-3 rounded-xl text-sm font-medium transition-all border flex items-center gap-2",
+                              accountId === acc.id
+                                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                : "bg-muted/50 border-transparent hover:bg-muted"
+                            )}
+                          >
+                            <div
+                              className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: acc.color }}
+                            />
+                            <span className="truncate">{acc.name}</span>
+                          </button>
                         ))}
                       </div>
                     </div>
