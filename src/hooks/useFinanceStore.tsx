@@ -305,12 +305,22 @@ function useFinanceProvider() {
         let invoiceMonthYear = txData.invoiceMonthYear || null;
 
         if (card && !txData.isInvoicePayment) {
+          // A data original da transação desta parcela específica
           const tDate = new Date(txData.date);
-          const { closingDay } = getCardSettingsForDate(card, tDate);
-          let invoiceDate = new Date(tDate);
-          if (tDate.getDate() > closingDay) {
+          // Converter para UTC meia-noite para evitar timezone shifts
+          const tDateLocal = new Date(tDate.getUTCFullYear(), tDate.getUTCMonth(), tDate.getUTCDate());
+
+          const { closingDay } = getCardSettingsForDate(card, tDateLocal);
+
+          // A fatura de qual mês esta compra pertence?
+          // Se o dia da compra for MAIOR ou IGUAL ao dia do fechamento (ex: dia 15, fecha dia 14), 
+          // ela entra na fatura do mês *seguinte*.
+          // Se for MENOR (ex: dia 10, fecha dia 14), entra na fatura do *próprio* mês.
+          let invoiceDate = new Date(tDateLocal.getFullYear(), tDateLocal.getMonth(), 1);
+          if (tDateLocal.getDate() > closingDay) {
             invoiceDate.setMonth(invoiceDate.getMonth() + 1);
           }
+
           invoiceMonthYear = format(invoiceDate, 'yyyy-MM');
         }
 
@@ -347,26 +357,31 @@ function useFinanceProvider() {
         });
       } else if (transaction.installmentTotal && transaction.installmentTotal > 1) {
         const val = transaction.amount / transaction.installmentTotal;
+        const baseDate = new Date(transaction.date);
+        const y = baseDate.getFullYear();
+        const m = baseDate.getMonth();
+        const d = baseDate.getDate();
+
         for (let i = 1; i <= transaction.installmentTotal; i++) {
-          const d = new Date(transaction.date);
-          d.setMonth(d.getMonth() + (i - 1));
+          const instDate = new Date(y, m + (i - 1), d);
           pushTx({
             ...transaction,
-            date: d.toISOString().split('T')[0],
+            date: format(instDate, 'yyyy-MM-dd'),
             amount: val
           }, i, transaction.installmentTotal);
         }
       } else if (transaction.isRecurring) {
+        const baseDate = new Date(transaction.date);
+        const y = baseDate.getFullYear();
+        const m = baseDate.getMonth();
+        const d = baseDate.getDate();
+
         for (let i = 1; i <= 12; i++) {
-          const d = new Date(transaction.date);
-          const targetDay = d.getDate();
-          d.setMonth(d.getMonth() + (i - 1));
-          // Simple day preservation
-          if (d.getDate() !== targetDay && targetDay > 28) d.setDate(0);
+          const instDate = new Date(y, m + (i - 1), d);
 
           pushTx({
             ...transaction,
-            date: d.toISOString().split('T')[0]
+            date: format(instDate, 'yyyy-MM-dd')
           }, i, undefined);
         }
       } else {
