@@ -24,7 +24,11 @@ interface Insight {
     onAction?: () => void;
 }
 
-export function SmartInsights() {
+interface SmartInsightsProps {
+    onNavigate?: (view: string) => void;
+}
+
+export function SmartInsights({ onNavigate }: SmartInsightsProps) {
     const { transactions, categories, totalIncome, totalExpenses, budgetRule } = useFinanceStore();
 
     const insights = useMemo(() => {
@@ -85,7 +89,8 @@ export function SmartInsights() {
                 title: 'Parabéns, você está no azul!',
                 description: `Você tem uma sobra de R$ ${surplus.toFixed(2)} este mês. Que tal aportar parte disso em uma meta?`,
                 icon: CheckCircle2,
-                actionLabel: 'Ver Metas'
+                actionLabel: 'Ver Metas',
+                onAction: () => onNavigate && onNavigate('goals')
             });
         }
 
@@ -116,7 +121,7 @@ export function SmartInsights() {
 
         // Cap at 3 insights for UI simplicity
         return list.slice(0, 3);
-    }, [transactions, categories, totalIncome, totalExpenses, budgetRule]);
+    }, [transactions, categories, totalIncome, totalExpenses, budgetRule, onNavigate]);
 
     if (insights.length === 0) return null;
 
@@ -153,7 +158,10 @@ export function SmartInsights() {
                                 <h4 className="font-bold text-sm">{insight.title}</h4>
                                 <p className="text-xs text-muted-foreground leading-relaxed">{insight.description}</p>
                                 {insight.actionLabel && (
-                                    <button className="text-[10px] font-black uppercase text-primary mt-2 flex items-center gap-1 hover:gap-2 transition-all">
+                                    <button
+                                        onClick={insight.onAction}
+                                        className="text-[10px] font-black uppercase text-primary mt-2 flex w-max items-center gap-1 hover:gap-2 transition-all border-2 border-primary px-2 py-1 rounded-lg hover:bg-primary/10"
+                                    >
                                         {insight.actionLabel} <ArrowRight className="w-3 h-3" />
                                     </button>
                                 )}

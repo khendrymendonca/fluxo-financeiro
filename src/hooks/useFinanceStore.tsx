@@ -315,7 +315,7 @@ function useFinanceProvider() {
     }
   }, []);
 
-  const updateTransaction = useCallback(async (updatedTx: Transaction, applyToFuture: boolean = false) => {
+  const updateTransaction = useCallback(async (updatedTx: Transaction, applyScope: 'this' | 'future' | 'all' = 'this') => {
     try {
       const categoryName = state.categories.find(c => c.id === updatedTx.categoryId)?.name || 'Outros';
 
@@ -334,11 +334,10 @@ function useFinanceProvider() {
         is_paid: updatedTx.isPaid
       };
 
-      if (applyToFuture && updatedTx.installmentGroupId) {
-        // Encontrar todas as parcelas deste grupo que são iguais ou posteriores a esta
+      if (applyScope !== 'this' && updatedTx.installmentGroupId) {
         const currentTx = state.transactions.find(t => t.id === updatedTx.id);
         if (currentTx) {
-          const { error } = await supabase
+          let query = supabase
             .from('transactions')
             .update({
               description: updatedTx.description,
@@ -349,18 +348,24 @@ function useFinanceProvider() {
               account_id: updatedTx.accountId,
               card_id: updatedTx.cardId,
             })
-            .eq('installment_group_id', updatedTx.installmentGroupId)
-            .gte('installment_number', updatedTx.installmentNumber || 0);
+            .eq('installment_group_id', updatedTx.installmentGroupId);
 
-          if (error) throw error;
+          if (applyScope === 'future') {
+            query = query.gte('installment_number', updatedTx.installmentNumber || 0);
+          }
+
+          const { error } = await query;
 
           setState(prev => ({
             ...prev,
-            transactions: prev.transactions.map(t =>
-              (t.installmentGroupId === updatedTx.installmentGroupId && (t.installmentNumber || 0) >= (updatedTx.installmentNumber || 0))
-                ? { ...t, ...updatedTx, id: t.id, installmentNumber: t.installmentNumber, date: t.date } // Keep original ID, number and date
-                : t
-            )
+            transactions: prev.transactions.map(t => {
+              if (t.installmentGroupId === updatedTx.installmentGroupId) {
+                if (applyScope === 'all' || (applyScope === 'future' && (t.installmentNumber || 0) >= (updatedTx.installmentNumber || 0))) {
+                  return { ...t, ...updatedTx, id: t.id, installmentNumber: t.installmentNumber, date: t.date };
+                }
+              }
+              return t;
+            })
           }));
           toast({ title: 'Parcelas atualizadas com sucesso' });
           return;
@@ -380,8 +385,31 @@ function useFinanceProvider() {
     }
   }, [state.transactions, state.categories]);
 
-  const deleteTransaction = useCallback(async (id: string) => {
+  const deleteTransaction = useCallback(async (id: string, scope: 'this' | 'future' | 'all' = 'this') => {
     try {
+      const txToDelete = state.transactions.find(t => t.id === id);
+      if (!txToDelete) return;
+
+      if (scope !== 'this' && txToDelete.installmentGroupId) {
+        let query = supabase.from('transactions').delete().eq('installment_group_id', txToDelete.installmentGroupId);
+        if (scope === 'future') {
+          query = query.gte('installment_number', txToDelete.installmentNumber || 0);
+        }
+        const { error } = await query;
+        if (error) throw error;
+
+        setState(prev => ({
+          ...prev,
+          transactions: prev.transactions.filter(t => {
+            if (t.installmentGroupId !== txToDelete.installmentGroupId) return true;
+            if (scope === 'future') return (t.installmentNumber || 0) < (txToDelete.installmentNumber || 0);
+            return false;
+          })
+        }));
+        toast({ title: 'Parcelas removidas com sucesso' });
+        return;
+      }
+
       const { error } = await supabase.from('transactions').delete().eq('id', id);
       if (error) throw error;
       setState(prev => ({ ...prev, transactions: prev.transactions.filter(t => t.id !== id) }));
@@ -389,7 +417,7 @@ function useFinanceProvider() {
     } catch (err) {
       toast({ title: 'Erro ao deletar', variant: 'destructive' });
     }
-  }, []);
+  }, [state.transactions]);
 
 
   const togglePaid = useCallback(async (id: string, isPaid: boolean) => {

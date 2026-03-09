@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Calendar, CreditCard, RotateCw, Coins, Check, ChevronsUpDown } from 'lucide-react';
+import { X, Calendar, CreditCard, RotateCw, Coins, Check, ChevronsUpDown, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,13 +20,14 @@ interface TransactionFormProps {
   accounts: Account[];
   creditCards: CreditCardType[];
   initialData?: Transaction;
-  onSubmit: (transaction: Omit<Transaction, 'id'>, customInstallments?: { date: string, amount: number }[], applyToFuture?: boolean) => void;
+  onSubmit: (transaction: Omit<Transaction, 'id'>, customInstallments?: { date: string, amount: number }[], applyScope?: 'this' | 'future' | 'all') => void;
+  onDelete?: (id: string, applyScope: 'this' | 'future' | 'all') => void;
   onClose: () => void;
 }
 
 type TabType = 'pontual' | 'parcelamento' | 'fixo' | 'divida';
 
-export function TransactionForm({ accounts, creditCards, initialData, onSubmit, onClose }: TransactionFormProps) {
+export function TransactionForm({ accounts, creditCards, initialData, onSubmit, onDelete, onClose }: TransactionFormProps) {
   const [activeTab, setActiveTab] = useState<TabType>('pontual');
   const [type, setType] = useState<'income' | 'expense'>(initialData?.type || 'expense');
 
@@ -58,7 +59,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   // Invoice Specifics
   const [invoiceReference, setInvoiceReference] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
 
-  const [applyToFuture, setApplyToFuture] = useState(false);
+  const [applyScope, setApplyScope] = useState<'this' | 'future' | 'all'>('this');
   const [isPaidLocally, setIsPaidLocally] = useState(initialData?.isPaid || false);
 
   const { debts, createDebtWithInstallments, categories, subcategories } = useFinanceStore();
@@ -177,8 +178,13 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       invoiceMonthYear: (paymentMethod === 'card' && type === 'expense') ? invoiceReference : undefined,
       isPaid: initialData ? isPaidLocally : (new Date(date) <= new Date()),
       userId: initialData?.userId || ''
-    }, finalCustomInstallments, applyToFuture);
+    }, finalCustomInstallments, applyScope);
 
+    onClose();
+  };
+
+  const handleClose = () => {
+    // Reset form simply relying on unmount from parent, but firing onClose
     onClose();
   };
 
@@ -187,10 +193,28 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       <div className="bg-card rounded-3xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-scale-in flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
-          <h2 className="text-xl font-semibold">{initialData ? 'Editar Lançamento' : 'Novo Lançamento'}</h2>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-muted transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+          <div>
+            <h2 className="text-xl font-semibold">{initialData ? 'Editar Lançamento' : 'Novo Lançamento'}</h2>
+            <p className="text-sm text-muted-foreground">{initialData ? 'Altere os dados abaixo' : 'Adicione uma nova receita ou despesa'}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {initialData && onDelete && (
+              <button
+                onClick={() => onDelete(initialData.id, applyScope)}
+                className="p-3 rounded-2xl hover:bg-danger/10 text-danger transition-colors bg-danger/5"
+                title="Excluir Lançamento"
+              >
+                <Trash2 className="w-6 h-6" />
+              </button>
+            )}
+            <button
+              onClick={handleClose}
+              className="p-3 rounded-2xl hover:bg-muted transition-colors"
+              title="Fechar"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -568,17 +592,17 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               )}
               {/* Bulk Edit Option */}
               {initialData?.installmentGroupId && (
-                <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-xl border border-primary/20">
-                  <input
-                    type="checkbox"
-                    id="apply-future"
-                    checked={applyToFuture}
-                    onChange={e => setApplyToFuture(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-                  <Label htmlFor="apply-future" className="text-xs cursor-pointer">
-                    Atualizar também todas as parcelas futuras ({initialData.installmentNumber}/{initialData.installmentTotal})
-                  </Label>
+                <div className="flex flex-col gap-2 p-3 bg-primary/5 rounded-xl border border-primary/20">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Alcance da Atualização / Exclusão</Label>
+                  <select
+                    className="h-10 rounded-xl border border-input bg-background/50 px-3 text-xs focus:ring-1 focus:ring-primary outline-none"
+                    value={applyScope}
+                    onChange={e => setApplyScope(e.target.value as any)}
+                  >
+                    <option value="this">Somente esta parcela ({initialData.installmentNumber})</option>
+                    <option value="future">Esta e as futuras (a partir de {initialData.installmentNumber})</option>
+                    <option value="all">Todas as parcelas (1 até {initialData.installmentTotal})</option>
+                  </select>
                 </div>
               )}
             </>

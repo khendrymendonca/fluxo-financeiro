@@ -138,7 +138,7 @@ export default function Index() {
               </div>
             )}
 
-            <SmartInsights />
+            <SmartInsights onNavigate={(view) => setCurrentView(view as any)} />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <StatCard
@@ -331,9 +331,9 @@ export default function Index() {
           accounts={accounts}
           creditCards={creditCards}
           initialData={editingTransaction}
-          onSubmit={(data, custom, applyToFuture) => {
+          onSubmit={(data, custom, applyScope: any) => {
             if (editingTransaction) {
-              updateTransaction({ ...editingTransaction, ...data } as any, applyToFuture);
+              updateTransaction({ ...editingTransaction, ...data } as any, applyScope as any);
             } else {
               addTransaction(data, custom);
             }
@@ -341,6 +341,11 @@ export default function Index() {
             setEditingTransaction(undefined);
           }}
           onClose={() => {
+            setShowTransactionForm(false);
+            setEditingTransaction(undefined);
+          }}
+          onDelete={(id, scope) => {
+            deleteTransaction(id, scope);
             setShowTransactionForm(false);
             setEditingTransaction(undefined);
           }}
