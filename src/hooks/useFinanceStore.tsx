@@ -227,7 +227,8 @@ function useFinanceProvider() {
           installment_number: instNum || txData.installmentNumber || null,
           installment_total: instTotal || txData.installmentTotal || null,
           debt_id: txData.debtId || null,
-          is_paid: txData.is_paid !== undefined ? txData.is_paid : (new Date(txData.date) <= new Date())
+          is_paid: txData.isPaid !== undefined ? txData.isPaid : (new Date(txData.date) <= new Date()),
+          payment_date: txData.paymentDate || (txData.isPaid ? txData.date : (new Date(txData.date) <= new Date() ? txData.date : null))
         });
       };
 
@@ -336,7 +337,8 @@ function useFinanceProvider() {
         account_id: updatedTx.accountId || null,
         card_id: updatedTx.cardId || null,
         invoice_month_year: updatedTx.invoiceMonthYear || null,
-        is_paid: updatedTx.isPaid
+        is_paid: updatedTx.isPaid,
+        payment_date: updatedTx.paymentDate
       };
 
       if (applyScope !== 'this' && updatedTx.installmentGroupId) {
@@ -384,6 +386,16 @@ function useFinanceProvider() {
         ...prev,
         transactions: prev.transactions.map(t => t.id === updatedTx.id ? updatedTx : t)
       }));
+
+      // Smart Sync: Se for um pagamento de conta, atualiza a bill correspondente
+      if (updatedTx.description.startsWith('Pgto: ')) {
+        const billName = updatedTx.description.replace('Pgto: ', '');
+        const bill = state.bills.find(b => b.name === billName && b.status === 'paid');
+        if (bill) {
+          await updateBill(bill.id, { paymentDate: updatedTx.paymentDate || updatedTx.date });
+        }
+      }
+
       toast({ title: 'Atualizado com sucesso' });
     } catch (err) {
       toast({ title: 'Erro ao atualizar', variant: 'destructive' });
@@ -417,7 +429,20 @@ function useFinanceProvider() {
 
       const { error } = await supabase.from('transactions').delete().eq('id', id);
       if (error) throw error;
-      setState(prev => ({ ...prev, transactions: prev.transactions.filter(t => t.id !== id) }));
+
+      // Smart Sync: Se estiver deletando um pagamento, reabre a bill
+      if (txToDelete.description.startsWith('Pgto: ')) {
+        const billName = txToDelete.description.replace('Pgto: ', '');
+        const bill = state.bills.find(b => b.name === billName && b.status === 'paid');
+        if (bill) {
+          await updateBill(bill.id, { status: 'pending', paymentDate: undefined });
+        }
+      }
+
+      setState(prev => ({
+        ...prev,
+        transactions: prev.transactions.filter(t => t.id !== id)
+      }));
       toast({ title: 'Removido com sucesso' });
     } catch (err) {
       toast({ title: 'Erro ao deletar', variant: 'destructive' });
@@ -454,6 +479,15 @@ function useFinanceProvider() {
           cardId: isPaid ? (effectiveCardId || undefined) : tx.cardId
         } : t)
       }));
+
+      // Smart Sync: Se estiver desmarcando um pagamento, reabre a bill
+      if (!isPaid && tx.description.startsWith('Pgto: ')) {
+        const billName = tx.description.replace('Pgto: ', '');
+        const bill = state.bills.find(b => b.name === billName && b.status === 'paid');
+        if (bill) {
+          await updateBill(bill.id, { status: 'pending', paymentDate: undefined });
+        }
+      }
 
       if (effectiveAccountId) {
         const baseChange = tx.type === 'income' ? tx.amount : -tx.amount;
@@ -954,7 +988,8 @@ function useFinanceProvider() {
 
       // 2. Create the associated transaction
       await addTransaction({
-        date: paymentDate,
+        date: bill.dueDate, // Mantém a data de competência (vencimento)
+        paymentDate: paymentDate, // Define a data de fluxo de caixa (pagamento)
         description: `Pgto: ${bill.name}`,
         amount: bill.amount,
         type: bill.type === 'payable' ? 'expense' : 'income',

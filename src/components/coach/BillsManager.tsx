@@ -62,6 +62,13 @@ export function BillsManager() {
         }).format(value);
     };
 
+    const parseLocalDate = (dateString: string) => {
+        if (!dateString) return new Date();
+        const [year, month, day] = dateString.split('-').map(Number);
+        if (isNaN(year) || isNaN(month) || isNaN(day)) return new Date(dateString);
+        return new Date(year, month - 1, day);
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!name || !amount || !dueDate) return;
@@ -305,10 +312,10 @@ export function BillsManager() {
                                             <Calendar className="w-3 h-3" />
                                             {bill.status === 'paid' && (bill.paymentDate || bill.dueDate) ? (
                                                 <span className="text-success font-bold">
-                                                    Pago em {format(new Date(bill.paymentDate || bill.dueDate), "dd 'de' MMMM", { locale: ptBR })}
+                                                    Pago em {format(parseLocalDate(bill.paymentDate || bill.dueDate), "dd 'de' MMMM", { locale: ptBR })}
                                                 </span>
                                             ) : (
-                                                <>{format(new Date(bill.dueDate), "dd 'de' MMMM", { locale: ptBR })}</>
+                                                <>{format(parseLocalDate(bill.dueDate), "dd 'de' MMMM", { locale: ptBR })}</>
                                             )}
                                             {category && (
                                                 <>

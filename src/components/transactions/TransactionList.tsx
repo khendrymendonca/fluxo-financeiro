@@ -40,8 +40,15 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     }).format(value);
   };
 
+  const parseLocalDate = (dateString: string) => {
+    if (!dateString) return new Date();
+    const [year, month, day] = dateString.split('-').map(Number);
+    if (isNaN(year) || isNaN(month) || isNaN(day)) return new Date(dateString);
+    return new Date(year, month - 1, day);
+  };
+
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
+    return parseLocalDate(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'long',
       year: 'numeric',
@@ -49,10 +56,18 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   };
 
   const formatShortDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
+    return parseLocalDate(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'short',
       year: '2-digit',
+    });
+  };
+
+  const formatLongDate = (dateString: string) => {
+    return parseLocalDate(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
     });
   };
 

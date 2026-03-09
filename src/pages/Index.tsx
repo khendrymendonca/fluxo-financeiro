@@ -92,8 +92,8 @@ export default function Index() {
 
   const handleEditTransaction = (item: any) => {
     if (item.isBill) {
-      setCurrentView('bills');
-      toast({ title: 'Redirecionando para Gestão de Contas...' });
+      // Deixamos o TransactionList tratar o clique em contas (geralmente para pagar)
+      return;
     } else {
       setEditingTransaction(item);
       setShowTransactionForm(true);
