@@ -1077,46 +1077,55 @@ function useFinanceProvider() {
   }, [state.bills]);
 
   const deleteBill = useCallback(async (id: string, applyToFuture: boolean = false) => {
+    console.log('deleteBill chamado:', { id, applyToFuture });
     try {
       const billToDelete = state.bills.find(b => b.id === id);
-      if (!billToDelete) return;
+      console.log('Conta encontrada para deletar:', billToDelete);
+
+      if (!billToDelete) {
+        console.warn('Conta não encontrada no estado local:', id);
+        return;
+      }
 
       // 1. Otimista / Fallback: remove localmente primeiro
       if (applyToFuture && billToDelete.isFixed) {
+        console.log('Removendo todas as ocorrências por nome:', billToDelete.name);
         setState(prev => ({
           ...prev,
           bills: prev.bills.filter(b =>
-            !(b.name === billToDelete.name && b.dueDate >= billToDelete.dueDate)
+            !(b.name === billToDelete.name) // Agora remove TUDO (passado e futuro) como solicitado
           )
         }));
       } else {
+        console.log('Removendo conta única:', id);
         setState(prev => ({ ...prev, bills: prev.bills.filter(b => b.id !== id) }));
       }
 
       let error;
       if (applyToFuture && billToDelete.isFixed) {
+        console.log('Executando delete em lote no Supabase para:', billToDelete.name);
         const { error: batchErr } = await supabase.from('bills')
           .delete()
           .eq('name', billToDelete.name)
           .eq('user_id', billToDelete.userId);
         error = batchErr;
       } else {
+        console.log('Executando delete único no Supabase para ID:', id);
         const { error: singleErr } = await supabase.from('bills').delete().eq('id', id);
         error = singleErr;
       }
 
-      if (error && error.code !== 'PGRST116') { // Ignorar erro de "não encontrado" se for fantasma
-        // Discutível se devemos fazer rollback aqui em caso de erro real de rede, 
-        // mas dado o bug das contas fantasmas, vamos priorizar a limpeza visual
-        console.warn('Erro ao deletar no Supabase (ignorando localmente):', error);
+      if (error && error.code !== 'PGRST116') {
+        console.error('Erro ao deletar no Supabase:', error);
       } else {
+        console.log('Deleção concluída com sucesso!');
         toast({ title: 'Conta removida' });
       }
     } catch (err) {
-      // Não reverter o state para permitir limpeza de bugs
+      console.error('Erro inesperado no deleteBill:', err);
       toast({ title: 'Conta removida (apenas local)', variant: 'default' });
     }
-  }, []);
+  }, [state.bills]);
 
   const payBill = useCallback(async (billId: string, accountId: string | undefined, paymentDate: string, cardId?: string) => {
     try {
