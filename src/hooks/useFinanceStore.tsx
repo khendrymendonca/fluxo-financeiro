@@ -107,7 +107,8 @@ function useFinanceProvider() {
           userId: a.user_id,
           accountType: a.account_type,
           hasOverdraft: a.has_overdraft || false,
-          overdraftLimit: a.overdraft_limit || 0
+          overdraftLimit: a.overdraft_limit || 0,
+          monthlyYieldRate: a.monthly_yield_rate || 0
         })),
         creditCards: (cardsRes.data || []).map((c: any) => ({
           ...c,
@@ -474,11 +475,12 @@ function useFinanceProvider() {
         color: account.color,
         account_type: account.accountType,
         has_overdraft: account.hasOverdraft || false,
-        overdraft_limit: account.overdraftLimit || 0
+        overdraft_limit: account.overdraftLimit || 0,
+        monthly_yield_rate: account.monthlyYieldRate || 0
       }).select().single();
 
       if (error) throw error;
-      const newAccount = { ...data, accountType: data.account_type, hasOverdraft: data.has_overdraft || false, overdraftLimit: data.overdraft_limit || 0 };
+      const newAccount = { ...data, accountType: data.account_type, hasOverdraft: data.has_overdraft || false, overdraftLimit: data.overdraft_limit || 0, monthlyYieldRate: data.monthly_yield_rate || 0 };
       setState(prev => ({ ...prev, accounts: [...prev.accounts, newAccount] }));
     } catch (err) { toast({ title: 'Erro ao criar conta', variant: 'destructive' }); }
   }, []);
@@ -514,9 +516,64 @@ function useFinanceProvider() {
       if (updates.accountType !== undefined) dbUpdates.account_type = updates.accountType;
       if (updates.hasOverdraft !== undefined) dbUpdates.has_overdraft = updates.hasOverdraft;
       if (updates.overdraftLimit !== undefined) dbUpdates.overdraft_limit = updates.overdraftLimit;
+      if (updates.monthlyYieldRate !== undefined) dbUpdates.monthly_yield_rate = updates.monthlyYieldRate;
       await supabase.from('accounts').update(dbUpdates).eq('id', id);
       setState(prev => ({ ...prev, accounts: prev.accounts.map(a => a.id === id ? { ...a, ...updates } : a) }));
     } catch (err) { toast({ title: 'Erro ao atualizar conta', variant: 'destructive' }); }
+  }, []);
+
+  const transferBetweenAccounts = useCallback(async (fromAccountId: string, toAccountId: string, amount: number, description: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const date = new Date().toISOString();
+      const groupId = crypto.randomUUID();
+
+      // Transação de Saída (Origem)
+      const { data: outTx, error: err1 } = await supabase.from('transactions').insert({
+        user_id: user.id,
+        description: `[Transferência] Saída - ${description}`,
+        amount: amount,
+        type: 'expense',
+        category_id: '',
+        date: date,
+        account_id: fromAccountId,
+        is_paid: true,
+        payment_date: date,
+        installment_group_id: groupId
+      }).select().single();
+      if (err1) throw err1;
+
+      // Transação de Entrada (Destino)
+      const { data: inTx, error: err2 } = await supabase.from('transactions').insert({
+        user_id: user.id,
+        description: `[Transferência] Entrada - ${description}`,
+        amount: amount,
+        type: 'income',
+        category_id: '',
+        date: date,
+        account_id: toAccountId,
+        is_paid: true,
+        payment_date: date,
+        installment_group_id: groupId
+      }).select().single();
+      if (err2) throw err2;
+
+      // Update balances
+      await updateAccountBalance(fromAccountId, -amount);
+      await updateAccountBalance(toAccountId, amount);
+
+      setState(prev => ({
+        ...prev,
+        transactions: [
+          ...prev.transactions,
+          { ...outTx, categoryId: outTx.category_id, accountId: outTx.account_id, isPaid: true, paymentDate: outTx.payment_date, installmentGroupId: outTx.installment_group_id },
+          { ...inTx, categoryId: inTx.category_id, accountId: inTx.account_id, isPaid: true, paymentDate: inTx.payment_date, installmentGroupId: inTx.installment_group_id }
+        ]
+      }));
+
+      toast({ title: 'Transferência concluída com sucesso!' });
+    } catch (error) { toast({ title: 'Erro na transferência', variant: 'destructive' }); }
   }, []);
 
 
@@ -1158,6 +1215,7 @@ function useFinanceProvider() {
     addAccount,
     updateAccount,
     deleteAccount,
+    transferBetweenAccounts,
     addCreditCard,
     updateCreditCard,
     deleteCreditCard,

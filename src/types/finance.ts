@@ -1,6 +1,6 @@
 export type TransactionType = 'income' | 'expense';
 export type TransactionStatus = 'punctual' | 'installment' | 'recurring' | 'adjustment';
-export type AccountType = 'checking' | 'savings' | 'benefit_vr' | 'benefit_va' | 'benefit_flex';
+export type AccountType = 'checking' | 'savings' | 'caixinha' | 'investment' | 'benefit_vr' | 'benefit_va' | 'benefit_flex';
 export type BillStatus = 'pending' | 'paid' | 'late' | 'cancelled';
 export type CategoryGroupName = 'needs' | 'wants' | 'savings';
 
@@ -63,6 +63,7 @@ export interface Account {
   accountType: AccountType;
   hasOverdraft?: boolean;
   overdraftLimit?: number;
+  monthlyYieldRate?: number;
 }
 
 export interface CreditCard {
