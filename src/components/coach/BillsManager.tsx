@@ -80,7 +80,7 @@ export function BillsManager() {
         e.preventDefault();
         if (!name || !amount || !dueDate) return;
 
-        if (editingBillId) {
+        if (editingBillId && !editingBillId.startsWith('virtual-')) {
             updateBill(editingBillId, {
                 name,
                 amount: parseFloat(amount),
@@ -102,7 +102,8 @@ export function BillsManager() {
                 accountId: accountId || undefined,
                 status: 'pending',
                 isFixed
-            });
+            }, false); // project: false para não criar mais 12 meses se estivermos efetivando uma virtual
+            setEditingBillId(null);
         }
 
         // Reset form
@@ -409,14 +410,16 @@ export function BillsManager() {
                                                 >
                                                     <Pencil className="w-5 h-5" />
                                                 </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={() => setDeletingBill(bill)}
-                                                    className="h-10 w-10 p-0 rounded-xl hover:bg-danger/10 hover:text-danger"
-                                                >
-                                                    <Trash2 className="w-5 h-5" />
-                                                </Button>
+                                                {!bill.isVirtual && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => setDeletingBill(bill)}
+                                                        className="h-10 w-10 p-0 rounded-xl hover:bg-danger/10 hover:text-danger"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </Button>
+                                                )}
                                             </>
                                         )}
                                     </div>
