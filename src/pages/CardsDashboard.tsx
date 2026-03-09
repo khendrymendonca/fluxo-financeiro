@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { format, addMonths, subMonths, isSameMonth, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { EditCardDialog } from '@/components/cards/EditCardDialog';
+import { Portal } from '@/components/ui/Portal';
 import { Pencil } from 'lucide-react';
 
 export default function CardsDashboard() {
@@ -265,20 +266,24 @@ export default function CardsDashboard() {
             )}
 
             {showAddCard && (
-                <AddCardDialog
-                    isOpen={showAddCard}
-                    onClose={() => setShowAddCard(false)}
-                    onAdd={addCreditCard}
-                />
+                <Portal>
+                    <AddCardDialog
+                        isOpen={showAddCard}
+                        onClose={() => setShowAddCard(false)}
+                        onAdd={addCreditCard}
+                    />
+                </Portal>
             )}
 
             {showEditCard && selectedCard && (
-                <EditCardDialog
-                    card={selectedCard}
-                    isOpen={showEditCard}
-                    onClose={() => setShowEditCard(false)}
-                    onSave={(updated) => updateCreditCard(updated)}
-                />
+                <Portal>
+                    <EditCardDialog
+                        card={selectedCard}
+                        isOpen={showEditCard}
+                        onClose={() => setShowEditCard(false)}
+                        onSave={(updated) => updateCreditCard(updated)}
+                    />
+                </Portal>
             )}
         </div>
     );
