@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, createContext, useContext } from 'react';
-import { FinanceState, Transaction, Account, CreditCard, Debt, SavingsGoal, Category, Subcategory, Bill, HabitLog, UserHabit, BudgetRule } from '@/types/finance';
+import { FinanceState, Transaction, Account, CreditCard, Debt, SavingsGoal, Category, Subcategory, Bill, HabitLog, UserHabit, BudgetRule, FilterMode } from '@/types/finance';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 
@@ -39,6 +39,7 @@ function useFinanceProvider() {
   const [state, setState] = useState<FinanceState>(initialState);
   const [loading, setLoading] = useState(true);
   const [viewDate, setViewDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<FilterMode>('month');
 
   const fetchInitialData = useCallback(async () => {
     try {
@@ -1187,23 +1188,75 @@ function useFinanceProvider() {
     });
   }, []);
 
+  const nextDay = useCallback(() => {
+    setViewDate(prev => {
+      const next = new Date(prev);
+      next.setDate(next.getDate() + 1);
+      return next;
+    });
+  }, []);
+
+  const prevDay = useCallback(() => {
+    setViewDate(prev => {
+      const next = new Date(prev);
+      next.setDate(next.getDate() - 1);
+      return next;
+    });
+  }, []);
+
+  const nextYear = useCallback(() => {
+    setViewDate(prev => {
+      const next = new Date(prev);
+      next.setFullYear(next.getFullYear() + 1);
+      return next;
+    });
+  }, []);
+
+  const prevYear = useCallback(() => {
+    setViewDate(prev => {
+      const next = new Date(prev);
+      next.setFullYear(next.getFullYear() - 1);
+      return next;
+    });
+  }, []);
+
   // --- Computed ---
 
   const currentMonthTransactions = state.transactions.filter(t => {
     const tDate = new Date(t.date);
-    return tDate.getMonth() === viewDate.getMonth() && tDate.getFullYear() === viewDate.getFullYear();
+    if (viewMode === 'day') {
+      return tDate.getDate() === viewDate.getDate() &&
+        tDate.getMonth() === viewDate.getMonth() &&
+        tDate.getFullYear() === viewDate.getFullYear();
+    }
+    if (viewMode === 'month') {
+      return tDate.getMonth() === viewDate.getMonth() &&
+        tDate.getFullYear() === viewDate.getFullYear();
+    }
+    // year
+    return tDate.getFullYear() === viewDate.getFullYear();
   });
 
   const currentMonthBills = state.bills.filter(b => {
     const bDate = new Date(b.dueDate);
-    const matchesViewDate = bDate.getMonth() === viewDate.getMonth() && bDate.getFullYear() === viewDate.getFullYear();
+    let matchesViewDate = false;
+
+    if (viewMode === 'day') {
+      matchesViewDate = bDate.getDate() === viewDate.getDate() &&
+        bDate.getMonth() === viewDate.getMonth() &&
+        bDate.getFullYear() === viewDate.getFullYear();
+    } else if (viewMode === 'month') {
+      matchesViewDate = bDate.getMonth() === viewDate.getMonth() &&
+        bDate.getFullYear() === viewDate.getFullYear();
+    } else {
+      matchesViewDate = bDate.getFullYear() === viewDate.getFullYear();
+    }
 
     // Filtro por data de cadastro (startDate)
     if (b.startDate) {
       const sDate = new Date(b.startDate);
-      // Garantir que a conta só apareça se o mês de vencimento for igual ou posterior ao mês de cadastro
-      const isAtOrAfterStart = (bDate.getFullYear() > sDate.getFullYear()) ||
-        (bDate.getFullYear() === sDate.getFullYear() && bDate.getMonth() >= sDate.getMonth());
+      // Garantir que a conta só apareça se a data de vencimento for igual ou posterior à data de cadastro
+      const isAtOrAfterStart = bDate.getTime() >= sDate.getTime();
       return matchesViewDate && isAtOrAfterStart;
     }
 
@@ -1269,9 +1322,15 @@ function useFinanceProvider() {
     ...state,
     loading,
     viewDate,
+    viewMode,
     nextMonth,
     prevMonth,
+    nextDay,
+    prevDay,
+    nextYear,
+    prevYear,
     setViewDate,
+    setViewMode,
     totalBalance: state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0),
     totalIncome: currentMonthTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + Number(t.amount), 0),
     totalExpenses: currentMonthTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0),

@@ -30,6 +30,7 @@ import { CategoriesManager } from '@/components/coach/CategoriesManager';
 import { SmartInsights } from '@/components/coach/SmartInsights';
 import { ExportManager } from '@/components/dashboard/ExportManager';
 import { toast } from '@/components/ui/use-toast';
+import { AccountEvolution } from '@/components/dashboard/AccountEvolution';
 import { cn } from '@/lib/utils';
 
 type ViewType = 'dashboard' | 'transactions' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'bills' | 'categories' | 'export';
@@ -189,6 +190,9 @@ export default function Index() {
             </div>
 
             <div className="grid grid-cols-1 gap-4">
+              <div>
+                <AccountEvolution />
+              </div>
               <div>
                 <RecentTransactions
                   transactions={currentMonthTransactions}

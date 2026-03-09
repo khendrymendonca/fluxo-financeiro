@@ -8,39 +8,89 @@ import { DayPicker } from 'react-day-picker';
 import { cn } from '@/lib/utils';
 
 export function MonthSelector() {
-    const { viewDate, setViewDate, nextMonth, prevMonth } = useFinanceStore();
+    const {
+        viewDate,
+        setViewDate,
+        viewMode,
+        setViewMode,
+        nextMonth,
+        prevMonth,
+        nextDay,
+        prevDay,
+        nextYear,
+        prevYear
+    } = useFinanceStore();
+
+    const handlePrev = () => {
+        if (viewMode === 'day') prevDay();
+        else if (viewMode === 'month') prevMonth();
+        else prevYear();
+    };
+
+    const handleNext = () => {
+        if (viewMode === 'day') nextDay();
+        else if (viewMode === 'month') nextMonth();
+        else nextYear();
+    };
+
+    const getFormat = () => {
+        if (viewMode === 'day') return "dd 'de' MMMM yyyy";
+        if (viewMode === 'month') return 'MMMM yyyy';
+        return 'yyyy';
+    };
 
     return (
-        <div className="flex items-center gap-2 bg-card p-1 rounded-xl shadow-sm border border-border">
-            <Button variant="ghost" size="icon" onClick={prevMonth} className="h-8 w-8 rounded-lg">
-                <ChevronLeft className="w-4 h-4" />
-            </Button>
-
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button variant="ghost" className="h-8 min-w-[140px] font-medium capitalize rounded-lg">
-                        <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
-                        {format(viewDate, 'MMMM yyyy', { locale: ptBR })}
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+            {/* Mode Selector */}
+            <div className="flex p-1 bg-muted rounded-xl">
+                {(['day', 'month', 'year'] as const).map((mode) => (
+                    <Button
+                        key={mode}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setViewMode(mode)}
+                        className={cn(
+                            "h-7 px-3 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all",
+                            viewMode === mode ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
+                        )}
+                    >
+                        {mode === 'day' ? 'Dia' : mode === 'month' ? 'Mês' : 'Ano'}
                     </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 z-50 rounded-2xl shadow-xl" align="center">
-                    <CalendarPicker
-                        mode="single"
-                        selected={viewDate}
-                        onSelect={(date) => date && setViewDate(date)}
-                        initialFocus
-                        locale={ptBR}
-                        className="p-3"
-                        classNames={{
-                            day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
-                        }}
-                    />
-                </PopoverContent>
-            </Popover>
+                ))}
+            </div>
 
-            <Button variant="ghost" size="icon" onClick={nextMonth} className="h-8 w-8 rounded-lg">
-                <ChevronRight className="w-4 h-4" />
-            </Button>
+            {/* Date Navigator */}
+            <div className="flex items-center gap-2 bg-card p-1 rounded-xl shadow-sm border border-border">
+                <Button variant="ghost" size="icon" onClick={handlePrev} className="h-8 w-8 rounded-lg">
+                    <ChevronLeft className="w-4 h-4" />
+                </Button>
+
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="ghost" className="h-8 min-w-[140px] font-medium capitalize rounded-lg">
+                            <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                            {format(viewDate, getFormat(), { locale: ptBR })}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 z-50 rounded-2xl shadow-xl" align="center">
+                        <CalendarPicker
+                            mode="single"
+                            selected={viewDate}
+                            onSelect={(date: Date | undefined) => date && setViewDate(date)}
+                            initialFocus
+                            locale={ptBR}
+                            className="p-3"
+                            classNames={{
+                                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
+                            }}
+                        />
+                    </PopoverContent>
+                </Popover>
+
+                <Button variant="ghost" size="icon" onClick={handleNext} className="h-8 w-8 rounded-lg">
+                    <ChevronRight className="w-4 h-4" />
+                </Button>
+            </div>
         </div>
     );
 }

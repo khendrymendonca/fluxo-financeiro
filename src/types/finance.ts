@@ -19,6 +19,7 @@ export interface Category {
   icon?: string;
   color?: string;
   isActive: boolean;
+  targetAmount?: number; // Meta de gasto para esta categoria
 }
 
 export interface Subcategory {
@@ -127,6 +128,7 @@ export interface Bill {
   isFixed: boolean;
   recurrenceRule?: string;
   startDate?: string;
+  targetAmount?: number; // Meta de valor para esta conta específica
 }
 
 export interface BudgetRule {
@@ -168,6 +170,8 @@ export interface FinanceState {
   habitLogs: HabitLog[];
   emergencyMonths: number;
 }
+
+export type FilterMode = 'day' | 'month' | 'year';
 
 // Keep these for UI mapping until fully migrated to DB-driven categories
 export const INCOME_CATEGORIES_LEGACY = {
