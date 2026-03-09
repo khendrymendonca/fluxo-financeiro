@@ -1468,11 +1468,15 @@ function useFinanceProvider() {
     const now = new Date();
     const currentBalance = state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
 
-    // Historical Balance = Current Balance - (Sum of all transactions since dayBefore)
+    // To find the balance at the exact start of the period (e.g., 01/Mar/2026 00:00:00),
+    // we take the CURRENT balance and subtract the net effect of all transactions
+    // that happened ON OR AFTER the start of the period and were paid.
     const delta = state.transactions.filter(t => {
       const tDate = new Date(t.date);
-      return tDate > dayBefore;
+      const tDateLocal = new Date(tDate.getFullYear(), tDate.getMonth(), tDate.getDate());
+      return tDateLocal >= periodStart;
     }).reduce((acc, t) => {
+      if (!t.isPaid && new Date(t.date) > new Date()) return acc; // Exclude unpaid future transactions
       return acc + (t.type === 'income' ? -t.amount : t.amount);
     }, 0);
 

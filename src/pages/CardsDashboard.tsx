@@ -25,6 +25,8 @@ export default function CardsDashboard() {
     const getCardStats = (cardId: string) => {
         const cardTransactions = transactions.filter(t => t.cardId === cardId);
 
+        // O valor consumido no cartão é a soma de todas as despesas no crédito
+        // menos tudo que já foi pago via fatura
         const totalSpent = cardTransactions
             .filter(t => t.type === 'expense' && !t.isInvoicePayment)
             .reduce((sum, t) => sum + t.amount, 0);
@@ -36,11 +38,12 @@ export default function CardsDashboard() {
         const currentUsedResult = Math.max(0, totalSpent - totalPaid);
         const card = creditCards.find(c => c.id === cardId);
         const limit = card?.limit || 0;
+        const available = Math.max(0, limit - currentUsedResult);
         const percentUsed = limit > 0 ? (currentUsedResult / limit) * 100 : 0;
 
         return {
             used: currentUsedResult,
-            available: limit - currentUsedResult,
+            available: available,
             limit,
             percentUsed
         };
@@ -54,21 +57,25 @@ export default function CardsDashboard() {
         const viewMonth = viewDate.getMonth();
         const viewYear = viewDate.getFullYear();
 
-        // Invoice for Month M covers: (Month M-1, Day X+1) to (Month M, Day X)
-        const endOfInvoice = new Date(viewYear, viewMonth, closingDay, 23, 59, 59);
-        const startOfInvoice = new Date(viewYear, viewMonth - 1, closingDay + 1, 0, 0, 0);
+        // A fatura de um mês (ex: Março) vai do dia de fechamento do mês anterior + 1
+        // até o dia de fechamento do mês atual.
+        // Se a data do vencimento for no mesmo mês (ex: fecha dia 3, vence dia 10),
+        // ou no mês subsequente. O padrão do sistema salva invoiceMonthYear como 'yyyy-MM'.
 
         const viewDateStr = format(viewDate, 'yyyy-MM');
+
+        const endOfInvoice = new Date(viewYear, viewMonth, closingDay, 23, 59, 59);
+        const startOfInvoice = new Date(viewYear, viewMonth - 1, closingDay + 1, 0, 0, 0);
 
         return transactions.filter(t => {
             if (t.cardId !== cardId || t.isInvoicePayment) return false;
 
-            // Priority 1: User explicitly set invoice reference (MonthYear)
+            // Prioridade 1: se já tem o mês fatura calculado e gravado
             if (t.invoiceMonthYear) {
                 return t.invoiceMonthYear === viewDateStr;
             }
 
-            // Priority 2: Fallback to Date Calculation
+            // Prioridade 2: fallback para cálculo de data
             const tDate = parseISO(t.date);
             return tDate >= startOfInvoice && tDate <= endOfInvoice;
         }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
