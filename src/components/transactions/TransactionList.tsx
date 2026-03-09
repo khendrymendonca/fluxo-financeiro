@@ -22,9 +22,10 @@ interface TransactionListProps {
   onDelete: (id: string) => void;
   onEdit: (transaction: Transaction) => void;
   onPayBill: (billId: string, accountId: string | undefined, paymentDate: string, cardId?: string) => Promise<void>;
+  onDeleteBill?: (id: string, applyToFuture?: boolean) => void;
 }
 
-export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBill }: TransactionListProps) {
+export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBill, onDeleteBill }: TransactionListProps) {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [payingItem, setPayingItem] = useState<any>(null);
   const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -32,6 +33,10 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [anticipatingIds, setAnticipatingIds] = useState<Set<string>>(new Set());
   const [anticipateAccount, setAnticipateAccount] = useState('');
+
+  // Delete Confirmation State
+  const [deletingBill, setDeletingBill] = useState<any>(null);
+  const [deleteFutureBills, setDeleteFutureBills] = useState(false);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -126,7 +131,8 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
       categoryId: b.categoryId,
       isBill: true,
       isPending: true,
-      billId: b.id
+      billId: b.id,
+      originalBillId: b.originalBillId // Guardar ID real para exclusão
     })),
     ...debtBills,
     ...cardBills
@@ -162,6 +168,15 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
       await togglePaid(payingItem.id, true, isCard ? undefined : targetId, paymentDate, isCard ? targetId : undefined);
     }
     setPayingItem(null);
+  };
+
+  const handleConfirmDeleteBill = () => {
+    if (deletingBill && onDeleteBill) {
+      const targetId = deletingBill.originalBillId || deletingBill.billId || deletingBill.id;
+      onDeleteBill(targetId, deleteFutureBills);
+    }
+    setDeletingBill(null);
+    setDeleteFutureBills(false);
   };
 
   // Get future installments for a given group
@@ -341,6 +356,16 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                       <Pencil className="w-4 h-4" />
                                     </Button>
                                   )}
+                                  {item.isBill && onDeleteBill && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => setDeletingBill(item)}
+                                      className="h-9 w-9 rounded-xl hover:bg-danger/10 hover:text-danger shrink-0"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             ) : (
@@ -368,14 +393,22 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                     <Pencil className="w-4 h-4" />
                                   </Button>
                                 )}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => onDelete(item.id)}
-                                  className="h-9 w-9 rounded-lg hover:bg-danger/10 hover:text-danger"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                                {(!item.isBill || (item.isBill && onDeleteBill)) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      if (item.isBill) {
+                                        setDeletingBill(item);
+                                      } else {
+                                        onDelete(item.id);
+                                      }
+                                    }}
+                                    className="h-9 w-9 rounded-lg hover:bg-danger/10 hover:text-danger"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
                               </div>
                             )}
                           </div>
@@ -650,6 +683,66 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                 >
                   Cancelar
                 </Button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
+      {/* Delete Confirmation Popup */}
+      {deletingBill && (
+        <Portal>
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={() => setDeletingBill(null)}
+          >
+            <div
+              className="bg-card rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-border overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 text-center space-y-4">
+                <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto mb-4">
+                  <Trash2 className="w-6 h-6" />
+                </div>
+                <h2 className="text-xl font-black tracking-tight">Excluir Conta?</h2>
+                <p className="text-sm text-muted-foreground">
+                  Tem certeza que deseja remover <strong>{deletingBill.description}</strong>?
+                </p>
+
+                {/* Exibir opção de apagar futuras se for uma conta real e recorrente (neste caso simplificado mostramos sempre, mas ideal seria só para fixas) */}
+                <div className="pt-4 text-left">
+                  <label className="flex items-start gap-3 p-3 rounded-xl border border-border hover:bg-muted/50 transition-colors cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={deleteFutureBills}
+                      onChange={(e) => setDeleteFutureBills(e.target.checked)}
+                      className="mt-1 w-4 h-4 rounded text-primary focus:ring-primary"
+                    />
+                    <div>
+                      <span className="text-sm font-bold block">Aplicar a futuras?</span>
+                      <span className="text-xs text-muted-foreground">
+                        Também exclui os lançamentos desta conta nos próximos meses
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    variant="outline"
+                    className="flex-1 rounded-xl"
+                    onClick={() => setDeletingBill(null)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="flex-1 rounded-xl"
+                    onClick={handleConfirmDeleteBill}
+                  >
+                    Excluir
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

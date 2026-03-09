@@ -77,9 +77,9 @@ export default function Index() {
     deleteSavingsGoal,
     depositToGoal,
     categories,
-    bills,
     currentMonthBills,
     payBill,
+    deleteBill,
     transferBetweenAccounts,
     seedCoach,
     loading,
@@ -233,6 +233,7 @@ export default function Index() {
               onDelete={deleteTransaction}
               onEdit={handleEditTransaction}
               onPayBill={payBill}
+              onDeleteBill={deleteBill}
             />
           </div>
         );

@@ -1076,13 +1076,46 @@ function useFinanceProvider() {
     } catch (err) { toast({ title: 'Erro ao atualizar conta', variant: 'destructive' }); }
   }, [state.bills]);
 
-  const deleteBill = useCallback(async (id: string) => {
+  const deleteBill = useCallback(async (id: string, applyToFuture: boolean = false) => {
     try {
-      const { error } = await supabase.from('bills').delete().eq('id', id);
-      if (error) throw error;
-      setState(prev => ({ ...prev, bills: prev.bills.filter(b => b.id !== id) }));
-      toast({ title: 'Conta removida' });
-    } catch (err) { toast({ title: 'Erro ao remover conta', variant: 'destructive' }); }
+      const billToDelete = state.bills.find(b => b.id === id);
+      if (!billToDelete) return;
+
+      // 1. Otimista / Fallback: remove localmente primeiro
+      if (applyToFuture && billToDelete.isFixed) {
+        setState(prev => ({
+          ...prev,
+          bills: prev.bills.filter(b =>
+            !(b.name === billToDelete.name && b.dueDate >= billToDelete.dueDate)
+          )
+        }));
+      } else {
+        setState(prev => ({ ...prev, bills: prev.bills.filter(b => b.id !== id) }));
+      }
+
+      let error;
+      if (applyToFuture && billToDelete.isFixed) {
+        const { error: batchErr } = await supabase.from('bills')
+          .delete()
+          .eq('name', billToDelete.name)
+          .eq('user_id', billToDelete.userId);
+        error = batchErr;
+      } else {
+        const { error: singleErr } = await supabase.from('bills').delete().eq('id', id);
+        error = singleErr;
+      }
+
+      if (error && error.code !== 'PGRST116') { // Ignorar erro de "não encontrado" se for fantasma
+        // Discutível se devemos fazer rollback aqui em caso de erro real de rede, 
+        // mas dado o bug das contas fantasmas, vamos priorizar a limpeza visual
+        console.warn('Erro ao deletar no Supabase (ignorando localmente):', error);
+      } else {
+        toast({ title: 'Conta removida' });
+      }
+    } catch (err) {
+      // Não reverter o state para permitir limpeza de bugs
+      toast({ title: 'Conta removida (apenas local)', variant: 'default' });
+    }
   }, []);
 
   const payBill = useCallback(async (billId: string, accountId: string | undefined, paymentDate: string, cardId?: string) => {

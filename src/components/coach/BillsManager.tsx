@@ -58,6 +58,10 @@ export function BillsManager() {
     const [isFixed, setIsFixed] = useState(false);
     const [applyToFuture, setApplyToFuture] = useState(false);
 
+    // Delete Confirmation State
+    const [deletingBill, setDeletingBill] = useState<any>(null);
+    const [deleteFutureBills, setDeleteFutureBills] = useState(false);
+
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
@@ -140,6 +144,16 @@ export function BillsManager() {
         setAccountId('');
         setIsFixed(false);
         setApplyToFuture(false);
+        setApplyToFuture(false);
+    };
+
+    const handleConfirmDeleteBill = () => {
+        if (deletingBill) {
+            const targetId = deletingBill.originalBillId || deletingBill.id;
+            deleteBill(targetId, deleteFutureBills);
+        }
+        setDeletingBill(null);
+        setDeleteFutureBills(false);
     };
 
     // 1. Get virtual bills from debts
@@ -181,16 +195,17 @@ export function BillsManager() {
 
     const allBills = [...bills, ...debtBills, ...cardBills];
 
-    const filteredBills = allBills.filter(b => {
+    const currentMonthAllBills = allBills.filter(b => {
         const bDate = new Date(b.dueDate);
-        const matchesDate = bDate.getMonth() === viewDate.getMonth() && bDate.getFullYear() === viewDate.getFullYear();
-        if (!matchesDate) return false;
+        return bDate.getMonth() === viewDate.getMonth() && bDate.getFullYear() === viewDate.getFullYear();
+    });
 
+    const filteredBills = currentMonthAllBills.filter(b => {
         if (filter === 'all') return true;
         return b.type === filter;
     }).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
-    const pendingPayable = bills.filter(b => b.type === 'payable' && b.status === 'pending');
+    const pendingPayable = currentMonthAllBills.filter(b => b.type === 'payable' && b.status === 'pending');
     const totalPendingPayable = pendingPayable.reduce((acc, b) => acc + b.amount, 0);
 
     return (
@@ -397,7 +412,7 @@ export function BillsManager() {
                                                 <Button
                                                     size="sm"
                                                     variant="ghost"
-                                                    onClick={() => deleteBill(bill.id)}
+                                                    onClick={() => setDeletingBill(bill)}
                                                     className="h-10 w-10 p-0 rounded-xl hover:bg-danger/10 hover:text-danger"
                                                 >
                                                     <Trash2 className="w-5 h-5" />
@@ -568,6 +583,65 @@ export function BillsManager() {
                                 >
                                     Cancelar
                                 </Button>
+                            </div>
+                        </div>
+                    </div>
+                </Portal>
+            )}
+
+            {/* Delete Confirmation Popup */}
+            {deletingBill && (
+                <Portal>
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+                        onClick={() => setDeletingBill(null)}
+                    >
+                        <div
+                            className="bg-card rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-border overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="p-6 text-center space-y-4">
+                                <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto mb-4">
+                                    <Trash2 className="w-6 h-6" />
+                                </div>
+                                <h2 className="text-xl font-black tracking-tight">Excluir Conta?</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Tem certeza que deseja remover <strong>{deletingBill.name}</strong>?
+                                </p>
+
+                                <div className="pt-4 text-left">
+                                    <label className="flex items-start gap-3 p-3 rounded-xl border border-border hover:bg-muted/50 transition-colors cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={deleteFutureBills}
+                                            onChange={(e) => setDeleteFutureBills(e.target.checked)}
+                                            className="mt-1 w-4 h-4 rounded text-primary focus:ring-primary"
+                                        />
+                                        <div>
+                                            <span className="text-sm font-bold block">Aplicar a futuras?</span>
+                                            <span className="text-xs text-muted-foreground">
+                                                Também exclui os lançamentos desta conta nos próximos meses
+                                            </span>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div className="flex gap-3 pt-4">
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1 rounded-xl"
+                                        onClick={() => setDeletingBill(null)}
+                                    >
+                                        Cancelar
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        className="flex-1 rounded-xl"
+                                        onClick={handleConfirmDeleteBill}
+                                    >
+                                        Excluir
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </div>
