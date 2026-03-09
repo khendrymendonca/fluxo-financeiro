@@ -172,14 +172,9 @@ export default function Index() {
               />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <BudgetCoach />
               <ExpenseChart data={categoryExpenses.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)} />
-              <BalanceEvolutionChart
-                transactions={currentMonthTransactions}
-                initialBalance={getPeriodStartBalance()}
-                viewDate={viewDate}
-              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
