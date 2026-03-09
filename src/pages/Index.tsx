@@ -140,61 +140,57 @@ export default function Index() {
 
             <SmartInsights onNavigate={(view) => setCurrentView(view as any)} />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard
                 title="Balanço Mensal"
                 value={balance}
-                icon={<Wallet className="w-6 h-6" />}
+                icon={<Wallet className="w-5 h-5" />}
                 variant={balance >= 0 ? 'positive' : 'negative'}
               />
               <StatCard
                 title="Receitas"
                 value={totalIncome}
-                icon={<TrendingUp className="w-6 h-6 text-success" />}
+                icon={<TrendingUp className="w-5 h-5 text-success" />}
                 variant="positive"
               />
               <StatCard
                 title="Despesas"
                 value={totalExpenses}
-                icon={<TrendingDown className="w-6 h-6 text-danger" />}
+                icon={<TrendingDown className="w-5 h-5 text-danger" />}
                 variant="negative"
               />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <BudgetCoach />
               <ExpenseChart data={categoryExpenses.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)} />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <BalanceEvolutionChart transactions={currentMonthTransactions} />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <EmergencyReserve data={emergencyData} onMonthsChange={setEmergencyMonths} />
-                  <PendingPayments
-                    transactions={currentMonthTransactions}
-                    accounts={accounts}
-                    creditCards={creditCards}
-                  />
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <EmergencyReserve data={emergencyData} onMonthsChange={setEmergencyMonths} />
+              <PendingPayments
+                transactions={currentMonthTransactions}
+                accounts={accounts}
+                creditCards={creditCards}
+              />
+              <GoalProgress goals={savingsGoals} />
+              <AccountsOverview
+                accounts={accounts}
+                creditCards={creditCards}
+                getCardExpenses={getCardExpenses}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-2">
                 <RecentTransactions
                   transactions={currentMonthTransactions}
                   accounts={accounts}
                   creditCards={creditCards}
                 />
               </div>
-              <div className="space-y-6">
-                <HabitTracker />
-                <GoalProgress goals={savingsGoals} />
-                <AccountsOverview
-                  accounts={accounts}
-                  creditCards={creditCards}
-                  getCardExpenses={getCardExpenses}
-                />
-              </div>
+              <HabitTracker />
             </div>
           </div>
         );

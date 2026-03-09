@@ -453,7 +453,8 @@ function useFinanceProvider() {
         updateAccountBalance(effectiveAccountId, actualChange);
       }
 
-      toast({ title: isPaid ? 'Pagamento registrado' : 'Pagamento estornado' });
+      const label = tx.type === 'income' ? 'Recebimento' : 'Pagamento';
+      toast({ title: isPaid ? `${label} registrado` : `${label} estornado` });
     } catch (err) {
       toast({ title: 'Erro ao atualizar status', variant: 'destructive' });
     }

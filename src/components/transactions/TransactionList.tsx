@@ -260,7 +260,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                             )}
                             {item.paymentDate && item.paymentDate !== item.date && (
                               <span className="text-[10px] bg-success/20 text-success px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">
-                                Pago em {formatShortDate(item.paymentDate)}
+                                {isIncome ? 'Recebido em' : 'Pago em'} {formatShortDate(item.paymentDate)}
                               </span>
                             )}
                           </div>

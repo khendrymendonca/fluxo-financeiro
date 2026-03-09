@@ -1,4 +1,4 @@
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface ExpenseChartProps {
   data: Record<string, number>;
@@ -27,14 +27,6 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
     }))
     .sort((a, b) => b.value - a.value);
 
-  if (chartData.length === 0) {
-    return (
-      <div className="card-elevated p-6 h-80 flex items-center justify-center">
-        <p className="text-muted-foreground">Nenhuma despesa registrada este mês</p>
-      </div>
-    );
-  }
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -42,12 +34,20 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
     }).format(value);
   };
 
+  if (chartData.length === 0) {
+    return (
+      <div className="card-elevated p-4 flex items-center justify-center h-full min-h-[120px]">
+        <p className="text-xs text-muted-foreground">Nenhuma despesa registrada</p>
+      </div>
+    );
+  }
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-card shadow-lg rounded-xl p-3 border border-border">
+        <div className="bg-card shadow-lg rounded-xl p-2 border border-border text-xs">
           <p className="font-medium">{payload[0].name}</p>
-          <p className="text-primary font-semibold">{formatCurrency(payload[0].value)}</p>
+          <p className="text-primary font-bold">{formatCurrency(payload[0].value)}</p>
         </div>
       );
     }
@@ -55,71 +55,55 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
   };
 
   const totalValue = chartData.reduce((sum, item) => sum + item.value, 0);
-  const topCategory = chartData[0];
-  const top3Value = chartData.slice(0, 3).reduce((sum, item) => sum + item.value, 0);
-  const top3Percent = (top3Value / totalValue) * 100;
 
   return (
-    <div className="card-elevated p-6 animate-fade-in flex flex-col h-full">
-      <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-        <div className="w-2 h-6 bg-primary rounded-full" />
-        Distribuição de Gastos
+    <div className="card-elevated p-4 animate-fade-in h-full flex flex-col">
+      <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+        <div className="w-1.5 h-4 bg-primary rounded-full" />
+        Distribuição
       </h3>
 
-      <div className="flex-1 min-h-[280px]">
-        <ResponsiveContainer width="100%" height="85%">
-          <PieChart>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="50%"
-              innerRadius={70}
-              outerRadius={100}
-              paddingAngle={4}
-              dataKey="value"
-              stroke="none"
-              animationBegin={0}
-              animationDuration={1500}
-            >
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip content={<CustomTooltip />} />
-          </PieChart>
-        </ResponsiveContainer>
+      <div className="flex items-center gap-3 flex-1 min-h-0">
+        {/* Mini Pie */}
+        <div className="w-24 h-24 shrink-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={chartData}
+                cx="50%"
+                cy="50%"
+                innerRadius={28}
+                outerRadius={42}
+                paddingAngle={3}
+                dataKey="value"
+                stroke="none"
+                animationDuration={800}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip content={<CustomTooltip />} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
 
-        {/* Legend / Diagnostics */}
-        <div className="mt-4 space-y-4">
-          <div className="grid grid-cols-2 gap-2">
-            {chartData.slice(0, 4).map((item, idx) => (
-              <div key={idx} className="flex items-center gap-2 text-[10px] font-bold uppercase text-muted-foreground whitespace-nowrap overflow-hidden">
-                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                <span className="truncate">{item.name}</span>
-                <span className="ml-auto text-foreground">{((item.value / totalValue) * 100).toFixed(0)}%</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="pt-4 border-t border-dashed">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-2">Diagnóstico Visual</h4>
-            <div className="bg-muted/30 rounded-xl p-3 space-y-2">
-              <p className="text-xs leading-relaxed">
-                <span className="font-bold text-foreground">Concentração:</span>{' '}
-                {top3Percent > 70
-                  ? 'Seus gastos estão muito concentrados em poucas categorias. Tente diversificar ou revisar estes custos fixos.'
-                  : 'Sua distribuição de gastos está equilibrada entre diversas categorias.'}
-              </p>
-              {topCategory && (
-                <div className="flex items-center gap-2 text-[10px] bg-primary/10 text-primary p-2 rounded-lg font-black uppercase">
-                  <span>Maior Gasto: {topCategory.name} ({((topCategory.value / totalValue) * 100).toFixed(0)}%)</span>
-                </div>
-              )}
+        {/* Legend */}
+        <div className="flex-1 space-y-1 min-w-0">
+          {chartData.slice(0, 5).map((item, idx) => (
+            <div key={idx} className="flex items-center gap-1.5 text-[10px]">
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+              <span className="truncate text-muted-foreground font-medium">{item.name}</span>
+              <span className="ml-auto font-black text-foreground whitespace-nowrap">
+                {((item.value / totalValue) * 100).toFixed(0)}%
+              </span>
             </div>
-          </div>
+          ))}
+          {chartData.length > 5 && (
+            <p className="text-[9px] text-muted-foreground/50 font-bold">+{chartData.length - 5} categorias</p>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
