@@ -43,6 +43,46 @@ function useFinanceProvider() {
   const [viewDate, setViewDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<FilterMode>('month');
 
+  // --- Helper Functions (defined early to avoid ReferenceError) ---
+
+  const getCardSettingsForDate = useCallback((card: CreditCard, targetDate: Date) => {
+    if (!card.history || card.history.length === 0) return { dueDay: card.dueDay, closingDay: card.closingDay };
+    const sortedHistory = [...card.history].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
+    const match = sortedHistory.find(h => new Date(h.effectiveDate) <= targetDate);
+    if (match) return { dueDay: match.dueDay, closingDay: match.closingDay };
+    if (sortedHistory.length > 0) return { dueDay: sortedHistory[sortedHistory.length - 1].dueDay, closingDay: sortedHistory[sortedHistory.length - 1].closingDay };
+    return { dueDay: card.dueDay, closingDay: card.closingDay };
+  }, []);
+
+  const getTransactionTargetDate = useCallback((transaction: Transaction) => {
+    const tDate = new Date(transaction.date);
+    if (transaction.type !== 'expense' || !transaction.cardId) return tDate;
+
+    const card = state.creditCards.find(c => c.id === transaction.cardId);
+    if (!card) return tDate;
+
+    const { closingDay, dueDay } = getCardSettingsForDate(card, tDate);
+
+    // Data de competência inicial: mesmo mês da compra
+    let targetDate = new Date(tDate.getFullYear(), tDate.getMonth(), dueDay);
+
+    // Se a compra foi APÓS o fechamento, joga para o próximo mês
+    if (tDate.getDate() > closingDay) {
+      targetDate.setMonth(targetDate.getMonth() + 1);
+    }
+
+    // Se o dia de vencimento for menor que o de fechamento (ex: fecha 25, vence dia 05 do próximo mês)
+    // o targetDate já estaria no mês seguinte se tDate.getDate() > closingDay.
+    // Mas precisamos garantir que refletimos o mês do VENCIMENTO da fatura.
+    if (dueDay <= closingDay && tDate.getDate() <= closingDay) {
+      // Caso específico: compra dia 10, fecha 25, vence dia 05. 
+      // Vence dia 05 do MÊS SEGUINTE.
+      targetDate.setMonth(targetDate.getMonth() + 1);
+    }
+
+    return targetDate;
+  }, [state.creditCards, getCardSettingsForDate]);
+
   // --- Computed ---
 
   const currentMonthTransactions = state.transactions.filter(t => {
@@ -1423,43 +1463,9 @@ function useFinanceProvider() {
     return Object.entries(expenses).map(([name, value]) => ({ name, value }));
   }, [currentMonthTransactions, state.categories]);
 
-  const getCardSettingsForDate = useCallback((card: CreditCard, targetDate: Date) => {
-    if (!card.history || card.history.length === 0) return { dueDay: card.dueDay, closingDay: card.closingDay };
-    const sortedHistory = [...card.history].sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
-    const match = sortedHistory.find(h => new Date(h.effectiveDate) <= targetDate);
-    if (match) return { dueDay: match.dueDay, closingDay: match.closingDay };
-    if (sortedHistory.length > 0) return { dueDay: sortedHistory[sortedHistory.length - 1].dueDay, closingDay: sortedHistory[sortedHistory.length - 1].closingDay };
-    return { dueDay: card.dueDay, closingDay: card.closingDay };
-  }, []);
 
-  const getTransactionTargetDate = useCallback((transaction: Transaction) => {
-    const tDate = new Date(transaction.date);
-    if (transaction.type !== 'expense' || !transaction.cardId) return tDate;
 
-    const card = state.creditCards.find(c => c.id === transaction.cardId);
-    if (!card) return tDate;
 
-    const { closingDay, dueDay } = getCardSettingsForDate(card, tDate);
-
-    // Data de competência inicial: mesmo mês da compra
-    let targetDate = new Date(tDate.getFullYear(), tDate.getMonth(), dueDay);
-
-    // Se a compra foi APÓS o fechamento, joga para o próximo mês
-    if (tDate.getDate() > closingDay) {
-      targetDate.setMonth(targetDate.getMonth() + 1);
-    }
-
-    // Se o dia de vencimento for menor que o de fechamento (ex: fecha 25, vence dia 05 do próximo mês)
-    // o targetDate já estaria no mês seguinte se tDate.getDate() > closingDay.
-    // Mas precisamos garantir que refletimos o mês do VENCIMENTO da fatura.
-    if (dueDay <= closingDay && tDate.getDate() <= closingDay) {
-      // Caso específico: compra dia 10, fecha 25, vence dia 05. 
-      // Vence dia 05 do MÊS SEGUINTE.
-      targetDate.setMonth(targetDate.getMonth() + 1);
-    }
-
-    return targetDate;
-  }, [state.creditCards, getCardSettingsForDate]);
 
   const setEmergencyMonths = useCallback((months: number) => {
     localStorage.setItem('emergencyMonths', String(months));
