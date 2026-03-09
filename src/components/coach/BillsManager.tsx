@@ -345,7 +345,7 @@ export function BillsManager() {
                                                     variant="ghost"
                                                     onClick={() => {
                                                         setIsPaying(bill);
-                                                        setPaymentDate(new Date().toISOString().split('T')[0]);
+                                                        setPaymentDate(bill.dueDate || new Date().toISOString().split('T')[0]);
                                                         setPaymentMethod('account');
                                                     }}
                                                     className="h-11 px-4 rounded-2xl bg-success/5 text-success hover:bg-success/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider"

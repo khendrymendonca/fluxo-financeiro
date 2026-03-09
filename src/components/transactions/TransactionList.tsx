@@ -285,7 +285,11 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => setPayingItem(item)}
+                                  onClick={() => {
+                                    setPayingItem(item);
+                                    setPaymentDate(item.date || new Date().toISOString().split('T')[0]);
+                                    setPaymentMethod('account');
+                                  }}
                                   disabled={item.isVirtual}
                                   className="flex-1 md:flex-none h-9 px-4 rounded-xl border-primary/30 text-primary hover:bg-primary/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider transition-all hover:scale-105 active:scale-95"
                                 >
