@@ -229,6 +229,7 @@ export default function Index() {
             <AccountsManager
               accounts={accounts}
               onAddAccount={addAccount}
+              onUpdateAccount={(id, updates) => updateAccount(id, updates)}
               onDeleteAccount={deleteAccount}
             />
           </div>

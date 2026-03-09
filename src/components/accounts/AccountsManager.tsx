@@ -1,26 +1,28 @@
 import { useState } from 'react';
-import { Building2, Plus, Trash2, X, Wallet } from 'lucide-react';
+import { Building2, Plus, Trash2, X, Wallet, Pencil } from 'lucide-react';
 import { Account } from '@/types/finance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
+import { Portal } from '@/components/ui/Portal';
 
 interface AccountsManagerProps {
   accounts: Account[];
   onAddAccount: (account: Omit<Account, 'id' | 'userId'>) => void;
+  onUpdateAccount: (id: string, updates: Partial<Account>) => void;
   onDeleteAccount: (id: string) => void;
 }
-
-import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
-import { Portal } from '@/components/ui/Portal';
 
 export function AccountsManager({
   accounts,
   onAddAccount,
+  onUpdateAccount,
   onDeleteAccount,
 }: AccountsManagerProps) {
   const [showAccountForm, setShowAccountForm] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
   // Account form state
   const [accountName, setAccountName] = useState('');
@@ -36,25 +38,63 @@ export function AccountsManager({
     }).format(value);
   };
 
-  const handleAddAccount = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!accountName || !accountBank || !accountBalance) return;
-
-    onAddAccount({
-      name: accountName,
-      bank: accountBank,
-      balance: parseFloat(accountBalance),
-      color: accountColor,
-      accountType: accountType,
-    });
-
+  const resetForm = () => {
     setAccountName('');
     setAccountBank('');
     setAccountBalance('');
+    setAccountType('checking');
+    setAccountColor(APP_COLORS[0]);
+    setEditingAccount(null);
+  };
+
+  const openAddForm = () => {
+    resetForm();
+    setShowAccountForm(true);
+  };
+
+  const openEditForm = (account: Account) => {
+    setEditingAccount(account);
+    setAccountName(account.name);
+    setAccountBank(account.bank);
+    setAccountBalance(account.balance.toString());
+    setAccountType(account.accountType);
+    setAccountColor(account.color);
+    setShowAccountForm(true);
+  };
+
+  const closeForm = () => {
     setShowAccountForm(false);
+    resetForm();
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accountName || !accountBank || !accountBalance) return;
+
+    if (editingAccount) {
+      onUpdateAccount(editingAccount.id, {
+        name: accountName,
+        bank: accountBank,
+        balance: parseFloat(accountBalance),
+        color: accountColor,
+        accountType: accountType,
+      });
+    } else {
+      onAddAccount({
+        name: accountName,
+        bank: accountBank,
+        balance: parseFloat(accountBalance),
+        color: accountColor,
+        accountType: accountType,
+      });
+    }
+
+    closeForm();
   };
 
   const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+
+  const isEditing = !!editingAccount;
 
   return (
     <div className="space-y-6">
@@ -71,7 +111,7 @@ export function AccountsManager({
             </h2>
           </div>
           <Button
-            onClick={() => setShowAccountForm(true)}
+            onClick={openAddForm}
             size="lg"
             className="rounded-2xl h-14 px-8 gap-2 shadow-xl shadow-primary/20 font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95"
           >
@@ -85,7 +125,8 @@ export function AccountsManager({
         {accounts.map((account) => (
           <div
             key={account.id}
-            className="card-elevated p-6 group hover:border-primary/50 transition-all flex flex-col justify-between h-48 relative overflow-hidden"
+            className="card-elevated p-6 group hover:border-primary/50 transition-all flex flex-col justify-between h-48 relative overflow-hidden cursor-pointer"
+            onClick={() => openEditForm(account)}
           >
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
               <Building2 className="w-16 h-16" />
@@ -102,12 +143,22 @@ export function AccountsManager({
                 </div>
                 <h3 className="text-xl font-bold truncate max-w-[180px]">{account.name}</h3>
               </div>
-              <button
-                onClick={() => onDeleteAccount(account.id)}
-                className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-danger/10 text-danger transition-all"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={(e) => { e.stopPropagation(); openEditForm(account); }}
+                  className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-primary/10 text-primary transition-all"
+                  title="Editar conta"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDeleteAccount(account.id); }}
+                  className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-danger/10 text-danger transition-all"
+                  title="Excluir conta"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <div className="mt-auto relative z-10">
@@ -122,32 +173,36 @@ export function AccountsManager({
         {accounts.length === 0 && !showAccountForm && (
           <div className="col-span-full py-20 text-center card-elevated border-dashed border-2 bg-muted/20">
             <p className="text-muted-foreground font-medium">Nenhuma conta ou carteira cadastrada.</p>
-            <Button variant="ghost" onClick={() => setShowAccountForm(true)} className="mt-4">Começar agora</Button>
+            <Button variant="ghost" onClick={openAddForm} className="mt-4">Começar agora</Button>
           </div>
         )}
       </div>
 
-      {/* Account Form Modal */}
+      {/* Account Form Modal (Add / Edit) */}
       {showAccountForm && (
         <Portal>
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowAccountForm(false)}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={closeForm}>
             <div
               className="bg-card rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 border border-border max-h-[85vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
                 <div>
-                  <h2 className="text-lg font-black tracking-tight">Nova Conta</h2>
-                  <p className="text-xs text-muted-foreground">Cadastre um banco ou carteira digital.</p>
+                  <h2 className="text-lg font-black tracking-tight">
+                    {isEditing ? 'Editar Conta' : 'Nova Conta'}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    {isEditing ? 'Atualize os dados da sua conta.' : 'Cadastre um banco ou carteira digital.'}
+                  </p>
                 </div>
                 <button
-                  onClick={() => setShowAccountForm(false)}
+                  onClick={closeForm}
                   className="p-2 rounded-xl hover:bg-muted transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <form onSubmit={handleAddAccount} className="px-5 py-4 space-y-4">
+              <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nome da Conta / Apelido</Label>
                   <Input
@@ -170,7 +225,9 @@ export function AccountsManager({
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Saldo Inicial (R$)</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                      {isEditing ? 'Saldo Atual (R$)' : 'Saldo Inicial (R$)'}
+                    </Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -204,7 +261,7 @@ export function AccountsManager({
                 />
 
                 <Button type="submit" className="w-full h-12 rounded-xl text-sm font-black uppercase tracking-wider shadow-lg shadow-primary/20 transition-all hover:translate-y-[-1px] active:translate-y-[0px]">
-                  Confirmar Cadastro
+                  {isEditing ? 'Salvar Alterações' : 'Confirmar Cadastro'}
                 </Button>
               </form>
             </div>
