@@ -128,12 +128,12 @@ export function AccountsManager({
 
       {/* Account Form Modal */}
       {showAccountForm && (
-        <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center p-4 pt-8 md:pt-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto" onClick={() => setShowAccountForm(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowAccountForm(false)}>
           <div
-            className="bg-card rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 border border-border my-auto max-h-[90vh] flex flex-col"
+            className="bg-card rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 border border-border max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
               <div>
                 <h2 className="text-lg font-black tracking-tight">Nova Conta</h2>
                 <p className="text-xs text-muted-foreground">Cadastre um banco ou carteira digital.</p>
@@ -145,7 +145,7 @@ export function AccountsManager({
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleAddAccount} className="px-5 py-4 space-y-4 overflow-y-auto flex-1">
+            <form onSubmit={handleAddAccount} className="px-5 py-4 space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nome da Conta / Apelido</Label>
                 <Input
