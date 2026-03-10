@@ -287,6 +287,7 @@ function useFinanceProvider() {
           categoryId: b.category_id,
           subcategoryId: b.subcategory_id,
           accountId: b.account_id,
+          cardId: b.card_id,
           dueDate: b.due_date,
           paymentDate: b.payment_date,
           isFixed: b.is_fixed,
@@ -1125,6 +1126,7 @@ function useFinanceProvider() {
           user_id: user.id,
           category_id: bill.categoryId,
           account_id: bill.accountId,
+          card_id: bill.cardId,
           name: bill.name,
           amount: bill.amount,
           type: bill.type,
@@ -1167,6 +1169,7 @@ function useFinanceProvider() {
       const dbUpdates: any = { ...updates };
       if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
       if (updates.accountId !== undefined) dbUpdates.account_id = updates.accountId;
+      if (updates.cardId !== undefined) dbUpdates.card_id = updates.cardId;
       if (updates.dueDate !== undefined) dbUpdates.due_date = updates.dueDate;
       if (updates.paymentDate !== undefined) dbUpdates.payment_date = updates.paymentDate;
       if (updates.isFixed !== undefined) dbUpdates.is_fixed = updates.isFixed;
@@ -1174,6 +1177,7 @@ function useFinanceProvider() {
 
       delete dbUpdates.categoryId;
       delete dbUpdates.accountId;
+      delete dbUpdates.cardId;
       delete dbUpdates.dueDate;
       delete dbUpdates.paymentDate;
       delete dbUpdates.isFixed;
@@ -1228,7 +1232,8 @@ function useFinanceProvider() {
               name: updates.name || fb.name,
               amount: updates.amount !== undefined ? updates.amount : fb.amount,
               category_id: updates.categoryId || fb.category_id,
-              account_id: updates.accountId || fb.account_id,
+              account_id: updates.accountId !== undefined ? updates.accountId : fb.account_id,
+              card_id: updates.cardId !== undefined ? updates.cardId : fb.card_id,
               due_date: newDueDate,
               is_fixed: true,
               user_id: fb.user_id,

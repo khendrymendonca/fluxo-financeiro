@@ -56,6 +56,8 @@ export function BillsManager() {
     const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
     const [categoryId, setCategoryId] = useState('');
     const [accountId, setAccountId] = useState('');
+    const [cardId, setCardId] = useState('');
+    const [formPaymentMethod, setFormPaymentMethod] = useState<'account' | 'card'>('account');
     const [isFixed, setIsFixed] = useState(false);
     const [applyToFuture, setApplyToFuture] = useState(false);
 
@@ -90,7 +92,8 @@ export function BillsManager() {
                     type,
                     dueDate,
                     categoryId: categoryId || undefined,
-                    accountId: accountId || undefined,
+                    accountId: formPaymentMethod === 'account' ? (accountId || undefined) : undefined,
+                    cardId: formPaymentMethod === 'card' ? (cardId || undefined) : undefined,
                     isFixed
                 }, applyToFuture);
                 setEditingBillId(null);
@@ -107,7 +110,8 @@ export function BillsManager() {
                     type,
                     dueDate,
                     categoryId: categoryId || undefined,
-                    accountId: accountId || undefined,
+                    accountId: formPaymentMethod === 'account' ? (accountId || undefined) : undefined,
+                    cardId: formPaymentMethod === 'card' ? (cardId || undefined) : undefined,
                     status: 'pending',
                     isFixed
                 }, shouldProject);
@@ -120,6 +124,8 @@ export function BillsManager() {
             setAmount('');
             setCategoryId('');
             setAccountId('');
+            setCardId('');
+            setFormPaymentMethod('account');
             setIsFixed(false);
             setShowAddForm(false);
         } catch (error) {
@@ -143,6 +149,8 @@ export function BillsManager() {
         setDueDate(bill.dueDate.split('T')[0]);
         setCategoryId(bill.categoryId || '');
         setAccountId(bill.accountId || '');
+        setCardId(bill.cardId || '');
+        setFormPaymentMethod(bill.cardId ? 'card' : 'account');
         setIsFixed(bill.isFixed);
         setApplyToFuture(false);
         setShowAddForm(true);
@@ -157,6 +165,8 @@ export function BillsManager() {
         setAmount('');
         setCategoryId('');
         setAccountId('');
+        setCardId('');
+        setFormPaymentMethod('account');
         setIsFixed(false);
         setApplyToFuture(false);
         setApplyToFuture(false);
@@ -185,7 +195,9 @@ export function BillsManager() {
             isFixed: true,
             categoryId: 'debt-payment',
             isVirtual: true,
-            icon: ShieldAlert
+            icon: ShieldAlert,
+            accountId: undefined,
+            cardId: undefined
         };
     });
 
@@ -204,7 +216,9 @@ export function BillsManager() {
             isFixed: true,
             categoryId: 'card-payment',
             isVirtual: true,
-            icon: CardIcon
+            icon: CardIcon,
+            accountId: undefined,
+            cardId: card.id
         };
     }).filter(c => c.amount > 0);
 
@@ -277,7 +291,7 @@ export function BillsManager() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                         <div className="space-y-2">
                             <Label>Categoria</Label>
                             <select className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" value={categoryId} onChange={e => setCategoryId(e.target.value)}>
@@ -287,6 +301,45 @@ export function BillsManager() {
                                 ))}
                             </select>
                         </div>
+
+                        <div className="space-y-2">
+                            <Label>Onde será pago/recebido?</Label>
+                            <div className="flex gap-2">
+                                <select
+                                    className="w-1/3 h-10 rounded-md border border-input bg-background px-2 py-2 text-xs"
+                                    value={formPaymentMethod}
+                                    onChange={(e) => setFormPaymentMethod(e.target.value as any)}
+                                >
+                                    <option value="account">Conta</option>
+                                    {type === 'payable' && <option value="card">Cartão</option>}
+                                </select>
+
+                                {formPaymentMethod === 'account' ? (
+                                    <select
+                                        className="w-2/3 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                        value={accountId}
+                                        onChange={(e) => setAccountId(e.target.value)}
+                                    >
+                                        <option value="">Selecione a Conta...</option>
+                                        {accounts.map(acc => (
+                                            <option key={acc.id} value={acc.id}>{acc.name}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <select
+                                        className="w-2/3 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                        value={cardId}
+                                        onChange={(e) => setCardId(e.target.value)}
+                                    >
+                                        <option value="">Selecione o Cartão...</option>
+                                        {creditCards.map(card => (
+                                            <option key={card.id} value={card.id}>{card.name}</option>
+                                        ))}
+                                    </select>
+                                )}
+                            </div>
+                        </div>
+
                         <div className="flex flex-col gap-2">
                             <div className="flex items-center gap-2 h-6">
                                 <input type="checkbox" id="isFixed" checked={isFixed} onChange={e => setIsFixed(e.target.checked)} className="w-4 h-4" />
@@ -371,6 +424,24 @@ export function BillsManager() {
                                                     <span>{category.name}</span>
                                                 </>
                                             )}
+                                            {bill.accountId && (
+                                                <>
+                                                    <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                                                    <span className="flex items-center gap-1 font-bold">
+                                                        <ShieldAlert className="w-3 h-3" />
+                                                        {accounts.find(a => a.id === bill.accountId)?.name}
+                                                    </span>
+                                                </>
+                                            )}
+                                            {bill.cardId && (
+                                                <>
+                                                    <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                                                    <span className="flex items-center gap-1 font-bold">
+                                                        <CardIcon className="w-3 h-3" />
+                                                        {creditCards.find(c => c.id === bill.cardId)?.name}
+                                                    </span>
+                                                </>
+                                            )}
                                             {bill.isFixed && <span className="ml-1 px-1.5 py-0.5 bg-primary/10 text-primary rounded-md text-[10px] font-bold">RECORRENTE</span>}
                                         </div>
                                     </div>
@@ -407,7 +478,7 @@ export function BillsManager() {
                                                     onClick={() => {
                                                         setIsPaying(bill);
                                                         setPaymentDate((bill.dueDate || new Date().toISOString()).split('T')[0]);
-                                                        setPaymentMethod('account');
+                                                        setPaymentMethod(bill.cardId ? 'credit_card' : 'account');
                                                     }}
                                                     className="h-11 px-4 rounded-2xl bg-success/5 text-success hover:bg-success/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider"
                                                 >

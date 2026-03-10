@@ -122,6 +122,7 @@ export interface Bill {
   amount: number;
   type: 'payable' | 'receivable';
   accountId?: string;
+  cardId?: string;
   dueDate: string;
   paymentDate?: string;
   status: BillStatus;
