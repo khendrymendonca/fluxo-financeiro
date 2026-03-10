@@ -62,6 +62,12 @@ function useFinanceProvider() {
   }, []);
 
   const getTransactionTargetDate = useCallback((transaction: Transaction) => {
+    // Se for um pagamento de fatura, o 'targetDate' é determinado pelo invoiceMonthYear
+    if (transaction.isInvoicePayment && transaction.invoiceMonthYear) {
+      const [year, month] = transaction.invoiceMonthYear.split('-').map(Number);
+      return new Date(year, month - 1, 15); // Meio do mês de competência da fatura
+    }
+
     const tDate = parseLocalDate(transaction.date);
     if (transaction.type !== 'expense' || !transaction.cardId) return tDate;
 
@@ -1387,7 +1393,7 @@ function useFinanceProvider() {
     }
   }, [state.bills]);
 
-  const payBill = useCallback(async (billId: string, accountId: string | undefined, paymentDate: string, cardId?: string) => {
+  const payBill = useCallback(async (billId: string, accountId: string | undefined, paymentDate: string, cardId?: string, customAmount?: number) => {
     try {
       let bill = state.bills.find(b => b.id === billId);
 
@@ -1399,55 +1405,57 @@ function useFinanceProvider() {
       if (!bill) return;
 
       const isVirtual = billId.startsWith('virtual-');
+      const finalAmount = customAmount !== undefined ? customAmount : bill.amount;
+      const isPartial = customAmount !== undefined && Math.abs(customAmount - bill.amount) > 0.01;
 
       // 1. Update the bill status or create a new real record if virtual
+      // Se for pagamento parcial, não marcamos a bill como 'paid' a menos que o total seja atingido
+      // Para simplificar "abatimento" de cartão, vamos sempre criar a transação.
       if (isVirtual) {
-        // Criar uma nova conta real marcada como paga, vinculada à original
-        await addBill({
-          name: bill.name,
-          amount: bill.amount,
-          type: bill.type,
-          dueDate: bill.dueDate,
-          paymentDate: paymentDate,
-          status: 'paid',
-          categoryId: bill.categoryId,
-          subcategoryId: bill.subcategoryId,
-          isFixed: false, // A instância paga não é o template fixo
-          accountId: accountId || undefined,
-          originalBillId: (bill as any).originalBillId
-        }, false);
+        if (!isPartial) {
+          await addBill({
+            name: bill.name,
+            amount: bill.amount,
+            type: bill.type,
+            dueDate: bill.dueDate,
+            paymentDate: paymentDate,
+            status: 'paid',
+            categoryId: bill.categoryId,
+            subcategoryId: bill.subcategoryId,
+            isFixed: false,
+            accountId: accountId || undefined,
+            originalBillId: (bill as any).originalBillId
+          }, false);
+        }
       } else {
-        await updateBill(billId, {
-          status: 'paid',
-          paymentDate,
-          accountId: accountId || undefined
-        });
+        if (!isPartial) {
+          await updateBill(billId, {
+            status: 'paid',
+            paymentDate,
+            accountId: accountId || undefined
+          });
+        }
       }
 
       // 2. Create the associated transaction
+      const isCardBill = bill.id.startsWith('card-') || !!bill.cardId;
+
       await addTransaction({
         date: bill.dueDate,
         paymentDate: paymentDate,
-        description: `Pgto: ${bill.name}`,
-        amount: bill.amount,
+        description: isPartial ? `Abatimento: ${bill.name}` : `Pgto: ${bill.name}`,
+        amount: finalAmount,
         type: bill.type === 'payable' ? 'expense' : 'income',
         transactionType: 'punctual',
         categoryId: bill.categoryId,
         subcategoryId: bill.subcategoryId,
         accountId: accountId || undefined,
-        cardId: cardId || undefined,
+        cardId: bill.cardId || cardId || undefined,
         isPaid: true,
-        userId: bill.userId
+        userId: bill.userId,
+        isInvoicePayment: isCardBill,
+        invoiceMonthYear: isCardBill ? format(parseLocalDate(bill.dueDate), 'yyyy-MM') : undefined
       });
-
-      // 3. If fixed and NOT virtual, create next month (Legacy mode)
-      // Se era uma conta real fixa, ela já criou o 'vínculo'. 
-      // Com a virtualização, não precisamos mais criar a próxima manualmente no payBill.
-      // Mas vamos manter se o usuário preferir registros físicos.
-      if (!isVirtual && bill.isFixed) {
-        // Opcional: remover a criação manual do próximo mês para evitar duplicidade com o virtualizador
-        // Mas a lógica do virtualizador já ignora se existir uma conta real no mês.
-      }
 
       // 3. If fixed, create next month
       if (bill.isFixed) {
@@ -1463,17 +1471,17 @@ function useFinanceProvider() {
           categoryId: bill.categoryId,
           subcategoryId: bill.subcategoryId,
           isFixed: true,
-          accountId: bill.accountId, // mantém as configurações originais da conta para as próximas
+          accountId: bill.accountId,
           startDate: bill.startDate
         }, false);
       }
 
-      toast({ title: 'Pagamento registrado e fluxo atualizado!' });
+      toast({ title: isPartial ? 'Abatimento registrado' : 'Pagamento concluído!' });
     } catch (err) {
       console.error(err);
       toast({ title: 'Erro ao processar pagamento', variant: 'destructive' });
     }
-  }, [state.bills, updateBill, addTransaction, addBill, currentMonthBills]);
+  }, [state.bills, currentMonthBills, addBill, updateBill, addTransaction, parseLocalDate]);
 
   const seedCoach = useCallback(async () => {
     try {
@@ -1668,10 +1676,25 @@ function useFinanceProvider() {
 
 
   const getCardExpenses = useCallback((cardId: string) => {
-    return currentMonthTransactions
-      .filter(t => t.cardId === cardId && t.type === 'expense' && !t.isInvoicePayment)
-      .reduce((acc, curr) => acc + curr.amount, 0);
-  }, [currentMonthTransactions]);
+    const cardTransactions = state.transactions.filter(t => t.cardId === cardId);
+
+    // Total gasto (compras) que vencem no mês selecionado
+    const spent = cardTransactions.filter(t => {
+      const targetDate = getTransactionTargetDate(t);
+      return t.type === 'expense' &&
+        !t.isInvoicePayment &&
+        targetDate.getMonth() === viewDate.getMonth() &&
+        targetDate.getFullYear() === viewDate.getFullYear();
+    }).reduce((acc, curr) => acc + curr.amount, 0);
+
+    // Total pago/abatido para faturas deste mês
+    const currentInvoiceMonthYear = format(viewDate, 'yyyy-MM');
+    const paid = cardTransactions.filter(t =>
+      t.isInvoicePayment && t.invoiceMonthYear === currentInvoiceMonthYear
+    ).reduce((acc, curr) => acc + curr.amount, 0);
+
+    return Math.max(0, spent - paid);
+  }, [state.transactions, viewDate, getTransactionTargetDate]);
 
   const getCardUsedLimit = useCallback((cardId: string) => {
     const cardTransactions = state.transactions.filter(t => t.cardId === cardId);

@@ -45,6 +45,7 @@ export function BillsManager() {
     const [filter, setFilter] = useState<'all' | 'payable' | 'receivable'>('all');
     const [isPaying, setIsPaying] = useState<any>(null);
     const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [paymentAmount, setPaymentAmount] = useState<string>('');
     const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
     const [editingBillId, setEditingBillId] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -139,7 +140,8 @@ export function BillsManager() {
 
     const handleMarkAsPaid = async (targetId: string, isCard: boolean) => {
         if (!isPaying) return;
-        await payBill(isPaying.id, isCard ? undefined : targetId, paymentDate, isCard ? targetId : undefined);
+        const amount = paymentAmount ? parseFloat(paymentAmount) : isPaying.amount;
+        await payBill(isPaying.id, isCard ? undefined : targetId, paymentDate, isCard ? targetId : undefined, amount);
         setIsPaying(null);
     };
 
@@ -494,6 +496,7 @@ export function BillsManager() {
                                                     onClick={() => {
                                                         setIsPaying(bill);
                                                         setPaymentDate((bill.dueDate || new Date().toISOString()).split('T')[0]);
+                                                        setPaymentAmount(bill.amount.toString());
                                                         setPaymentMethod(bill.cardId ? 'credit_card' : 'account');
                                                     }}
                                                     className="h-11 px-4 rounded-2xl bg-success/5 text-success hover:bg-success/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider"
@@ -594,6 +597,26 @@ export function BillsManager() {
                                     >
                                         Cartão de Crédito
                                     </button>
+                                </div>
+
+                                {/* Amount Input */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Valor do Pagamento</label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">R$</span>
+                                        <Input
+                                            type="number"
+                                            value={paymentAmount}
+                                            onChange={(e) => setPaymentAmount(e.target.value)}
+                                            className="pl-10 h-11 rounded-xl font-bold bg-muted/20"
+                                            placeholder="0.00"
+                                        />
+                                    </div>
+                                    {isPaying.id.startsWith('card-') && (
+                                        <p className="text-[10px] text-primary font-bold leading-tight">
+                                            Este pagamento será registrado como um abatimento na fatura deste mês.
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 
