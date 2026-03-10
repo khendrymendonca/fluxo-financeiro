@@ -1280,6 +1280,32 @@ function useFinanceProvider() {
         ...prev,
         bills: prev.bills.map(b => b.id === id ? { ...b, ...updates } : b)
       }));
+
+      // Smart Sync: Se a data de pagamento foi alterada em uma conta paga, 
+      // atualizar a transação de pagamento correspondente.
+      if (updates.paymentDate && bill.status === 'paid') {
+        const paymentTx = state.transactions.find(t =>
+          t.description === `Pgto: ${bill.name}` &&
+          Math.abs(t.amount - bill.amount) < 0.01 &&
+          t.isPaid
+        );
+
+        if (paymentTx) {
+          const newDate = updates.paymentDate;
+          // Atualiza localmente
+          setState(prev => ({
+            ...prev,
+            transactions: prev.transactions.map(t =>
+              t.id === paymentTx.id ? { ...t, date: newDate, paymentDate: newDate } : t
+            )
+          }));
+          // Persiste no banco
+          supabase.from('transactions')
+            .update({ date: newDate, payment_date: newDate })
+            .eq('id', paymentTx.id)
+            .then();
+        }
+      }
     } catch (err) { toast({ title: 'Erro ao atualizar conta', variant: 'destructive' }); }
   }, [state.bills]);
 

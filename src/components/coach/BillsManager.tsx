@@ -59,6 +59,7 @@ export function BillsManager() {
     const [cardId, setCardId] = useState('');
     const [formPaymentMethod, setFormPaymentMethod] = useState<'account' | 'card'>('account');
     const [isFixed, setIsFixed] = useState(false);
+    const [formPaymentDate, setFormPaymentDate] = useState<string>('');
     const [applyToFuture, setApplyToFuture] = useState(false);
 
     // Delete Confirmation State
@@ -94,7 +95,8 @@ export function BillsManager() {
                     categoryId: categoryId || undefined,
                     accountId: formPaymentMethod === 'account' ? (accountId || undefined) : undefined,
                     cardId: formPaymentMethod === 'card' ? (cardId || undefined) : undefined,
-                    isFixed
+                    isFixed,
+                    paymentDate: formPaymentDate || undefined
                 }, applyToFuture);
                 setEditingBillId(null);
                 setApplyToFuture(false);
@@ -152,6 +154,7 @@ export function BillsManager() {
         setCardId(bill.cardId || '');
         setFormPaymentMethod(bill.cardId ? 'card' : 'account');
         setIsFixed(bill.isFixed);
+        setFormPaymentDate(bill.paymentDate ? bill.paymentDate.split('T')[0] : (bill.status === 'paid' ? bill.dueDate.split('T')[0] : ''));
         setApplyToFuture(false);
         setShowAddForm(true);
         // Scroll to form
@@ -168,6 +171,7 @@ export function BillsManager() {
         setCardId('');
         setFormPaymentMethod('account');
         setIsFixed(false);
+        setFormPaymentDate('');
         setApplyToFuture(false);
         setApplyToFuture(false);
     };
@@ -339,6 +343,18 @@ export function BillsManager() {
                                 )}
                             </div>
                         </div>
+
+                        {editingBillId && allBills.find(b => b.id === editingBillId)?.status === 'paid' && (
+                            <div className="space-y-2 animate-fade-in">
+                                <Label className="text-success font-bold">Data do Pagamento</Label>
+                                <Input
+                                    type="date"
+                                    value={formPaymentDate}
+                                    onChange={e => setFormPaymentDate(e.target.value)}
+                                    className="border-success/30 focus:border-success"
+                                />
+                            </div>
+                        )}
 
                         <div className="flex flex-col gap-2">
                             <div className="flex items-center gap-2 h-6">
