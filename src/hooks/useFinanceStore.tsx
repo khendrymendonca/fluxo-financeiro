@@ -43,7 +43,14 @@ function useFinanceProvider() {
   const [viewDate, setViewDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<FilterMode>('month');
 
-  // --- Helper Functions (defined early to avoid ReferenceError) ---
+  // --- Helper Functions ---
+
+  // Converte string YYYY-MM-DD para objeto Date local (meia-noite)
+  const parseLocalDate = useCallback((dateStr: string) => {
+    if (!dateStr) return new Date();
+    const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }, []);
 
   const getCardSettingsForDate = useCallback((card: CreditCard, targetDate: Date) => {
     if (!card.history || card.history.length === 0) return { dueDay: card.dueDay, closingDay: card.closingDay };
@@ -55,7 +62,7 @@ function useFinanceProvider() {
   }, []);
 
   const getTransactionTargetDate = useCallback((transaction: Transaction) => {
-    const tDate = new Date(transaction.date);
+    const tDate = parseLocalDate(transaction.date);
     if (transaction.type !== 'expense' || !transaction.cardId) return tDate;
 
     const card = state.creditCards.find(c => c.id === transaction.cardId);
@@ -72,16 +79,12 @@ function useFinanceProvider() {
     }
 
     // Se o dia de vencimento for menor que o de fechamento (ex: fecha 25, vence dia 05 do próximo mês)
-    // o targetDate já estaria no mês seguinte se tDate.getDate() > closingDay.
-    // Mas precisamos garantir que refletimos o mês do VENCIMENTO da fatura.
     if (dueDay <= closingDay && tDate.getDate() <= closingDay) {
-      // Caso específico: compra dia 10, fecha 25, vence dia 05. 
-      // Vence dia 05 do MÊS SEGUINTE.
       targetDate.setMonth(targetDate.getMonth() + 1);
     }
 
     return targetDate;
-  }, [state.creditCards, getCardSettingsForDate]);
+  }, [state.creditCards, getCardSettingsForDate, parseLocalDate]);
 
   // --- Computed ---
 
@@ -148,7 +151,7 @@ function useFinanceProvider() {
     });
 
     const filteredBills = [...state.bills, ...virtualBills].filter(b => {
-      const bDate = new Date(b.dueDate);
+      const bDate = parseLocalDate(b.dueDate);
       let matchesViewDate = false;
 
       if (viewMode === 'day') {
@@ -162,18 +165,16 @@ function useFinanceProvider() {
         matchesViewDate = bDate.getFullYear() === viewDate.getFullYear();
       }
 
-      // Filtro por data de cadastro (startDate)
       if (b.startDate) {
-        const sDate = new Date(b.startDate);
-        const isAtOrAfterStart = bDate.getTime() >= sDate.getTime();
-        return matchesViewDate && isAtOrAfterStart;
+        const sDate = parseLocalDate(b.startDate);
+        return matchesViewDate && bDate.getTime() >= sDate.getTime();
       }
 
       return matchesViewDate;
     });
 
     return filteredBills;
-  }, [state.bills, viewDate, viewMode]);
+  }, [state.bills, viewDate, viewMode, parseLocalDate]);
 
   const fetchInitialData = useCallback(async () => {
     try {
@@ -228,7 +229,7 @@ function useFinanceProvider() {
           subcategoryId: t.subcategory_id,
           accountId: t.account_id,
           cardId: t.card_id,
-          isPaid: t.is_paid !== undefined ? t.is_paid : new Date(t.date) <= new Date(),
+          isPaid: t.is_paid !== undefined ? t.is_paid : parseLocalDate(t.date) <= new Date(),
           isRecurring: t.is_recurring,
           installmentGroupId: t.installment_group_id,
           installmentNumber: t.installment_number,
@@ -420,8 +421,8 @@ function useFinanceProvider() {
           installment_number: instNum || txData.installmentNumber || null,
           installment_total: instTotal || txData.installmentTotal || null,
           debt_id: txData.debtId || null,
-          is_paid: txData.isPaid !== undefined ? txData.isPaid : (new Date(txData.date) <= new Date()),
-          payment_date: txData.paymentDate || (txData.isPaid ? txData.date : (new Date(txData.date) <= new Date() ? txData.date : null))
+          is_paid: txData.isPaid !== undefined ? txData.isPaid : (parseLocalDate(txData.date) <= new Date()),
+          payment_date: txData.paymentDate || (txData.isPaid ? txData.date : (parseLocalDate(txData.date) <= new Date() ? txData.date : null))
         });
       };
 
@@ -1293,7 +1294,34 @@ function useFinanceProvider() {
         return;
       }
 
-      // 1. Otimista / Fallback: remove localmente primeiro
+      // 1. Se a conta estava paga, deletar a transação associada para estornar o saldo
+      if (billToDelete.status === 'paid') {
+        const paymentTx = state.transactions.find(t =>
+          t.description === `Pgto: ${billToDelete.name}` &&
+          Math.abs(t.amount - billToDelete.amount) < 0.01 &&
+          t.isPaid
+        );
+        if (paymentTx) {
+          console.log('Transação de pagamento encontrada, deletando para estornar saldo:', paymentTx.id);
+          // Chamamos a lógica de deleção de transação que já cuida do estorno
+          // deletamos localmente primeiro para ser rápido
+          setState(prev => ({
+            ...prev,
+            transactions: prev.transactions.filter(t => t.id !== paymentTx.id)
+          }));
+
+          // Estornar saldo se a transação estava paga e tinha conta
+          if (paymentTx.accountId) {
+            const change = paymentTx.type === 'income' ? -paymentTx.amount : paymentTx.amount;
+            updateAccountBalance(paymentTx.accountId, change);
+          }
+
+          // Persistir deleção da transação
+          supabase.from('transactions').delete().eq('id', paymentTx.id).then();
+        }
+      }
+
+      // 2. Otimista / Fallback: remove localmente primeiro a própria conta
       if (applyToFuture && billToDelete.isFixed) {
         console.log('Removendo todas as ocorrências por nome:', billToDelete.name);
         setState(prev => ({
@@ -1746,11 +1774,10 @@ function useFinanceProvider() {
     // we take the CURRENT balance and subtract the net effect of all transactions
     // that happened ON OR AFTER the start of the period and were paid.
     const delta = state.transactions.filter(t => {
-      const tDate = new Date(t.date);
-      const tDateLocal = new Date(tDate.getFullYear(), tDate.getMonth(), tDate.getDate());
-      return tDateLocal >= periodStart;
+      const tDate = parseLocalDate(t.date);
+      return tDate.getTime() >= periodStart.getTime();
     }).reduce((acc, t) => {
-      if (!t.isPaid && new Date(t.date) > new Date()) return acc; // Exclude unpaid future transactions
+      if (!t.isPaid && parseLocalDate(t.date) > new Date()) return acc; // Exclude unpaid future transactions
       return acc + (t.type === 'income' ? -t.amount : t.amount);
     }, 0);
 
