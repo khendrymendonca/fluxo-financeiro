@@ -457,19 +457,20 @@ function useFinanceProvider() {
         let invoiceMonthYear = txData.invoiceMonthYear || null;
 
         if (card && !txData.isInvoicePayment) {
-          // A data original da transação desta parcela específica
-          const tDate = new Date(txData.date);
-          // Converter para UTC meia-noite para evitar timezone shifts
-          const tDateLocal = new Date(tDate.getUTCFullYear(), tDate.getUTCMonth(), tDate.getUTCDate());
+          const tDate = parseLocalDate(txData.date);
+          const { closingDay, dueDay } = getCardSettingsForDate(card, tDate);
 
-          const { closingDay } = getCardSettingsForDate(card, tDateLocal);
+          // Data de competência inicial: mesmo mês da compra
+          let invoiceDate = new Date(tDate.getFullYear(), tDate.getMonth(), 1);
 
-          // A fatura de qual mês esta compra pertence?
-          // Se o dia da compra for MAIOR ou IGUAL ao dia do fechamento (ex: dia 15, fecha dia 14), 
-          // ela entra na fatura do mês *seguinte*.
-          // Se for MENOR (ex: dia 10, fecha dia 14), entra na fatura do *próprio* mês.
-          let invoiceDate = new Date(tDateLocal.getFullYear(), tDateLocal.getMonth(), 1);
-          if (tDateLocal.getDate() > closingDay) {
+          // Se a compra foi APÓS o fechamento, joga para o próximo mês
+          if (tDate.getDate() > closingDay) {
+            invoiceDate.setMonth(invoiceDate.getMonth() + 1);
+          }
+
+          // Se o dia de vencimento for menor que o de fechamento (ex: fecha 25, vence dia 05 do próximo mês)
+          // a compra feita ATÉ o dia 25 já cai na fatura do mês seguinte.
+          if (dueDay <= closingDay && tDate.getDate() <= closingDay) {
             invoiceDate.setMonth(invoiceDate.getMonth() + 1);
           }
 
@@ -585,7 +586,7 @@ function useFinanceProvider() {
       console.error(error);
       toast({ title: 'Erro ao salvar', variant: 'destructive' });
     }
-  }, []);
+  }, [state.categories, state.creditCards, state.debts, updateAccountBalance]);
 
   const updateTransaction = useCallback(async (updatedTx: Transaction, applyScope: 'this' | 'future' | 'all' = 'this') => {
     try {
@@ -681,7 +682,7 @@ function useFinanceProvider() {
     } catch (err) {
       toast({ title: 'Erro ao atualizar', variant: 'destructive' });
     }
-  }, [state.transactions, state.categories]);
+  }, [state.transactions, state.categories, state.bills, updateAccountBalance, updateBill]);
 
   const deleteTransaction = useCallback(async (id: string, scope: 'this' | 'future' | 'all' = 'this') => {
     try {
@@ -752,7 +753,7 @@ function useFinanceProvider() {
       toast({ title: 'Erro ao deletar', variant: 'destructive' });
       // Em um cenário real, poderíamos re-buscar os dados do banco aqui para garantir sincronia em caso de erro
     }
-  }, [state.transactions, state.bills]);
+  }, [state.transactions, state.bills, updateAccountBalance, updateBill]);
 
 
   const togglePaid = useCallback(async (id: string, isPaid: boolean, paymentAccountId?: string, paymentDate?: string, paymentCardId?: string) => {
@@ -821,7 +822,7 @@ function useFinanceProvider() {
     } catch (err) {
       toast({ title: 'Erro ao atualizar status', variant: 'destructive' });
     }
-  }, [state.transactions]);
+  }, [state.transactions, state.bills, updateAccountBalance, updateBill]);
 
   const addAccount = useCallback(async (account: Omit<Account, 'id' | 'userId'>) => {
     try {
