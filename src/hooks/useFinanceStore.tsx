@@ -231,19 +231,28 @@ function useFinanceProvider() {
       const d = new Date(viewDate);
       d.setDate(card.dueDay || 1);
 
-      filteredBills.push({
-        id: `card-${card.id}-${currentInvoiceMonthYear}`,
-        name: `Fatura: ${card.bank} - ${card.name}`,
-        amount: amount,
-        type: 'payable',
-        dueDate: d.toISOString(),
-        status: 'pending',
-        isFixed: true,
-        categoryId: 'card-payment',
-        isVirtual: true,
-        cardId: card.id,
-        userId: card.userId
-      } as Bill);
+      // Verificar se já existe uma conta real vinculada a este cartão para este mês
+      const exists = state.bills.find(b =>
+        b.cardId === card.id &&
+        new Date(b.dueDate).getMonth() === viewDate.getMonth() &&
+        new Date(b.dueDate).getFullYear() === viewDate.getFullYear()
+      );
+
+      if (!exists) {
+        filteredBills.push({
+          id: `card-${card.id}-${currentInvoiceMonthYear}`,
+          name: `Fatura: ${card.bank} - ${card.name}`,
+          amount: amount,
+          type: 'payable',
+          dueDate: d.toISOString(),
+          status: 'pending',
+          isFixed: true,
+          categoryId: 'card-payment',
+          isVirtual: true,
+          cardId: card.id,
+          userId: card.userId
+        } as Bill);
+      }
     });
 
     return filteredBills.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());

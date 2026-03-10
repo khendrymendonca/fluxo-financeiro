@@ -90,44 +90,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     return cat ? cat.name : 'Outros';
   };
 
-  // Convert bills to transaction-like objects for the list
-  const pendingBills = bills.filter(b => b.status === 'pending');
-
-  // Virtual bills from debts
-  const debtBills = debts.map(debt => {
-    // Projeta o vencimento da dívida no mês e ano da viewDate (filtro da tela)
-    const d = new Date(viewDate.getFullYear(), viewDate.getMonth(), debt.dueDay || 1, 12, 0, 0);
-    return {
-      id: `debt-${debt.id}`,
-      description: `Dívida: ${debt.name}`,
-      amount: debt.monthlyPayment,
-      type: 'expense' as const,
-      date: d.toISOString().split('T')[0],
-      categoryId: 'debt-payment',
-      isBill: true,
-      billId: debt.id,
-      isVirtual: true,
-      icon: ShieldAlert
-    };
-  });
-
-  // Virtual bills from credit cards
-  const cardBills = creditCards.map(card => {
-    const amount = getCardExpenses(card.id);
-    // O vencimento do cartão nesse painel exibe a fatura no mês selecionado (viewDate)
-    const cardDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), card.dueDay || 1, 12, 0, 0);
-    return {
-      id: `card-${card.id}`,
-      description: `Fatura: ${card.bank} - ${card.name}`,
-      amount: amount,
-      type: 'expense' as const,
-      date: cardDate.toISOString().split('T')[0],
-      categoryId: 'card-payment',
-      isBill: true,
-      isVirtual: true,
-      icon: CardIcon
-    };
-  }).filter(c => c.amount > 0);
+  // Virtual bills and debts are now provided directly by the 'bills' prop from useFinanceStore
 
   const displayItems = [
     ...transactions.map(t => ({
@@ -135,7 +98,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
       isBill: false,
       isPending: !t.isPaid
     })),
-    ...pendingBills.map(b => ({
+    ...bills.filter(b => b.status === 'pending').map(b => ({
       id: b.id,
       description: b.name,
       amount: b.amount,
@@ -145,10 +108,10 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
       isBill: true,
       isPending: true,
       billId: b.id,
-      originalBillId: b.originalBillId // Guardar ID real para exclusão
-    })),
-    ...debtBills,
-    ...cardBills
+      originalBillId: b.originalBillId, // Guardar ID real para exclusão
+      isVirtual: b.isVirtual,
+      icon: b.categoryId === 'card-payment' ? CardIcon : b.categoryId === 'debt-payment' ? ShieldAlert : undefined
+    }))
   ];
 
   const getGroupDate = (item: any) => {
@@ -581,7 +544,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
             onClick={() => setPayingItem(null)}
           >
             <div
-              className="bg-card rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-border max-h-[80vh] overflow-y-auto"
+              className="bg-card rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-border max-h-[85vh] flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -637,8 +600,8 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                 </div>
               </div>
 
-              {/* Targets List */}
-              <div className="p-3 pt-0 space-y-2">
+              {/* Targets List with Internal Scroll */}
+              <div className="flex-1 overflow-y-auto p-3 pt-0 space-y-2 custom-scrollbar">
                 {paymentMethod === 'account' && (
                   accounts.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8 text-sm">Nenhuma conta cadastrada.</p>
@@ -655,7 +618,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                           onClick={() => handleSubmitPayment(acc.id, false)}
                           disabled={insufficientFunds}
                           className={cn(
-                            "w-full p-4 rounded-xl border-2 text-left transition-all",
+                            "w-full p-3 rounded-xl border-2 text-left transition-all",
                             insufficientFunds
                               ? "border-border/30 opacity-40 cursor-not-allowed"
                               : "border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] cursor-pointer"
@@ -664,11 +627,11 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <div
-                                className="w-4 h-4 rounded-full shadow-sm"
+                                className="w-3 h-3 rounded-full shadow-sm"
                                 style={{ backgroundColor: acc.color }}
                               />
                               <div>
-                                <p className="font-bold text-sm">{acc.name}</p>
+                                <p className="font-bold text-sm leading-tight">{acc.name}</p>
                                 <p className="text-[10px] text-muted-foreground font-bold uppercase">{acc.bank}</p>
                               </div>
                             </div>
@@ -701,15 +664,15 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                         <button
                           key={card.id}
                           onClick={() => handleSubmitPayment(card.id, true)}
-                          className="w-full p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] transition-all text-left cursor-pointer"
+                          className="w-full p-3 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] transition-all text-left cursor-pointer"
                         >
                           <div className="flex items-center gap-3">
                             <div
-                              className="w-4 h-4 rounded-full shadow-sm"
+                              className="w-3 h-3 rounded-full shadow-sm"
                               style={{ backgroundColor: card.color }}
                             />
                             <div>
-                              <p className="font-bold text-sm">{card.name}</p>
+                              <p className="font-bold text-sm leading-tight">{card.name}</p>
                               <p className="text-[10px] text-muted-foreground font-bold uppercase">{card.bank}</p>
                             </div>
                           </div>
