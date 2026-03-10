@@ -1091,6 +1091,7 @@ function useFinanceProvider() {
             is_fixed: true
           })
           .eq('name', bill.name)
+          .eq('category_id', bill.categoryId)
           .eq('user_id', bill.userId)
           .gte('due_date', bill.dueDate);
 
@@ -1099,7 +1100,7 @@ function useFinanceProvider() {
         setState(prev => ({
           ...prev,
           bills: prev.bills.map(b =>
-            (b.name === bill.name && b.dueDate >= bill.dueDate)
+            (b.name === bill.name && b.categoryId === bill.categoryId && b.dueDate >= bill.dueDate)
               ? { ...b, ...updates }
               : b
           )

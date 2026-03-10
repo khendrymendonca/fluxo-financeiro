@@ -47,6 +47,7 @@ export function BillsManager() {
     const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
     const [editingBillId, setEditingBillId] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Form State
     const [name, setName] = useState('');
@@ -76,43 +77,56 @@ export function BillsManager() {
         return new Date(year, month - 1, day);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !amount || !dueDate) return;
+        if (!name || !amount || !dueDate || isSubmitting) return;
 
-        if (editingBillId && !editingBillId.startsWith('virtual-')) {
-            updateBill(editingBillId, {
-                name,
-                amount: parseFloat(amount),
-                type,
-                dueDate,
-                categoryId: categoryId || undefined,
-                accountId: accountId || undefined,
-                isFixed
-            }, applyToFuture);
-            setEditingBillId(null);
-            setApplyToFuture(false);
-        } else {
-            addBill({
-                name,
-                amount: parseFloat(amount),
-                type,
-                dueDate,
-                categoryId: categoryId || undefined,
-                accountId: accountId || undefined,
-                status: 'pending',
-                isFixed
-            }, false); // project: false para não criar mais 12 meses se estivermos efetivando uma virtual
-            setEditingBillId(null);
+        setIsSubmitting(true);
+        try {
+            if (editingBillId && !editingBillId.startsWith('virtual-')) {
+                await updateBill(editingBillId, {
+                    name,
+                    amount: parseFloat(amount),
+                    type,
+                    dueDate,
+                    categoryId: categoryId || undefined,
+                    accountId: accountId || undefined,
+                    isFixed
+                }, applyToFuture);
+                setEditingBillId(null);
+                setApplyToFuture(false);
+            } else {
+                // Se editingBillId existe e começa com virtual-, estamos "efetivando" uma projeção.
+                // Nesse caso, NÃO queremos disparar novas projeções (project: false).
+                // Se não há editingBillId, é uma conta nova. Se for fixa, queremos projetar (project: true).
+                const shouldProject = !editingBillId && isFixed;
+
+                await addBill({
+                    name,
+                    amount: parseFloat(amount),
+                    type,
+                    dueDate,
+                    categoryId: categoryId || undefined,
+                    accountId: accountId || undefined,
+                    status: 'pending',
+                    isFixed
+                }, shouldProject);
+
+                setEditingBillId(null);
+            }
+
+            // Reset form
+            setName('');
+            setAmount('');
+            setCategoryId('');
+            setAccountId('');
+            setIsFixed(false);
+            setShowAddForm(false);
+        } catch (error) {
+            console.error('Error saving bill:', error);
+        } finally {
+            setIsSubmitting(false);
         }
-
-        // Reset form
-        setName('');
-        setAmount('');
-        setCategoryId('');
-        setAccountId('');
-        setIsFixed(false);
-        setShowAddForm(false);
     };
 
     const handleMarkAsPaid = async (targetId: string, isCard: boolean) => {
@@ -285,7 +299,9 @@ export function BillsManager() {
                                 </div>
                             )}
                         </div>
-                        <Button type="submit" className="w-full rounded-xl h-11">{editingBillId ? 'Atualizar Conta' : 'Salvar Conta'}</Button>
+                        <Button type="submit" className="w-full rounded-xl h-11" disabled={isSubmitting}>
+                            {isSubmitting ? 'Salvando...' : (editingBillId ? 'Atualizar Conta' : 'Salvar Conta')}
+                        </Button>
                     </div>
                 </form>
             )}
