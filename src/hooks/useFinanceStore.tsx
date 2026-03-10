@@ -432,7 +432,7 @@ function useFinanceProvider() {
         categoryId: t.category_id,
         subcategoryId: t.subcategory_id,
         accountId: t.account_id,
-        card_id: t.card_id,
+        cardId: t.card_id,
         installmentGroupId: t.installment_group_id,
         installmentNumber: t.installment_number,
         installmentTotal: t.installment_total,
@@ -651,8 +651,21 @@ function useFinanceProvider() {
       if (!tx) return;
 
       const effectivePaymentDate = paymentDate || new Date().toISOString().split('T')[0];
-      const effectiveAccountId = paymentAccountId || tx.accountId;
-      const effectiveCardId = paymentCardId || tx.cardId;
+
+      // Determine effective IDs based on the payment method provided
+      // If paymentAccountId is passed, it's an account payment (cardId should be null)
+      // If paymentCardId is passed, it's a card payment (accountId should be null)
+      // If NONE are passed (standard toggle), it uses the transaction's existing IDs
+      let effectiveAccountId: string | null | undefined = tx.accountId;
+      let effectiveCardId: string | null | undefined = tx.cardId;
+
+      if (paymentAccountId) {
+        effectiveAccountId = paymentAccountId;
+        effectiveCardId = null; // Clear card if paying from account
+      } else if (paymentCardId) {
+        effectiveCardId = paymentCardId;
+        effectiveAccountId = null; // Clear account if paying from card
+      }
 
       const updatePayload: any = {
         is_paid: isPaid,
@@ -684,10 +697,13 @@ function useFinanceProvider() {
         }
       }
 
-      if (effectiveAccountId) {
+      if (isPaid && effectiveAccountId) {
         const baseChange = tx.type === 'income' ? tx.amount : -tx.amount;
-        const actualChange = isPaid ? baseChange : -baseChange;
-        updateAccountBalance(effectiveAccountId, actualChange);
+        updateAccountBalance(effectiveAccountId, baseChange);
+      } else if (!isPaid && tx.isPaid && tx.accountId) {
+        // Estorno: apenas se estava pago e tinha conta
+        const baseChange = tx.type === 'income' ? -tx.amount : tx.amount;
+        updateAccountBalance(tx.accountId, baseChange);
       }
 
       const label = tx.type === 'income' ? 'Recebimento' : 'Pagamento';

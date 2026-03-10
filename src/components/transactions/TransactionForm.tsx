@@ -220,7 +220,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       isRecurring: activeTab === 'fixo',
       recurrence: activeTab === 'fixo' ? recurrence : undefined,
       debtId: selectedDebtId || undefined,
-      invoiceMonthYear: (paymentMethod === 'card' && type === 'expense' && initialData) ? invoiceReference : undefined,
+      invoiceMonthYear: (paymentMethod === 'card' && type === 'expense') ? invoiceReference : undefined,
       isPaid: initialData ? isPaidLocally : (new Date(date) <= new Date()),
       paymentDate: (initialData ? isPaidLocally : (new Date(date) <= new Date())) ? date : undefined,
       userId: initialData?.userId || ''
