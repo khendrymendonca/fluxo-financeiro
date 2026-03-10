@@ -15,6 +15,7 @@ import {
 } from '@/types/finance';
 import { cn } from '@/lib/utils';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { OverdraftWarningDialog } from '@/components/ui/OverdraftWarningDialog';
 
 interface TransactionFormProps {
   accounts: Account[];
@@ -61,6 +62,12 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
   const [applyScope, setApplyScope] = useState<'this' | 'future' | 'all'>('this');
   const [isPaidLocally, setIsPaidLocally] = useState(initialData?.isPaid || false);
+
+  // Overdraft Warning State
+  const [showOverdraftWarning, setShowOverdraftWarning] = useState(false);
+  const [overdraftAmountUsed, setOverdraftAmountUsed] = useState(0);
+  const [overdraftAccountName, setOverdraftAccountName] = useState('');
+  const [pendingSubmitData, setPendingSubmitData] = useState<any>(null);
 
   const { debts, createDebtWithInstallments, categories, subcategories } = useFinanceStore();
 
@@ -136,6 +143,45 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
     if (!description || !amount || !categoryId) return;
 
+    // Check overdraft if it's an expense being paid from an account right now
+    const parsedAmount = parseFloat(amount);
+    const isPayingNow = initialData ? isPaidLocally : (new Date(date) <= new Date());
+
+    if (type === 'expense' && paymentMethod === 'account' && accountId && isPayingNow) {
+      const acc = accounts.find(a => a.id === accountId);
+      if (acc && acc.hasOverdraft) {
+        let impact = parsedAmount;
+        // if editing, calculate the difference
+        if (initialData && initialData.isPaid && initialData.accountId === accountId) {
+          impact = parsedAmount - initialData.amount;
+        }
+
+        if (impact > 0) {
+          const availableTotal = acc.balance + (acc.overdraftLimit || 0);
+          const wouldGoNegative = acc.balance < impact;
+
+          if (wouldGoNegative) {
+            const deficit = impact - acc.balance;
+            if (deficit > 0 && deficit <= (acc.overdraftLimit || 0)) {
+              // We are dipping into the overdraft limit
+              setOverdraftAmountUsed(deficit);
+              setOverdraftAccountName(acc.name);
+              // Stop submission and display warning
+              setPendingSubmitData({
+                e, parsedAmount // store necessary info to resume
+              });
+              setShowOverdraftWarning(true);
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    executeSubmit(parsedAmount);
+  };
+
+  const executeSubmit = (parsedAmount: number) => {
     let finalCustomInstallments = undefined;
 
     if (activeTab === 'parcelamento') {
@@ -164,7 +210,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       type,
       transactionType: activeTab === 'parcelamento' ? 'installment' : activeTab === 'fixo' ? 'recurring' : 'punctual',
       description,
-      amount: parseFloat(amount),
+      amount: parsedAmount,
       categoryId,
       subcategoryId: subcategoryId || undefined,
       date,
@@ -660,6 +706,22 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
         </form>
       </div>
+
+      <OverdraftWarningDialog
+        isOpen={showOverdraftWarning}
+        accountName={overdraftAccountName}
+        amountUsedFromLimit={overdraftAmountUsed}
+        onCancel={() => {
+          setShowOverdraftWarning(false);
+          setPendingSubmitData(null);
+        }}
+        onConfirm={() => {
+          setShowOverdraftWarning(false);
+          if (pendingSubmitData) {
+            executeSubmit(pendingSubmitData.parsedAmount);
+          }
+        }}
+      />
     </div>
   );
 }

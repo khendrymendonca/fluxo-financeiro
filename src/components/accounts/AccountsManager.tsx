@@ -72,7 +72,7 @@ export function AccountsManager({
     setEditingAccount(account);
     setAccountName(account.name);
     setAccountBank(account.bank);
-    setAccountBalance(account.balance.toString());
+    setAccountBalance(account.balance.toFixed(2));
     setAccountType(account.accountType);
     setAccountColor(account.color);
     setHasOverdraft(account.hasOverdraft || false);

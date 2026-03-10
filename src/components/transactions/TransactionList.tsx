@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { Portal } from '@/components/ui/Portal';
+import { OverdraftWarningDialog } from '@/components/ui/OverdraftWarningDialog';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -37,6 +38,12 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   // Delete Confirmation State
   const [deletingBill, setDeletingBill] = useState<any>(null);
   const [deleteFutureBills, setDeleteFutureBills] = useState(false);
+
+  // Overdraft Warning State
+  const [showOverdraftWarning, setShowOverdraftWarning] = useState(false);
+  const [overdraftAmountUsed, setOverdraftAmountUsed] = useState(0);
+  const [overdraftAccountName, setOverdraftAccountName] = useState('');
+  const [pendingPaymentData, setPendingPaymentData] = useState<{ id: string, isCard: boolean, amountToUse: number } | null>(null);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -172,7 +179,30 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     return groups;
   }, {} as Record<string, any[]>);
 
-  const handleSubmitPayment = async (targetId: string, isCard: boolean) => {
+  const handleSubmitPayment = (targetId: string, isCard: boolean) => {
+    if (!payingItem) return;
+
+    // Check overdraft if it's an expense being paid from a bank account
+    if (!isCard && payingItem.type === 'expense') {
+      const acc = accounts.find(a => a.id === targetId);
+      if (acc && acc.hasOverdraft) {
+        if (acc.balance < payingItem.amount) {
+          const deficit = payingItem.amount - acc.balance;
+          if (deficit > 0 && deficit <= (acc.overdraftLimit || 0)) {
+            setOverdraftAmountUsed(deficit);
+            setOverdraftAccountName(acc.name);
+            setPendingPaymentData({ id: targetId, isCard, amountToUse: payingItem.amount });
+            setShowOverdraftWarning(true);
+            return; // Stop and wait for confirmation
+          }
+        }
+      }
+    }
+
+    executePayment(targetId, isCard);
+  };
+
+  const executePayment = async (targetId: string, isCard: boolean) => {
     if (!payingItem) return;
 
     if (payingItem.isBill) {
@@ -764,6 +794,22 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
           </div>
         </Portal>
       )}
+
+      <OverdraftWarningDialog
+        isOpen={showOverdraftWarning}
+        amountUsedFromLimit={overdraftAmountUsed}
+        accountName={overdraftAccountName}
+        onCancel={() => {
+          setShowOverdraftWarning(false);
+          setPendingPaymentData(null);
+        }}
+        onConfirm={() => {
+          setShowOverdraftWarning(false);
+          if (pendingPaymentData) {
+            executePayment(pendingPaymentData.id, pendingPaymentData.isCard);
+          }
+        }}
+      />
     </div>
   );
 }

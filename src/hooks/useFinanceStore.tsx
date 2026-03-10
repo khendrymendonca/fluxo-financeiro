@@ -726,7 +726,7 @@ function useFinanceProvider() {
         const acc = prev.accounts.find(a => a.id === id);
         if (!acc) return prev;
 
-        const newBalance = Number(acc.balance) + Number(change);
+        const newBalance = Math.round((Number(acc.balance) + Number(change)) * 100) / 100;
 
         // 2. Persistência em background
         supabase.from('accounts').update({ balance: newBalance }).eq('id', id).then(({ error }) => {
