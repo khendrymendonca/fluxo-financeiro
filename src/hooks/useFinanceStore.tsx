@@ -1997,6 +1997,8 @@ function useFinanceProvider() {
     addDebt,
     updateDebt,
     deleteDebt,
+    transactions: state.transactions,
+    getTransactionTargetDate,
     createDebtWithInstallments,
     getPeriodStartBalance,
     seedCoach

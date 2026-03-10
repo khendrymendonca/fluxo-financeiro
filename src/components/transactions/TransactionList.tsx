@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowUpRight, ArrowDownRight, Trash2, Filter, Pencil, FastForward, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Trash2, Filter, Pencil, FastForward, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [expandedBillId, setExpandedBillId] = useState<string | null>(null);
   const [anticipatingIds, setAnticipatingIds] = useState<Set<string>>(new Set());
   const [anticipateAccount, setAnticipateAccount] = useState('');
 
@@ -83,7 +84,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     });
   };
 
-  const { categories, accounts, debts, creditCards, getCardExpenses, togglePaid, transactions: allTransactions, viewDate } = useFinanceStore();
+  const { categories, accounts, debts, creditCards, getCardExpenses, togglePaid, transactions: allTransactions, viewDate, getTransactionTargetDate } = useFinanceStore();
 
   const getCategoryName = (transaction: Transaction) => {
     const cat = categories.find(c => c.id === transaction.categoryId);
@@ -93,11 +94,13 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   // Virtual bills and debts are now provided directly by the 'bills' prop from useFinanceStore
 
   const displayItems = [
-    ...transactions.map(t => ({
-      ...t,
-      isBill: false,
-      isPending: !t.isPaid
-    })),
+    ...transactions
+      .filter(t => !t.cardId) // Ocultar transações individuais de cartão
+      .map(t => ({
+        ...t,
+        isBill: false,
+        isPending: !t.isPaid
+      })),
     ...bills.filter(b => b.status === 'pending').map(b => ({
       id: b.id,
       description: b.name,
@@ -254,23 +257,19 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
 
       {/* Transaction Groups */}
       {Object.keys(groupedItems).length === 0 ? (
-        <div className="card-elevated p-12 text-center">
-          <p className="text-muted-foreground">Nenhuma transação ou pendência encontrada</p>
+        <div className="card-elevated p-12 text-center text-muted-foreground">
+          Nenhuma transação ou pendência encontrada
         </div>
       ) : (
-        Object.keys(groupedItems).sort((a, b) => {
-          const dateA = new Date(a).getTime();
-          const dateB = new Date(b).getTime();
-          return dateB - dateA;
-        }).map(date => {
-          const dayItems = groupedItems[date];
-          return (
+        Object.keys(groupedItems)
+          .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+          .map(date => (
             <div key={date} className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground px-2">
                 {formatDate(date)}
               </p>
               <div className="card-elevated divide-y divide-border">
-                {dayItems.map((item) => {
+                {groupedItems[date].map(item => {
                   const isIncome = item.type === 'income';
                   const isPending = item.isPending;
                   const hasInstallmentGroup = item.installmentGroupId && !item.isBill;
@@ -280,13 +279,14 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                     : [];
 
                   return (
-                    <div key={item.id}>
+                    <div key={item.id} className="overflow-hidden">
                       <div
                         className={cn(
                           "flex flex-col md:flex-row md:items-center justify-between p-4 hover:bg-muted/30 transition-colors group gap-4",
                           isPending && "bg-primary/5 border-l-4 border-l-primary"
                         )}
                       >
+                        {/* Left Side: Icon & Info */}
                         <div className="flex items-center gap-3">
                           <div className={cn(
                             "p-2.5 rounded-xl flex-shrink-0",
@@ -297,8 +297,22 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                             )}
                           </div>
                           <div>
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex items-center gap-2">
                               <p className="font-bold">{item.description}</p>
+                              {item.categoryId === 'card-payment' && item.billId && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedBillId(expandedBillId === item.id ? null : item.id);
+                                  }}
+                                  className="px-2 py-0.5 bg-primary/10 hover:bg-primary/20 rounded-md text-[10px] font-black uppercase text-primary transition-all flex items-center gap-1"
+                                >
+                                  {expandedBillId === item.id ? 'Ocultar Detalhes' : 'Ver Detalhes'}
+                                  <Plus className={cn("w-3 h-3 transition-transform", expandedBillId === item.id && "rotate-45")} />
+                                </button>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
                               {isPending && <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">Pendente</span>}
                               {item.installmentNumber && item.installmentTotal && (
                                 <span className="text-[10px] bg-info/20 text-info px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">
@@ -317,6 +331,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                           </div>
                         </div>
 
+                        {/* Right Side: Amount & Actions */}
                         <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
                           <span className={cn(
                             "font-black text-lg md:text-base",
@@ -328,58 +343,20 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                           <div className="flex items-center gap-2 w-full md:w-auto">
                             {isPending ? (
                               <div className="flex items-center gap-2 w-full">
-                                <div className="flex gap-1 w-full flex-wrap">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      setPayingItem(item);
-                                      setPaymentDate(item.date || new Date().toISOString().split('T')[0]);
-                                      setPaymentMethod('account');
-                                    }}
-                                    disabled={item.isVirtual}
-                                    className="flex-1 md:flex-none h-9 px-4 rounded-xl border-primary/30 text-primary hover:bg-primary/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider transition-all hover:scale-105 active:scale-95"
-                                  >
-                                    <CheckCircle2 className="w-4 h-4" />
-                                    Baixar Agora
-                                  </Button>
-                                  {hasInstallmentGroup && futureInstallments.length > 0 && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => setExpandedGroup(isGroupExpanded ? null : item.installmentGroupId)}
-                                      className="h-9 px-3 rounded-xl border-info/30 text-info hover:bg-info/10 flex items-center gap-1 font-black uppercase text-[10px] tracking-wider transition-all"
-                                    >
-                                      <FastForward className="w-4 h-4" />
-                                      Antecipar
-                                      {isGroupExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                                    </Button>
-                                  )}
-                                  {!item.isBill && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => onEdit(item as any)}
-                                      className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary shrink-0"
-                                    >
-                                      <Pencil className="w-4 h-4" />
-                                    </Button>
-                                  )}
-                                  {item.isBill && onDeleteBill && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => setDeletingBill(item)}
-                                      className="h-9 w-9 rounded-xl hover:bg-danger/10 hover:text-danger shrink-0"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all gap-1 justify-end w-full">
-                                {/* Antecipar button even for paid items in installment groups */}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setPayingItem(item);
+                                    setPaymentDate(item.date || new Date().toISOString().split('T')[0]);
+                                    setPaymentMethod('account');
+                                  }}
+                                  disabled={item.isVirtual}
+                                  className="flex-1 md:flex-none h-9 px-4 rounded-xl border-primary/30 text-primary hover:bg-primary/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider transition-all hover:scale-105 active:scale-95"
+                                >
+                                  <CheckCircle2 className="w-4 h-4" />
+                                  Baixar Agora
+                                </Button>
                                 {hasInstallmentGroup && futureInstallments.length > 0 && (
                                   <Button
                                     size="sm"
@@ -388,8 +365,41 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                     className="h-9 px-3 rounded-xl border-info/30 text-info hover:bg-info/10 flex items-center gap-1 font-black uppercase text-[10px] tracking-wider transition-all"
                                   >
                                     <FastForward className="w-4 h-4" />
-                                    Antecipar
-                                    {isGroupExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                    {isGroupExpanded ? <ChevronUp className="w-3" /> : <ChevronDown className="w-3" />}
+                                  </Button>
+                                )}
+                                {!item.isBill && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => onEdit(item as any)}
+                                    className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary shrink-0"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                {item.isBill && onDeleteBill && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setDeletingBill(item)}
+                                    className="h-9 w-9 rounded-xl hover:bg-danger/10 hover:text-danger shrink-0"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all gap-1 justify-end w-full">
+                                {hasInstallmentGroup && futureInstallments.length > 0 && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setExpandedGroup(isGroupExpanded ? null : item.installmentGroupId)}
+                                    className="h-9 px-3 rounded-xl border-info/30 text-info hover:bg-info/10 flex items-center gap-1 font-black uppercase text-[10px] tracking-wider transition-all"
+                                  >
+                                    <FastForward className="w-4 h-4" />
+                                    {isGroupExpanded ? <ChevronUp className="w-3" /> : <ChevronDown className="w-3" />}
                                   </Button>
                                 )}
                                 {!item.isBill && (
@@ -424,6 +434,53 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                         </div>
                       </div>
 
+                      {/* Dropdown: Detalhamento da Fatura */}
+                      {expandedBillId === item.id && item.categoryId === 'card-payment' && item.billId && (
+                        <div className="bg-muted/30 border-t border-border/50 p-4 animate-in slide-in-from-top-2 duration-300">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-1 h-3 bg-primary rounded-full" />
+                            <h5 className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Compras no Período</h5>
+                          </div>
+                          <div className="space-y-2">
+                            {allTransactions
+                              .filter(t => {
+                                const targetDate = getTransactionTargetDate(t);
+                                return t.cardId === item.billId &&
+                                  !t.isInvoicePayment &&
+                                  targetDate.getMonth() === viewDate.getMonth() &&
+                                  targetDate.getFullYear() === viewDate.getFullYear();
+                              })
+                              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                              .map(t => (
+                                <div key={t.id} className="flex items-center justify-between p-2.5 rounded-xl bg-background/60 border border-border/30 hover:border-primary/20 transition-all">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-1.5 rounded-lg bg-danger/5 text-danger">
+                                      <ArrowDownRight className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-bold">{t.description}</p>
+                                      <p className="text-[9px] text-muted-foreground mt-0.5">
+                                        {formatShortDate(t.date)} • {categories.find(c => c.id === t.categoryId)?.name || 'Outros'}
+                                        {t.installmentNumber && ` • Parcela ${t.installmentNumber}/${t.installmentTotal}`}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <span className="text-xs font-black text-danger">{formatCurrency(t.amount)}</span>
+                                </div>
+                              ))}
+                            {allTransactions.filter(t => {
+                              const targetDate = getTransactionTargetDate(t);
+                              return t.cardId === item.billId &&
+                                !t.isInvoicePayment &&
+                                targetDate.getMonth() === viewDate.getMonth() &&
+                                targetDate.getFullYear() === viewDate.getFullYear();
+                            }).length === 0 && (
+                                <p className="text-[10px] text-muted-foreground text-center py-4 italic">Nenhuma compra listada para esta fatura.</p>
+                              )}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Expanded: Future Installments Panel */}
                       {isGroupExpanded && hasInstallmentGroup && (
                         <div className="bg-info/5 border-t border-info/20 p-4 animate-fade-in">
@@ -434,7 +491,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                 Antecipar Parcelas Futuras
                               </h4>
                               <p className="text-xs text-muted-foreground mt-1">
-                                {futureInstallments.length} parcela(s) pendente(s). A data de vencimento original será mantida.
+                                {futureInstallments.length} parcela(s) pendente(s).
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -453,7 +510,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                 onClick={() => handleAnticipateAll(futureInstallments)}
                                 className="h-9 px-4 rounded-xl bg-info hover:bg-info/90 text-white font-black uppercase text-[10px] tracking-wider"
                               >
-                                Antecipar Todas ({futureInstallments.length})
+                                Tudo ({futureInstallments.length})
                               </Button>
                             </div>
                           </div>
@@ -463,7 +520,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                               <div
                                 key={inst.id}
                                 className={cn(
-                                  "flex items-center justify-between p-3 rounded-xl bg-background/60 border border-border/50 transition-all",
+                                  "flex items-center justify-between p-3 rounded-xl bg-background/60 border border-border/50",
                                   anticipatingIds.has(inst.id) && "border-info/50 bg-info/10"
                                 )}
                               >
@@ -484,8 +541,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                     <span className="text-xs font-black text-info">
                                       Parcela {inst.installmentNumber}/{inst.installmentTotal}
                                     </span>
-                                    <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                      <Calendar className="w-3 h-3" />
+                                    <p className="text-[10px] text-muted-foreground">
                                       Vence em {formatShortDate(inst.date)}
                                     </p>
                                   </div>
@@ -500,31 +556,12 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                     onClick={() => handleAnticipatePayment(inst)}
                                     className="h-8 px-3 rounded-lg border-info/30 text-info hover:bg-info/20 text-[10px] font-black uppercase"
                                   >
-                                    Baixar
+                                    Pagar
                                   </Button>
                                 </div>
                               </div>
                             ))}
                           </div>
-
-                          {anticipatingIds.size > 0 && (
-                            <div className="flex items-center justify-between mt-3 pt-3 border-t border-info/20">
-                              <p className="text-xs font-bold text-info">
-                                {anticipatingIds.size} selecionada(s) — Total: {formatCurrency(
-                                  futureInstallments
-                                    .filter(i => anticipatingIds.has(i.id))
-                                    .reduce((sum, i) => sum + i.amount, 0)
-                                )}
-                              </p>
-                              <Button
-                                size="sm"
-                                onClick={() => handleAnticipateAll(futureInstallments.filter(i => anticipatingIds.has(i.id)))}
-                                className="h-8 px-4 rounded-lg bg-info hover:bg-info/90 text-white font-black uppercase text-[10px]"
-                              >
-                                Baixar Selecionadas
-                              </Button>
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>
@@ -532,231 +569,234 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                 })}
               </div>
             </div>
-          );
-        })
+          ))
       )}
 
       {/* Payment Account Selection Popup */}
-      {payingItem && (
-        <Portal>
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
-            onClick={() => setPayingItem(null)}
-          >
+      {
+        payingItem && (
+          <Portal>
             <div
-              className="bg-card rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-border max-h-[85vh] flex flex-col overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+              onClick={() => setPayingItem(null)}
             >
-              {/* Header */}
-              <div className="px-5 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
-                <h2 className="text-lg font-black tracking-tight">
-                  {payingItem.type === 'income' ? 'Receber com qual conta?' : 'Pagar com qual conta?'}
-                </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  <span className={cn("font-bold", payingItem.type === 'income' ? "text-success" : "text-danger")}>
-                    {formatCurrency(payingItem.amount)}
-                  </span>
-                  {' — '}
-                  {payingItem.description}
-                </p>
-              </div>
-
-              {/* Advanced Payment Options */}
-              <div className="p-4 space-y-4">
-                {/* Date Selection */}
-                <div className="space-y-2 relative">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Data do Pagamento</label>
-                  <label className="relative flex items-center bg-muted/30 border border-input rounded-xl p-3 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all cursor-pointer">
-                    <Calendar className="absolute left-3 w-4 h-4 text-primary" />
-                    <input
-                      type="date"
-                      value={paymentDate}
-                      onChange={(e) => setPaymentDate(e.target.value)}
-                      className="w-full pl-8 pr-2 bg-transparent text-sm font-bold focus:outline-none appearance-none cursor-pointer text-foreground"
-                    />
-                  </label>
+              <div
+                className="bg-card rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-border max-h-[85vh] flex flex-col overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="px-5 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
+                  <h2 className="text-lg font-black tracking-tight">
+                    {payingItem.type === 'income' ? 'Receber com qual conta?' : 'Pagar com qual conta?'}
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    <span className={cn("font-bold", payingItem.type === 'income' ? "text-success" : "text-danger")}>
+                      {formatCurrency(payingItem.amount)}
+                    </span>
+                    {' — '}
+                    {payingItem.description}
+                  </p>
                 </div>
 
-                {/* Account / Card Tabs */}
-                <div className="flex rounded-xl bg-muted/40 p-1">
-                  <button
-                    onClick={() => setPaymentMethod('account')}
-                    className={cn(
-                      "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
-                      paymentMethod === 'account' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Conta Bancária
-                  </button>
-                  <button
-                    onClick={() => setPaymentMethod('credit_card')}
-                    className={cn(
-                      "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
-                      paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Cartão de Crédito
-                  </button>
+                {/* Advanced Payment Options */}
+                <div className="p-4 space-y-4">
+                  {/* Date Selection */}
+                  <div className="space-y-2 relative">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Data do Pagamento</label>
+                    <label className="relative flex items-center bg-muted/30 border border-input rounded-xl p-3 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all cursor-pointer">
+                      <Calendar className="absolute left-3 w-4 h-4 text-primary" />
+                      <input
+                        type="date"
+                        value={paymentDate}
+                        onChange={(e) => setPaymentDate(e.target.value)}
+                        className="w-full pl-8 pr-2 bg-transparent text-sm font-bold focus:outline-none appearance-none cursor-pointer text-foreground"
+                      />
+                    </label>
+                  </div>
+
+                  {/* Account / Card Tabs */}
+                  <div className="flex rounded-xl bg-muted/40 p-1">
+                    <button
+                      onClick={() => setPaymentMethod('account')}
+                      className={cn(
+                        "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
+                        paymentMethod === 'account' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      Conta Bancária
+                    </button>
+                    <button
+                      onClick={() => setPaymentMethod('credit_card')}
+                      className={cn(
+                        "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
+                        paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      Cartão de Crédito
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Targets List with Internal Scroll */}
-              <div className="flex-1 overflow-y-auto p-3 pt-0 space-y-2 custom-scrollbar">
-                {paymentMethod === 'account' && (
-                  accounts.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8 text-sm">Nenhuma conta cadastrada.</p>
-                  ) : (
-                    accounts.map(acc => {
-                      const availableTotal = acc.balance + (acc.hasOverdraft ? (acc.overdraftLimit || 0) : 0);
-                      const wouldGoNegative = payingItem.type === 'expense' && acc.balance < payingItem.amount;
-                      const hasEnoughWithOverdraft = acc.hasOverdraft && availableTotal >= payingItem.amount;
-                      const insufficientFunds = wouldGoNegative && !hasEnoughWithOverdraft;
+                {/* Targets List with Internal Scroll */}
+                <div className="flex-1 overflow-y-auto p-3 pt-0 space-y-2 custom-scrollbar">
+                  {paymentMethod === 'account' && (
+                    accounts.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8 text-sm">Nenhuma conta cadastrada.</p>
+                    ) : (
+                      accounts.map(acc => {
+                        const availableTotal = acc.balance + (acc.hasOverdraft ? (acc.overdraftLimit || 0) : 0);
+                        const wouldGoNegative = payingItem.type === 'expense' && acc.balance < payingItem.amount;
+                        const hasEnoughWithOverdraft = acc.hasOverdraft && availableTotal >= payingItem.amount;
+                        const insufficientFunds = wouldGoNegative && !hasEnoughWithOverdraft;
 
-                      return (
-                        <button
-                          key={acc.id}
-                          onClick={() => handleSubmitPayment(acc.id, false)}
-                          disabled={insufficientFunds}
-                          className={cn(
-                            "w-full p-3 rounded-xl border-2 text-left transition-all",
-                            insufficientFunds
-                              ? "border-border/30 opacity-40 cursor-not-allowed"
-                              : "border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] cursor-pointer"
-                          )}
-                        >
-                          <div className="flex items-center justify-between">
+                        return (
+                          <button
+                            key={acc.id}
+                            onClick={() => handleSubmitPayment(acc.id, false)}
+                            disabled={insufficientFunds}
+                            className={cn(
+                              "w-full p-3 rounded-xl border-2 text-left transition-all",
+                              insufficientFunds
+                                ? "border-border/30 opacity-40 cursor-not-allowed"
+                                : "border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] cursor-pointer"
+                            )}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className="w-3 h-3 rounded-full shadow-sm"
+                                  style={{ backgroundColor: acc.color }}
+                                />
+                                <div>
+                                  <p className="font-bold text-sm leading-tight">{acc.name}</p>
+                                  <p className="text-[10px] text-muted-foreground font-bold uppercase">{acc.bank}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className={cn("font-black text-sm", acc.balance < 0 && "text-danger")}>
+                                  {formatCurrency(acc.balance)}
+                                </p>
+                                {acc.hasOverdraft && (acc.overdraftLimit || 0) > 0 && (
+                                  <p className="text-[9px] text-amber-600 font-bold">
+                                    Limite: {formatCurrency(acc.overdraftLimit || 0)}
+                                  </p>
+                                )}
+                                {insufficientFunds && (
+                                  <p className="text-[9px] text-danger font-bold">Saldo inadequado</p>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })
+                    )
+                  )}
+
+                  {paymentMethod === 'credit_card' && (
+                    creditCards.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8 text-sm">Nenhum cartão cadastrado.</p>
+                    ) : (
+                      creditCards.map(card => {
+                        return (
+                          <button
+                            key={card.id}
+                            onClick={() => handleSubmitPayment(card.id, true)}
+                            className="w-full p-3 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] transition-all text-left cursor-pointer"
+                          >
                             <div className="flex items-center gap-3">
                               <div
                                 className="w-3 h-3 rounded-full shadow-sm"
-                                style={{ backgroundColor: acc.color }}
+                                style={{ backgroundColor: card.color }}
                               />
                               <div>
-                                <p className="font-bold text-sm leading-tight">{acc.name}</p>
-                                <p className="text-[10px] text-muted-foreground font-bold uppercase">{acc.bank}</p>
+                                <p className="font-bold text-sm leading-tight">{card.name}</p>
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase">{card.bank}</p>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className={cn("font-black text-sm", acc.balance < 0 && "text-danger")}>
-                                {formatCurrency(acc.balance)}
-                              </p>
-                              {acc.hasOverdraft && (acc.overdraftLimit || 0) > 0 && (
-                                <p className="text-[9px] text-amber-600 font-bold">
-                                  Limite: {formatCurrency(acc.overdraftLimit || 0)}
-                                </p>
-                              )}
-                              {insufficientFunds && (
-                                <p className="text-[9px] text-danger font-bold">Saldo inadequado</p>
-                              )}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })
-                  )
-                )}
-
-                {paymentMethod === 'credit_card' && (
-                  creditCards.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8 text-sm">Nenhum cartão cadastrado.</p>
-                  ) : (
-                    creditCards.map(card => {
-                      return (
-                        <button
-                          key={card.id}
-                          onClick={() => handleSubmitPayment(card.id, true)}
-                          className="w-full p-3 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] transition-all text-left cursor-pointer"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-3 h-3 rounded-full shadow-sm"
-                              style={{ backgroundColor: card.color }}
-                            />
-                            <div>
-                              <p className="font-bold text-sm leading-tight">{card.name}</p>
-                              <p className="text-[10px] text-muted-foreground font-bold uppercase">{card.bank}</p>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })
-                  )
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="px-5 py-3 border-t border-border">
-                <Button
-                  variant="ghost"
-                  onClick={() => setPayingItem(null)}
-                  className="w-full rounded-xl text-sm font-bold"
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Portal>
-      )}
-
-      {/* Delete Confirmation Popup */}
-      {deletingBill && (
-        <Portal>
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
-            onClick={() => setDeletingBill(null)}
-          >
-            <div
-              className="bg-card rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-border overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-6 text-center space-y-4">
-                <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto mb-4">
-                  <Trash2 className="w-6 h-6" />
-                </div>
-                <h2 className="text-xl font-black tracking-tight">Excluir Conta?</h2>
-                <p className="text-sm text-muted-foreground">
-                  Tem certeza que deseja remover <strong>{deletingBill.description}</strong>?
-                </p>
-
-                {/* Exibir opção de apagar futuras se for uma conta real e recorrente (neste caso simplificado mostramos sempre, mas ideal seria só para fixas) */}
-                <div className="pt-4 text-left">
-                  <label className="flex items-start gap-3 p-3 rounded-xl border border-border hover:bg-muted/50 transition-colors cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={deleteFutureBills}
-                      onChange={(e) => setDeleteFutureBills(e.target.checked)}
-                      className="mt-1 w-4 h-4 rounded text-primary focus:ring-primary"
-                    />
-                    <div>
-                      <span className="text-sm font-bold block">Aplicar a futuras?</span>
-                      <span className="text-xs text-muted-foreground">
-                        Também exclui os lançamentos desta conta nos próximos meses
-                      </span>
-                    </div>
-                  </label>
+                          </button>
+                        );
+                      })
+                    )
+                  )}
                 </div>
 
-                <div className="flex gap-3 pt-4">
+                {/* Footer */}
+                <div className="px-5 py-3 border-t border-border">
                   <Button
-                    variant="outline"
-                    className="flex-1 rounded-xl"
-                    onClick={() => setDeletingBill(null)}
+                    variant="ghost"
+                    onClick={() => setPayingItem(null)}
+                    className="w-full rounded-xl text-sm font-bold"
                   >
                     Cancelar
                   </Button>
-                  <Button
-                    variant="destructive"
-                    className="flex-1 rounded-xl"
-                    onClick={handleConfirmDeleteBill}
-                  >
-                    Excluir
-                  </Button>
                 </div>
               </div>
             </div>
-          </div>
-        </Portal>
-      )}
+          </Portal>
+        )
+      }
+
+      {/* Delete Confirmation Popup */}
+      {
+        deletingBill && (
+          <Portal>
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+              onClick={() => setDeletingBill(null)}
+            >
+              <div
+                className="bg-card rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-border overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-6 text-center space-y-4">
+                  <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto mb-4">
+                    <Trash2 className="w-6 h-6" />
+                  </div>
+                  <h2 className="text-xl font-black tracking-tight">Excluir Conta?</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Tem certeza que deseja remover <strong>{deletingBill.description}</strong>?
+                  </p>
+
+                  {/* Exibir opção de apagar futuras se for uma conta real e recorrente (neste caso simplificado mostramos sempre, mas ideal seria só para fixas) */}
+                  <div className="pt-4 text-left">
+                    <label className="flex items-start gap-3 p-3 rounded-xl border border-border hover:bg-muted/50 transition-colors cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={deleteFutureBills}
+                        onChange={(e) => setDeleteFutureBills(e.target.checked)}
+                        className="mt-1 w-4 h-4 rounded text-primary focus:ring-primary"
+                      />
+                      <div>
+                        <span className="text-sm font-bold block">Aplicar a futuras?</span>
+                        <span className="text-xs text-muted-foreground">
+                          Também exclui os lançamentos desta conta nos próximos meses
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      variant="outline"
+                      className="flex-1 rounded-xl"
+                      onClick={() => setDeletingBill(null)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1 rounded-xl"
+                      onClick={handleConfirmDeleteBill}
+                    >
+                      Excluir
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Portal>
+        )
+      }
 
       <OverdraftWarningDialog
         isOpen={showOverdraftWarning}
@@ -773,6 +813,6 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
           }
         }}
       />
-    </div>
+    </div >
   );
 }
