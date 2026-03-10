@@ -432,7 +432,7 @@ function useFinanceProvider() {
         categoryId: t.category_id,
         subcategoryId: t.subcategory_id,
         accountId: t.account_id,
-        cardId: t.card_id,
+        card_id: t.card_id,
         installmentGroupId: t.installment_group_id,
         installmentNumber: t.installment_number,
         installmentTotal: t.installment_total,
@@ -443,22 +443,24 @@ function useFinanceProvider() {
         paymentDate: t.payment_date,
       }));
 
+      // 1. Atualizar transações localmente
       setState(prev => ({
         ...prev,
         transactions: [...prev.transactions, ...newTransactions]
       }));
 
+      // 2. Atualizar Saldos e Dívidas
       for (const tx of newTransactions) {
         if (tx.isPaid && tx.accountId) {
           const change = tx.type === 'income' ? tx.amount : -tx.amount;
-          updateAccountBalance(tx.accountId, change);
+          updateAccountBalance(tx.accountId, change); // Agora é otimista
         }
         if (tx.debtId) {
           // Abater saldo da dívida
           const debt = state.debts.find(d => d.id === tx.debtId);
           if (debt) {
-            const newRemaining = Math.max(0, debt.remainingAmount - tx.amount);
-            await supabase.from('debts').update({ remaining_amount: newRemaining }).eq('id', tx.debtId);
+            const newRemaining = Math.max(0, (debt.remainingAmount || 0) - tx.amount);
+            supabase.from('debts').update({ remaining_amount: newRemaining }).eq('id', tx.debtId).then();
             setState(prev => ({
               ...prev,
               debts: prev.debts.map(d => d.id === tx.debtId ? { ...d, remainingAmount: newRemaining } : d)
@@ -536,6 +538,21 @@ function useFinanceProvider() {
       const { error } = await supabase.from('transactions').update(updateData).eq('id', updatedTx.id);
       if (error) throw error;
 
+      // 1. Calcular diferença de saldo se necessário
+      const oldTx = state.transactions.find(t => t.id === updatedTx.id);
+      if (oldTx) {
+        // Estornar antigo
+        if (oldTx.isPaid && oldTx.accountId) {
+          const reverse = oldTx.type === 'income' ? -oldTx.amount : oldTx.amount;
+          updateAccountBalance(oldTx.accountId, reverse);
+        }
+        // Aplicar novo
+        if (updatedTx.isPaid && updatedTx.accountId) {
+          const apply = updatedTx.type === 'income' ? updatedTx.amount : -updatedTx.amount;
+          updateAccountBalance(updatedTx.accountId, apply);
+        }
+      }
+
       setState(prev => ({
         ...prev,
         transactions: prev.transactions.map(t => t.id === updatedTx.id ? updatedTx : t)
@@ -546,7 +563,7 @@ function useFinanceProvider() {
         const billName = updatedTx.description.replace('Pgto: ', '');
         const bill = state.bills.find(b => b.name === billName && b.status === 'paid');
         if (bill) {
-          await updateBill(bill.id, { paymentDate: updatedTx.paymentDate || updatedTx.date });
+          updateBill(bill.id, { paymentDate: updatedTx.paymentDate || updatedTx.date });
         }
       }
 
@@ -561,14 +578,13 @@ function useFinanceProvider() {
       const txToDelete = state.transactions.find(t => t.id === id);
       if (!txToDelete) return;
 
-      if (scope !== 'this' && txToDelete.installmentGroupId) {
-        let query = supabase.from('transactions').delete().eq('installment_group_id', txToDelete.installmentGroupId);
-        if (scope === 'future') {
-          query = query.gte('installment_number', txToDelete.installmentNumber || 0);
-        }
-        const { error } = await query;
-        if (error) throw error;
-
+      // 1. Atualizar o estado local IMEDIATAMENTE (Otimista)
+      if (scope === 'this') {
+        setState(prev => ({
+          ...prev,
+          transactions: prev.transactions.filter(t => t.id !== id)
+        }));
+      } else if (txToDelete.installmentGroupId) {
         setState(prev => ({
           ...prev,
           transactions: prev.transactions.filter(t => {
@@ -577,31 +593,56 @@ function useFinanceProvider() {
             return false;
           })
         }));
-        toast({ title: 'Parcelas removidas com sucesso' });
-        return;
       }
 
-      const { error } = await supabase.from('transactions').delete().eq('id', id);
-      if (error) throw error;
+      // 2. Estornar saldo se a(s) transação(ões) estava(m) paga(s)
+      if (scope !== 'this' && txToDelete.installmentGroupId) {
+        const txsToRemove = state.transactions.filter(t => {
+          if (t.installmentGroupId !== txToDelete.installmentGroupId) return false;
+          if (scope === 'future') return (t.installmentNumber || 0) >= (txToDelete.installmentNumber || 0);
+          return true;
+        });
 
-      // Smart Sync: Se estiver deletando um pagamento, reabre a bill
-      if (txToDelete.description.startsWith('Pgto: ')) {
-        const billName = txToDelete.description.replace('Pgto: ', '');
-        const bill = state.bills.find(b => b.name === billName && b.status === 'paid');
-        if (bill) {
-          await updateBill(bill.id, { status: 'pending', paymentDate: undefined });
+        for (const tx of txsToRemove) {
+          if (tx.isPaid && tx.accountId) {
+            const change = tx.type === 'income' ? -tx.amount : tx.amount;
+            updateAccountBalance(tx.accountId, change); // Otimista, não precisa de await aqui para o UI renderizar
+          }
         }
-      }
 
-      setState(prev => ({
-        ...prev,
-        transactions: prev.transactions.filter(t => t.id !== id)
-      }));
-      toast({ title: 'Removido com sucesso' });
+        // 3. Persistir no banco
+        let query = supabase.from('transactions').delete().eq('installment_group_id', txToDelete.installmentGroupId);
+        if (scope === 'future') {
+          query = query.gte('installment_number', txToDelete.installmentNumber || 0);
+        }
+        await query;
+        toast({ title: 'Parcelas removidas com sucesso' });
+      } else {
+        // Estornar saldo se a transação estava paga
+        if (txToDelete.isPaid && txToDelete.accountId) {
+          const change = txToDelete.type === 'income' ? -txToDelete.amount : txToDelete.amount;
+          updateAccountBalance(txToDelete.accountId, change);
+        }
+
+        // Smart Sync: Se estiver deletando um pagamento, reabre a bill
+        if (txToDelete.description.startsWith('Pgto: ')) {
+          const billName = txToDelete.description.replace('Pgto: ', '');
+          const bill = state.bills.find(b => b.name === billName && b.status === 'paid');
+          if (bill) {
+            updateBill(bill.id, { status: 'pending', paymentDate: undefined });
+          }
+        }
+
+        // 3. Persistir no banco
+        await supabase.from('transactions').delete().eq('id', id);
+        toast({ title: 'Removido com sucesso' });
+      }
     } catch (err) {
+      console.error(err);
       toast({ title: 'Erro ao deletar', variant: 'destructive' });
+      // Em um cenário real, poderíamos re-buscar os dados do banco aqui para garantir sincronia em caso de erro
     }
-  }, [state.transactions]);
+  }, [state.transactions, state.bills]);
 
 
   const togglePaid = useCallback(async (id: string, isPaid: boolean, paymentAccountId?: string, paymentDate?: string, paymentCardId?: string) => {
@@ -680,16 +721,24 @@ function useFinanceProvider() {
 
   const updateAccountBalance = async (id: string, change: number) => {
     try {
-      const { data: acc } = await supabase.from('accounts').select('balance').eq('id', id).single();
-      if (acc) {
+      // 1. Otimista: tenta alterar o estado local usando o saldo atual do state
+      setState(prev => {
+        const acc = prev.accounts.find(a => a.id === id);
+        if (!acc) return prev;
+
         const newBalance = Number(acc.balance) + Number(change);
-        await supabase.from('accounts').update({ balance: newBalance }).eq('id', id);
-        setState(prev => ({
+
+        // 2. Persistência em background
+        supabase.from('accounts').update({ balance: newBalance }).eq('id', id).then(({ error }) => {
+          if (error) console.error('Erro ao persistir saldo:', error);
+        });
+
+        return {
           ...prev,
           accounts: prev.accounts.map(a => a.id === id ? { ...a, balance: newBalance } : a)
-        }));
-      }
-    } catch (err) { console.error(err); }
+        };
+      });
+    } catch (err) { console.error('Erro em updateAccountBalance:', err); }
   };
 
   const deleteAccount = useCallback(async (id: string) => {
