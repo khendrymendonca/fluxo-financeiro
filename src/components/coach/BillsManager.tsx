@@ -590,13 +590,46 @@ export function BillsManager() {
                                                         <span className="text-xs font-black text-danger">{formatCurrency(t.amount)}</span>
                                                     </div>
                                                 ))}
+
+                                            {/* Bills assigned to this card */}
+                                            {bills
+                                                .filter(b =>
+                                                    b.cardId === bill.cardId &&
+                                                    b.status === 'pending' &&
+                                                    b.categoryId !== 'card-payment' &&
+                                                    new Date(b.dueDate).getMonth() === viewDate.getMonth() &&
+                                                    new Date(b.dueDate).getFullYear() === viewDate.getFullYear()
+                                                )
+                                                .map(b => (
+                                                    <div key={b.id} className="flex items-center justify-between p-2 rounded-xl bg-background/50 border border-border/30 hover:border-primary/30 transition-colors">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="p-1.5 rounded-lg bg-warning/5 text-warning">
+                                                                <Receipt className="w-3 h-3" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-bold leading-none">{b.name} (Conta)</p>
+                                                                <p className="text-[9px] text-muted-foreground mt-0.5">
+                                                                    Vence em {format(parseLocalDate(b.dueDate), "dd/MM")}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-xs font-black text-danger">{formatCurrency(b.amount)}</span>
+                                                    </div>
+                                                ))}
+
                                             {transactions.filter(t => {
                                                 const targetDate = getTransactionTargetDate(t);
                                                 return t.cardId === bill.cardId &&
                                                     !t.isInvoicePayment &&
                                                     targetDate.getMonth() === viewDate.getMonth() &&
                                                     targetDate.getFullYear() === viewDate.getFullYear();
-                                            }).length === 0 && (
+                                            }).length === 0 && bills.filter(b =>
+                                                b.cardId === bill.cardId &&
+                                                b.status === 'pending' &&
+                                                b.categoryId !== 'card-payment' &&
+                                                new Date(b.dueDate).getMonth() === viewDate.getMonth() &&
+                                                new Date(b.dueDate).getFullYear() === viewDate.getFullYear()
+                                            ).length === 0 && (
                                                     <p className="text-[10px] text-muted-foreground text-center py-2 italic">Nenhuma compra listada para esta fatura.</p>
                                                 )}
                                         </div>

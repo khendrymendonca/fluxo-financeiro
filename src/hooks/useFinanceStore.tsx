@@ -69,7 +69,14 @@ function useFinanceProvider() {
     }
 
     const tDate = parseLocalDate(transaction.date);
-    if (transaction.type !== 'expense' || !transaction.cardId) return tDate;
+    if (!transaction.cardId) return tDate;
+
+    // Para compras no cartão, usamos prioritariamente a data da fatura (invoiceMonthYear)
+    if (transaction.invoiceMonthYear) {
+      const [year, month] = transaction.invoiceMonthYear.split('-').map(Number);
+      const card = state.creditCards.find(c => c.id === transaction.cardId);
+      return new Date(year, month - 1, card?.dueDay || 15);
+    }
 
     const card = state.creditCards.find(c => c.id === transaction.cardId);
     if (!card) return tDate;
@@ -235,7 +242,6 @@ function useFinanceProvider() {
       ).reduce((acc, curr) => acc + curr.amount, 0);
 
       const amount = Math.max(0, spent - paid);
-      if (amount <= 0) return;
 
       const d = new Date(viewDate);
       d.setDate(card.dueDay || 1);

@@ -96,7 +96,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
 
   const displayItems = [
     ...transactions
-      .filter(t => !t.cardId) // Ocultar transações individuais de cartão
+      .filter(t => !t.cardId || t.isInvoicePayment) // Ocultar transações individuais de cartão
       .map(t => ({
         ...t,
         isBill: false,
@@ -125,9 +125,10 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     if (!item.isPending && item.paymentDate) {
       return item.paymentDate.split('T')[0];
     }
-    if (item.isPending && item.cardId) {
+    if (item.isPending && item.categoryId === 'card-payment' && item.cardId) {
       const card = creditCards.find(c => c.id === item.cardId);
       if (card) {
+        // As faturas virtuais sempre aparecem no mês de visualização
         const d = new Date(viewDate.getFullYear(), viewDate.getMonth(), card.dueDay || 1, 12, 0, 0);
         return d.toISOString().split('T')[0];
       }
