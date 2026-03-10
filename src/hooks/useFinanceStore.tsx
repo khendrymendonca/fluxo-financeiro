@@ -311,8 +311,43 @@ function useFinanceProvider() {
           habitId: l.habit_id,
           loggedDate: l.logged_date
         })),
-        emergencyMonths: Number(localStorage.getItem('emergencyMonths')) || initialState.emergencyMonths,
+        emergencyMonths: Number(localStorage.getItem('emergencyMonths')) || 12,
       });
+
+      setLoading(false);
+
+      // --- Reparo Automático de Saldo (Executa uma única vez) ---
+      const repairDone = localStorage.getItem('balanceRepair_v20260310_final');
+      if (!repairDone && accountsRes.data && transactionsRes.data) {
+        const mappedTxs = (transactionsRes.data || []).map((t: any) => ({
+          ...t,
+          accountId: t.account_id,
+          cardId: t.card_id,
+          isPaid: t.is_paid,
+          amount: Number(t.amount),
+          type: t.type
+        }));
+
+        for (const account of accountsRes.data) {
+          const accountTxs = mappedTxs.filter(t => t.accountId === account.id && t.isPaid && !t.cardId);
+          const calculatedBalance = accountTxs.reduce((sum, t) => {
+            return sum + (t.type === 'income' ? t.amount : -t.amount);
+          }, 0);
+
+          const roundedBalance = Math.round(calculatedBalance * 100) / 100;
+
+          if (Math.abs(roundedBalance - Number(account.balance)) > 0.01) {
+            await supabase.from('accounts').update({ balance: roundedBalance }).eq('id', account.id);
+            // Atualiza o estado que acabamos de definir
+            setState(prev => ({
+              ...prev,
+              accounts: prev.accounts.map(a => a.id === account.id ? { ...a, balance: roundedBalance } : a)
+            }));
+          }
+        }
+        localStorage.setItem('balanceRepair_v20260310_final', 'true');
+        toast({ title: 'Saldos reajustados para bater com seus lançamentos!' });
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({ title: 'Erro ao carregar dados', variant: 'destructive' });
