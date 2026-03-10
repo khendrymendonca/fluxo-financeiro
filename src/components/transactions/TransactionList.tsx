@@ -96,14 +96,13 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
 
   const displayItems = [
     ...transactions
-      .filter(t => !t.cardId || t.isInvoicePayment) // Ocultar transações individuais de cartão
       .map(t => ({
         ...t,
         isBill: false,
         isPending: !t.isPaid
       })),
     ...bills
-      .filter(b => b.status === 'pending' && (!b.cardId || b.categoryId === 'card-payment'))
+      .filter(b => b.status === 'pending' && b.categoryId !== 'card-payment')
       .map(b => ({
         id: b.id,
         description: b.name,
@@ -117,7 +116,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
         originalBillId: b.originalBillId, // Guardar ID real para exclusão
         isVirtual: b.isVirtual,
         cardId: b.cardId,
-        icon: b.categoryId === 'card-payment' ? CardIcon : b.categoryId === 'debt-payment' ? ShieldAlert : undefined
+        icon: b.categoryId === 'debt-payment' ? ShieldAlert : undefined
       }))
   ];
 

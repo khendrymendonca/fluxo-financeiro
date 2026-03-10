@@ -195,6 +195,9 @@ export function BillsManager() {
         // Ocultar transações individuais que estão em um cartão (pois serão agrupadas na fatura)
         if (b.cardId && !b.isVirtual && b.categoryId !== 'card-payment') return false;
 
+        // Ocultar faturas de cartão com valor zero
+        if (b.categoryId === 'card-payment' && b.amount <= 0) return false;
+
         if (filter === 'all') return true;
         return b.type === filter;
     }).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
