@@ -76,7 +76,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     });
   };
 
-  const { categories, accounts, debts, creditCards, getCardExpenses, togglePaid, transactions: allTransactions } = useFinanceStore();
+  const { categories, accounts, debts, creditCards, getCardExpenses, togglePaid, transactions: allTransactions, viewDate } = useFinanceStore();
 
   const getCategoryName = (transaction: Transaction) => {
     const cat = categories.find(c => c.id === transaction.categoryId);
@@ -87,28 +87,34 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   const pendingBills = bills.filter(b => b.status === 'pending');
 
   // Virtual bills from debts
-  const debtBills = debts.map(debt => ({
-    id: `debt-${debt.id}`,
-    description: `Dívida: ${debt.name}`,
-    amount: debt.monthlyPayment,
-    type: 'expense' as const,
-    date: new Date(new Date().setDate(debt.dueDay || 1)).toISOString().split('T')[0],
-    categoryId: 'debt-payment',
-    isBill: true,
-    billId: debt.id,
-    isVirtual: true,
-    icon: ShieldAlert
-  }));
+  const debtBills = debts.map(debt => {
+    // Projeta o vencimento da dívida no mês e ano da viewDate (filtro da tela)
+    const d = new Date(viewDate.getFullYear(), viewDate.getMonth(), debt.dueDay || 1, 12, 0, 0);
+    return {
+      id: `debt-${debt.id}`,
+      description: `Dívida: ${debt.name}`,
+      amount: debt.monthlyPayment,
+      type: 'expense' as const,
+      date: d.toISOString().split('T')[0],
+      categoryId: 'debt-payment',
+      isBill: true,
+      billId: debt.id,
+      isVirtual: true,
+      icon: ShieldAlert
+    };
+  });
 
   // Virtual bills from credit cards
   const cardBills = creditCards.map(card => {
     const amount = getCardExpenses(card.id);
+    // O vencimento do cartão nesse painel exibe a fatura no mês selecionado (viewDate)
+    const cardDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), card.dueDay || 1, 12, 0, 0);
     return {
       id: `card-${card.id}`,
       description: `Fatura: ${card.bank} - ${card.name}`,
       amount: amount,
       type: 'expense' as const,
-      date: new Date(new Date().setDate(card.dueDay || 1)).toISOString().split('T')[0],
+      date: cardDate.toISOString().split('T')[0],
       categoryId: 'card-payment',
       isBill: true,
       isVirtual: true,
@@ -141,6 +147,13 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   const getGroupDate = (item: any) => {
     if (!item.isPending && item.paymentDate) {
       return item.paymentDate.split('T')[0];
+    }
+    if (item.isPending && item.cardId) {
+      const card = creditCards.find(c => c.id === item.cardId);
+      if (card) {
+        const d = new Date(viewDate.getFullYear(), viewDate.getMonth(), card.dueDay || 1, 12, 0, 0);
+        return d.toISOString().split('T')[0];
+      }
     }
     return item.date;
   };
@@ -300,10 +313,13 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
                               {item.categoryId === 'debt-payment' ? 'Pagamento de Dívida' :
                                 item.categoryId === 'card-payment' ? 'Fatura de Cartão' :
                                   item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || 'Outros' : 'Outros'}
+                              {item.isPending && item.cardId && (
+                                <span> • Compra: {formatShortDate(item.date)}</span>
+                              )}
                             </p>
                           </div>
                         </div>

@@ -1095,23 +1095,32 @@ function useFinanceProvider() {
           if (!futureBills || futureBills.length === 0) return;
 
           // Prepara os dados de atualização para cada conta futura
-          const baseDateObj = new Date(dbUpdates.due_date || bill.dueDate);
+          const newDayString = updates.dueDate ? updates.dueDate.split('-')[2] : null;
+
           const updatedBills = futureBills.map(fb => {
-            const fbDate = new Date(fb.due_date);
+            let newDueDate = fb.due_date;
 
             // Se a data de vencimento foi alterada, atualiza o DIA na conta futura, preservando mês/ano
-            let newDueDate = fb.due_date;
-            if (updates.dueDate) {
-              const targetDate = new Date(
-                fbDate.getFullYear(),
-                fbDate.getMonth(),
-                baseDateObj.getDate()
-              );
+            if (newDayString && fb.due_date) {
+              const [fbYearStr, fbMonthStr] = fb.due_date.split('-');
+              const fbYear = parseInt(fbYearStr, 10);
+              const fbMonth = parseInt(fbMonthStr, 10); // 1 a 12
+              let targetDay = parseInt(newDayString, 10);
+
               // Handle end of month (e.g., setting day 31 in Feb)
-              if (targetDate.getMonth() !== fbDate.getMonth()) {
-                targetDate.setDate(0);
+              // We create a Date object just to check validity of the day in that specific month/year at noon
+              const testDate = new Date(fbYear, fbMonth - 1, targetDay, 12, 0, 0);
+              if (testDate.getMonth() !== (fbMonth - 1)) {
+                // The day rolled over to the next month (e.g., Feb 31 -> Mar 3)
+                // Find the last day of the target month instead
+                const lastDayOfMonth = new Date(fbYear, fbMonth, 0, 12, 0, 0).getDate();
+                targetDay = lastDayOfMonth;
               }
-              newDueDate = targetDate.toISOString().split('T')[0];
+
+              const y = fbYear;
+              const m = String(fbMonth).padStart(2, '0');
+              const d = String(targetDay).padStart(2, '0');
+              newDueDate = `${y}-${m}-${d}`;
             }
 
             return {
