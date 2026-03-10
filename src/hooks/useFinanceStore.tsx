@@ -441,6 +441,309 @@ function useFinanceProvider() {
     return () => subscription.unsubscribe();
   }, [fetchInitialData]);
 
+  // --- Utilities & Accounts ---
+
+  const updateAccountBalance = async (id: string, change: number) => {
+    try {
+      // 1. Otimista: tenta alterar o estado local usando o saldo atual do state
+      setState(prev => {
+        const acc = prev.accounts.find(a => a.id === id);
+        if (!acc) return prev;
+
+        const newBalance = Math.round((Number(acc.balance) + Number(change)) * 100) / 100;
+
+        // 2. Persistência em background
+        supabase.from('accounts').update({ balance: newBalance }).eq('id', id).then(({ error }) => {
+          if (error) console.error('Erro ao persistir saldo:', error);
+        });
+
+        return {
+          ...prev,
+          accounts: prev.accounts.map(a => a.id === id ? { ...a, balance: newBalance } : a)
+        };
+      });
+    } catch (err) { console.error('Erro em updateAccountBalance:', err); }
+  };
+
+  // --- Bills ---
+  const addBill = useCallback(async (bill: Omit<Bill, 'id' | 'userId'>, project: boolean = true) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const billsToAdd = [];
+      const count = (project && bill.isFixed) ? 12 : 1;
+
+      for (let i = 0; i < count; i++) {
+        const d = new Date(bill.dueDate);
+        const targetDay = d.getDate();
+        d.setMonth(d.getMonth() + i);
+        if (d.getDate() !== targetDay && targetDay > 28) d.setDate(0);
+
+        billsToAdd.push({
+          user_id: user.id,
+          category_id: bill.categoryId,
+          account_id: bill.accountId,
+          card_id: bill.cardId,
+          name: bill.name,
+          amount: bill.amount,
+          type: bill.type,
+          due_date: d.toISOString().split('T')[0],
+          payment_date: bill.paymentDate,
+          status: bill.status,
+          is_fixed: bill.isFixed,
+          recurrence_rule: bill.recurrenceRule,
+          start_date: bill.startDate || bill.dueDate
+        });
+      }
+
+      const { data, error } = await supabase.from('bills').insert(billsToAdd).select();
+
+      if (error) throw error;
+
+      const newBills = (data || []).map((b: any) => ({
+        ...b,
+        userId: b.user_id,
+        categoryId: b.category_id,
+        subcategoryId: b.subcategory_id,
+        accountId: b.account_id,
+        dueDate: b.due_date,
+        paymentDate: b.payment_date,
+        isFixed: b.is_fixed,
+        recurrenceRule: b.recurrence_rule,
+        startDate: b.start_date
+      }));
+
+      setState(prev => ({ ...prev, bills: [...prev.bills, ...newBills] }));
+      if (project) toast({ title: bill.isFixed ? 'Conta fixa configurada para os próximos 12 meses' : 'Conta adicionada com sucesso' });
+    } catch (err) { toast({ title: 'Erro ao adicionar conta', variant: 'destructive' }); }
+  }, []);
+
+  const updateBill = useCallback(async (id: string, updates: Partial<Bill>, applyToFuture: boolean = false) => {
+    try {
+      const bill = state.bills.find(b => b.id === id);
+      if (!bill) return;
+
+      const dbUpdates: any = { ...updates };
+      if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
+      if (updates.accountId !== undefined) dbUpdates.account_id = updates.accountId;
+      if (updates.cardId !== undefined) dbUpdates.card_id = updates.cardId;
+      if (updates.dueDate !== undefined) dbUpdates.due_date = updates.dueDate;
+      if (updates.paymentDate !== undefined) dbUpdates.payment_date = updates.paymentDate;
+      if (updates.isFixed !== undefined) dbUpdates.is_fixed = updates.isFixed;
+      if (updates.recurrenceRule !== undefined) dbUpdates.recurrence_rule = updates.recurrenceRule;
+
+      delete dbUpdates.categoryId;
+      delete dbUpdates.accountId;
+      delete dbUpdates.cardId;
+      delete dbUpdates.dueDate;
+      delete dbUpdates.paymentDate;
+      delete dbUpdates.isFixed;
+      delete dbUpdates.recurrenceRule;
+      delete dbUpdates.userId;
+
+      if (applyToFuture && bill.isFixed) {
+        try {
+          // Busca todas as contas vindouras relacionadas
+          const { data: futureBills, error: fetchError } = await supabase
+            .from('bills')
+            .select('*')
+            .eq('name', bill.name)
+            .eq('category_id', bill.categoryId)
+            .eq('user_id', bill.userId)
+            .gte('due_date', bill.dueDate);
+
+          if (fetchError) throw fetchError;
+          if (!futureBills || futureBills.length === 0) return;
+
+          // Prepara os dados de atualização para cada conta futura
+          const newDayString = updates.dueDate ? updates.dueDate.split('-')[2] : null;
+
+          const updatedBills = futureBills.map(fb => {
+            let newDueDate = fb.due_date;
+
+            // Se a data de vencimento foi alterada, atualiza o DIA na conta futura, preservando mês/ano
+            if (newDayString && fb.due_date) {
+              const [fbYearStr, fbMonthStr] = fb.due_date.split('-');
+              const fbYear = parseInt(fbYearStr, 10);
+              const fbMonth = parseInt(fbMonthStr, 10); // 1 a 12
+              let targetDay = parseInt(newDayString, 10);
+
+              // Handle end of month (e.g., setting day 31 in Feb)
+              // We create a Date object just to check validity of the day in that specific month/year at noon
+              const testDate = new Date(fbYear, fbMonth - 1, targetDay, 12, 0, 0);
+              if (testDate.getMonth() !== (fbMonth - 1)) {
+                // The day rolled over to the next month (e.g., Feb 31 -> Mar 3)
+                // Find the last day of the target month instead
+                const lastDayOfMonth = new Date(fbYear, fbMonth, 0, 12, 0, 0).getDate();
+                targetDay = lastDayOfMonth;
+              }
+
+              const y = fbYear;
+              const m = String(fbMonth).padStart(2, '0');
+              const d = String(targetDay).padStart(2, '0');
+              newDueDate = `${y}-${m}-${d}`;
+            }
+
+            return {
+              id: fb.id,
+              name: updates.name || fb.name,
+              amount: updates.amount !== undefined ? updates.amount : fb.amount,
+              category_id: updates.categoryId || fb.category_id,
+              account_id: updates.accountId !== undefined ? updates.accountId : fb.account_id,
+              card_id: updates.cardId !== undefined ? updates.cardId : fb.card_id,
+              due_date: newDueDate,
+              is_fixed: true,
+              user_id: fb.user_id,
+              type: fb.type,
+              status: fb.status
+            };
+          });
+
+          // Atualização em lote (Upsert)
+          const { error: upsertError } = await supabase
+            .from('bills')
+            .upsert(updatedBills);
+
+          if (upsertError) throw upsertError;
+
+          // Refletir no estado local
+          setState(prev => ({
+            ...prev,
+            bills: prev.bills.map(b => {
+              const updatedB = updatedBills.find(ub => ub.id === b.id);
+              if (updatedB) {
+                return {
+                  ...b,
+                  ...updates, // Aplica nome, amount, categoria
+                  dueDate: updatedB.due_date + "T00:00:00.000Z", // Sync com a data calculada
+                };
+              }
+              return b;
+            })
+          }));
+          toast({ title: 'Contas futuras atualizadas' });
+          return;
+        } catch (err) {
+          console.error('Error applying to future:', err);
+          throw err;
+        }
+      }
+
+      const { error } = await supabase.from('bills').update(dbUpdates).eq('id', id);
+      if (error) throw error;
+
+      setState(prev => ({
+        ...prev,
+        bills: prev.bills.map(b => b.id === id ? { ...b, ...updates } : b)
+      }));
+
+      // Smart Sync: Se a data de pagamento foi alterada em uma conta paga, 
+      // atualizar a transação de pagamento correspondente.
+      if (updates.paymentDate && bill.status === 'paid') {
+        const paymentTx = state.transactions.find(t =>
+          t.description === `Pgto: ${bill.name}` &&
+          Math.abs(t.amount - bill.amount) < 0.01 &&
+          t.isPaid
+        );
+
+        if (paymentTx) {
+          const newDate = updates.paymentDate;
+          // Atualiza localmente
+          setState(prev => ({
+            ...prev,
+            transactions: prev.transactions.map(t =>
+              t.id === paymentTx.id ? { ...t, date: newDate, paymentDate: newDate } : t
+            )
+          }));
+          // Persiste no banco
+          supabase.from('transactions')
+            .update({ date: newDate, payment_date: newDate })
+            .eq('id', paymentTx.id)
+            .then();
+        }
+      }
+    } catch (err) { toast({ title: 'Erro ao atualizar conta', variant: 'destructive' }); }
+  }, [state.bills]);
+
+  const deleteBill = useCallback(async (id: string, applyToFuture: boolean = false) => {
+    console.log('deleteBill chamado:', { id, applyToFuture });
+    try {
+      const billToDelete = state.bills.find(b => b.id === id);
+      console.log('Conta encontrada para deletar:', billToDelete);
+
+      if (!billToDelete) {
+        console.warn('Conta não encontrada no estado local:', id);
+        return;
+      }
+
+      // 1. Se a conta estava paga, deletar a transação associada para estornar o saldo
+      if (billToDelete.status === 'paid') {
+        const paymentTx = state.transactions.find(t =>
+          t.description === `Pgto: ${billToDelete.name}` &&
+          Math.abs(t.amount - billToDelete.amount) < 0.01 &&
+          t.isPaid
+        );
+        if (paymentTx) {
+          console.log('Transação de pagamento encontrada, deletando para estornar saldo:', paymentTx.id);
+          // Chamamos a lógica de deleção de transação que já cuida do estorno
+          // deletamos localmente primeiro para ser rápido
+          setState(prev => ({
+            ...prev,
+            transactions: prev.transactions.filter(t => t.id !== paymentTx.id)
+          }));
+
+          // Estornar saldo se a transação estava paga e tinha conta
+          if (paymentTx.accountId) {
+            const change = paymentTx.type === 'income' ? -paymentTx.amount : paymentTx.amount;
+            updateAccountBalance(paymentTx.accountId, change);
+          }
+
+          // Persistir deleção da transação
+          supabase.from('transactions').delete().eq('id', paymentTx.id).then();
+        }
+      }
+
+      // 2. Otimista / Fallback: remove localmente primeiro a própria conta
+      if (applyToFuture && billToDelete.isFixed) {
+        console.log('Removendo todas as ocorrências por nome:', billToDelete.name);
+        setState(prev => ({
+          ...prev,
+          bills: prev.bills.filter(b =>
+            !(b.name === billToDelete.name) // Agora remove TUDO (passado e futuro) como solicitado
+          )
+        }));
+      } else {
+        console.log('Removendo conta única:', id);
+        setState(prev => ({ ...prev, bills: prev.bills.filter(b => b.id !== id) }));
+      }
+
+      let error;
+      if (applyToFuture && billToDelete.isFixed) {
+        console.log('Executando delete em lote no Supabase para:', billToDelete.name);
+        const { error: batchErr } = await supabase.from('bills')
+          .delete()
+          .eq('name', billToDelete.name)
+          .eq('user_id', billToDelete.userId);
+        error = batchErr;
+      } else {
+        console.log('Executando delete único no Supabase para ID:', id);
+        const { error: singleErr } = await supabase.from('bills').delete().eq('id', id);
+        error = singleErr;
+      }
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Erro ao deletar no Supabase:', error);
+      } else {
+        console.log('Deleção concluída com sucesso!');
+        toast({ title: 'Conta removida' });
+      }
+    } catch (err) {
+      console.error('Erro inesperado no deleteBill:', err);
+      toast({ title: 'Conta removida (apenas local)', variant: 'default' });
+    }
+  }, [state.bills]);
+
   // --- Transactions ---
 
   const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id'>, customInstallments?: { date: string, amount: number }[]) => {
@@ -846,28 +1149,6 @@ function useFinanceProvider() {
     } catch (err) { toast({ title: 'Erro ao criar conta', variant: 'destructive' }); }
   }, []);
 
-  const updateAccountBalance = async (id: string, change: number) => {
-    try {
-      // 1. Otimista: tenta alterar o estado local usando o saldo atual do state
-      setState(prev => {
-        const acc = prev.accounts.find(a => a.id === id);
-        if (!acc) return prev;
-
-        const newBalance = Math.round((Number(acc.balance) + Number(change)) * 100) / 100;
-
-        // 2. Persistência em background
-        supabase.from('accounts').update({ balance: newBalance }).eq('id', id).then(({ error }) => {
-          if (error) console.error('Erro ao persistir saldo:', error);
-        });
-
-        return {
-          ...prev,
-          accounts: prev.accounts.map(a => a.id === id ? { ...a, balance: newBalance } : a)
-        };
-      });
-    } catch (err) { console.error('Erro em updateAccountBalance:', err); }
-  };
-
   const deleteAccount = useCallback(async (id: string) => {
     try {
       await supabase.from('accounts').delete().eq('id', id);
@@ -1182,284 +1463,6 @@ function useFinanceProvider() {
     }
   }, [state.budgetRule]);
 
-  // --- Bills ---
-  const addBill = useCallback(async (bill: Omit<Bill, 'id' | 'userId'>, project: boolean = true) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const billsToAdd = [];
-      const count = (project && bill.isFixed) ? 12 : 1;
-
-      for (let i = 0; i < count; i++) {
-        const d = new Date(bill.dueDate);
-        const targetDay = d.getDate();
-        d.setMonth(d.getMonth() + i);
-        if (d.getDate() !== targetDay && targetDay > 28) d.setDate(0);
-
-        billsToAdd.push({
-          user_id: user.id,
-          category_id: bill.categoryId,
-          account_id: bill.accountId,
-          card_id: bill.cardId,
-          name: bill.name,
-          amount: bill.amount,
-          type: bill.type,
-          due_date: d.toISOString().split('T')[0],
-          payment_date: bill.paymentDate,
-          status: bill.status,
-          is_fixed: bill.isFixed,
-          recurrence_rule: bill.recurrenceRule,
-          start_date: bill.startDate || bill.dueDate
-        });
-      }
-
-      const { data, error } = await supabase.from('bills').insert(billsToAdd).select();
-
-      if (error) throw error;
-
-      const newBills = (data || []).map((b: any) => ({
-        ...b,
-        userId: b.user_id,
-        categoryId: b.category_id,
-        subcategoryId: b.subcategory_id,
-        accountId: b.account_id,
-        dueDate: b.due_date,
-        paymentDate: b.payment_date,
-        isFixed: b.is_fixed,
-        recurrenceRule: b.recurrence_rule,
-        startDate: b.start_date
-      }));
-
-      setState(prev => ({ ...prev, bills: [...prev.bills, ...newBills] }));
-      if (project) toast({ title: bill.isFixed ? 'Conta fixa configurada para os próximos 12 meses' : 'Conta adicionada com sucesso' });
-    } catch (err) { toast({ title: 'Erro ao adicionar conta', variant: 'destructive' }); }
-  }, []);
-
-  const updateBill = useCallback(async (id: string, updates: Partial<Bill>, applyToFuture: boolean = false) => {
-    try {
-      const bill = state.bills.find(b => b.id === id);
-      if (!bill) return;
-
-      const dbUpdates: any = { ...updates };
-      if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
-      if (updates.accountId !== undefined) dbUpdates.account_id = updates.accountId;
-      if (updates.cardId !== undefined) dbUpdates.card_id = updates.cardId;
-      if (updates.dueDate !== undefined) dbUpdates.due_date = updates.dueDate;
-      if (updates.paymentDate !== undefined) dbUpdates.payment_date = updates.paymentDate;
-      if (updates.isFixed !== undefined) dbUpdates.is_fixed = updates.isFixed;
-      if (updates.recurrenceRule !== undefined) dbUpdates.recurrence_rule = updates.recurrenceRule;
-
-      delete dbUpdates.categoryId;
-      delete dbUpdates.accountId;
-      delete dbUpdates.cardId;
-      delete dbUpdates.dueDate;
-      delete dbUpdates.paymentDate;
-      delete dbUpdates.isFixed;
-      delete dbUpdates.recurrenceRule;
-      delete dbUpdates.userId;
-
-      if (applyToFuture && bill.isFixed) {
-        try {
-          // Busca todas as contas vindouras relacionadas
-          const { data: futureBills, error: fetchError } = await supabase
-            .from('bills')
-            .select('*')
-            .eq('name', bill.name)
-            .eq('category_id', bill.categoryId)
-            .eq('user_id', bill.userId)
-            .gte('due_date', bill.dueDate);
-
-          if (fetchError) throw fetchError;
-          if (!futureBills || futureBills.length === 0) return;
-
-          // Prepara os dados de atualização para cada conta futura
-          const newDayString = updates.dueDate ? updates.dueDate.split('-')[2] : null;
-
-          const updatedBills = futureBills.map(fb => {
-            let newDueDate = fb.due_date;
-
-            // Se a data de vencimento foi alterada, atualiza o DIA na conta futura, preservando mês/ano
-            if (newDayString && fb.due_date) {
-              const [fbYearStr, fbMonthStr] = fb.due_date.split('-');
-              const fbYear = parseInt(fbYearStr, 10);
-              const fbMonth = parseInt(fbMonthStr, 10); // 1 a 12
-              let targetDay = parseInt(newDayString, 10);
-
-              // Handle end of month (e.g., setting day 31 in Feb)
-              // We create a Date object just to check validity of the day in that specific month/year at noon
-              const testDate = new Date(fbYear, fbMonth - 1, targetDay, 12, 0, 0);
-              if (testDate.getMonth() !== (fbMonth - 1)) {
-                // The day rolled over to the next month (e.g., Feb 31 -> Mar 3)
-                // Find the last day of the target month instead
-                const lastDayOfMonth = new Date(fbYear, fbMonth, 0, 12, 0, 0).getDate();
-                targetDay = lastDayOfMonth;
-              }
-
-              const y = fbYear;
-              const m = String(fbMonth).padStart(2, '0');
-              const d = String(targetDay).padStart(2, '0');
-              newDueDate = `${y}-${m}-${d}`;
-            }
-
-            return {
-              id: fb.id,
-              name: updates.name || fb.name,
-              amount: updates.amount !== undefined ? updates.amount : fb.amount,
-              category_id: updates.categoryId || fb.category_id,
-              account_id: updates.accountId !== undefined ? updates.accountId : fb.account_id,
-              card_id: updates.cardId !== undefined ? updates.cardId : fb.card_id,
-              due_date: newDueDate,
-              is_fixed: true,
-              user_id: fb.user_id,
-              type: fb.type,
-              status: fb.status
-            };
-          });
-
-          // Atualização em lote (Upsert)
-          const { error: upsertError } = await supabase
-            .from('bills')
-            .upsert(updatedBills);
-
-          if (upsertError) throw upsertError;
-
-          // Refletir no estado local
-          setState(prev => ({
-            ...prev,
-            bills: prev.bills.map(b => {
-              const updatedB = updatedBills.find(ub => ub.id === b.id);
-              if (updatedB) {
-                return {
-                  ...b,
-                  ...updates, // Aplica nome, amount, categoria
-                  dueDate: updatedB.due_date + "T00:00:00.000Z", // Sync com a data calculada
-                };
-              }
-              return b;
-            })
-          }));
-          toast({ title: 'Contas futuras atualizadas' });
-          return;
-        } catch (err) {
-          console.error('Error applying to future:', err);
-          throw err;
-        }
-      }
-
-      const { error } = await supabase.from('bills').update(dbUpdates).eq('id', id);
-      if (error) throw error;
-
-      setState(prev => ({
-        ...prev,
-        bills: prev.bills.map(b => b.id === id ? { ...b, ...updates } : b)
-      }));
-
-      // Smart Sync: Se a data de pagamento foi alterada em uma conta paga, 
-      // atualizar a transação de pagamento correspondente.
-      if (updates.paymentDate && bill.status === 'paid') {
-        const paymentTx = state.transactions.find(t =>
-          t.description === `Pgto: ${bill.name}` &&
-          Math.abs(t.amount - bill.amount) < 0.01 &&
-          t.isPaid
-        );
-
-        if (paymentTx) {
-          const newDate = updates.paymentDate;
-          // Atualiza localmente
-          setState(prev => ({
-            ...prev,
-            transactions: prev.transactions.map(t =>
-              t.id === paymentTx.id ? { ...t, date: newDate, paymentDate: newDate } : t
-            )
-          }));
-          // Persiste no banco
-          supabase.from('transactions')
-            .update({ date: newDate, payment_date: newDate })
-            .eq('id', paymentTx.id)
-            .then();
-        }
-      }
-    } catch (err) { toast({ title: 'Erro ao atualizar conta', variant: 'destructive' }); }
-  }, [state.bills]);
-
-  const deleteBill = useCallback(async (id: string, applyToFuture: boolean = false) => {
-    console.log('deleteBill chamado:', { id, applyToFuture });
-    try {
-      const billToDelete = state.bills.find(b => b.id === id);
-      console.log('Conta encontrada para deletar:', billToDelete);
-
-      if (!billToDelete) {
-        console.warn('Conta não encontrada no estado local:', id);
-        return;
-      }
-
-      // 1. Se a conta estava paga, deletar a transação associada para estornar o saldo
-      if (billToDelete.status === 'paid') {
-        const paymentTx = state.transactions.find(t =>
-          t.description === `Pgto: ${billToDelete.name}` &&
-          Math.abs(t.amount - billToDelete.amount) < 0.01 &&
-          t.isPaid
-        );
-        if (paymentTx) {
-          console.log('Transação de pagamento encontrada, deletando para estornar saldo:', paymentTx.id);
-          // Chamamos a lógica de deleção de transação que já cuida do estorno
-          // deletamos localmente primeiro para ser rápido
-          setState(prev => ({
-            ...prev,
-            transactions: prev.transactions.filter(t => t.id !== paymentTx.id)
-          }));
-
-          // Estornar saldo se a transação estava paga e tinha conta
-          if (paymentTx.accountId) {
-            const change = paymentTx.type === 'income' ? -paymentTx.amount : paymentTx.amount;
-            updateAccountBalance(paymentTx.accountId, change);
-          }
-
-          // Persistir deleção da transação
-          supabase.from('transactions').delete().eq('id', paymentTx.id).then();
-        }
-      }
-
-      // 2. Otimista / Fallback: remove localmente primeiro a própria conta
-      if (applyToFuture && billToDelete.isFixed) {
-        console.log('Removendo todas as ocorrências por nome:', billToDelete.name);
-        setState(prev => ({
-          ...prev,
-          bills: prev.bills.filter(b =>
-            !(b.name === billToDelete.name) // Agora remove TUDO (passado e futuro) como solicitado
-          )
-        }));
-      } else {
-        console.log('Removendo conta única:', id);
-        setState(prev => ({ ...prev, bills: prev.bills.filter(b => b.id !== id) }));
-      }
-
-      let error;
-      if (applyToFuture && billToDelete.isFixed) {
-        console.log('Executando delete em lote no Supabase para:', billToDelete.name);
-        const { error: batchErr } = await supabase.from('bills')
-          .delete()
-          .eq('name', billToDelete.name)
-          .eq('user_id', billToDelete.userId);
-        error = batchErr;
-      } else {
-        console.log('Executando delete único no Supabase para ID:', id);
-        const { error: singleErr } = await supabase.from('bills').delete().eq('id', id);
-        error = singleErr;
-      }
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Erro ao deletar no Supabase:', error);
-      } else {
-        console.log('Deleção concluída com sucesso!');
-        toast({ title: 'Conta removida' });
-      }
-    } catch (err) {
-      console.error('Erro inesperado no deleteBill:', err);
-      toast({ title: 'Conta removida (apenas local)', variant: 'default' });
-    }
-  }, [state.bills]);
 
   const payBill = useCallback(async (billId: string, accountId: string | undefined, paymentDate: string, cardId?: string, customAmount?: number) => {
     try {
