@@ -38,7 +38,8 @@ export function BillsManager() {
         deleteBill,
         payBill,
         getCardExpenses,
-        viewDate
+        viewDate,
+        currentMonthBills
     } = useFinanceStore();
 
     const [showAddForm, setShowAddForm] = useState(false);
@@ -187,60 +188,12 @@ export function BillsManager() {
         setDeleteFutureBills(false);
     };
 
-    // 1. Get virtual bills from debts
-    const debtBills = debts.map(debt => {
-        const d = new Date(viewDate);
-        d.setDate(debt.dueDay || 1);
-        return {
-            id: `debt-${debt.id}`,
-            name: `Dívida: ${debt.name}`,
-            amount: debt.monthlyPayment,
-            type: 'payable' as const,
-            dueDate: d.toISOString().split('T')[0],
-            status: 'pending' as const,
-            isFixed: true,
-            categoryId: 'debt-payment',
-            isVirtual: true,
-            icon: ShieldAlert,
-            accountId: undefined,
-            cardId: undefined
-        };
-    });
-
-    // 2. Get virtual bills from credit cards
-    const cardBills = creditCards.map(card => {
-        const amount = getCardExpenses(card.id);
-        const d = new Date(viewDate);
-        d.setDate(card.dueDay || 1);
-        return {
-            id: `card-${card.id}`,
-            name: `Fatura: ${card.bank} - ${card.name}`,
-            amount: amount,
-            type: 'payable' as const,
-            dueDate: d.toISOString().split('T')[0],
-            status: 'pending' as const,
-            isFixed: true,
-            categoryId: 'card-payment',
-            isVirtual: true,
-            icon: CardIcon,
-            accountId: undefined,
-            cardId: card.id
-        };
-    }).filter(c => c.amount > 0);
-
-    const allBills = [...bills, ...debtBills, ...cardBills];
-
-    const currentMonthAllBills = allBills.filter(b => {
-        const bDate = new Date(b.dueDate);
-        return bDate.getMonth() === viewDate.getMonth() && bDate.getFullYear() === viewDate.getFullYear();
-    });
-
-    const filteredBills = currentMonthAllBills.filter(b => {
+    const filteredBills = currentMonthBills.filter(b => {
         if (filter === 'all') return true;
         return b.type === filter;
     }).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
-    const pendingPayable = currentMonthAllBills.filter(b => b.type === 'payable' && b.status === 'pending');
+    const pendingPayable = currentMonthBills.filter(b => b.type === 'payable' && b.status === 'pending');
     const totalPendingPayable = pendingPayable.reduce((acc, b) => acc + b.amount, 0);
 
     return (
@@ -346,7 +299,7 @@ export function BillsManager() {
                             </div>
                         </div>
 
-                        {editingBillId && allBills.find(b => b.id === editingBillId)?.status === 'paid' && (
+                        {editingBillId && currentMonthBills.find(b => b.id === editingBillId)?.status === 'paid' && (
                             <div className="space-y-2 animate-fade-in">
                                 <Label className="text-success font-bold">Data do Pagamento</Label>
                                 <Input
@@ -460,6 +413,15 @@ export function BillsManager() {
                                                     </span>
                                                 </>
                                             )}
+                                            {bill.debtId && (
+                                                <>
+                                                    <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                                                    <span className="flex items-center gap-1 font-bold">
+                                                        <ShieldAlert className="w-3 h-3 text-warning" />
+                                                        {debts.find(d => d.id === bill.debtId)?.name}
+                                                    </span>
+                                                </>
+                                            )}
                                             {bill.isFixed && <span className="ml-1 px-1.5 py-0.5 bg-primary/10 text-primary rounded-md text-[10px] font-bold">RECORRENTE</span>}
                                         </div>
                                     </div>
@@ -496,7 +458,7 @@ export function BillsManager() {
                                                     onClick={() => {
                                                         setIsPaying(bill);
                                                         setPaymentDate((bill.dueDate || new Date().toISOString()).split('T')[0]);
-                                                        setPaymentAmount(bill.amount.toString());
+                                                        setPaymentAmount(bill.amount.toFixed(2));
                                                         setPaymentMethod(bill.cardId ? 'credit_card' : 'account');
                                                     }}
                                                     className="h-11 px-4 rounded-2xl bg-success/5 text-success hover:bg-success/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider"
@@ -578,26 +540,28 @@ export function BillsManager() {
                                 </div>
 
                                 {/* Account / Card Tabs */}
-                                <div className="flex rounded-xl bg-muted/40 p-1">
-                                    <button
-                                        onClick={() => setPaymentMethod('account')}
-                                        className={cn(
-                                            "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
-                                            paymentMethod === 'account' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
-                                        )}
-                                    >
-                                        Conta Bancária
-                                    </button>
-                                    <button
-                                        onClick={() => setPaymentMethod('credit_card')}
-                                        className={cn(
-                                            "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
-                                            paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
-                                        )}
-                                    >
-                                        Cartão de Crédito
-                                    </button>
-                                </div>
+                                {(!isPaying.id.startsWith('card-') && !isPaying.cardId) && (
+                                    <div className="flex rounded-xl bg-muted/40 p-1">
+                                        <button
+                                            onClick={() => setPaymentMethod('account')}
+                                            className={cn(
+                                                "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
+                                                paymentMethod === 'account' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                                            )}
+                                        >
+                                            Conta Bancária
+                                        </button>
+                                        <button
+                                            onClick={() => setPaymentMethod('credit_card')}
+                                            className={cn(
+                                                "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
+                                                paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                                            )}
+                                        >
+                                            Cartão de Crédito
+                                        </button>
+                                    </div>
+                                )}
 
                                 {/* Amount Input */}
                                 <div className="space-y-2">

@@ -179,8 +179,75 @@ function useFinanceProvider() {
       return matchesViewDate;
     });
 
-    return filteredBills;
-  }, [state.bills, viewDate, viewMode, parseLocalDate]);
+    // 2. Get virtual bills from debts
+    state.debts.forEach(debt => {
+      const d = new Date(viewDate);
+      d.setDate(debt.dueDay || 1);
+      const invoiceMonthYear = format(viewDate, 'yyyy-MM');
+
+      const exists = state.bills.find(b =>
+        b.name === `Dívida: ${debt.name}` &&
+        new Date(b.dueDate).getMonth() === viewDate.getMonth() &&
+        new Date(b.dueDate).getFullYear() === viewDate.getFullYear()
+      );
+
+      if (!exists) {
+        filteredBills.push({
+          id: `debt-${debt.id}-${invoiceMonthYear}`,
+          name: `Dívida: ${debt.name}`,
+          amount: debt.monthlyPayment,
+          type: 'payable',
+          dueDate: d.toISOString(),
+          status: 'pending',
+          isFixed: true,
+          categoryId: 'debt-payment',
+          isVirtual: true,
+          debtId: debt.id,
+          userId: debt.userId
+        } as Bill);
+      }
+    });
+
+    // 3. Get virtual bills from credit cards
+    state.creditCards.forEach(card => {
+      // Obtenção direta para evitar recursão de dependência se usar getCardExpenses diretamente no useMemo
+      const cardTransactions = state.transactions.filter(t => t.cardId === card.id);
+      const spent = cardTransactions.filter(t => {
+        const targetDate = getTransactionTargetDate(t);
+        return t.type === 'expense' &&
+          !t.isInvoicePayment &&
+          targetDate.getMonth() === viewDate.getMonth() &&
+          targetDate.getFullYear() === viewDate.getFullYear();
+      }).reduce((acc, curr) => acc + curr.amount, 0);
+
+      const currentInvoiceMonthYear = format(viewDate, 'yyyy-MM');
+      const paid = cardTransactions.filter(t =>
+        t.isInvoicePayment && t.invoiceMonthYear === currentInvoiceMonthYear
+      ).reduce((acc, curr) => acc + curr.amount, 0);
+
+      const amount = Math.max(0, spent - paid);
+      if (amount <= 0) return;
+
+      const d = new Date(viewDate);
+      d.setDate(card.dueDay || 1);
+
+      filteredBills.push({
+        id: `card-${card.id}-${currentInvoiceMonthYear}`,
+        name: `Fatura: ${card.bank} - ${card.name}`,
+        amount: amount,
+        type: 'payable',
+        dueDate: d.toISOString(),
+        status: 'pending',
+        isFixed: true,
+        categoryId: 'card-payment',
+        isVirtual: true,
+        cardId: card.id,
+        userId: card.userId
+      } as Bill);
+    });
+
+    return filteredBills.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  }, [state.bills, state.debts, state.creditCards, state.transactions, viewDate, viewMode, parseLocalDate, getTransactionTargetDate]);
 
   const fetchInitialData = useCallback(async () => {
     try {
