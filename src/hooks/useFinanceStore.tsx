@@ -210,15 +210,24 @@ function useFinanceProvider() {
 
     // 3. Get virtual bills from credit cards
     state.creditCards.forEach(card => {
-      // Obtenção direta para evitar recursão de dependência se usar getCardExpenses diretamente no useMemo
       const cardTransactions = state.transactions.filter(t => t.cardId === card.id);
-      const spent = cardTransactions.filter(t => {
+      const spentTxs = cardTransactions.filter(t => {
         const targetDate = getTransactionTargetDate(t);
         return t.type === 'expense' &&
           !t.isInvoicePayment &&
           targetDate.getMonth() === viewDate.getMonth() &&
           targetDate.getFullYear() === viewDate.getFullYear();
       }).reduce((acc, curr) => acc + curr.amount, 0);
+
+      const spentBills = state.bills.filter(b =>
+        b.cardId === card.id &&
+        b.status === 'pending' &&
+        b.categoryId !== 'card-payment' &&
+        new Date(b.dueDate).getMonth() === viewDate.getMonth() &&
+        new Date(b.dueDate).getFullYear() === viewDate.getFullYear()
+      ).reduce((acc, curr) => acc + curr.amount, 0);
+
+      const spent = spentTxs + spentBills;
 
       const currentInvoiceMonthYear = format(viewDate, 'yyyy-MM');
       const paid = cardTransactions.filter(t =>
@@ -231,9 +240,10 @@ function useFinanceProvider() {
       const d = new Date(viewDate);
       d.setDate(card.dueDay || 1);
 
-      // Verificar se já existe uma conta real vinculada a este cartão para este mês
+      // Verificar se já existe uma conta real vinculada a este cartão para este mês que seja o pagamento da fatura
       const exists = state.bills.find(b =>
         b.cardId === card.id &&
+        b.categoryId === 'card-payment' &&
         new Date(b.dueDate).getMonth() === viewDate.getMonth() &&
         new Date(b.dueDate).getFullYear() === viewDate.getFullYear()
       );

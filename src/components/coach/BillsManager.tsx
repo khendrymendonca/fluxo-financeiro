@@ -383,9 +383,11 @@ export function BillsManager() {
                                     <div className="flex items-center gap-4">
                                         <div className={cn(
                                             "p-3 rounded-2xl",
-                                            bill.type === 'payable' ? "bg-danger/10 text-danger" : "bg-success/10 text-success"
+                                            bill.categoryId === 'card-payment' ? "bg-primary/10 text-primary" :
+                                                (bill.type === 'payable' ? "bg-danger/10 text-danger" : "bg-success/10 text-success")
                                         )}>
-                                            {bill.type === 'payable' ? <ArrowDownCircle className="w-5 h-5" /> : <ArrowUpCircle className="w-5 h-5" />}
+                                            {bill.categoryId === 'card-payment' ? <CardIcon className="w-5 h-5" /> :
+                                                (bill.type === 'payable' ? <ArrowDownCircle className="w-5 h-5" /> : <ArrowUpCircle className="w-5 h-5" />)}
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
@@ -396,14 +398,51 @@ export function BillsManager() {
                                                             e.stopPropagation();
                                                             setExpandedBillId(expandedBillId === bill.id ? null : bill.id);
                                                         }}
-                                                        className="px-2 py-0.5 bg-muted hover:bg-muted-foreground/10 rounded-md text-[10px] font-black uppercase text-muted-foreground transition-all flex items-center gap-1"
+                                                        className="px-2 py-0.5 bg-primary/10 hover:bg-primary/20 rounded-md text-[10px] font-black uppercase text-primary transition-all flex items-center gap-1"
                                                     >
                                                         {expandedBillId === bill.id ? 'Ocultar Detalhes' : 'Ver Detalhes'}
                                                         <Plus className={cn("w-3 h-3 transition-transform", expandedBillId === bill.id && "rotate-45")} />
                                                     </button>
                                                 )}
                                             </div>
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                            {/* Dropdown de Detalhes da Fatura */}
+                                            {expandedBillId === bill.id && bill.categoryId === 'card-payment' && bill.cardId && (
+                                                <div className="mt-4 space-y-2 border-l-2 border-primary/20 pl-4 animate-in slide-in-from-top-2">
+                                                    <p className="text-[10px] font-black uppercase text-muted-foreground mb-2">Compras e Contas no Período</p>
+                                                    {/* Transações Reais */}
+                                                    {transactions.filter(t => {
+                                                        const targetDate = getTransactionTargetDate(t);
+                                                        return t.cardId === bill.cardId &&
+                                                            !t.isInvoicePayment &&
+                                                            targetDate.getMonth() === viewDate.getMonth() &&
+                                                            targetDate.getFullYear() === viewDate.getFullYear();
+                                                    }).map(t => (
+                                                        <div key={t.id} className="flex justify-between items-center text-xs py-1 border-b border-border/50">
+                                                            <div>
+                                                                <p className="font-bold">{t.description}</p>
+                                                                <p className="text-[10px] text-muted-foreground">{format(new Date(t.date), 'dd/MM')}</p>
+                                                            </div>
+                                                            <span className="font-black text-danger">{formatCurrency(t.amount)}</span>
+                                                        </div>
+                                                    ))}
+                                                    {/* Contas Assignadas ao Cartão */}
+                                                    {bills.filter(b =>
+                                                        b.cardId === bill.cardId &&
+                                                        b.categoryId !== 'card-payment' &&
+                                                        new Date(b.dueDate).getMonth() === viewDate.getMonth() &&
+                                                        new Date(b.dueDate).getFullYear() === viewDate.getFullYear()
+                                                    ).map(b => (
+                                                        <div key={b.id} className="flex justify-between items-center text-xs py-1 border-b border-border/50">
+                                                            <div>
+                                                                <p className="font-bold">{b.name}</p>
+                                                                <p className="text-[10px] text-muted-foreground">{format(new Date(b.dueDate), 'dd/MM')} • Conta</p>
+                                                            </div>
+                                                            <span className="font-black text-danger">{formatCurrency(b.amount)}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                                                 <Calendar className="w-3 h-3" />
                                                 {bill.status === 'paid' && (bill.paymentDate || bill.dueDate) ? (
                                                     <span className="text-success font-bold">

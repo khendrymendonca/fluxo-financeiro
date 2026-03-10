@@ -11,7 +11,8 @@ import {
   Clock,
   Calendar,
   ShieldAlert,
-  CreditCard as CardIcon
+  CreditCard as CardIcon,
+  Receipt
 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { Portal } from '@/components/ui/Portal';
@@ -101,20 +102,23 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
         isBill: false,
         isPending: !t.isPaid
       })),
-    ...bills.filter(b => b.status === 'pending').map(b => ({
-      id: b.id,
-      description: b.name,
-      amount: b.amount,
-      type: b.type === 'payable' ? 'expense' as const : 'income' as const,
-      date: b.dueDate,
-      categoryId: b.categoryId,
-      isBill: true,
-      isPending: true,
-      billId: b.id,
-      originalBillId: b.originalBillId, // Guardar ID real para exclusão
-      isVirtual: b.isVirtual,
-      icon: b.categoryId === 'card-payment' ? CardIcon : b.categoryId === 'debt-payment' ? ShieldAlert : undefined
-    }))
+    ...bills
+      .filter(b => b.status === 'pending' && (!b.cardId || b.categoryId === 'card-payment'))
+      .map(b => ({
+        id: b.id,
+        description: b.name,
+        amount: b.amount,
+        type: b.type === 'payable' ? 'expense' as const : 'income' as const,
+        date: b.dueDate,
+        categoryId: b.categoryId,
+        isBill: true,
+        isPending: true,
+        billId: b.id,
+        originalBillId: b.originalBillId, // Guardar ID real para exclusão
+        isVirtual: b.isVirtual,
+        cardId: b.cardId,
+        icon: b.categoryId === 'card-payment' ? CardIcon : b.categoryId === 'debt-payment' ? ShieldAlert : undefined
+      }))
   ];
 
   const getGroupDate = (item: any) => {
@@ -445,7 +449,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                             {allTransactions
                               .filter(t => {
                                 const targetDate = getTransactionTargetDate(t);
-                                return t.cardId === item.billId &&
+                                return t.cardId === item.cardId &&
                                   !t.isInvoicePayment &&
                                   targetDate.getMonth() === viewDate.getMonth() &&
                                   targetDate.getFullYear() === viewDate.getFullYear();
@@ -468,14 +472,39 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                   <span className="text-xs font-black text-danger">{formatCurrency(t.amount)}</span>
                                 </div>
                               ))}
+
+                            {/* Contas Assinaladas ao Cartão */}
+                            {bills
+                              .filter(b =>
+                                b.cardId === item.cardId &&
+                                b.categoryId !== 'card-payment' &&
+                                new Date(b.dueDate).getMonth() === viewDate.getMonth() &&
+                                new Date(b.dueDate).getFullYear() === viewDate.getFullYear()
+                              )
+                              .map(b => (
+                                <div key={b.id} className="flex items-center justify-between p-2.5 rounded-xl bg-background/60 border border-border/30 hover:border-primary/20 transition-all">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-1.5 rounded-lg bg-info/5 text-info">
+                                      <Receipt className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-bold leading-none">{b.name}</p>
+                                      <p className="text-[9px] text-muted-foreground mt-1">
+                                        {formatShortDate(b.dueDate)} • Conta fixa/recorrente
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <span className="text-xs font-black text-danger">{formatCurrency(b.amount)}</span>
+                                </div>
+                              ))}
                             {allTransactions.filter(t => {
                               const targetDate = getTransactionTargetDate(t);
-                              return t.cardId === item.billId &&
+                              return t.cardId === item.cardId &&
                                 !t.isInvoicePayment &&
                                 targetDate.getMonth() === viewDate.getMonth() &&
                                 targetDate.getFullYear() === viewDate.getFullYear();
-                            }).length === 0 && (
-                                <p className="text-[10px] text-muted-foreground text-center py-4 italic">Nenhuma compra listada para esta fatura.</p>
+                            }).length === 0 && bills.filter(b => b.cardId === item.cardId && b.categoryId !== 'card-payment' && new Date(b.dueDate).getMonth() === viewDate.getMonth() && new Date(b.dueDate).getFullYear() === viewDate.getFullYear()).length === 0 && (
+                                <p className="text-[10px] text-muted-foreground text-center py-4 italic">Nenhum lançamento encontrado para esta fatura.</p>
                               )}
                           </div>
                         </div>
