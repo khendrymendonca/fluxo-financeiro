@@ -19,6 +19,13 @@ import { Button } from '@/components/ui/button';
 export function AccountEvolution() {
     const { transactions, categories, viewDate } = useFinanceStore();
 
+    const formatCurrency = (value: number) => {
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+        }).format(value);
+    };
+
     // Prepare data for the last 6 months
     const data = Array.from({ length: 6 }).map((_, i) => {
         const monthDate = subMonths(startOfMonth(viewDate), 5 - i);
@@ -154,11 +161,17 @@ export function AccountEvolution() {
                     <div className="space-y-4">
                         <div>
                             <div className="flex justify-between text-xs mb-1">
-                                <span className="font-medium">Meta Global</span>
-                                <span className="font-bold">85%</span>
+                                <span className="font-medium">Meta Global de Gastos</span>
+                                <span className="font-bold">{Math.round((latestMonth.valor / target) * 100)}%</span>
                             </div>
                             <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                                <div className="h-full bg-amber-500 rounded-full w-[85%]" />
+                                <div
+                                    className={cn(
+                                        "h-full rounded-full transition-all duration-500",
+                                        latestMonth.valor > target ? "bg-danger" : "bg-amber-500"
+                                    )}
+                                    style={{ width: `${Math.min((latestMonth.valor / target) * 100, 100)}%` }}
+                                />
                             </div>
                         </div>
 
@@ -173,7 +186,7 @@ export function AccountEvolution() {
                         <div className="flex items-start gap-2 p-3 rounded-xl bg-danger/5 border border-danger/10 text-danger mt-2">
                             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
                             <p className="text-[10px] font-medium leading-tight">
-                                Você ultrapassou sua meta global este mês.
+                                Você ultrapassou sua meta global de gastos este mês em {formatCurrency(latestMonth.valor - target)}.
                             </p>
                         </div>
                     )}
