@@ -1081,32 +1081,81 @@ function useFinanceProvider() {
       delete dbUpdates.userId;
 
       if (applyToFuture && bill.isFixed) {
-        // Update all future bills with the same name and category
-        const { error } = await supabase.from('bills')
-          .update({
-            name: updates.name || bill.name,
-            amount: updates.amount !== undefined ? updates.amount : bill.amount,
-            category_id: updates.categoryId || bill.categoryId,
-            account_id: updates.accountId || bill.accountId,
-            is_fixed: true
-          })
-          .eq('name', bill.name)
-          .eq('category_id', bill.categoryId)
-          .eq('user_id', bill.userId)
-          .gte('due_date', bill.dueDate);
+        try {
+          // Busca todas as contas vindouras relacionadas
+          const { data: futureBills, error: fetchError } = await supabase
+            .from('bills')
+            .select('*')
+            .eq('name', bill.name)
+            .eq('category_id', bill.categoryId)
+            .eq('user_id', bill.userId)
+            .gte('due_date', bill.dueDate);
 
-        if (error) throw error;
+          if (fetchError) throw fetchError;
+          if (!futureBills || futureBills.length === 0) return;
 
-        setState(prev => ({
-          ...prev,
-          bills: prev.bills.map(b =>
-            (b.name === bill.name && b.categoryId === bill.categoryId && b.dueDate >= bill.dueDate)
-              ? { ...b, ...updates }
-              : b
-          )
-        }));
-        toast({ title: 'Contas futuras atualizadas' });
-        return;
+          // Prepara os dados de atualização para cada conta futura
+          const baseDateObj = new Date(dbUpdates.due_date || bill.dueDate);
+          const updatedBills = futureBills.map(fb => {
+            const fbDate = new Date(fb.due_date);
+
+            // Se a data de vencimento foi alterada, atualiza o DIA na conta futura, preservando mês/ano
+            let newDueDate = fb.due_date;
+            if (updates.dueDate) {
+              const targetDate = new Date(
+                fbDate.getFullYear(),
+                fbDate.getMonth(),
+                baseDateObj.getDate()
+              );
+              // Handle end of month (e.g., setting day 31 in Feb)
+              if (targetDate.getMonth() !== fbDate.getMonth()) {
+                targetDate.setDate(0);
+              }
+              newDueDate = targetDate.toISOString().split('T')[0];
+            }
+
+            return {
+              id: fb.id,
+              name: updates.name || fb.name,
+              amount: updates.amount !== undefined ? updates.amount : fb.amount,
+              category_id: updates.categoryId || fb.category_id,
+              account_id: updates.accountId || fb.account_id,
+              due_date: newDueDate,
+              is_fixed: true,
+              user_id: fb.user_id,
+              type: fb.type,
+              status: fb.status
+            };
+          });
+
+          // Atualização em lote (Upsert)
+          const { error: upsertError } = await supabase
+            .from('bills')
+            .upsert(updatedBills);
+
+          if (upsertError) throw upsertError;
+
+          // Refletir no estado local
+          setState(prev => ({
+            ...prev,
+            bills: prev.bills.map(b => {
+              const updatedB = updatedBills.find(ub => ub.id === b.id);
+              if (updatedB) {
+                return {
+                  ...b,
+                  ...updates, // Aplica nome, amount, categoria
+                  dueDate: updatedB.due_date + "T00:00:00.000Z", // Sync com a data calculada
+                };
+              }
+              return b;
+            })
+          }));
+          toast({ title: 'Contas futuras atualizadas' });
+          return;
+        } catch (err) {
+          console.error('Error applying to future:', err);
+          throw err;
+        }
       }
 
       const { error } = await supabase.from('bills').update(dbUpdates).eq('id', id);

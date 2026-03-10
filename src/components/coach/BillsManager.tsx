@@ -292,7 +292,7 @@ export function BillsManager() {
                                 <input type="checkbox" id="isFixed" checked={isFixed} onChange={e => setIsFixed(e.target.checked)} className="w-4 h-4" />
                                 <Label htmlFor="isFixed" className="cursor-pointer">Conta Fixa / Recorrente?</Label>
                             </div>
-                            {editingBillId && isFixed && (
+                            {editingBillId && isFixed && !editingBillId.startsWith('virtual-') && (
                                 <div className="flex items-center gap-2 h-6 animate-fade-in">
                                     <input type="checkbox" id="applyFuture" checked={applyToFuture} onChange={e => setApplyToFuture(e.target.checked)} className="w-4 h-4" />
                                     <Label htmlFor="applyFuture" className="cursor-pointer text-xs text-primary font-bold">Aplicar a futuras?</Label>
