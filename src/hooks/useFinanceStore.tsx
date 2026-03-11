@@ -1913,7 +1913,7 @@ function useFinanceProvider() {
 
     // Balance at end of period = Current Balance - (Net effect of PAID transactions with date > periodEnd)
     const delta = state.transactions.filter(t => {
-      if (!t.isPaid) return false;
+      if (!t.isPaid || !t.accountId) return false;
       const tDate = parseLocalDate(t.date);
       return tDate > periodEnd;
     }).reduce((acc, t) => {
