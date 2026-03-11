@@ -1886,19 +1886,19 @@ function useFinanceProvider() {
     return currentRealBalance + delta;
   }, [state.accounts, state.transactions, viewDate, viewMode, parseLocalDate]);
 
-  // balanceRepair_v20260311_v8: Sincronia DEFINITIVA e REAL com extrato bancário
+  // balanceRepair_FINAL_STABLE: Fixação definitiva baseada no extrato real do usuário
   useEffect(() => {
     const itau = state.accounts.find(a =>
       a.name.toLowerCase().includes('itaú') ||
       a.bank.toLowerCase().includes('itaú')
     );
-    const syncDone = localStorage.getItem('itau_sync_v8_real');
+    const syncDone = localStorage.getItem('itau_sync_final_stable');
 
     if (itau && !syncDone) {
-      // Saldo Banco Real em 09/03: -99.79 (Confirmado pelo usuário)
+      // Valor exato do extrato bancário do dia 09/03 (Confirmado pelo usuário)
       updateAccount(itau.id, { balance: -99.79 });
-      localStorage.setItem('itau_sync_v8_real', 'true');
-      console.log('Sincronia Mestra Itaú V8: -99.79 aplicado (Saldo Real)');
+      localStorage.setItem('itau_sync_final_stable', 'true');
+      console.log('Sincronia Final Estável Itaú: -99.79 aplicado');
     }
   }, [state.accounts.length, updateAccount]);
 
