@@ -70,6 +70,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   // Transfer Specifics
   const [transferFrom, setTransferFrom] = useState('');
   const [transferTo, setTransferTo] = useState('');
+  const [transferToType, setTransferToType] = useState<'account' | 'card'>('account');
   const [transferDescription, setTransferDescription] = useState('Transferência entre contas');
 
   // Overdraft Warning State
@@ -78,7 +79,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [overdraftAccountName, setOverdraftAccountName] = useState('');
   const [pendingSubmitData, setPendingSubmitData] = useState<any>(null);
 
-  const { debts, createDebtWithInstallments, categories, subcategories, transferBetweenAccounts, getAccountViewBalance } = useFinanceStore();
+  const { debts, createDebtWithInstallments, categories, subcategories, transferBetweenAccounts, getAccountViewBalance, getCardExpenses } = useFinanceStore();
 
   const [openCategory, setOpenCategory] = useState(false);
   const [openSubcategory, setOpenSubcategory] = useState(false);
@@ -168,7 +169,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
     if (activeTab === 'transfer') {
       if (!transferFrom || !transferTo || !amount) return;
-      transferBetweenAccounts(transferFrom, transferTo, parseFloat(amount), transferDescription, date);
+      transferBetweenAccounts(transferFrom, transferTo, parseFloat(amount), transferDescription, date, transferToType);
       onClose();
       return;
     }
@@ -388,29 +389,55 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 </div>
               </div>
 
-              {/* Para: Conta Destino */}
+              {/* Para: Conta/Cartão Destino */}
               <div className="space-y-3">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Entrar na Conta</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Entrar no Destino</Label>
+                  <div className="flex bg-muted rounded-lg p-0.5">
+                    <button type="button" onClick={() => { setTransferToType('account'); setTransferTo(''); }} className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", transferToType === 'account' ? "bg-card shadow-sm" : "text-muted-foreground")}>Conta</button>
+                    <button type="button" onClick={() => { setTransferToType('card'); setTransferTo(''); }} className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", transferToType === 'card' ? "bg-card shadow-sm" : "text-muted-foreground")}>Cartão</button>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
-                  {accounts.map(a => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      onClick={() => setTransferTo(a.id)}
-                      className={cn(
-                        "flex flex-col items-start p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden",
-                        transferTo === a.id
-                          ? "border-primary bg-primary/5 shadow-md"
-                          : "border-transparent bg-muted/30 hover:bg-muted/50"
-                      )}
-                    >
-                      <div className="w-1.5 h-full absolute left-0 top-0" style={{ backgroundColor: a.color }} />
-                      <span className="text-xs font-bold truncate block w-full ml-1">{a.bank} - {a.name}</span>
-                      <span className="text-sm font-black mt-1 ml-1">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getAccountViewBalance(a.id))}
-                      </span>
-                    </button>
-                  ))}
+                  {transferToType === 'account' ? (
+                    accounts.map(a => (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => setTransferTo(a.id)}
+                        className={cn(
+                          "flex flex-col items-start p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden",
+                          transferTo === a.id
+                            ? "border-primary bg-primary/5 shadow-md"
+                            : "border-transparent bg-muted/30 hover:bg-muted/50"
+                        )}
+                      >
+                        <div className="w-1.5 h-full absolute left-0 top-0" style={{ backgroundColor: a.color }} />
+                        <span className="text-xs font-bold truncate block w-full ml-1">{a.bank} - {a.name}</span>
+                        <span className="text-sm font-black mt-1 ml-1">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getAccountViewBalance(a.id))}
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    creditCards.map(c => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setTransferTo(c.id)}
+                        className={cn(
+                          "flex flex-col items-start p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden",
+                          transferTo === c.id
+                            ? "border-primary bg-primary/5 shadow-md"
+                            : "border-transparent bg-muted/30 hover:bg-muted/50"
+                        )}
+                      >
+                        <div className="w-1.5 h-full absolute left-0 top-0 bg-primary" />
+                        <span className="text-xs font-bold truncate block w-full ml-1">{c.bank} - {c.name}</span>
+                        <span className="text-[10px] text-muted-foreground ml-1">Fatura: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getCardExpenses(c.id))}</span>
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
 

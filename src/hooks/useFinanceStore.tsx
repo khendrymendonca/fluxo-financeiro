@@ -903,7 +903,9 @@ function useFinanceProvider() {
         if (tx.isPaid && tx.accountId) {
           const tDate = parseLocalDate(tx.paymentDate || tx.date);
           if (tDate <= now) {
-            const change = tx.type === 'income' ? tx.amount : -tx.amount;
+            // Regra Especial de Pagamento de Fatura/Abatimento:
+            // Se viajou para um cartão (isInvoicePayment), sempre sai da conta
+            const change = tx.isInvoicePayment ? -tx.amount : (tx.type === 'income' ? tx.amount : -tx.amount);
             updateAccountBalance(tx.accountId, change);
           }
         }
@@ -1010,7 +1012,8 @@ function useFinanceProvider() {
         if (oldTx.isPaid && oldTx.accountId) {
           const oldDate = parseLocalDate(oldTx.paymentDate || oldTx.date);
           if (oldDate <= now) {
-            const reverse = oldTx.type === 'income' ? -oldTx.amount : oldTx.amount;
+            // Se era pagamento de fatura, o estorno é uma entrada (devolve pra conta)
+            const reverse = oldTx.isInvoicePayment ? oldTx.amount : (oldTx.type === 'income' ? -oldTx.amount : oldTx.amount);
             updateAccountBalance(oldTx.accountId, reverse);
           }
         }
@@ -1018,7 +1021,8 @@ function useFinanceProvider() {
         if (updatedTx.isPaid && updatedTx.accountId) {
           const newDate = parseLocalDate(updatedTx.paymentDate || updatedTx.date);
           if (newDate <= now) {
-            const apply = updatedTx.type === 'income' ? updatedTx.amount : -updatedTx.amount;
+            // Se é pagamento de fatura, sempre sai da conta
+            const apply = updatedTx.isInvoicePayment ? -updatedTx.amount : (updatedTx.type === 'income' ? updatedTx.amount : -updatedTx.amount);
             updateAccountBalance(updatedTx.accountId, apply);
           }
         }
@@ -1172,13 +1176,15 @@ function useFinanceProvider() {
       if (isPaid && effectiveAccountId) {
         const tDate = parseLocalDate(effectivePaymentDate);
         if (tDate <= now) {
-          const baseChange = tx.type === 'income' ? tx.amount : -tx.amount;
+          // Se for pagamento de fatura, sempre tira da conta
+          const baseChange = tx.isInvoicePayment ? -tx.amount : (tx.type === 'income' ? tx.amount : -tx.amount);
           updateAccountBalance(effectiveAccountId, baseChange);
         }
       } else if (!isPaid && tx.isPaid && tx.accountId) {
         const tDate = parseLocalDate(tx.paymentDate || tx.date);
         if (tDate <= now) {
-          const baseChange = tx.type === 'income' ? -tx.amount : tx.amount;
+          // Estorno de pagamento de fatura: devolve pra conta
+          const baseChange = tx.isInvoicePayment ? tx.amount : (tx.type === 'income' ? -tx.amount : tx.amount);
           updateAccountBalance(tx.accountId, baseChange);
         }
       }
@@ -1235,7 +1241,7 @@ function useFinanceProvider() {
     } catch (err) { toast({ title: 'Erro ao atualizar conta', variant: 'destructive' }); }
   }, []);
 
-  const transferBetweenAccounts = useCallback(async (fromAccountId: string, toAccountId: string, amount: number, description: string, customDate?: string) => {
+  const transferBetweenAccounts = useCallback(async (fromAccountId: string, toId: string, amount: number, description: string, customDate?: string, toType: 'account' | 'card' = 'account') => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -1261,15 +1267,17 @@ function useFinanceProvider() {
       // Transação de Entrada (Destino)
       const { data: inTx, error: err2 } = await supabase.from('transactions').insert({
         user_id: user.id,
-        description: `[Transferência] Entrada - ${description}`,
+        description: `[${toType === 'card' ? 'Pagamento Cartão' : 'Transferência'}] Entrada - ${description}`,
         amount: amount,
         type: 'income',
         category_id: null,
-        category: 'Transferência',
+        category: toType === 'card' ? 'Pagamento de Fatura' : 'Transferência',
         date: date,
-        account_id: toAccountId,
+        account_id: toType === 'account' ? toId : null,
+        card_id: toType === 'card' ? toId : null,
         is_paid: true,
         payment_date: date,
+        is_invoice_payment: toType === 'card',
         installment_group_id: groupId
       }).select().single();
       if (err2) throw err2;
@@ -1279,7 +1287,11 @@ function useFinanceProvider() {
       const tDate = parseLocalDate(date);
       if (tDate <= now) {
         await updateAccountBalance(fromAccountId, -amount);
-        await updateAccountBalance(toAccountId, amount);
+        // Só atualiza saldo se o destino for uma conta bancária. 
+        // Se for cartão, o abatimento já é computado dinamicamente via transactions.
+        if (toType === 'account') {
+          await updateAccountBalance(toId, amount);
+        }
       }
 
       setState(prev => ({
