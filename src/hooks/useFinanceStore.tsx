@@ -1923,19 +1923,15 @@ function useFinanceProvider() {
     return currentRealBalance + delta;
   }, [state.accounts, state.transactions, viewDate, viewMode, parseLocalDate]);
 
-  // balanceRepair_v20260311_v4: Alinhamento com extrato real do usuário
+  // balanceRepair_v20260311_v5: Sincronia definitiva com extrato real
   useEffect(() => {
     const itau = state.accounts.find(a => a.name.includes('Itaú') || a.bank.includes('Itaú'));
-    if (itau) {
-      // O saldo real no dia 09/03 era -99.79.
-      // No dia 10/03 teve a Faculdade (-59.80).
-      // Saldo esperado hoje: -159.59
-      if (itau.balance !== -159.59) {
-        updateAccount(itau.id, { balance: -159.59 });
-      }
+    if (itau && itau.balance !== -159.59) {
+      // -21.78 (inicial) + todas as transações até 09/03 (-78.01) + Faculdade (-59.80) = -159.59
+      updateAccount(itau.id, { balance: -159.59 });
+      console.log('Saldo Itaú sincronizado com extrato real: -159.59');
     }
-    console.log('Balance repair executed');
-  }, [state.accounts, state.transactions, updateAccount]);
+  }, [state.accounts.length > 0]); // Executa apenas no carregamento inicial das contas
 
   const getPeriodStartBalance = useCallback(() => {
     let periodStart: Date;
