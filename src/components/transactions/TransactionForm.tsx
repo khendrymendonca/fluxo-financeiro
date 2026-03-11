@@ -214,7 +214,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       categoryId,
       subcategoryId: subcategoryId || undefined,
       date,
-      accountId: type === 'income' ? (accountId || undefined) : (paymentMethod === 'account' ? accountId : undefined),
+      accountId: paymentMethod === 'account' ? accountId : undefined,
       cardId: paymentMethod === 'card' ? cardId : undefined,
       installmentTotal: activeTab === 'parcelamento' ? parseInt(installmentsCount) : undefined,
       isRecurring: activeTab === 'fixo',
@@ -557,10 +557,38 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 </div>
               )}
 
-              {/* Account selector for income */}
-              {type === 'income' && accounts.length > 0 && (
+
+
+              <div className="space-y-2">
+                <Label>{type === 'income' ? 'Onde será recebido?' : 'Forma de Pagamento'}</Label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('account')}
+                    className={cn(
+                      "flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all border",
+                      paymentMethod === 'account' ? (type === 'income' ? "bg-success text-success-foreground border-success" : "bg-primary text-primary-foreground border-primary") : "bg-muted/50 border-transparent"
+                    )}
+                  >
+                    Conta
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('card')}
+                    className={cn(
+                      "flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all border",
+                      paymentMethod === 'card' ? (type === 'income' ? "bg-success text-success-foreground border-success" : "bg-primary text-primary-foreground border-primary") : "bg-muted/50 border-transparent"
+                    )}
+                  >
+                    Cartão
+                  </button>
+                </div>
+              </div>
+
+              {/* Payment Method Details */}
+              {paymentMethod === 'account' && accounts.length > 0 && (
                 <div className="space-y-2">
-                  <Label>Conta de Destino</Label>
+                  <Label>Conta</Label>
                   <div className="grid grid-cols-2 gap-2">
                     {accounts.map((acc) => (
                       <button
@@ -570,7 +598,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                         className={cn(
                           "py-3 px-3 rounded-xl text-sm font-medium transition-all border flex items-center gap-2",
                           accountId === acc.id
-                            ? "bg-success text-success-foreground border-success shadow-sm"
+                            ? (type === 'income' ? "bg-success text-secondary-foreground border-success shadow-sm" : "bg-primary text-primary-foreground border-primary shadow-sm")
                             : "bg-muted/50 border-transparent hover:bg-muted"
                         )}
                       >
@@ -585,103 +613,57 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 </div>
               )}
 
-              {/* Payment Method & Debt Link (Expenses Only) */}
-              {type === 'expense' && (
-                <>
+              {paymentMethod === 'card' && creditCards.length > 0 && (
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Forma de Pagamento</Label>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('account')}
-                        className={cn(
-                          "flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all border",
-                          paymentMethod === 'account' ? "bg-primary text-primary-foreground border-primary" : "bg-muted/50 border-transparent"
-                        )}
-                      >
-                        Conta
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('card')}
-                        className={cn(
-                          "flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all border",
-                          paymentMethod === 'card' ? "bg-primary text-primary-foreground border-primary" : "bg-muted/50 border-transparent"
-                        )}
-                      >
-                        Cartão
-                      </button>
+                    <Label>Cartão</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {creditCards.map((card) => (
+                        <button
+                          key={card.id}
+                          type="button"
+                          onClick={() => setCardId(card.id)}
+                          className={cn(
+                            "py-2 px-3 rounded-xl text-sm font-medium transition-all border",
+                            cardId === card.id
+                              ? (type === 'income' ? "bg-success text-success-foreground border-success" : "bg-primary text-primary-foreground border-primary")
+                              : "bg-muted/50 border-transparent hover:bg-muted"
+                          )}
+                        >
+                          {card.name}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Payment Method Details */}
-                  {paymentMethod === 'account' && accounts.length > 0 && (
-                    <div className="space-y-2">
-                      <Label>Conta</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {accounts.map((acc) => (
-                          <button
-                            key={acc.id}
-                            type="button"
-                            onClick={() => setAccountId(acc.id)}
-                            className={cn(
-                              "py-3 px-3 rounded-xl text-sm font-medium transition-all border flex items-center gap-2",
-                              accountId === acc.id
-                                ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                : "bg-muted/50 border-transparent hover:bg-muted"
-                            )}
-                          >
-                            <div
-                              className="w-3 h-3 rounded-full flex-shrink-0"
-                              style={{ backgroundColor: acc.color }}
-                            />
-                            <span className="truncate">{acc.name}</span>
-                          </button>
-                        ))}
+                  {/* Invoice Reference View Only For Edits */}
+                  {initialData && (
+                    <div className="space-y-2 p-3 bg-muted/50 rounded-xl border border-dashed text-sm">
+                      <div className="flex items-center justify-between">
+                        <Label>Referência da Fatura</Label>
+                        <Input
+                          type="month"
+                          value={invoiceReference}
+                          onChange={e => setInvoiceReference(e.target.value)}
+                          className="w-32 h-8 text-xs bg-background"
+                        />
                       </div>
+                      <p className="text-xs text-muted-foreground">O mês correspondente desta cobrança específica. Editar altera apenas este lançamento.</p>
                     </div>
                   )}
-
-                  {paymentMethod === 'card' && creditCards.length > 0 && (
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Cartão</Label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {creditCards.map((card) => (
-                            <button key={card.id} type="button" onClick={() => setCardId(card.id)} className={cn("py-2 px-3 rounded-xl text-sm font-medium transition-all border", cardId === card.id ? "bg-primary text-primary-foreground border-primary" : "bg-muted/50 border-transparent hover:bg-muted")}>{card.name}</button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Invoice Reference View Only For Edits */}
-                      {initialData && (
-                        <div className="space-y-2 p-3 bg-muted/50 rounded-xl border border-dashed text-sm">
-                          <div className="flex items-center justify-between">
-                            <Label>Referência da Fatura</Label>
-                            <Input
-                              type="month"
-                              value={invoiceReference}
-                              onChange={e => setInvoiceReference(e.target.value)}
-                              className="w-32 h-8 text-xs bg-background"
-                            />
-                          </div>
-                          <p className="text-xs text-muted-foreground">O mês correspondente desta cobrança específica. Editar altera apenas este lançamento.</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {debts.length > 0 && (
-                    <div className="space-y-2 pt-2 border-t border-border">
-                      <Label>Vincular a uma Dívida (Opcional)</Label>
-                      <select className="w-full h-10 rounded-md border border-input bg-background px-3 py-2" value={selectedDebtId} onChange={e => setSelectedDebtId(e.target.value)}>
-                        <option value="">Selecione uma dívida...</option>
-                        {debts.map(d => <option key={d.id} value={d.id}>{d.name} (Resta: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(d.remainingAmount)})</option>)}
-                      </select>
-                    </div>
-                  )}
-                </>
+                </div>
               )}
+
+              {debts.length > 0 && type === 'expense' && (
+                <div className="space-y-2 pt-2 border-t border-border">
+                  <Label>Vincular a uma Dívida (Opcional)</Label>
+                  <select className="w-full h-10 rounded-md border border-input bg-background px-3 py-2" value={selectedDebtId} onChange={e => setSelectedDebtId(e.target.value)}>
+                    <option value="">Selecione uma dívida...</option>
+                    {debts.map(d => <option key={d.id} value={d.id}>{d.name} (Resta: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(d.remainingAmount)})</option>)}
+                  </select>
+                </div>
+              )}
+
               {/* Bulk Edit Option */}
               {initialData?.installmentGroupId && (
                 <div className="flex flex-col gap-2 p-3 bg-primary/5 rounded-xl border border-primary/20">
@@ -722,6 +704,6 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
           }
         }}
       />
-    </div>
+    </div >
   );
 }

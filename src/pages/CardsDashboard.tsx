@@ -19,10 +19,6 @@ export default function CardsDashboard() {
 
     const [showAddCard, setShowAddCard] = useState(false);
     const [showEditCard, setShowEditCard] = useState(false);
-    const [showAbatimento, setShowAbatimento] = useState(false);
-    const [abatimentoAmount, setAbatimentoAmount] = useState('');
-    const [abatimentoDate, setAbatimentoDate] = useState(new Date().toISOString().split('T')[0]);
-    const [abatimentoAccountId, setAbatimentoAccountId] = useState('');
 
     const { payBill } = useFinanceStore();
     const selectedCard = creditCards.find(c => c.id === selectedCardId);
@@ -76,7 +72,7 @@ export default function CardsDashboard() {
     };
 
     const currentInvoiceTransactions = selectedCardId ? getInvoiceTransactions(selectedCardId) : [];
-    const currentInvoiceTotal = currentInvoiceTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const currentInvoiceTotal = currentInvoiceTransactions.reduce((sum, t) => sum + (t.type === 'income' ? -t.amount : t.amount), 0);
 
     const stats = selectedCardId ? getCardStats(selectedCardId) : { used: 0, available: 0, limit: 0, percentUsed: 0 };
 
@@ -189,17 +185,7 @@ export default function CardsDashboard() {
                                                 </div>
                                             </div>
 
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    onClick={() => {
-                                                        setAbatimentoAmount('');
-                                                        setShowAbatimento(true);
-                                                    }}
-                                                    className="rounded-2xl h-12 px-6 bg-success hover:bg-success/90 text-white font-bold flex gap-2 items-center transition-all hover:scale-105 active:scale-95 shadow-lg shadow-success/20"
-                                                >
-                                                    <ArrowDownCircle className="w-5 h-5" /> Fazer Abatimento
-                                                </Button>
-                                            </div>
+
                                         </div>
 
                                         <div className="flex flex-wrap items-center gap-x-8 gap-y-4 pt-2 border-t border-border/50">
@@ -252,7 +238,9 @@ export default function CardsDashboard() {
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="font-black text-base">{formatCurrency(t.amount)}</p>
+                                                            <p className={cn("font-black text-base", t.type === 'income' ? "text-success" : "text-foreground")}>
+                                                                {t.type === 'income' ? '-' : ''}{formatCurrency(t.amount)}
+                                                            </p>
                                                             {t.installmentTotal && (
                                                                 <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tighter">Parc {t.installmentNumber}/{t.installmentTotal}</p>
                                                             )}
@@ -289,92 +277,6 @@ export default function CardsDashboard() {
                         onClose={() => setShowEditCard(false)}
                         onSave={(updated) => updateCreditCard(updated)}
                     />
-                </Portal>
-            )}
-            {showAbatimento && selectedCard && (
-                <Portal>
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto pt-20 pb-20">
-                        <div className="bg-card w-full max-w-md rounded-3xl shadow-2xl border border-border animate-in fade-in zoom-in duration-200">
-                            <div className="p-6 space-y-6">
-                                <div>
-                                    <h2 className="text-2xl font-black tracking-tight">Fazer Abatimento</h2>
-                                    <p className="text-sm text-muted-foreground">Fatura {selectedCard.name} — {format(viewDate, 'MMMM yyyy', { locale: ptBR })}</p>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest pl-1">Valor do Abatimento</label>
-                                        <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">R$</span>
-                                            <input
-                                                type="number"
-                                                autoFocus
-                                                value={abatimentoAmount}
-                                                onChange={e => setAbatimentoAmount(e.target.value)}
-                                                placeholder="0,00"
-                                                className="w-full h-14 pl-12 pr-4 rounded-2xl bg-muted/30 border border-border focus:border-success focus:ring-4 focus:ring-success/10 transition-all font-black text-xl outline-none"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest pl-1">Data do Pagamento</label>
-                                        <input
-                                            type="date"
-                                            value={abatimentoDate}
-                                            onChange={e => setAbatimentoDate(e.target.value)}
-                                            className="w-full h-12 px-4 rounded-xl bg-muted/30 border border-border focus:border-primary outline-none font-bold"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest pl-1">Conta de Origem</label>
-                                        <div className="grid grid-cols-1 gap-2">
-                                            {accounts.map(acc => (
-                                                <button
-                                                    key={acc.id}
-                                                    onClick={() => setAbatimentoAccountId(acc.id)}
-                                                    className={cn(
-                                                        "flex items-center justify-between p-4 rounded-2xl border-2 transition-all",
-                                                        abatimentoAccountId === acc.id
-                                                            ? "border-success bg-success/5 shadow-inner"
-                                                            : "border-transparent bg-muted/20 hover:bg-muted/40"
-                                                    )}
-                                                >
-                                                    <div className="flex items-center gap-3 text-left">
-                                                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-background border border-border">
-                                                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: acc.color }} />
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-bold text-sm leading-none mb-1">{acc.name}</p>
-                                                            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">{acc.bank}</p>
-                                                        </div>
-                                                    </div>
-                                                    {abatimentoAccountId === acc.id && <Check className="w-5 h-5 text-success" />}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-3 pt-2">
-                                    <Button variant="ghost" className="flex-1 h-12 rounded-xl font-bold" onClick={() => setShowAbatimento(false)}>Cancelar</Button>
-                                    <Button
-                                        disabled={!abatimentoAmount || !abatimentoAccountId || !abatimentoDate}
-                                        onClick={async () => {
-                                            // Mock de objeto Bill para o payBill conseguir identificar competência
-                                            const virtualBillId = `card-${selectedCard.id}-${format(viewDate, 'yyyy-MM')}`;
-                                            await payBill(virtualBillId, abatimentoAccountId, abatimentoDate, undefined, parseFloat(abatimentoAmount));
-                                            setShowAbatimento(false);
-                                        }}
-                                        className="flex-1 h-12 rounded-xl bg-success hover:bg-success/90 text-white font-bold animate-in slide-in-from-bottom-2"
-                                    >
-                                        Confirmar
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </Portal>
             )}
         </div>

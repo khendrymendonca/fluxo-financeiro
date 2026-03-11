@@ -44,28 +44,13 @@ export function BillsManager() {
         getTransactionTargetDate
     } = useFinanceStore();
 
-    const [showAddForm, setShowAddForm] = useState(false);
     const [filter, setFilter] = useState<'all' | 'payable' | 'receivable'>('all');
     const [isPaying, setIsPaying] = useState<any>(null);
     const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [paymentAmount, setPaymentAmount] = useState<string>('');
     const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
-    const [editingBillId, setEditingBillId] = useState<string | null>(null);
     const [expandedBillId, setExpandedBillId] = useState<string | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Form State
-    const [name, setName] = useState('');
-    const [amount, setAmount] = useState('');
-    const [type, setType] = useState<'payable' | 'receivable'>('payable');
-    const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
-    const [categoryId, setCategoryId] = useState('');
-    const [accountId, setAccountId] = useState('');
-    const [cardId, setCardId] = useState('');
-    const [formPaymentMethod, setFormPaymentMethod] = useState<'account' | 'card'>('account');
-    const [isFixed, setIsFixed] = useState(false);
-    const [formPaymentDate, setFormPaymentDate] = useState<string>('');
-    const [applyToFuture, setApplyToFuture] = useState(false);
 
     // Delete Confirmation State
     const [deletingBill, setDeletingBill] = useState<any>(null);
@@ -85,62 +70,7 @@ export function BillsManager() {
         return new Date(year, month - 1, day);
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!name || !amount || !dueDate || isSubmitting) return;
 
-        setIsSubmitting(true);
-        try {
-            if (editingBillId && !editingBillId.startsWith('virtual-')) {
-                await updateBill(editingBillId, {
-                    name,
-                    amount: parseFloat(amount),
-                    type,
-                    dueDate,
-                    categoryId: categoryId || undefined,
-                    accountId: formPaymentMethod === 'account' ? (accountId || undefined) : undefined,
-                    cardId: formPaymentMethod === 'card' ? (cardId || undefined) : undefined,
-                    isFixed,
-                    paymentDate: formPaymentDate || undefined
-                }, applyToFuture);
-                setEditingBillId(null);
-                setApplyToFuture(false);
-            } else {
-                // Se editingBillId existe e começa com virtual-, estamos "efetivando" uma projeção.
-                // Nesse caso, NÃO queremos disparar novas projeções (project: false).
-                // Se não há editingBillId, é uma conta nova. Se for fixa, queremos projetar (project: true).
-                const shouldProject = !editingBillId && isFixed;
-
-                await addBill({
-                    name,
-                    amount: parseFloat(amount),
-                    type,
-                    dueDate,
-                    categoryId: categoryId || undefined,
-                    accountId: formPaymentMethod === 'account' ? (accountId || undefined) : undefined,
-                    cardId: formPaymentMethod === 'card' ? (cardId || undefined) : undefined,
-                    status: 'pending',
-                    isFixed
-                }, shouldProject);
-
-                setEditingBillId(null);
-            }
-
-            // Reset form
-            setName('');
-            setAmount('');
-            setCategoryId('');
-            setAccountId('');
-            setCardId('');
-            setFormPaymentMethod('account');
-            setIsFixed(false);
-            setShowAddForm(false);
-        } catch (error) {
-            console.error('Error saving bill:', error);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
 
     const handleMarkAsPaid = async (targetId: string, isCard: boolean) => {
         if (!isPaying) return;
@@ -149,38 +79,7 @@ export function BillsManager() {
         setIsPaying(null);
     };
 
-    const handleEdit = (bill: any) => {
-        setEditingBillId(bill.id);
-        setName(bill.name);
-        setAmount(bill.amount.toString());
-        setType(bill.type);
-        setDueDate(bill.dueDate.split('T')[0]);
-        setCategoryId(bill.categoryId || '');
-        setAccountId(bill.accountId || '');
-        setCardId(bill.cardId || '');
-        setFormPaymentMethod(bill.cardId ? 'card' : 'account');
-        setIsFixed(bill.isFixed);
-        setFormPaymentDate(bill.paymentDate ? bill.paymentDate.split('T')[0] : (bill.status === 'paid' ? bill.dueDate.split('T')[0] : ''));
-        setApplyToFuture(false);
-        setShowAddForm(true);
-        // Scroll to form
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
 
-    const handleCancel = () => {
-        setShowAddForm(false);
-        setEditingBillId(null);
-        setName('');
-        setAmount('');
-        setCategoryId('');
-        setAccountId('');
-        setCardId('');
-        setFormPaymentMethod('account');
-        setIsFixed(false);
-        setFormPaymentDate('');
-        setApplyToFuture(false);
-        setApplyToFuture(false);
-    };
 
     const handleConfirmDeleteBill = () => {
         if (deletingBill) {
@@ -227,117 +126,11 @@ export function BillsManager() {
                             <p className="text-[10px] uppercase font-bold text-danger/70">A Pagar Pendente</p>
                             <p className="text-lg font-bold text-danger">{formatCurrency(totalPendingPayable)}</p>
                         </div>
-                        <Button onClick={() => setShowAddForm(!showAddForm)} className="rounded-xl h-full px-6 gap-2">
-                            {showAddForm ? 'Cancelar' : <><Plus className="w-4 h-4" /> Nova Conta</>}
-                        </Button>
                     </div>
                 </div>
             </div>
 
-            {/* Add Form */}
-            {showAddForm && (
-                <form onSubmit={handleSubmit} className="card-elevated p-6 border-2 border-primary/20 animate-scale-in space-y-4 bg-muted/30">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="space-y-2">
-                            <Label>Nome da Conta</Label>
-                            <Input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Aluguel" required />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Valor (R$)</Label>
-                            <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" required />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Vencimento</Label>
-                            <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Tipo</Label>
-                            <select className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" value={type} onChange={e => setType(e.target.value as any)}>
-                                <option value="payable">A Pagar (Despesa)</option>
-                                <option value="receivable">A Receber (Receita)</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                        <div className="space-y-2">
-                            <Label>Categoria</Label>
-                            <select className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" value={categoryId} onChange={e => setCategoryId(e.target.value)}>
-                                <option value="">Selecione...</option>
-                                {categories.filter(c => c.type === (type === 'payable' ? 'expense' : 'income')).map(cat => (
-                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label>Onde será pago/recebido?</Label>
-                            <div className="flex gap-2">
-                                <select
-                                    className="w-1/3 h-10 rounded-md border border-input bg-background px-2 py-2 text-xs"
-                                    value={formPaymentMethod}
-                                    onChange={(e) => setFormPaymentMethod(e.target.value as any)}
-                                >
-                                    <option value="account">Conta</option>
-                                    {type === 'payable' && <option value="card">Cartão</option>}
-                                </select>
-
-                                {formPaymentMethod === 'account' ? (
-                                    <select
-                                        className="w-2/3 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                        value={accountId}
-                                        onChange={(e) => setAccountId(e.target.value)}
-                                    >
-                                        <option value="">Selecione a Conta...</option>
-                                        {accounts.map(acc => (
-                                            <option key={acc.id} value={acc.id}>{acc.name}</option>
-                                        ))}
-                                    </select>
-                                ) : (
-                                    <select
-                                        className="w-2/3 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                        value={cardId}
-                                        onChange={(e) => setCardId(e.target.value)}
-                                    >
-                                        <option value="">Selecione o Cartão...</option>
-                                        {creditCards.map(card => (
-                                            <option key={card.id} value={card.id}>{card.name}</option>
-                                        ))}
-                                    </select>
-                                )}
-                            </div>
-                        </div>
-
-                        {editingBillId && currentMonthBills.find(b => b.id === editingBillId)?.status === 'paid' && (
-                            <div className="space-y-2 animate-fade-in">
-                                <Label className="text-success font-bold">Data do Pagamento</Label>
-                                <Input
-                                    type="date"
-                                    value={formPaymentDate}
-                                    onChange={e => setFormPaymentDate(e.target.value)}
-                                    className="border-success/30 focus:border-success"
-                                />
-                            </div>
-                        )}
-
-                        <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2 h-6">
-                                <input type="checkbox" id="isFixed" checked={isFixed} onChange={e => setIsFixed(e.target.checked)} className="w-4 h-4" />
-                                <Label htmlFor="isFixed" className="cursor-pointer">Conta Fixa / Recorrente?</Label>
-                            </div>
-                            {editingBillId && isFixed && !editingBillId.startsWith('virtual-') && (
-                                <div className="flex items-center gap-2 h-6 animate-fade-in">
-                                    <input type="checkbox" id="applyFuture" checked={applyToFuture} onChange={e => setApplyToFuture(e.target.checked)} className="w-4 h-4" />
-                                    <Label htmlFor="applyFuture" className="cursor-pointer text-xs text-primary font-bold">Aplicar a futuras?</Label>
-                                </div>
-                            )}
-                        </div>
-                        <Button type="submit" className="w-full rounded-xl h-11" disabled={isSubmitting}>
-                            {isSubmitting ? 'Salvando...' : (editingBillId ? 'Atualizar Conta' : 'Salvar Conta')}
-                        </Button>
-                    </div>
-                </form>
-            )}
 
             {/* Filters */}
             <div className="flex items-center gap-2 p-1 bg-muted rounded-2xl w-full overflow-x-auto no-scrollbar md:w-fit">
@@ -533,28 +326,7 @@ export function BillsManager() {
                                                     </Button>
                                                 </div>
                                             )}
-                                            {!bill.isVirtual && (
-                                                <>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={() => handleEdit(bill)}
-                                                        className="h-10 w-10 p-0 rounded-xl hover:bg-primary/10 hover:text-primary"
-                                                    >
-                                                        <Pencil className="w-5 h-5" />
-                                                    </Button>
-                                                    {!bill.isVirtual && (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => setDeletingBill(bill)}
-                                                            className="h-10 w-10 p-0 rounded-xl hover:bg-danger/10 hover:text-danger"
-                                                        >
-                                                            <Trash2 className="w-5 h-5" />
-                                                        </Button>
-                                                    )}
-                                                </>
-                                            )}
+
                                         </div>
                                     </div>
                                 </div>
