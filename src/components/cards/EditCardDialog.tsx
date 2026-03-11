@@ -128,6 +128,9 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
                             <div className="space-y-2">
                                 <Label>Dia Fechamento</Label>
                                 <Input type="number" min="1" max="31" value={closingDay} onChange={e => setClosingDay(e.target.value)} />
+                                <p className="text-[10px] text-primary font-bold">
+                                    ✨ Melhor dia para compra: {(parseInt(closingDay) % 31) + 1}
+                                </p>
                             </div>
                             <div className="space-y-2">
                                 <Label>Dia Vencimento</Label>

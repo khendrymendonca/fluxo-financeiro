@@ -38,6 +38,7 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
             dueDay: parseInt(dueDay),
             closingDay: parseInt(closingDay),
             isClosingDateFixed,
+            isActive: true,
         });
 
         // Reset form
@@ -103,6 +104,9 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
                                 onChange={e => setClosingDay(e.target.value)}
                                 required
                             />
+                            <p className="text-[10px] text-primary font-bold animate-pulse">
+                                ✨ Melhor dia para compra: {(parseInt(closingDay) % 31) + 1}
+                            </p>
                         </div>
                         <div className="space-y-2">
                             <Label>Dia Vencimento</Label>
