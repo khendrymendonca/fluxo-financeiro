@@ -1785,31 +1785,28 @@ function useFinanceProvider() {
 
   const getCardExpenses = useCallback((cardId: string) => {
     const cardTransactions = state.transactions.filter(t => t.cardId === cardId);
-
-    // Total gasto (compras) que vencem no mês selecionado
-    const spent = cardTransactions.filter(t => {
-      const targetDate = getTransactionTargetDate(t);
-      return t.type === 'expense' &&
-        !t.isInvoicePayment &&
-        targetDate.getMonth() === viewDate.getMonth() &&
-        targetDate.getFullYear() === viewDate.getFullYear();
-    }).reduce((acc, curr) => acc + curr.amount, 0);
-
     // Total pago/abatido para faturas deste mês
     const currentInvoiceMonthYear = format(viewDate, 'yyyy-MM');
     const paid = cardTransactions.filter(t =>
       t.isInvoicePayment && t.invoiceMonthYear === currentInvoiceMonthYear
     ).reduce((acc, curr) => acc + curr.amount, 0);
 
-    return Math.max(0, spent - paid);
+    const totalSpent = cardTransactions.filter(t => {
+      const targetDate = getTransactionTargetDate(t);
+      return !t.isInvoicePayment &&
+        targetDate.getMonth() === viewDate.getMonth() &&
+        targetDate.getFullYear() === viewDate.getFullYear();
+    }).reduce((acc, curr) => acc + (curr.type === 'expense' ? curr.amount : -curr.amount), 0);
+
+    return Math.max(0, totalSpent - paid);
   }, [state.transactions, viewDate, getTransactionTargetDate]);
 
   const getCardUsedLimit = useCallback((cardId: string) => {
     const cardTransactions = state.transactions.filter(t => t.cardId === cardId);
     const now = new Date();
 
-    const totalSpent = cardTransactions
-      .filter(t => t.type === 'expense' && !t.isInvoicePayment)
+    const spendingTotal = cardTransactions
+      .filter(t => !t.isInvoicePayment)
       .filter(t => {
         // Se for recorrência, só conta se a data já passou ou é hoje
         if (t.isRecurring) {
@@ -1819,13 +1816,13 @@ function useFinanceProvider() {
         // Se for parcelamento ou pontual, conta tudo (reserva o limite)
         return true;
       })
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
 
-    const totalPaid = cardTransactions
+    const paymentsTotal = cardTransactions
       .filter(t => t.isInvoicePayment)
       .reduce((sum, t) => sum + t.amount, 0);
 
-    return Math.max(0, totalSpent - totalPaid);
+    return Math.max(0, spendingTotal - paymentsTotal);
   }, [state.transactions]);
 
   const getCategoryExpenses = useCallback(() => {
