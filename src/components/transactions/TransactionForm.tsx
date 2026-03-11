@@ -78,7 +78,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [overdraftAccountName, setOverdraftAccountName] = useState('');
   const [pendingSubmitData, setPendingSubmitData] = useState<any>(null);
 
-  const { debts, createDebtWithInstallments, categories, subcategories, transferBetweenAccounts } = useFinanceStore();
+  const { debts, createDebtWithInstallments, categories, subcategories, transferBetweenAccounts, getAccountViewBalance } = useFinanceStore();
 
   const [openCategory, setOpenCategory] = useState(false);
   const [openSubcategory, setOpenSubcategory] = useState(false);
@@ -168,7 +168,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
     if (activeTab === 'transfer') {
       if (!transferFrom || !transferTo || !amount) return;
-      transferBetweenAccounts(transferFrom, transferTo, parseFloat(amount), transferDescription);
+      transferBetweenAccounts(transferFrom, transferTo, parseFloat(amount), transferDescription, date);
       onClose();
       return;
     }
@@ -349,74 +349,102 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               </div>
             </div>
           ) : activeTab === 'transfer' ? (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Conta de Origem (Sai)</Label>
-                <select
-                  value={transferFrom}
-                  onChange={(e) => setTransferFrom(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-input bg-background px-3 py-2 text-sm font-bold focus:border-primary outline-none"
-                  required
-                >
-                  <option value="">Selecione origem...</option>
-                  {accounts.map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.bank} - {a.name} (Saldo: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(a.balance)})
-                    </option>
-                  ))}
-                </select>
+            <div className="space-y-6">
+              {/* De: Conta Origem */}
+              <div className="space-y-3">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Sair da Conta</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {accounts.map(a => {
+                    const viewBalance = getAccountViewBalance(a.id);
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => setTransferFrom(a.id)}
+                        className={cn(
+                          "flex flex-col items-start p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden",
+                          transferFrom === a.id
+                            ? "border-primary bg-primary/5 shadow-md"
+                            : "border-transparent bg-muted/30 hover:bg-muted/50"
+                        )}
+                      >
+                        <div className="w-1.5 h-full absolute left-0 top-0" style={{ backgroundColor: a.color }} />
+                        <span className="text-xs font-bold truncate block w-full ml-1">{a.bank} - {a.name}</span>
+                        <span className={cn(
+                          "text-sm font-black mt-1 ml-1",
+                          viewBalance < 0 ? "text-danger" : "text-foreground"
+                        )}>
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(viewBalance)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              <div className="flex justify-center -my-2 relative z-10">
-                <div className="bg-muted rounded-full p-2 border-4 border-card">
-                  <ArrowRightLeft className="w-4 h-4 text-muted-foreground" />
+              <div className="flex justify-center -my-3 relative z-10">
+                <div className="bg-card rounded-full p-2.5 shadow-lg border border-border">
+                  <ArrowRightLeft className="w-5 h-5 text-primary rotate-90" />
+                </div>
+              </div>
+
+              {/* Para: Conta Destino */}
+              <div className="space-y-3">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Entrar na Conta</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {accounts.map(a => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => setTransferTo(a.id)}
+                      className={cn(
+                        "flex flex-col items-start p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden",
+                        transferTo === a.id
+                          ? "border-primary bg-primary/5 shadow-md"
+                          : "border-transparent bg-muted/30 hover:bg-muted/50"
+                      )}
+                    >
+                      <div className="w-1.5 h-full absolute left-0 top-0" style={{ backgroundColor: a.color }} />
+                      <span className="text-xs font-bold truncate block w-full ml-1">{a.bank} - {a.name}</span>
+                      <span className="text-sm font-black mt-1 ml-1">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getAccountViewBalance(a.id))}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Valor (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={amount}
+                    onChange={e => setAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="h-12 rounded-2xl border-2 focus:border-primary px-4 font-black text-xl"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Data</Label>
+                  <Input
+                    type="date"
+                    value={date}
+                    onChange={e => setDate(e.target.value)}
+                    className="h-12 rounded-2xl border-2 focus:border-primary px-4"
+                  />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Conta de Destino (Entra)</Label>
-                <select
-                  value={transferTo}
-                  onChange={(e) => setTransferTo(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-input bg-background px-3 py-2 text-sm font-bold focus:border-primary outline-none"
-                  required
-                >
-                  <option value="">Selecione destino...</option>
-                  {accounts.map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.bank} - {a.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Valor (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={amount}
-                  onChange={e => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  className="h-10 rounded-xl border focus:border-primary px-4 font-bold text-lg"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Descrição da Transferência</Label>
+                <Label>Descrição</Label>
                 <Input
                   value={transferDescription}
                   onChange={e => setTransferDescription(e.target.value)}
                   placeholder="Ex: Reserva mensal"
-                  className="h-10 rounded-xl border focus:border-primary px-4"
-                  required
+                  className="h-11 rounded-2xl border-2 focus:border-primary px-4"
                 />
-              </div>
-
-              <div className="p-4 bg-muted/50 rounded-xl text-xs text-muted-foreground">
-                Mova o saldo entre contas. Serão criadas duas transações: uma de saída e uma de entrada.
               </div>
             </div>
           ) : (

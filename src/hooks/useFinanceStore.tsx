@@ -1234,11 +1234,11 @@ function useFinanceProvider() {
     } catch (err) { toast({ title: 'Erro ao atualizar conta', variant: 'destructive' }); }
   }, []);
 
-  const transferBetweenAccounts = useCallback(async (fromAccountId: string, toAccountId: string, amount: number, description: string) => {
+  const transferBetweenAccounts = useCallback(async (fromAccountId: string, toAccountId: string, amount: number, description: string, customDate?: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const date = new Date().toISOString();
+      const date = customDate || new Date().toISOString();
       const groupId = crypto.randomUUID();
 
       // Transação de Saída (Origem)
