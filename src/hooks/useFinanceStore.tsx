@@ -430,8 +430,14 @@ function useFinanceProvider() {
           type: t.type
         }));
 
+        const now = new Date();
         for (const account of accountsRes.data) {
-          const accountTxs = mappedTxs.filter(t => t.accountId === account.id && t.isPaid && !t.cardId);
+          const accountTxs = mappedTxs.filter(t =>
+            t.accountId === account.id &&
+            t.isPaid &&
+            !t.cardId &&
+            parseLocalDate(t.payment_date || t.date) <= now
+          );
           const calculatedBalance = accountTxs.reduce((sum, t) => {
             return sum + (t.type === 'income' ? t.amount : -t.amount);
           }, 0);
@@ -447,7 +453,7 @@ function useFinanceProvider() {
             }));
           }
         }
-        localStorage.setItem('balanceRepair_v20260310_final', 'true');
+        localStorage.setItem('balanceRepair_v20260311_v3', 'true');
         toast({ title: 'Saldos reajustados para bater com seus lançamentos!' });
       }
     } catch (error) {
@@ -891,10 +897,14 @@ function useFinanceProvider() {
       }));
 
       // 2. Atualizar Saldos e Dívidas
+      const now = new Date();
       for (const tx of newTransactions) {
         if (tx.isPaid && tx.accountId) {
-          const change = tx.type === 'income' ? tx.amount : -tx.amount;
-          updateAccountBalance(tx.accountId, change); // Agora é otimista
+          const tDate = parseLocalDate(tx.paymentDate || tx.date);
+          if (tDate <= now) {
+            const change = tx.type === 'income' ? tx.amount : -tx.amount;
+            updateAccountBalance(tx.accountId, change);
+          }
         }
         if (tx.debtId) {
           // Abater saldo da dívida
@@ -994,15 +1004,22 @@ function useFinanceProvider() {
       // 1. Calcular diferença de saldo se necessário
       const oldTx = state.transactions.find(t => t.id === updatedTx.id);
       if (oldTx) {
-        // Estornar antigo
+        const now = new Date();
+        // Estornar antigo se afetou o saldo real
         if (oldTx.isPaid && oldTx.accountId) {
-          const reverse = oldTx.type === 'income' ? -oldTx.amount : oldTx.amount;
-          updateAccountBalance(oldTx.accountId, reverse);
+          const oldDate = parseLocalDate(oldTx.paymentDate || oldTx.date);
+          if (oldDate <= now) {
+            const reverse = oldTx.type === 'income' ? -oldTx.amount : oldTx.amount;
+            updateAccountBalance(oldTx.accountId, reverse);
+          }
         }
-        // Aplicar novo
+        // Aplicar novo se afetar o saldo real agora
         if (updatedTx.isPaid && updatedTx.accountId) {
-          const apply = updatedTx.type === 'income' ? updatedTx.amount : -updatedTx.amount;
-          updateAccountBalance(updatedTx.accountId, apply);
+          const newDate = parseLocalDate(updatedTx.paymentDate || updatedTx.date);
+          if (newDate <= now) {
+            const apply = updatedTx.type === 'income' ? updatedTx.amount : -updatedTx.amount;
+            updateAccountBalance(updatedTx.accountId, apply);
+          }
         }
       }
 
@@ -1150,13 +1167,19 @@ function useFinanceProvider() {
         }
       }
 
+      const now = new Date();
       if (isPaid && effectiveAccountId) {
-        const baseChange = tx.type === 'income' ? tx.amount : -tx.amount;
-        updateAccountBalance(effectiveAccountId, baseChange);
+        const tDate = parseLocalDate(effectivePaymentDate);
+        if (tDate <= now) {
+          const baseChange = tx.type === 'income' ? tx.amount : -tx.amount;
+          updateAccountBalance(effectiveAccountId, baseChange);
+        }
       } else if (!isPaid && tx.isPaid && tx.accountId) {
-        // Estorno: apenas se estava pago e tinha conta
-        const baseChange = tx.type === 'income' ? -tx.amount : tx.amount;
-        updateAccountBalance(tx.accountId, baseChange);
+        const tDate = parseLocalDate(tx.paymentDate || tx.date);
+        if (tDate <= now) {
+          const baseChange = tx.type === 'income' ? -tx.amount : tx.amount;
+          updateAccountBalance(tx.accountId, baseChange);
+        }
       }
 
       const label = tx.type === 'income' ? 'Recebimento' : 'Pagamento';

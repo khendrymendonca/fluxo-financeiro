@@ -187,11 +187,12 @@ export function AccountsManager({
       {/* Bank Accounts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
         {accounts.map((account) => {
-          const availableTotal = account.balance + (account.hasOverdraft ? (account.overdraftLimit || 0) : 0);
-          const isNegative = account.balance < 0;
-          const overdraftUsed = isNegative ? Math.abs(account.balance) : 0;
+          const viewAccountBalance = getAccountViewBalance(account.id);
+          const availableTotal = viewAccountBalance + (account.hasOverdraft ? (account.overdraftLimit || 0) : 0);
+          const isNegative = viewAccountBalance < 0;
+          const overdraftUsed = isNegative ? Math.abs(viewAccountBalance) : 0;
           const hasYield = (account.monthlyYieldRate || 0) > 0;
-          const estimatedMonthlyYield = hasYield ? (account.balance > 0 ? account.balance * ((account.monthlyYieldRate || 0) / 100) : 0) : 0;
+          const estimatedMonthlyYield = hasYield ? (viewAccountBalance > 0 ? viewAccountBalance * ((account.monthlyYieldRate || 0) / 100) : 0) : 0;
 
           return (
             <div
