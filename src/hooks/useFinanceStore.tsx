@@ -220,11 +220,10 @@ function useFinanceProvider() {
       const cardTransactions = state.transactions.filter(t => t.cardId === card.id);
       const spentTxs = cardTransactions.filter(t => {
         const targetDate = getTransactionTargetDate(t);
-        return t.type === 'expense' &&
-          !t.isInvoicePayment &&
+        return !t.isInvoicePayment &&
           targetDate.getMonth() === viewDate.getMonth() &&
           targetDate.getFullYear() === viewDate.getFullYear();
-      }).reduce((acc, curr) => acc + curr.amount, 0);
+      }).reduce((acc, curr) => acc + (curr.type === 'expense' ? curr.amount : -curr.amount), 0);
 
       const spentBills = state.bills.filter(b =>
         b.cardId === card.id &&
