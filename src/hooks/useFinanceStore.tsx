@@ -1846,31 +1846,11 @@ function useFinanceProvider() {
   }, [state.transactions, viewDate, getTransactionTargetDate]);
 
   const getCardUsedLimit = useCallback((cardId: string) => {
-    const cardTransactions = state.transactions.filter(t => t.cardId === cardId);
-    const now = new Date();
-
-    const spendingTotal = cardTransactions
-      .filter(t => !t.isInvoicePayment)
-      .filter(t => {
-        // Se for recorrência, só conta se a data já passou ou é hoje
-        if (t.isRecurring) {
-          const tDate = new Date(t.date);
-          return tDate <= now;
-        }
-        // Se for parcelamento ou pontual, conta tudo (reserva o limite)
-        return true;
-      })
-      .reduce((sum, t) => {
-        const amt = Number(t.amount);
-        return sum + (t.type === 'income' ? -amt : amt);
-      }, 0);
-
-    const paymentsTotal = cardTransactions
-      .filter(t => t.isInvoicePayment)
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    return Math.max(0, spendingTotal - paymentsTotal);
-  }, [state.transactions]);
+    // Para simplificar e bater com a visão do usuário:
+    // O limite consumido é o valor da fatura atual + faturas pendentes de outros meses
+    // Mas para o dashboard de detalhes, vamos usar o valor dinâmico da fatura atual.
+    return getCardExpenses(cardId);
+  }, [getCardExpenses]);
 
   const getCategoryExpenses = useCallback(() => {
     const expenses: Record<string, number> = {};
