@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Calendar, CreditCard, RotateCw, Coins, Check, ChevronsUpDown, Trash2 } from 'lucide-react';
+import { X, Calendar, CreditCard, RotateCw, Coins, Check, ChevronsUpDown, Trash2, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,7 +26,7 @@ interface TransactionFormProps {
   onClose: () => void;
 }
 
-type TabType = 'pontual' | 'parcelamento' | 'fixo' | 'divida';
+type TabType = 'pontual' | 'parcelamento' | 'fixo' | 'divida' | 'transfer';
 
 export function TransactionForm({ accounts, creditCards, initialData, onSubmit, onDelete, onClose }: TransactionFormProps) {
   const [activeTab, setActiveTab] = useState<TabType>('pontual');
@@ -67,13 +67,18 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [applyScope, setApplyScope] = useState<'this' | 'future' | 'all'>('this');
   const [isPaidLocally, setIsPaidLocally] = useState(initialData?.isPaid || false);
 
+  // Transfer Specifics
+  const [transferFrom, setTransferFrom] = useState('');
+  const [transferTo, setTransferTo] = useState('');
+  const [transferDescription, setTransferDescription] = useState('Transferência entre contas');
+
   // Overdraft Warning State
   const [showOverdraftWarning, setShowOverdraftWarning] = useState(false);
   const [overdraftAmountUsed, setOverdraftAmountUsed] = useState(0);
   const [overdraftAccountName, setOverdraftAccountName] = useState('');
   const [pendingSubmitData, setPendingSubmitData] = useState<any>(null);
 
-  const { debts, createDebtWithInstallments, categories, subcategories } = useFinanceStore();
+  const { debts, createDebtWithInstallments, categories, subcategories, transferBetweenAccounts } = useFinanceStore();
 
   const [openCategory, setOpenCategory] = useState(false);
   const [openSubcategory, setOpenSubcategory] = useState(false);
@@ -157,6 +162,13 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         interestRateMonthly: 0,
         startDate: new Date().toISOString(),
       }, debtFirstPaymentDate);
+      onClose();
+      return;
+    }
+
+    if (activeTab === 'transfer') {
+      if (!transferFrom || !transferTo || !amount) return;
+      transferBetweenAccounts(transferFrom, transferTo, parseFloat(amount), transferDescription);
       onClose();
       return;
     }
@@ -290,6 +302,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
             { id: 'parcelamento', label: 'Parcelado', icon: CreditCard },
             { id: 'fixo', label: 'Fixo', icon: RotateCw },
             { id: 'divida', label: 'Dívida', icon: Calendar },
+            { id: 'transfer', label: 'Transferência', icon: ArrowRightLeft },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -333,6 +346,77 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               </div>
               <div className="p-4 bg-muted/50 rounded-xl text-sm text-muted-foreground">
                 Isso criará um registro em <strong>Controle de Dívidas</strong> e lançará {debtInstallments || 0} despesas futuras no seu contas a pagar.
+              </div>
+            </div>
+          ) : activeTab === 'transfer' ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Conta de Origem (Sai)</Label>
+                <select
+                  value={transferFrom}
+                  onChange={(e) => setTransferFrom(e.target.value)}
+                  className="w-full h-10 rounded-xl border border-input bg-background px-3 py-2 text-sm font-bold focus:border-primary outline-none"
+                  required
+                >
+                  <option value="">Selecione origem...</option>
+                  {accounts.map(a => (
+                    <option key={a.id} value={a.id}>
+                      {a.bank} - {a.name} (Saldo: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(a.balance)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-center -my-2 relative z-10">
+                <div className="bg-muted rounded-full p-2 border-4 border-card">
+                  <ArrowRightLeft className="w-4 h-4 text-muted-foreground" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Conta de Destino (Entra)</Label>
+                <select
+                  value={transferTo}
+                  onChange={(e) => setTransferTo(e.target.value)}
+                  className="w-full h-10 rounded-xl border border-input bg-background px-3 py-2 text-sm font-bold focus:border-primary outline-none"
+                  required
+                >
+                  <option value="">Selecione destino...</option>
+                  {accounts.map(a => (
+                    <option key={a.id} value={a.id}>
+                      {a.bank} - {a.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Valor (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="h-10 rounded-xl border focus:border-primary px-4 font-bold text-lg"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Descrição da Transferência</Label>
+                <Input
+                  value={transferDescription}
+                  onChange={e => setTransferDescription(e.target.value)}
+                  placeholder="Ex: Reserva mensal"
+                  className="h-10 rounded-xl border focus:border-primary px-4"
+                  required
+                />
+              </div>
+
+              <div className="p-4 bg-muted/50 rounded-xl text-xs text-muted-foreground">
+                Mova o saldo entre contas. Serão criadas duas transações: uma de saída e uma de entrada.
               </div>
             </div>
           ) : (
@@ -702,8 +786,8 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
             </>
           )}
 
-          <Button type="submit" className={cn("w-full rounded-xl py-6 font-semibold", activeTab === 'divida' ? "bg-primary" : type === 'income' ? "bg-success hover:bg-success/90" : "bg-danger hover:bg-danger/90")}>
-            {activeTab === 'divida' ? 'Criar Dívida e Parcelas' : 'Salvar Lançamento'}
+          <Button type="submit" className={cn("w-full rounded-xl py-6 font-semibold", activeTab === 'divida' || activeTab === 'transfer' ? "bg-primary" : type === 'income' ? "bg-success hover:bg-success/90" : "bg-danger hover:bg-danger/90")}>
+            {activeTab === 'divida' ? 'Criar Dívida e Parcelas' : activeTab === 'transfer' ? 'Confirmar Transferência' : 'Salvar Lançamento'}
           </Button>
 
         </form>
