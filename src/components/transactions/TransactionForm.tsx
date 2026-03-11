@@ -58,7 +58,11 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [debtFirstPaymentDate, setDebtFirstPaymentDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Invoice Specifics
-  const [invoiceReference, setInvoiceReference] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+  const [invoiceReference, setInvoiceReference] = useState(() => {
+    if (initialData?.invoiceMonthYear) return initialData.invoiceMonthYear;
+    if (initialData?.date) return initialData.date.slice(0, 7);
+    return new Date().toISOString().slice(0, 7);
+  });
 
   const [applyScope, setApplyScope] = useState<'this' | 'future' | 'all'>('this');
   const [isPaidLocally, setIsPaidLocally] = useState(initialData?.isPaid || false);
@@ -123,6 +127,22 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       }
     }
   }, [description, categories, categoryId]);
+
+  // Sync active tab with transaction type on edit
+  useEffect(() => {
+    if (initialData) {
+      if (initialData.transactionType === 'recurring' || initialData.isRecurring) {
+        setActiveTab('fixo');
+      } else if (initialData.transactionType === 'installment' || (initialData.installmentTotal && initialData.installmentTotal > 1)) {
+        setActiveTab('parcelamento');
+        setInstallmentsCount(initialData.installmentTotal?.toString() || '2');
+      } else if (initialData.debtId) {
+        setActiveTab('divida');
+      } else {
+        setActiveTab('pontual');
+      }
+    }
+  }, [initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,7 +240,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       isRecurring: activeTab === 'fixo',
       recurrence: activeTab === 'fixo' ? recurrence : undefined,
       debtId: selectedDebtId || undefined,
-      invoiceMonthYear: (paymentMethod === 'card' && type === 'expense') ? invoiceReference : undefined,
+      invoiceMonthYear: paymentMethod === 'card' ? invoiceReference : undefined,
       isPaid: initialData ? isPaidLocally : (new Date(date) <= new Date()),
       paymentDate: (initialData ? isPaidLocally : (new Date(date) <= new Date())) ? date : undefined,
       userId: initialData?.userId || ''

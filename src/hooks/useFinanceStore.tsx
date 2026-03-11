@@ -949,6 +949,7 @@ function useFinanceProvider() {
               subcategory_id: updatedTx.subcategoryId,
               account_id: updatedTx.accountId,
               card_id: updatedTx.cardId,
+              transaction_type: updatedTx.transactionType
             })
             .eq('installment_group_id', updatedTx.installmentGroupId);
 
@@ -963,7 +964,18 @@ function useFinanceProvider() {
             transactions: prev.transactions.map(t => {
               if (t.installmentGroupId === updatedTx.installmentGroupId) {
                 if (applyScope === 'all' || (applyScope === 'future' && (t.installmentNumber || 0) >= (updatedTx.installmentNumber || 0))) {
-                  return { ...t, ...updatedTx, id: t.id, installmentNumber: t.installmentNumber, date: t.date };
+                  // Somente campos comuns são atualizados em massa.
+                  // Preservamos id, date, invoiceMonthYear, installmentNumber, isPaid, paymentDate
+                  return {
+                    ...t,
+                    description: updatedTx.description,
+                    amount: updatedTx.amount,
+                    categoryId: updatedTx.categoryId,
+                    subcategoryId: updatedTx.subcategoryId,
+                    accountId: updatedTx.accountId,
+                    cardId: updatedTx.cardId,
+                    transactionType: updatedTx.transactionType
+                  };
                 }
               }
               return t;
