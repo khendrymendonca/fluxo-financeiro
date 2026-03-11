@@ -1999,8 +1999,14 @@ function useFinanceProvider() {
     totalBalance: state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0),
     viewBalance,
     getAccountViewBalance,
-    totalIncome: currentMonthTransactions.filter(t => t.type === 'income' && !t.isInvoicePayment).reduce((acc, t) => acc + Number(t.amount), 0),
-    totalExpenses: currentMonthTransactions.filter(t => t.type === 'expense' && !t.isInvoicePayment).reduce((acc, t) => acc + Number(t.amount), 0),
+    totalIncome: (
+      currentMonthTransactions.filter(t => t.type === 'income' && !t.isInvoicePayment).reduce((acc, t) => acc + Number(t.amount), 0) +
+      currentMonthBills.filter(b => b.type === 'receivable' && b.status === 'pending').reduce((acc, b) => acc + Number(b.amount), 0)
+    ),
+    totalExpenses: (
+      currentMonthTransactions.filter(t => t.type === 'expense' && !t.isInvoicePayment).reduce((acc, t) => acc + Number(t.amount), 0) +
+      currentMonthBills.filter(b => b.type === 'payable' && b.status === 'pending').reduce((acc, b) => acc + Number(b.amount), 0)
+    ),
     currentMonthTransactions,
     currentMonthBills,
     getCardExpenses,
