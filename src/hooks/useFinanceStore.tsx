@@ -223,7 +223,10 @@ function useFinanceProvider() {
         return !t.isInvoicePayment &&
           targetDate.getMonth() === viewDate.getMonth() &&
           targetDate.getFullYear() === viewDate.getFullYear();
-      }).reduce((acc, curr) => acc + (curr.type === 'expense' ? curr.amount : -curr.amount), 0);
+      }).reduce((acc, curr) => {
+        const amt = Number(curr.amount);
+        return acc + (curr.type === 'income' ? -amt : amt);
+      }, 0);
 
       const spentBills = state.bills.filter(b =>
         b.cardId === card.id &&
@@ -1815,7 +1818,10 @@ function useFinanceProvider() {
         // Se for parcelamento ou pontual, conta tudo (reserva o limite)
         return true;
       })
-      .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
+      .reduce((sum, t) => {
+        const amt = Number(t.amount);
+        return sum + (t.type === 'income' ? -amt : amt);
+      }, 0);
 
     const paymentsTotal = cardTransactions
       .filter(t => t.isInvoicePayment)
