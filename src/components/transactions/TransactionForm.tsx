@@ -273,7 +273,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div>
             <h2 className="text-xl font-semibold">{initialData ? 'Editar Lançamento' : 'Novo Lançamento'}</h2>
-            <p className="text-sm text-muted-foreground">{initialData ? 'Altere os dados abaixo' : 'Adicione uma nova receita ou despesa'}</p>
+            <p className="text-sm text-muted-foreground">{initialData ? 'Altere os dados abaixo' : 'Mecânica V2 • Registre uma transação ou transferência'}</p>
           </div>
           <div className="flex items-center gap-2">
             {initialData && onDelete && (
