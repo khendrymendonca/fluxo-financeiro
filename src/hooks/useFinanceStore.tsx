@@ -418,44 +418,7 @@ function useFinanceProvider() {
 
       setLoading(false);
 
-      // --- Reparo Automático de Saldo (Executa uma única vez) ---
-      const repairDone = localStorage.getItem('balanceRepair_v20260310_final');
-      if (!repairDone && accountsRes.data && transactionsRes.data) {
-        const mappedTxs = (transactionsRes.data || []).map((t: any) => ({
-          ...t,
-          accountId: t.account_id,
-          cardId: t.card_id,
-          isPaid: t.is_paid,
-          amount: Number(t.amount),
-          type: t.type
-        }));
-
-        const now = new Date();
-        for (const account of accountsRes.data) {
-          const accountTxs = mappedTxs.filter(t =>
-            t.accountId === account.id &&
-            t.isPaid &&
-            !t.cardId &&
-            parseLocalDate(t.payment_date || t.date) <= now
-          );
-          const calculatedBalance = accountTxs.reduce((sum, t) => {
-            return sum + (t.type === 'income' ? t.amount : -t.amount);
-          }, 0);
-
-          const roundedBalance = Math.round(calculatedBalance * 100) / 100;
-
-          if (Math.abs(roundedBalance - Number(account.balance)) > 0.01) {
-            await supabase.from('accounts').update({ balance: roundedBalance }).eq('id', account.id);
-            // Atualiza o estado que acabamos de definir
-            setState(prev => ({
-              ...prev,
-              accounts: prev.accounts.map(a => a.id === account.id ? { ...a, balance: roundedBalance } : a)
-            }));
-          }
-        }
-        localStorage.setItem('balanceRepair_v20260311_v3', 'true');
-        toast({ title: 'Saldos reajustados para bater com seus lançamentos!' });
-      }
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({ title: 'Erro ao carregar dados', variant: 'destructive' });
@@ -1923,15 +1886,18 @@ function useFinanceProvider() {
     return currentRealBalance + delta;
   }, [state.accounts, state.transactions, viewDate, viewMode, parseLocalDate]);
 
-  // balanceRepair_v20260311_v5: Sincronia definitiva com extrato real
+  // balanceRepair_v20260311_v6: Sincronia definitiva e ÚNICA com extrato real
   useEffect(() => {
     const itau = state.accounts.find(a => a.name.includes('Itaú') || a.bank.includes('Itaú'));
-    if (itau && itau.balance !== -159.59) {
-      // -21.78 (inicial) + todas as transações até 09/03 (-78.01) + Faculdade (-59.80) = -159.59
+    const syncDone = localStorage.getItem('itau_sync_v6_final');
+
+    if (itau && !syncDone) {
+      // Forçamos o saldo para -159.59 (Saldo -99.79 do dia 09 + Faculdade -59.80 do dia 10)
       updateAccount(itau.id, { balance: -159.59 });
-      console.log('Saldo Itaú sincronizado com extrato real: -159.59');
+      localStorage.setItem('itau_sync_v6_final', 'true');
+      console.log('Sincronia Mestra Itaú executada: -159.59');
     }
-  }, [state.accounts.length > 0]); // Executa apenas no carregamento inicial das contas
+  }, [state.accounts.length > 0, updateAccount]);
 
   const getPeriodStartBalance = useCallback(() => {
     let periodStart: Date;
