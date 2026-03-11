@@ -1247,7 +1247,8 @@ function useFinanceProvider() {
         description: `[Transferência] Saída - ${description}`,
         amount: amount,
         type: 'expense',
-        category_id: '',
+        category_id: null,
+        category: 'Transferência',
         date: date,
         account_id: fromAccountId,
         is_paid: true,
@@ -1262,7 +1263,8 @@ function useFinanceProvider() {
         description: `[Transferência] Entrada - ${description}`,
         amount: amount,
         type: 'income',
-        category_id: '',
+        category_id: null,
+        category: 'Transferência',
         date: date,
         account_id: toAccountId,
         is_paid: true,
@@ -1271,9 +1273,13 @@ function useFinanceProvider() {
       }).select().single();
       if (err2) throw err2;
 
-      // Update balances
-      await updateAccountBalance(fromAccountId, -amount);
-      await updateAccountBalance(toAccountId, amount);
+      // Update balances only if transfer is for today or past (Mecânica de Saldo Real)
+      const now = new Date();
+      const tDate = parseLocalDate(date);
+      if (tDate <= now) {
+        await updateAccountBalance(fromAccountId, -amount);
+        await updateAccountBalance(toAccountId, amount);
+      }
 
       setState(prev => ({
         ...prev,
