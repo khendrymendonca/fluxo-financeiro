@@ -832,7 +832,8 @@ function useFinanceProvider() {
           installment_total: instTotal || txData.installmentTotal || null,
           debt_id: txData.debtId || null,
           is_paid: txData.isPaid !== undefined ? txData.isPaid : (parseLocalDate(txData.date) <= new Date()),
-          payment_date: txData.paymentDate || (txData.isPaid ? txData.date : (parseLocalDate(txData.date) <= new Date() ? txData.date : null))
+          payment_date: txData.paymentDate || (txData.isPaid ? txData.date : (parseLocalDate(txData.date) <= new Date() ? txData.date : null)),
+          is_invoice_payment: txData.isInvoicePayment || false
         });
       };
 
