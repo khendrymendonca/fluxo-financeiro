@@ -231,7 +231,7 @@ function useFinanceProvider() {
         b.categoryId !== 'card-payment' &&
         new Date(b.dueDate).getMonth() === viewDate.getMonth() &&
         new Date(b.dueDate).getFullYear() === viewDate.getFullYear()
-      ).reduce((acc, curr) => acc + curr.amount, 0);
+      ).reduce((acc, curr) => acc + (curr.type === 'payable' ? curr.amount : -curr.amount), 0);
 
       const spent = spentTxs + spentBills;
 

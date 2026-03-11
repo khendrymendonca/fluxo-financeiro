@@ -458,18 +458,26 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                               .map(t => (
                                 <div key={t.id} className="flex items-center justify-between p-2.5 rounded-xl bg-background/60 border border-border/30 hover:border-primary/20 transition-all">
                                   <div className="flex items-center gap-3">
-                                    <div className="p-1.5 rounded-lg bg-danger/5 text-danger">
-                                      <ArrowDownRight className="w-4 h-4" />
+                                    <div className={cn(
+                                      "p-1.5 rounded-lg",
+                                      t.type === 'income' ? "bg-success/5 text-success" : "bg-danger/5 text-danger"
+                                    )}>
+                                      {t.type === 'income' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
                                     </div>
                                     <div>
                                       <p className="text-xs font-bold">{t.description}</p>
                                       <p className="text-[9px] text-muted-foreground mt-0.5">
                                         {formatShortDate(t.date)} • {categories.find(c => c.id === t.categoryId)?.name || 'Outros'}
-                                        {t.installmentNumber && ` • Parcela ${t.installmentNumber}/${t.installmentTotal}`}
+                                        {t.installmentNumber && ` • Parcela ${t.installmentNumber}${t.installmentTotal ? `/${t.installmentTotal}` : ''}`}
                                       </p>
                                     </div>
                                   </div>
-                                  <span className="text-xs font-black text-danger">{formatCurrency(t.amount)}</span>
+                                  <span className={cn(
+                                    "text-xs font-black",
+                                    t.type === 'income' ? "text-success" : "text-danger"
+                                  )}>
+                                    {t.type === 'income' ? '-' : ''}{formatCurrency(t.amount)}
+                                  </span>
                                 </div>
                               ))}
 

@@ -325,7 +325,7 @@ export function BillsManager() {
                                                                 <p className="text-xs font-bold leading-none">{t.description}</p>
                                                                 <p className="text-[9px] text-muted-foreground mt-0.5">
                                                                     {format(parseLocalDate(t.date), "dd/MM")} • {categories.find(c => c.id === t.categoryId)?.name || 'Outros'}
-                                                                    {t.installmentNumber && ` • Parcela ${t.installmentNumber}/${t.installmentTotal}`}
+                                                                    {t.installmentNumber && ` • Parcela ${t.installmentNumber}${t.installmentTotal ? `/${t.installmentTotal}` : ''}`}
                                                                 </p>
                                                             </div>
                                                         </div>
