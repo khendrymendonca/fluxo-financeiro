@@ -1886,31 +1886,20 @@ function useFinanceProvider() {
       periodEnd = new Date(viewDate.getFullYear(), 11, 31, 23, 59, 59, 999);
     }
 
-    const totalInitialBalance = state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+    const currentRealBalance = state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
 
-    // Sum all transactions that occurred until periodEnd
-    // Note: We need to know if the account 'balance' in state is the INITIAL balance or CURRENT balance.
-    // Looking at addAccount/updateAccount, it seems 'balance' is the CURRENT balance in the DB.
-    // However, for historical views, we need to reconstruct the balance.
-    // Let's assume the DB 'balance' is the current real-time balance.
-
-    const now = new Date();
-    if (periodEnd >= now) {
-      return state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
-    }
-
-    // Historical Balance = Current Balance - (Sum of all transactions since periodEnd)
+    // Balance at end of period = Current Balance - (Net effect of PAID transactions with date > periodEnd)
     const delta = state.transactions.filter(t => {
-      const tDate = new Date(t.date);
+      if (!t.isPaid) return false;
+      const tDate = parseLocalDate(t.date);
       return tDate > periodEnd;
     }).reduce((acc, t) => {
-      // If it's an income AFTER the period, we subtract it to go back.
-      // If it's an expense AFTER the period, we add it back.
-      return acc + (t.type === 'income' ? -t.amount : t.amount);
+      const amt = Number(t.amount);
+      return acc + (t.type === 'income' ? -amt : amt);
     }, 0);
 
-    return state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0) + delta;
-  }, [state.accounts, state.transactions, viewDate, viewMode]);
+    return currentRealBalance + delta;
+  }, [state.accounts, state.transactions, viewDate, viewMode, parseLocalDate]);
 
   const getPeriodStartBalance = useCallback(() => {
     let periodStart: Date;
@@ -1946,7 +1935,6 @@ function useFinanceProvider() {
   const getAccountViewBalance = useCallback((accountId: string) => {
     const account = state.accounts.find(a => a.id === accountId);
     if (!account) return 0;
-
     const currentBalance = Number(account.balance);
 
     let periodEnd: Date;
@@ -1959,16 +1947,16 @@ function useFinanceProvider() {
       periodEnd = new Date(viewDate.getFullYear(), 11, 31, 23, 59, 59, 999);
     }
 
-    const now = new Date();
-    if (periodEnd >= now) return currentBalance;
-
     const delta = state.transactions
-      .filter(t => t.accountId === accountId)
-      .filter(t => new Date(t.date) > periodEnd)
-      .reduce((acc, t) => acc + (t.type === 'income' ? -t.amount : t.amount), 0);
+      .filter(t => t.accountId === accountId && t.isPaid)
+      .filter(t => parseLocalDate(t.date) > periodEnd)
+      .reduce((acc, t) => {
+        const amt = Number(t.amount);
+        return acc + (t.type === 'income' ? -amt : amt);
+      }, 0);
 
     return currentBalance + delta;
-  }, [state.accounts, state.transactions, viewDate, viewMode]);
+  }, [state.accounts, state.transactions, viewDate, viewMode, parseLocalDate]);
 
   const viewBalance = getViewBalance();
 
