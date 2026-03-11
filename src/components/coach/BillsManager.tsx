@@ -201,43 +201,7 @@ export function BillsManager() {
                                                     </button>
                                                 )}
                                             </div>
-                                            {/* Dropdown de Detalhes da Fatura */}
-                                            {expandedBillId === bill.id && bill.categoryId === 'card-payment' && bill.cardId && (
-                                                <div className="mt-4 space-y-2 border-l-2 border-primary/20 pl-4 animate-in slide-in-from-top-2">
-                                                    <p className="text-[10px] font-black uppercase text-muted-foreground mb-2">Compras e Contas no Período</p>
-                                                    {/* Transações Reais */}
-                                                    {transactions.filter(t => {
-                                                        const targetDate = getTransactionTargetDate(t);
-                                                        return t.cardId === bill.cardId &&
-                                                            !t.isInvoicePayment &&
-                                                            targetDate.getMonth() === viewDate.getMonth() &&
-                                                            targetDate.getFullYear() === viewDate.getFullYear();
-                                                    }).map(t => (
-                                                        <div key={t.id} className="flex justify-between items-center text-xs py-1 border-b border-border/50">
-                                                            <div>
-                                                                <p className="font-bold">{t.description}</p>
-                                                                <p className="text-[10px] text-muted-foreground">{format(new Date(t.date), 'dd/MM')}</p>
-                                                            </div>
-                                                            <span className="font-black text-danger">{formatCurrency(t.amount)}</span>
-                                                        </div>
-                                                    ))}
-                                                    {/* Contas Assignadas ao Cartão */}
-                                                    {bills.filter(b =>
-                                                        b.cardId === bill.cardId &&
-                                                        b.categoryId !== 'card-payment' &&
-                                                        new Date(b.dueDate).getMonth() === viewDate.getMonth() &&
-                                                        new Date(b.dueDate).getFullYear() === viewDate.getFullYear()
-                                                    ).map(b => (
-                                                        <div key={b.id} className="flex justify-between items-center text-xs py-1 border-b border-border/50">
-                                                            <div>
-                                                                <p className="font-bold">{b.name}</p>
-                                                                <p className="text-[10px] text-muted-foreground">{format(new Date(b.dueDate), 'dd/MM')} • Conta</p>
-                                                            </div>
-                                                            <span className="font-black text-danger">{formatCurrency(b.amount)}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
+
                                             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                                                 <Calendar className="w-3 h-3" />
                                                 {bill.status === 'paid' && (bill.paymentDate || bill.dueDate) ? (
