@@ -29,7 +29,6 @@ import { BillsManager } from '@/components/coach/BillsManager';
 import { CategoriesManager } from '@/components/coach/CategoriesManager';
 import { SmartInsights } from '@/components/coach/SmartInsights';
 import { ExportManager } from '@/components/dashboard/ExportManager';
-import { toast } from '@/components/ui/use-toast';
 import { AccountEvolution } from '@/components/dashboard/AccountEvolution';
 import { cn } from '@/lib/utils';
 
@@ -85,23 +84,19 @@ export default function Index() {
     loading,
     viewBalance,
     getPeriodStartBalance,
-    viewDate
   } = useFinanceStore();
 
-  const balance = totalIncome - totalExpenses;
+  // ✅ FIX: renomeado para periodBalance para não confundir com viewBalance
+  const periodBalance = totalIncome - totalExpenses;
   const categoryExpenses = getCategoryExpenses();
   const emergencyData = getEmergencyFundData();
 
   const showCoachOnboarding = !loading && categories.length === 0;
 
-  const handleEditTransaction = (item: any) => {
-    if (item.isBill) {
-      // Deixamos o TransactionList tratar o clique em contas (geralmente para pagar)
-      return;
-    } else {
-      setEditingTransaction(item);
-      setShowTransactionForm(true);
-    }
+  // ✅ FIX: removido bloco silencioso de bills — TransactionList já trata bills diretamente
+  const handleEditTransaction = (item: Transaction) => {
+    setEditingTransaction(item);
+    setShowTransactionForm(true);
   };
 
   const handleToggleSidebar = (expanded: boolean) => {
@@ -121,7 +116,10 @@ export default function Index() {
               </div>
               <div className="flex items-center gap-3">
                 <MonthSelector />
-                <Button onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }} className="gap-2 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
+                <Button
+                  onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }}
+                  className="gap-2 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+                >
                   <Plus className="w-4 h-4" /> Novo Lançamento
                 </Button>
               </div>
@@ -143,7 +141,7 @@ export default function Index() {
               </div>
             )}
 
-            <SmartInsights onNavigate={(view) => setCurrentView(view as any)} />
+            <SmartInsights onNavigate={(view) => setCurrentView(view as ViewType)} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
@@ -164,17 +162,20 @@ export default function Index() {
                 icon={<TrendingDown className="w-5 h-5 text-danger" />}
                 variant="negative"
               />
+              {/* ✅ FIX: usa periodBalance no lugar de balance */}
               <StatCard
                 title="Saldo do Período"
-                value={balance}
+                value={periodBalance}
                 icon={<PiggyBank className="w-5 h-5" />}
-                variant={balance >= 0 ? 'positive' : 'negative'}
+                variant={periodBalance >= 0 ? 'positive' : 'negative'}
               />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <BudgetCoach />
-              <ExpenseChart data={categoryExpenses.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)} />
+              <ExpenseChart
+                data={categoryExpenses.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -197,16 +198,12 @@ export default function Index() {
             </div>
 
             <div className="grid grid-cols-1 gap-4">
-              <div>
-                <AccountEvolution />
-              </div>
-              <div>
-                <RecentTransactions
-                  transactions={currentMonthTransactions}
-                  accounts={accounts}
-                  creditCards={creditCards}
-                />
-              </div>
+              <AccountEvolution />
+              <RecentTransactions
+                transactions={currentMonthTransactions}
+                accounts={accounts}
+                creditCards={creditCards}
+              />
             </div>
           </div>
         );
@@ -221,7 +218,10 @@ export default function Index() {
               </div>
               <div className="flex items-center gap-3">
                 <MonthSelector />
-                <Button onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }} className="gap-2 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
+                <Button
+                  onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }}
+                  className="gap-2 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+                >
                   <Plus className="w-4 h-4" /> Nova Transação
                 </Button>
               </div>
@@ -345,9 +345,13 @@ export default function Index() {
           accounts={accounts}
           creditCards={creditCards}
           initialData={editingTransaction}
-          onSubmit={(data, custom, applyScope: any) => {
+          onSubmit={(data, custom, applyScope) => {
             if (editingTransaction) {
-              updateTransaction({ ...editingTransaction, ...data } as any, applyScope as any);
+              // ✅ FIX: tipagem explícita sem double cast as any
+              updateTransaction(
+                { ...editingTransaction, ...data } as Transaction,
+                applyScope as 'this' | 'future' | 'all'
+              );
             } else {
               addTransaction(data, custom);
             }

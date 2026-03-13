@@ -19,7 +19,7 @@ export interface Category {
   icon?: string;
   color?: string;
   isActive: boolean;
-  targetAmount?: number; // Meta de gasto para esta categoria
+  targetAmount?: number;
 }
 
 export interface Subcategory {
@@ -42,15 +42,18 @@ export interface Transaction {
   accountId?: string;
   cardId?: string;
   isPaid: boolean;
-  paymentDate?: string; // data efetiva de pagamento (pode diferir da data de vencimento)
+  paymentDate?: string;
   installmentGroupId?: string;
   installmentNumber?: number;
   installmentTotal?: number;
-  invoiceMonthYear?: string; // YYYY-MM
+  invoiceMonthYear?: string; // formato: YYYY-MM
   isRecurring?: boolean;
   recurrence?: string;
   debtId?: string;
   isInvoicePayment?: boolean;
+  // ✅ ADICIONADO: rastreabilidade de origem para bills convertidas
+  isVirtual?: boolean;
+  originalBillId?: string;
 }
 
 export interface Account {
@@ -100,6 +103,8 @@ export interface Debt {
   dueDay?: number;
   strategyPriority?: number;
   minimumPayment?: number;
+  // ✅ ADICIONADO: de qual conta sai o pagamento da dívida
+  accountId?: string;
 }
 
 export interface SavingsGoal {
@@ -111,6 +116,8 @@ export interface SavingsGoal {
   deadline?: string;
   color: string;
   icon?: string;
+  // ✅ ADICIONADO: vínculo com conta/caixinha real
+  accountId?: string;
 }
 
 export interface Bill {
@@ -129,8 +136,8 @@ export interface Bill {
   isFixed: boolean;
   recurrenceRule?: string;
   startDate?: string;
-  targetAmount?: number; // Meta de valor para esta conta específica
-  originalBillId?: string; // ID da conta "mãe" para contas fixas/recorrentes
+  targetAmount?: number;
+  originalBillId?: string;
   isVirtual?: boolean;
   debtId?: string;
 }
@@ -177,7 +184,7 @@ export interface FinanceState {
 
 export type FilterMode = 'day' | 'month' | 'year';
 
-// Keep these for UI mapping until fully migrated to DB-driven categories
+/** @deprecated Use categories from database instead */
 export const INCOME_CATEGORIES_LEGACY = {
   salary: { label: 'Salário', icon: 'Briefcase' },
   benefits: { label: 'Benefícios', icon: 'Gift' },
@@ -186,6 +193,7 @@ export const INCOME_CATEGORIES_LEGACY = {
   other: { label: 'Outros', icon: 'MoreHorizontal' },
 };
 
+/** @deprecated Use categories from database instead */
 export const EXPENSE_CATEGORIES_LEGACY = {
   housing: { label: 'Moradia', icon: 'Home' },
   food: { label: 'Alimentação', icon: 'UtensilsCrossed' },

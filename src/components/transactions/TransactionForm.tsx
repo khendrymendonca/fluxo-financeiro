@@ -9,9 +9,6 @@ import {
   Transaction,
   Account,
   CreditCard as CreditCardType,
-  Category,
-  Subcategory,
-  Debt
 } from '@/types/finance';
 import { cn } from '@/lib/utils';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
@@ -28,11 +25,23 @@ interface TransactionFormProps {
 
 type TabType = 'pontual' | 'parcelamento' | 'fixo' | 'divida' | 'transfer';
 
+// ✅ FIX: helper local para construir datas sem bug de fuso UTC
+const parseLocalDate = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const isDateTodayOrPast = (dateStr: string): boolean => {
+  const d = parseLocalDate(dateStr);
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  return d <= today;
+};
+
 export function TransactionForm({ accounts, creditCards, initialData, onSubmit, onDelete, onClose }: TransactionFormProps) {
   const [activeTab, setActiveTab] = useState<TabType>('pontual');
   const [type, setType] = useState<'income' | 'expense'>(initialData?.type || 'expense');
 
-  // Common Fields
   const [description, setDescription] = useState(initialData?.description || '');
   const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
   const [categoryId, setCategoryId] = useState<string>(initialData?.categoryId || '');
@@ -43,21 +52,17 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [paymentMethod, setPaymentMethod] = useState<'account' | 'card'>(initialData?.cardId ? 'card' : 'account');
   const [selectedDebtId, setSelectedDebtId] = useState<string>(initialData?.debtId || '');
 
-  // Installment Specifics
   const [installmentsCount, setInstallmentsCount] = useState('2');
   const [areInstallmentsEqual, setAreInstallmentsEqual] = useState(true);
   const [fixedPaymentDay, setFixedPaymentDay] = useState(true);
   const [customInstallmentDates, setCustomInstallmentDates] = useState<{ date: string, amount: number }[]>([]);
 
-  // Fixed/Recurring Specifics
   const [recurrence, setRecurrence] = useState<'monthly' | 'weekly'>('monthly');
 
-  // Debt Specifics
   const [debtTotal, setDebtTotal] = useState('');
   const [debtInstallments, setDebtInstallments] = useState('');
   const [debtFirstPaymentDate, setDebtFirstPaymentDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Invoice Specifics
   const [invoiceReference, setInvoiceReference] = useState(() => {
     if (initialData?.invoiceMonthYear) return initialData.invoiceMonthYear;
     if (initialData?.date) return initialData.date.slice(0, 7);
@@ -67,17 +72,16 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [applyScope, setApplyScope] = useState<'this' | 'future' | 'all'>('this');
   const [isPaidLocally, setIsPaidLocally] = useState(initialData?.isPaid || false);
 
-  // Transfer Specifics
   const [transferFrom, setTransferFrom] = useState('');
   const [transferTo, setTransferTo] = useState('');
   const [transferToType, setTransferToType] = useState<'account' | 'card'>('account');
   const [transferDescription, setTransferDescription] = useState('Transferência entre contas');
 
-  // Overdraft Warning State
   const [showOverdraftWarning, setShowOverdraftWarning] = useState(false);
   const [overdraftAmountUsed, setOverdraftAmountUsed] = useState(0);
   const [overdraftAccountName, setOverdraftAccountName] = useState('');
-  const [pendingSubmitData, setPendingSubmitData] = useState<any>(null);
+  // ✅ FIX: pendingSubmitData armazena apenas parsedAmount, sem o evento sintético
+  const [pendingAmount, setPendingAmount] = useState<number | null>(null);
 
   const { debts, createDebtWithInstallments, categories, subcategories, transferBetweenAccounts, getAccountViewBalance, getCardExpenses } = useFinanceStore();
 
@@ -87,34 +91,31 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const filteredCategories = categories.filter(c => c.type === type);
   const currentCategorySubcategories = subcategories.filter(s => s.categoryId === categoryId);
 
-  // Helper to generate initial custom installments
+  // ✅ FIX: geração de parcelas com parseLocalDate (sem bug de fuso)
   const generateCustomInstallments = () => {
     const count = parseInt(installmentsCount) || 2;
     const baseAmount = parseFloat(amount) || 0;
-    const val = baseAmount / count;
+    const val = parseFloat((baseAmount / count).toFixed(2));
+    const [y, m, d] = date.split('-').map(Number);
 
-    // Always regenerate to ensure sync with current amount/count
-    const newInst = [];
-    for (let i = 0; i < count; i++) {
-      const d = new Date(date);
-      d.setMonth(d.getMonth() + i);
-      newInst.push({
-        date: d.toISOString().split('T')[0],
-        amount: parseFloat(val.toFixed(2))
-      });
-    }
-    // Adjust last installment to match total exactly
-    const currentSum = newInst.reduce((acc, curr) => acc + curr.amount, 0);
-    const diff = baseAmount - currentSum;
+    const newInst = Array.from({ length: count }, (_, i) => {
+      const instDate = new Date(y, m - 1 + i, d);
+      return {
+        date: `${instDate.getFullYear()}-${String(instDate.getMonth() + 1).padStart(2, '0')}-${String(instDate.getDate()).padStart(2, '0')}`,
+        amount: val
+      };
+    });
+
+    // Ajusta último centavo
+    const diff = parseFloat((baseAmount - newInst.reduce((s, i) => s + i.amount, 0)).toFixed(2));
     if (newInst.length > 0 && Math.abs(diff) > 0.001) {
-      newInst[newInst.length - 1].amount += diff;
-      newInst[newInst.length - 1].amount = parseFloat(newInst[newInst.length - 1].amount.toFixed(2));
+      newInst[newInst.length - 1].amount = parseFloat((newInst[newInst.length - 1].amount + diff).toFixed(2));
     }
 
     setCustomInstallmentDates(newInst);
   };
 
-  // Auto-suggestion logic
+  // Auto-sugestão de categoria
   useEffect(() => {
     if (!categoryId && description.length > 3 && categories.length > 0) {
       const desc = description.toLowerCase();
@@ -127,14 +128,11 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         if (c.name === 'Moradia' && (desc.includes('aluguel') || desc.includes('condominio') || desc.includes('energia') || desc.includes('agua'))) return true;
         return false;
       });
-
-      if (suggestion) {
-        setCategoryId(suggestion.id);
-      }
+      if (suggestion) setCategoryId(suggestion.id);
     }
   }, [description, categories, categoryId]);
 
-  // Sync active tab with transaction type on edit
+  // Sincroniza tab com tipo da transação ao editar
   useEffect(() => {
     if (initialData) {
       if (initialData.transactionType === 'recurring' || initialData.isRecurring) {
@@ -176,36 +174,26 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
     if (!description || !amount || !categoryId) return;
 
-    // Check overdraft if it's an expense being paid from an account right now
     const parsedAmount = parseFloat(amount);
-    const isPayingNow = initialData ? isPaidLocally : (new Date(date) <= new Date());
+    // ✅ FIX: usa isDateTodayOrPast com comparação local
+    const isPayingNow = initialData ? isPaidLocally : isDateTodayOrPast(date);
 
     if (type === 'expense' && paymentMethod === 'account' && accountId && isPayingNow) {
       const acc = accounts.find(a => a.id === accountId);
       if (acc && acc.hasOverdraft) {
         let impact = parsedAmount;
-        // if editing, calculate the difference
         if (initialData && initialData.isPaid && initialData.accountId === accountId) {
           impact = parsedAmount - initialData.amount;
         }
-
-        if (impact > 0) {
-          const availableTotal = acc.balance + (acc.overdraftLimit || 0);
-          const wouldGoNegative = acc.balance < impact;
-
-          if (wouldGoNegative) {
-            const deficit = impact - acc.balance;
-            if (deficit > 0 && deficit <= (acc.overdraftLimit || 0)) {
-              // We are dipping into the overdraft limit
-              setOverdraftAmountUsed(deficit);
-              setOverdraftAccountName(acc.name);
-              // Stop submission and display warning
-              setPendingSubmitData({
-                e, parsedAmount // store necessary info to resume
-              });
-              setShowOverdraftWarning(true);
-              return;
-            }
+        if (impact > 0 && acc.balance < impact) {
+          const deficit = impact - acc.balance;
+          if (deficit > 0 && deficit <= (acc.overdraftLimit || 0)) {
+            setOverdraftAmountUsed(deficit);
+            setOverdraftAccountName(acc.name);
+            // ✅ FIX: armazena apenas o número, não o evento sintético
+            setPendingAmount(parsedAmount);
+            setShowOverdraftWarning(true);
+            return;
           }
         }
       }
@@ -215,29 +203,34 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   };
 
   const executeSubmit = (parsedAmount: number) => {
-    let finalCustomInstallments = undefined;
+    let finalCustomInstallments: { date: string, amount: number }[] | undefined = undefined;
 
-    if (activeTab === 'parcelamento') {
-      if (!areInstallmentsEqual || !fixedPaymentDay) {
-        if (customInstallmentDates.length === 0) {
-          const count = parseInt(installmentsCount) || 2;
-          const baseAmount = parseFloat(amount) || 0;
-          const val = baseAmount / count;
-          const newInst = [];
-          for (let i = 0; i < count; i++) {
-            const d = new Date(date);
-            d.setMonth(d.getMonth() + i);
-            newInst.push({
-              date: d.toISOString().split('T')[0],
-              amount: val
-            });
-          }
-          finalCustomInstallments = newInst;
-        } else {
-          finalCustomInstallments = customInstallmentDates;
+    if (activeTab === 'parcelamento' && (!areInstallmentsEqual || !fixedPaymentDay)) {
+      // ✅ FIX: usa generateCustomInstallments como fonte única de geração
+      if (customInstallmentDates.length > 0) {
+        finalCustomInstallments = customInstallmentDates;
+      } else {
+        // Gera inline com a mesma lógica corrigida de fuso
+        const count = parseInt(installmentsCount) || 2;
+        const val = parseFloat((parsedAmount / count).toFixed(2));
+        const [y, m, d] = date.split('-').map(Number);
+        finalCustomInstallments = Array.from({ length: count }, (_, i) => {
+          const instDate = new Date(y, m - 1 + i, d);
+          return {
+            date: `${instDate.getFullYear()}-${String(instDate.getMonth() + 1).padStart(2, '0')}-${String(instDate.getDate()).padStart(2, '0')}`,
+            amount: val
+          };
+        });
+        const diff = parseFloat((parsedAmount - finalCustomInstallments.reduce((s, i) => s + i.amount, 0)).toFixed(2));
+        if (finalCustomInstallments.length > 0 && Math.abs(diff) > 0.001) {
+          finalCustomInstallments[finalCustomInstallments.length - 1].amount = parseFloat(
+            (finalCustomInstallments[finalCustomInstallments.length - 1].amount + diff).toFixed(2)
+          );
         }
       }
     }
+
+    const isPaid = initialData ? isPaidLocally : isDateTodayOrPast(date);
 
     onSubmit({
       type,
@@ -253,17 +246,13 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       isRecurring: activeTab === 'fixo',
       recurrence: activeTab === 'fixo' ? recurrence : undefined,
       debtId: selectedDebtId || undefined,
-      invoiceMonthYear: paymentMethod === 'card' ? invoiceReference : undefined,
-      isPaid: initialData ? isPaidLocally : (new Date(date) <= new Date()),
-      paymentDate: (initialData ? isPaidLocally : (new Date(date) <= new Date())) ? date : undefined,
+      // ✅ FIX: invoiceMonthYear só é enviado na edição — criação deixa o store calcular
+      invoiceMonthYear: (paymentMethod === 'card' && initialData) ? invoiceReference : undefined,
+      isPaid,
+      paymentDate: isPaid ? date : undefined,
       userId: initialData?.userId || ''
     }, finalCustomInstallments, applyScope);
 
-    onClose();
-  };
-
-  const handleClose = () => {
-    // Reset form simply relying on unmount from parent, but firing onClose
     onClose();
   };
 
@@ -274,7 +263,9 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div>
             <h2 className="text-xl font-semibold">{initialData ? 'Editar Lançamento' : 'Novo Lançamento'}</h2>
-            <p className="text-sm text-muted-foreground">{initialData ? 'Altere os dados abaixo' : 'Mecânica V2 • Registre uma transação ou transferência'}</p>
+            <p className="text-sm text-muted-foreground">
+              {initialData ? 'Altere os dados abaixo' : 'Registre uma transação ou transferência'}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             {initialData && onDelete && (
@@ -287,7 +278,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               </button>
             )}
             <button
-              onClick={handleClose}
+              onClick={onClose}
               className="p-3 rounded-2xl hover:bg-muted transition-colors"
               title="Fechar"
             >
@@ -296,7 +287,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* ✅ FIX: tabs desabilitadas em modo edição para evitar corrupção de dados */}
         <div className="flex p-2 gap-1 border-b border-border overflow-x-auto">
           {[
             { id: 'pontual', label: 'Pontual', icon: Coins },
@@ -308,12 +299,14 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id as TabType)}
+              disabled={!!initialData}
+              onClick={() => !initialData && setActiveTab(tab.id as TabType)}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap",
                 activeTab === tab.id
                   ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted text-muted-foreground"
+                  : "hover:bg-muted text-muted-foreground",
+                !!initialData && activeTab !== tab.id && "opacity-30 cursor-default"
               )}
             >
               <tab.icon className="w-4 h-4" />
@@ -323,8 +316,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5 flex-1 overflow-y-auto">
-
-          {/* Debt Tab Specifics */}
+          {/* Debt Tab */}
           {activeTab === 'divida' ? (
             <div className="space-y-4">
               <div className="space-y-2">
@@ -349,9 +341,10 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 Isso criará um registro em <strong>Controle de Dívidas</strong> e lançará {debtInstallments || 0} despesas futuras no seu contas a pagar.
               </div>
             </div>
+
           ) : activeTab === 'transfer' ? (
             <div className="space-y-6">
-              {/* De: Conta Origem */}
+              {/* Conta Origem */}
               <div className="space-y-3">
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Sair da Conta</Label>
                 <div className="grid grid-cols-2 gap-2">
@@ -364,17 +357,12 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                         onClick={() => setTransferFrom(a.id)}
                         className={cn(
                           "flex flex-col items-start p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden",
-                          transferFrom === a.id
-                            ? "border-primary bg-primary/5 shadow-md"
-                            : "border-transparent bg-muted/30 hover:bg-muted/50"
+                          transferFrom === a.id ? "border-primary bg-primary/5 shadow-md" : "border-transparent bg-muted/30 hover:bg-muted/50"
                         )}
                       >
                         <div className="w-1.5 h-full absolute left-0 top-0" style={{ backgroundColor: a.color }} />
                         <span className="text-xs font-bold truncate block w-full ml-1">{a.bank} - {a.name}</span>
-                        <span className={cn(
-                          "text-sm font-black mt-1 ml-1",
-                          viewBalance < 0 ? "text-danger" : "text-foreground"
-                        )}>
+                        <span className={cn("text-sm font-black mt-1 ml-1", viewBalance < 0 ? "text-danger" : "text-foreground")}>
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(viewBalance)}
                         </span>
                       </button>
@@ -389,27 +377,28 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 </div>
               </div>
 
-              {/* Para: Conta/Cartão Destino */}
+              {/* Destino */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Entrar no Destino</Label>
                   <div className="flex bg-muted rounded-lg p-0.5">
-                    <button type="button" onClick={() => { setTransferToType('account'); setTransferTo(''); }} className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", transferToType === 'account' ? "bg-card shadow-sm" : "text-muted-foreground")}>Conta</button>
-                    <button type="button" onClick={() => { setTransferToType('card'); setTransferTo(''); }} className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", transferToType === 'card' ? "bg-card shadow-sm" : "text-muted-foreground")}>Cartão</button>
+                    <button type="button" onClick={() => { setTransferToType('account'); setTransferTo(''); }}
+                      className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", transferToType === 'account' ? "bg-card shadow-sm" : "text-muted-foreground")}>
+                      Conta
+                    </button>
+                    <button type="button" onClick={() => { setTransferToType('card'); setTransferTo(''); }}
+                      className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", transferToType === 'card' ? "bg-card shadow-sm" : "text-muted-foreground")}>
+                      Cartão
+                    </button>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {transferToType === 'account' ? (
                     accounts.map(a => (
-                      <button
-                        key={a.id}
-                        type="button"
-                        onClick={() => setTransferTo(a.id)}
+                      <button key={a.id} type="button" onClick={() => setTransferTo(a.id)}
                         className={cn(
                           "flex flex-col items-start p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden",
-                          transferTo === a.id
-                            ? "border-primary bg-primary/5 shadow-md"
-                            : "border-transparent bg-muted/30 hover:bg-muted/50"
+                          transferTo === a.id ? "border-primary bg-primary/5 shadow-md" : "border-transparent bg-muted/30 hover:bg-muted/50"
                         )}
                       >
                         <div className="w-1.5 h-full absolute left-0 top-0" style={{ backgroundColor: a.color }} />
@@ -421,20 +410,17 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     ))
                   ) : (
                     creditCards.map(c => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => setTransferTo(c.id)}
+                      <button key={c.id} type="button" onClick={() => setTransferTo(c.id)}
                         className={cn(
                           "flex flex-col items-start p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden",
-                          transferTo === c.id
-                            ? "border-primary bg-primary/5 shadow-md"
-                            : "border-transparent bg-muted/30 hover:bg-muted/50"
+                          transferTo === c.id ? "border-primary bg-primary/5 shadow-md" : "border-transparent bg-muted/30 hover:bg-muted/50"
                         )}
                       >
                         <div className="w-1.5 h-full absolute left-0 top-0 bg-primary" />
                         <span className="text-xs font-bold truncate block w-full ml-1">{c.bank} - {c.name}</span>
-                        <span className="text-[10px] text-muted-foreground ml-1">Fatura: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getCardExpenses(c.id))}</span>
+                        <span className="text-[10px] text-muted-foreground ml-1">
+                          Fatura: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getCardExpenses(c.id))}
+                        </span>
                       </button>
                     ))
                   )}
@@ -444,63 +430,38 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Valor (R$)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={amount}
-                    onChange={e => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    className="h-12 rounded-2xl border-2 focus:border-primary px-4 font-black text-xl"
-                  />
+                  <Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)}
+                    placeholder="0.00" className="h-12 rounded-2xl border-2 focus:border-primary px-4 font-black text-xl" />
                 </div>
                 <div className="space-y-2">
                   <Label>Data</Label>
-                  <Input
-                    type="date"
-                    value={date}
-                    onChange={e => setDate(e.target.value)}
-                    className="h-12 rounded-2xl border-2 focus:border-primary px-4"
-                  />
+                  <Input type="date" value={date} onChange={e => setDate(e.target.value)}
+                    className="h-12 rounded-2xl border-2 focus:border-primary px-4" />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label>Descrição</Label>
-                <Input
-                  value={transferDescription}
-                  onChange={e => setTransferDescription(e.target.value)}
-                  placeholder="Ex: Reserva mensal"
-                  className="h-11 rounded-2xl border-2 focus:border-primary px-4"
-                />
+                <Input value={transferDescription} onChange={e => setTransferDescription(e.target.value)}
+                  placeholder="Ex: Reserva mensal" className="h-11 rounded-2xl border-2 focus:border-primary px-4" />
               </div>
             </div>
+
           ) : (
             <>
-              {/* Type Toggle for Non-Debt */}
+              {/* Toggle Receita/Despesa */}
               <div className="flex gap-2 p-1 bg-muted rounded-2xl">
-                <button
-                  type="button"
-                  onClick={() => { setType('income'); setCategoryId(''); setSubcategoryId(''); }}
-                  className={cn(
-                    "flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all",
-                    type === 'income' ? "bg-success text-success-foreground shadow-sm" : "text-muted-foreground"
-                  )}
-                >
+                <button type="button" onClick={() => { setType('income'); setCategoryId(''); setSubcategoryId(''); }}
+                  className={cn("flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all",
+                    type === 'income' ? "bg-success text-success-foreground shadow-sm" : "text-muted-foreground")}>
                   Receita
                 </button>
-                <button
-                  type="button"
-                  onClick={() => { setType('expense'); setCategoryId(''); setSubcategoryId(''); }}
-                  className={cn(
-                    "flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all",
-                    type === 'expense' ? "bg-danger text-danger-foreground shadow-sm" : "text-muted-foreground"
-                  )}
-                >
+                <button type="button" onClick={() => { setType('expense'); setCategoryId(''); setSubcategoryId(''); }}
+                  className={cn("flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all",
+                    type === 'expense' ? "bg-danger text-danger-foreground shadow-sm" : "text-muted-foreground")}>
                   Despesa
                 </button>
               </div>
 
-              {/* Standard Fields */}
               <div className="space-y-2">
                 <Label>Descrição</Label>
                 <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Ex: Supermercado" required />
@@ -513,7 +474,6 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                   value={amount}
                   onChange={e => {
                     setAmount(e.target.value);
-                    // If manual installments active, reset them to force regen or update
                     if (activeTab === 'parcelamento' && !areInstallmentsEqual) setCustomInstallmentDates([]);
                   }}
                   placeholder="0.00"
@@ -522,25 +482,17 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 />
               </div>
 
-              {/* Category */}
+              {/* Categoria */}
               <div className="space-y-4">
                 <div className="space-y-2 flex flex-col">
                   <Label>Categoria</Label>
                   <Popover open={openCategory} onOpenChange={setOpenCategory}>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openCategory}
-                        className={cn(
-                          "w-full justify-between rounded-xl h-11",
-                          !categoryId && "text-muted-foreground",
-                          type === 'income' && categoryId ? "border-success text-success bg-success/5" : type === 'expense' && categoryId ? "border-danger text-danger bg-danger/5" : ""
-                        )}
-                      >
-                        {categoryId
-                          ? filteredCategories.find((cat) => cat.id === categoryId)?.name
-                          : "Selecione uma categoria..."}
+                      <Button variant="outline" role="combobox" aria-expanded={openCategory}
+                        className={cn("w-full justify-between rounded-xl h-11", !categoryId && "text-muted-foreground",
+                          type === 'income' && categoryId ? "border-success text-success bg-success/5" :
+                          type === 'expense' && categoryId ? "border-danger text-danger bg-danger/5" : "")}>
+                        {categoryId ? filteredCategories.find(c => c.id === categoryId)?.name : "Selecione uma categoria..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
@@ -550,22 +502,10 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                         <CommandList>
                           <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
                           <CommandGroup>
-                            {filteredCategories.map((cat) => (
-                              <CommandItem
-                                key={cat.id}
-                                value={cat.name}
-                                onSelect={() => {
-                                  setCategoryId(cat.id);
-                                  setSubcategoryId('');
-                                  setOpenCategory(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    categoryId === cat.id ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
+                            {filteredCategories.map(cat => (
+                              <CommandItem key={cat.id} value={cat.name}
+                                onSelect={() => { setCategoryId(cat.id); setSubcategoryId(''); setOpenCategory(false); }}>
+                                <Check className={cn("mr-2 h-4 w-4", categoryId === cat.id ? "opacity-100" : "opacity-0")} />
                                 {cat.name}
                               </CommandItem>
                             ))}
@@ -581,19 +521,10 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     <Label>Subcategoria</Label>
                     <Popover open={openSubcategory} onOpenChange={setOpenSubcategory}>
                       <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={openSubcategory}
-                          className={cn(
-                            "w-full justify-between rounded-xl h-11",
-                            !subcategoryId && "text-muted-foreground",
-                            subcategoryId && "border-primary text-primary bg-primary/5"
-                          )}
-                        >
-                          {subcategoryId
-                            ? currentCategorySubcategories.find((sub) => sub.id === subcategoryId)?.name
-                            : "Selecione (opcional)..."}
+                        <Button variant="outline" role="combobox" aria-expanded={openSubcategory}
+                          className={cn("w-full justify-between rounded-xl h-11", !subcategoryId && "text-muted-foreground",
+                            subcategoryId && "border-primary text-primary bg-primary/5")}>
+                          {subcategoryId ? currentCategorySubcategories.find(s => s.id === subcategoryId)?.name : "Selecione (opcional)..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
@@ -603,21 +534,10 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                           <CommandList>
                             <CommandEmpty>Nenhuma subcategoria.</CommandEmpty>
                             <CommandGroup>
-                              {currentCategorySubcategories.map((sub) => (
-                                <CommandItem
-                                  key={sub.id}
-                                  value={sub.name}
-                                  onSelect={() => {
-                                    setSubcategoryId(sub.id);
-                                    setOpenSubcategory(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      subcategoryId === sub.id ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
+                              {currentCategorySubcategories.map(sub => (
+                                <CommandItem key={sub.id} value={sub.name}
+                                  onSelect={() => { setSubcategoryId(sub.id); setOpenSubcategory(false); }}>
+                                  <Check className={cn("mr-2 h-4 w-4", subcategoryId === sub.id ? "opacity-100" : "opacity-0")} />
                                   {sub.name}
                                 </CommandItem>
                               ))}
@@ -630,38 +550,30 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 )}
               </div>
 
-              {/* Tab Specific logic */}
+              {/* Parcelamento */}
               {activeTab === 'parcelamento' && (
                 <div className="space-y-4 border-t pt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Nº Parcelas</Label>
-                      <Input
-                        type="number"
-                        value={installmentsCount}
-                        onChange={e => {
-                          setInstallmentsCount(e.target.value);
-                          setCustomInstallmentDates([]);
-                        }}
-                        min="2"
-                      />
+                      <Input type="number" value={installmentsCount}
+                        onChange={e => { setInstallmentsCount(e.target.value); setCustomInstallmentDates([]); }} min="2" />
                     </div>
                     <div className="space-y-2">
                       <Label>1ª Parcela</Label>
                       <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
                     </div>
                   </div>
-
                   <div className="flex items-center justify-between">
                     <Label className="cursor-pointer" htmlFor="equal-inst">Parcelas Iguais?</Label>
-                    <input type="checkbox" id="equal-inst" checked={areInstallmentsEqual} onChange={e => setAreInstallmentsEqual(e.target.checked)} className="w-4 h-4" />
+                    <input type="checkbox" id="equal-inst" checked={areInstallmentsEqual}
+                      onChange={e => setAreInstallmentsEqual(e.target.checked)} className="w-4 h-4" />
                   </div>
-
                   <div className="flex items-center justify-between">
                     <Label className="cursor-pointer" htmlFor="fixed-pay">Data Fixa (Mensal)?</Label>
-                    <input type="checkbox" id="fixed-pay" checked={fixedPaymentDay} onChange={e => setFixedPaymentDay(e.target.checked)} className="w-4 h-4" />
+                    <input type="checkbox" id="fixed-pay" checked={fixedPaymentDay}
+                      onChange={e => setFixedPaymentDay(e.target.checked)} className="w-4 h-4" />
                   </div>
-
                   {(!areInstallmentsEqual || !fixedPaymentDay) && (
                     <div className="space-y-2 max-h-40 overflow-y-auto p-2 border rounded-xl">
                       <Button type="button" size="sm" variant="outline" onClick={generateCustomInstallments} className="w-full mb-2">
@@ -686,14 +598,12 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 </div>
               )}
 
+              {/* Recorrente */}
               {activeTab === 'fixo' && (
                 <div className="space-y-2">
                   <Label>Periodicidade</Label>
-                  <select
-                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2"
-                    value={recurrence}
-                    onChange={e => setRecurrence(e.target.value as any)}
-                  >
+                  <select className="w-full h-10 rounded-md border border-input bg-background px-3 py-2"
+                    value={recurrence} onChange={e => setRecurrence(e.target.value as any)}>
                     <option value="monthly">Mensal</option>
                     <option value="weekly">Semanal</option>
                   </select>
@@ -704,67 +614,41 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               {(activeTab === 'pontual' || activeTab === 'fixo') && (
                 <div className="space-y-2">
                   <Label>Data</Label>
-                  <Input
-                    type="date"
-                    value={date}
-                    onChange={e => {
-                      setDate(e.target.value);
-                      // Auto-update invoice reference if simple change
-                      setInvoiceReference(e.target.value.slice(0, 7));
-                    }}
-                  />
+                  <Input type="date" value={date} onChange={e => {
+                    setDate(e.target.value);
+                    setInvoiceReference(e.target.value.slice(0, 7));
+                  }} />
                 </div>
               )}
 
-
-
+              {/* Forma de Pagamento */}
               <div className="space-y-2">
                 <Label>{type === 'income' ? 'Onde será recebido?' : 'Forma de Pagamento'}</Label>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('account')}
-                    className={cn(
-                      "flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all border",
-                      paymentMethod === 'account' ? (type === 'income' ? "bg-success text-success-foreground border-success" : "bg-primary text-primary-foreground border-primary") : "bg-muted/50 border-transparent"
-                    )}
-                  >
+                  <button type="button" onClick={() => setPaymentMethod('account')}
+                    className={cn("flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all border",
+                      paymentMethod === 'account' ? (type === 'income' ? "bg-success text-success-foreground border-success" : "bg-primary text-primary-foreground border-primary") : "bg-muted/50 border-transparent")}>
                     Conta
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('card')}
-                    className={cn(
-                      "flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all border",
-                      paymentMethod === 'card' ? (type === 'income' ? "bg-success text-success-foreground border-success" : "bg-primary text-primary-foreground border-primary") : "bg-muted/50 border-transparent"
-                    )}
-                  >
+                  <button type="button" onClick={() => setPaymentMethod('card')}
+                    className={cn("flex-1 py-2.5 px-4 rounded-xl font-medium text-sm transition-all border",
+                      paymentMethod === 'card' ? (type === 'income' ? "bg-success text-success-foreground border-success" : "bg-primary text-primary-foreground border-primary") : "bg-muted/50 border-transparent")}>
                     Cartão
                   </button>
                 </div>
               </div>
 
-              {/* Payment Method Details */}
               {paymentMethod === 'account' && accounts.length > 0 && (
                 <div className="space-y-2">
                   <Label>Conta</Label>
                   <div className="grid grid-cols-2 gap-2">
-                    {accounts.map((acc) => (
-                      <button
-                        key={acc.id}
-                        type="button"
-                        onClick={() => setAccountId(acc.id)}
-                        className={cn(
-                          "py-3 px-3 rounded-xl text-sm font-medium transition-all border flex items-center gap-2",
+                    {accounts.map(acc => (
+                      <button key={acc.id} type="button" onClick={() => setAccountId(acc.id)}
+                        className={cn("py-3 px-3 rounded-xl text-sm font-medium transition-all border flex items-center gap-2",
                           accountId === acc.id
                             ? (type === 'income' ? "bg-success text-secondary-foreground border-success shadow-sm" : "bg-primary text-primary-foreground border-primary shadow-sm")
-                            : "bg-muted/50 border-transparent hover:bg-muted"
-                        )}
-                      >
-                        <div
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: acc.color }}
-                        />
+                            : "bg-muted/50 border-transparent hover:bg-muted")}>
+                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: acc.color }} />
                         <span className="truncate">{acc.name}</span>
                       </button>
                     ))}
@@ -777,37 +661,27 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                   <div className="space-y-2">
                     <Label>Cartão</Label>
                     <div className="grid grid-cols-2 gap-2">
-                      {creditCards.map((card) => (
-                        <button
-                          key={card.id}
-                          type="button"
-                          onClick={() => setCardId(card.id)}
-                          className={cn(
-                            "py-2 px-3 rounded-xl text-sm font-medium transition-all border",
+                      {creditCards.map(card => (
+                        <button key={card.id} type="button" onClick={() => setCardId(card.id)}
+                          className={cn("py-2 px-3 rounded-xl text-sm font-medium transition-all border",
                             cardId === card.id
                               ? (type === 'income' ? "bg-success text-success-foreground border-success" : "bg-primary text-primary-foreground border-primary")
-                              : "bg-muted/50 border-transparent hover:bg-muted"
-                          )}
-                        >
+                              : "bg-muted/50 border-transparent hover:bg-muted")}>
                           {card.name}
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  {/* Invoice Reference View Only For Edits */}
+                  {/* Referência de fatura — apenas em edição */}
                   {initialData && (
                     <div className="space-y-2 p-3 bg-muted/50 rounded-xl border border-dashed text-sm">
                       <div className="flex items-center justify-between">
                         <Label>Referência da Fatura</Label>
-                        <Input
-                          type="month"
-                          value={invoiceReference}
+                        <Input type="month" value={invoiceReference}
                           onChange={e => setInvoiceReference(e.target.value)}
-                          className="w-32 h-8 text-xs bg-background"
-                        />
+                          className="w-32 h-8 text-xs bg-background" />
                       </div>
-                      <p className="text-xs text-muted-foreground">O mês correspondente desta cobrança específica. Editar altera apenas este lançamento.</p>
+                      <p className="text-xs text-muted-foreground">O mês correspondente desta cobrança. Editar altera apenas este lançamento.</p>
                     </div>
                   )}
                 </div>
@@ -816,22 +690,23 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               {debts.length > 0 && type === 'expense' && (
                 <div className="space-y-2 pt-2 border-t border-border">
                   <Label>Vincular a uma Dívida (Opcional)</Label>
-                  <select className="w-full h-10 rounded-md border border-input bg-background px-3 py-2" value={selectedDebtId} onChange={e => setSelectedDebtId(e.target.value)}>
+                  <select className="w-full h-10 rounded-md border border-input bg-background px-3 py-2"
+                    value={selectedDebtId} onChange={e => setSelectedDebtId(e.target.value)}>
                     <option value="">Selecione uma dívida...</option>
-                    {debts.map(d => <option key={d.id} value={d.id}>{d.name} (Resta: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(d.remainingAmount)})</option>)}
+                    {debts.map(d => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} (Resta: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(d.remainingAmount)})
+                      </option>
+                    ))}
                   </select>
                 </div>
               )}
 
-              {/* Bulk Edit Option */}
               {initialData?.installmentGroupId && (
                 <div className="flex flex-col gap-2 p-3 bg-primary/5 rounded-xl border border-primary/20">
                   <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Alcance da Atualização / Exclusão</Label>
-                  <select
-                    className="h-10 rounded-xl border border-input bg-background/50 px-3 text-xs focus:ring-1 focus:ring-primary outline-none"
-                    value={applyScope}
-                    onChange={e => setApplyScope(e.target.value as any)}
-                  >
+                  <select className="h-10 rounded-xl border border-input bg-background/50 px-3 text-xs focus:ring-1 focus:ring-primary outline-none"
+                    value={applyScope} onChange={e => setApplyScope(e.target.value as any)}>
                     <option value="this">Somente esta parcela ({initialData.installmentNumber})</option>
                     <option value="future">Esta e as futuras (a partir de {initialData.installmentNumber})</option>
                     <option value="all">Todas as parcelas (1 até {initialData.installmentTotal})</option>
@@ -841,10 +716,11 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
             </>
           )}
 
-          <Button type="submit" className={cn("w-full rounded-xl py-6 font-semibold", activeTab === 'divida' || activeTab === 'transfer' ? "bg-primary" : type === 'income' ? "bg-success hover:bg-success/90" : "bg-danger hover:bg-danger/90")}>
+          <Button type="submit" className={cn("w-full rounded-xl py-6 font-semibold",
+            activeTab === 'divida' || activeTab === 'transfer' ? "bg-primary" :
+            type === 'income' ? "bg-success hover:bg-success/90" : "bg-danger hover:bg-danger/90")}>
             {activeTab === 'divida' ? 'Criar Dívida e Parcelas' : activeTab === 'transfer' ? 'Confirmar Transferência' : 'Salvar Lançamento'}
           </Button>
-
         </form>
       </div>
 
@@ -854,15 +730,17 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         amountUsedFromLimit={overdraftAmountUsed}
         onCancel={() => {
           setShowOverdraftWarning(false);
-          setPendingSubmitData(null);
+          setPendingAmount(null);
         }}
         onConfirm={() => {
           setShowOverdraftWarning(false);
-          if (pendingSubmitData) {
-            executeSubmit(pendingSubmitData.parsedAmount);
+          // ✅ FIX: usa pendingAmount sem referência ao evento sintético
+          if (pendingAmount !== null) {
+            executeSubmit(pendingAmount);
+            setPendingAmount(null);
           }
         }}
       />
-    </div >
+    </div>
   );
 }
