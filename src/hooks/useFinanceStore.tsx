@@ -1634,8 +1634,10 @@ function useFinanceProvider() {
       .filter(t => {
         // Só deste cartão
         if (t.cardId !== cardId) return false;
-        // Só despesas reais (não pagamento de fatura)
-        if (t.type !== 'expense') return false;
+        
+        // Removido: if (t.type !== 'expense') return false; 
+        // Agora permitimos 'income' para processar abatimentos/créditos
+        
         if (t.isInvoicePayment === true) return false;
         // Ignora projeções virtuais de meses futuros (recorrentes ainda não cobradas)
         if (t.isVirtual) return false;
