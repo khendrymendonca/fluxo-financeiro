@@ -33,26 +33,39 @@ export default function CardsDashboard() {
     return new Date(year, month - 1, day);
   };
 
-  // ✅ FIX: calcula o limite consumido REAL considerando TODAS as parcelas não pagas
-  // independente do mês filtrado na tela — parcelas de Abril e Maio que ainda não foram
-  // pagas continuam consumindo o limite do cartão hoje
+  // ✅ LÓGICA CORRETA:
+  // Limite consumido = soma de todas as transações do cartão
+  // cujas faturas ainda NÃO foram quitadas.
+  // Uma fatura é considerada quitada quando existe uma transação
+  // com isInvoicePayment: true para aquele invoiceMonthYear.
   const getCardStats = (cardId: string) => {
     const card = creditCards.find(c => c.id === cardId);
     const limit = card?.limit || 0;
 
+    // 1. Descobre quais faturas (YYYY-MM) já foram pagas para este cartão
+    const paidInvoices = new Set(
+      transactions
+        .filter(t => t.cardId === cardId && t.isInvoicePayment && t.invoiceMonthYear)
+        .map(t => t.invoiceMonthYear as string)
+    );
+
+    // 2. Soma todas as despesas do cartão cujas faturas ainda estão abertas
     const totalCommitted = transactions
       .filter(t =>
         t.cardId === cardId &&
-        !t.isPaid &&
         !t.isInvoicePayment &&
-        t.type === 'expense'
+        t.type === 'expense' &&
+        // se tem invoiceMonthYear, checa se a fatura foi paga
+        // se NÃO tem invoiceMonthYear, considera como comprometido
+        (!t.invoiceMonthYear || !paidInvoices.has(t.invoiceMonthYear))
       )
       .reduce((sum, t) => sum + t.amount, 0);
 
     const available = Math.max(0, limit - totalCommitted);
-    const percentUsed = limit > 0 ? (totalCommitted / limit) * 100 : 0;
+    const percentUsed = limit > 0 ? Math.min((totalCommitted / limit) * 100, 100) : 0;
+    const isOverLimit = totalCommitted > limit;
 
-    return { used: totalCommitted, available, limit, percentUsed };
+    return { used: totalCommitted, available, limit, percentUsed, isOverLimit };
   };
 
   const getInvoiceTransactions = (cardId: string) => {
@@ -88,7 +101,7 @@ export default function CardsDashboard() {
   );
   const stats = selectedCardId
     ? getCardStats(selectedCardId)
-    : { used: 0, available: 0, limit: 0, percentUsed: 0 };
+    : { used: 0, available: 0, limit: 0, percentUsed: 0, isOverLimit: false };
   const invoiceStatus = selectedCardId ? getInvoiceStatus(selectedCardId) : 'aberta';
 
   const handlePrevMonth = () => setViewDate(prev => subMonths(prev, 1));
@@ -170,23 +183,31 @@ export default function CardsDashboard() {
                     <div>
                       <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Limite Consumido</p>
                       <p className="text-3xl font-black text-primary">{formatCurrency(stats.used)}</p>
-                      {/* ✅ INFO: mostra que o valor considera todas as faturas abertas */}
-                      <p className="text-[10px] text-muted-foreground mt-1">Inclui parcelas de meses futuros ainda não pagas</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Considera todas as faturas abertas (incluindo meses futuros)
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-muted-foreground">
-                        Disponível: <span className="font-bold text-success">{formatCurrency(stats.available)}</span>
+                        Disponível:{' '}
+                        <span className={cn("font-bold", stats.isOverLimit ? "text-danger" : "text-success")}>
+                          {formatCurrency(stats.available)}
+                        </span>
                       </p>
                       <p className="text-xs text-muted-foreground">Limite Total: {formatCurrency(stats.limit)}</p>
+                      {stats.isOverLimit && (
+                        <p className="text-[10px] text-danger font-bold mt-1">⚠️ Limite excedido!</p>
+                      )}
                     </div>
                   </div>
                   <div className="h-4 bg-muted rounded-full overflow-hidden border border-border/50">
                     <div
                       className={cn(
                         "h-full transition-all duration-1000 ease-out",
-                        stats.percentUsed > 90 ? "bg-danger" : stats.percentUsed > 70 ? "bg-amber-500" : "bg-primary"
+                        stats.percentUsed >= 100 ? "bg-danger" :
+                          stats.percentUsed > 80 ? "bg-amber-500" : "bg-primary"
                       )}
-                      style={{ width: `${Math.min(100, stats.percentUsed)}%` }}
+                      style={{ width: `${stats.percentUsed}%` }}
                     />
                   </div>
                   <p className="text-[10px] text-right text-muted-foreground font-bold">
@@ -231,7 +252,7 @@ export default function CardsDashboard() {
                             ? "bg-success/10 text-success"
                             : "bg-primary/10 text-primary"
                         )}>
-                          Status: {invoiceStatus === 'paga' ? 'Paga' : 'Aberta'}
+                          Status: {invoiceStatus === 'paga' ? '✅ Paga' : '🔓 Aberta'}
                         </span>
                       </div>
                     </div>
@@ -282,6 +303,13 @@ export default function CardsDashboard() {
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {!selectedCard && (
+              <div className="card-elevated p-16 text-center text-muted-foreground opacity-40">
+                <CreditCard className="w-16 h-16 mx-auto mb-4" />
+                <p className="text-lg font-bold">Selecione um cartão para ver os detalhes</p>
               </div>
             )}
           </div>
