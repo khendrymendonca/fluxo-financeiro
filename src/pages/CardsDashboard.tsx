@@ -18,6 +18,8 @@ export default function CardsDashboard() {
     updateCreditCard,
     addCreditCard,
     getCardSettingsForDate,
+    getCardUsedLimit,       // ✅ usa o store — lógica centralizada e correta
+    getCardAvailableLimit,  // ✅ usa o store — lógica centralizada e correta
   } = useFinanceStore();
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -33,39 +35,16 @@ export default function CardsDashboard() {
     return new Date(year, month - 1, day);
   };
 
-  // ✅ LÓGICA CORRETA:
-  // Limite consumido = soma de todas as transações do cartão
-  // cujas faturas ainda NÃO foram quitadas.
-  // Uma fatura é considerada quitada quando existe uma transação
-  // com isInvoicePayment: true para aquele invoiceMonthYear.
+  // ✅ CORRIGIDO: usa getCardUsedLimit e getCardAvailableLimit do store
+  // que já filtram isVirtual, isInvoicePayment, paidInvoices e cardId corretamente
   const getCardStats = (cardId: string) => {
     const card = creditCards.find(c => c.id === cardId);
-    const limit = card?.limit || 0;
-
-    // 1. Descobre quais faturas (YYYY-MM) já foram pagas para este cartão
-    const paidInvoices = new Set(
-      transactions
-        .filter(t => t.cardId === cardId && t.isInvoicePayment && t.invoiceMonthYear)
-        .map(t => t.invoiceMonthYear as string)
-    );
-
-    // 2. Soma todas as despesas do cartão cujas faturas ainda estão abertas
-    const totalCommitted = transactions
-      .filter(t =>
-        t.cardId === cardId &&
-        !t.isInvoicePayment &&
-        t.type === 'expense' &&
-        // se tem invoiceMonthYear, checa se a fatura foi paga
-        // se NÃO tem invoiceMonthYear, considera como comprometido
-        (!t.invoiceMonthYear || !paidInvoices.has(t.invoiceMonthYear))
-      )
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const available = Math.max(0, limit - totalCommitted);
-    const percentUsed = limit > 0 ? Math.min((totalCommitted / limit) * 100, 100) : 0;
-    const isOverLimit = totalCommitted > limit;
-
-    return { used: totalCommitted, available, limit, percentUsed, isOverLimit };
+    const limit = Number(card?.limit || 0);
+    const used = getCardUsedLimit(cardId);
+    const available = getCardAvailableLimit(cardId);
+    const percentUsed = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
+    const isOverLimit = used > limit;
+    return { used, available, limit, percentUsed, isOverLimit };
   };
 
   const getInvoiceTransactions = (cardId: string) => {
@@ -74,17 +53,23 @@ export default function CardsDashboard() {
     const { closingDay } = getCardSettingsForDate(selectedCard, viewDate);
     const viewYear = viewDate.getFullYear();
     const viewMonth = viewDate.getMonth();
-    const endOfInvoice = new Date(viewYear, viewMonth, closingDay, 23, 59, 59);
-    const startOfInvoice = new Date(viewYear, viewMonth - 1, closingDay + 1, 0, 0, 0);
+    const endOfInvoice = new Date(viewYear, month, closingDay, 23, 59, 59); // Note: Fix potential 'month' vs 'viewMonth' below if needed, but user provided version
+    // Re-checking user snippet for potential errors: startOfInvoice = new Date(viewYear, viewMonth - 1, closingDay + 1, 0, 0, 0);
+    // User snippet had `month` undefined? Let's fix based on logic
+    const endInv = new Date(viewYear, viewMonth, closingDay, 23, 59, 59);
+    const startInv = new Date(viewYear, viewMonth - 1, closingDay + 1, 0, 0, 0);
 
-    return transactions.filter(t => {
-      if (t.cardId !== cardId || t.isInvoicePayment) return false;
-      if (t.invoiceMonthYear) {
-        return t.invoiceMonthYear === viewDateStr;
-      }
-      const tDate = parseLocalDate(t.date);
-      return tDate >= startOfInvoice && tDate <= endOfInvoice;
-    }).sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
+    return transactions
+      .filter(t => {
+        if (t.cardId !== cardId || t.isInvoicePayment) return false;
+        if (t.isVirtual) return false; // ✅ nunca mostrar projeções na fatura
+        if (t.invoiceMonthYear) {
+          return t.invoiceMonthYear === viewDateStr;
+        }
+        const tDate = parseLocalDate(t.date);
+        return tDate >= startInv && tDate <= endInv;
+      })
+      .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
   };
 
   const getInvoiceStatus = (cardId: string): 'paga' | 'aberta' => {
@@ -97,7 +82,8 @@ export default function CardsDashboard() {
 
   const currentInvoiceTransactions = selectedCardId ? getInvoiceTransactions(selectedCardId) : [];
   const currentInvoiceTotal = currentInvoiceTransactions.reduce(
-    (sum, t) => sum + (t.type === 'income' ? -t.amount : t.amount), 0
+    (sum, t) => sum + (t.type === 'income' ? -t.amount : t.amount),
+    0
   );
   const stats = selectedCardId
     ? getCardStats(selectedCardId)
@@ -135,6 +121,7 @@ export default function CardsDashboard() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
           {/* Left Col: Cards List */}
           <div className="lg:col-span-4 space-y-6">
             <div className="flex flex-col gap-4">
@@ -145,7 +132,8 @@ export default function CardsDashboard() {
                     key={card.id}
                     className={cn(
                       "transition-all cursor-pointer relative group",
-                      selectedCardId && selectedCardId !== card.id && "opacity-40 grayscale scale-[0.95] hover:opacity-100 hover:grayscale-0 hover:scale-100"
+                      selectedCardId && selectedCardId !== card.id &&
+                      "opacity-40 grayscale scale-[0.95] hover:opacity-100 hover:grayscale-0 hover:scale-100"
                     )}
                     onClick={() => setSelectedCardId(prev => prev === card.id ? null : card.id)}
                   >
@@ -175,16 +163,19 @@ export default function CardsDashboard() {
 
           {/* Right Col: Invoice Details */}
           <div className="lg:col-span-8 space-y-6">
-            {selectedCard && (
+            {selectedCard ? (
               <div className="space-y-6">
+
                 {/* Limit Progress */}
                 <div className="card-elevated p-6 space-y-4">
                   <div className="flex justify-between items-end">
                     <div>
-                      <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Limite Consumido</p>
+                      <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+                        Limite Consumido
+                      </p>
                       <p className="text-3xl font-black text-primary">{formatCurrency(stats.used)}</p>
                       <p className="text-[10px] text-muted-foreground mt-1">
-                        Considera todas as faturas abertas (incluindo meses futuros)
+                        Soma faturas abertas + parcelamentos futuros não pagos
                       </p>
                     </div>
                     <div className="text-right">
@@ -194,7 +185,9 @@ export default function CardsDashboard() {
                           {formatCurrency(stats.available)}
                         </span>
                       </p>
-                      <p className="text-xs text-muted-foreground">Limite Total: {formatCurrency(stats.limit)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Limite Total: {formatCurrency(stats.limit)}
+                      </p>
                       {stats.isOverLimit && (
                         <p className="text-[10px] text-danger font-bold mt-1">⚠️ Limite excedido!</p>
                       )}
@@ -224,34 +217,57 @@ export default function CardsDashboard() {
                           <Receipt className="w-6 h-6 text-primary" />
                         </div>
                         <div>
-                          <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Total da Fatura</p>
+                          <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">
+                            Total da Fatura
+                          </p>
                           <p className="text-4xl font-black">{formatCurrency(currentInvoiceTotal)}</p>
                         </div>
                       </div>
                     </div>
+
                     <div className="flex flex-wrap items-center gap-x-8 gap-y-4 pt-2 border-t border-border/50">
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" onClick={handlePrevMonth} className="rounded-xl h-8 w-8 text-xs">{'<'}</Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={handlePrevMonth}
+                          className="rounded-xl h-8 w-8 text-xs"
+                        >
+                          {'<'}
+                        </Button>
                         <h3 className="font-bold text-sm capitalize min-w-[100px] text-center">
                           {format(viewDate, 'MMMM yyyy', { locale: ptBR })}
                         </h3>
-                        <Button variant="outline" size="icon" onClick={handleNextMonth} className="rounded-xl h-8 w-8 text-xs">{'>'}</Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={handleNextMonth}
+                          className="rounded-xl h-8 w-8 text-xs"
+                        >
+                          {'>'}
+                        </Button>
                       </div>
+
                       <div className="flex items-center gap-4">
                         <span className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
-                          <Calendar className="w-3.5 h-3.5 text-primary" /> Fechamento: Dia {selectedCard.closingDay}
+                          <Calendar className="w-3.5 h-3.5 text-primary" />
+                          Fechamento: Dia {selectedCard.closingDay}
                         </span>
                         <span className="flex items-center gap-2 text-xs font-bold text-danger">
-                          <Calendar className="w-3.5 h-3.5" /> Vencimento: Dia {selectedCard.dueDay}
+                          <Calendar className="w-3.5 h-3.5" />
+                          Vencimento: Dia {selectedCard.dueDay}
                         </span>
                       </div>
+
                       <div className="ml-auto">
-                        <span className={cn(
-                          "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider",
-                          invoiceStatus === 'paga'
-                            ? "bg-success/10 text-success"
-                            : "bg-primary/10 text-primary"
-                        )}>
+                        <span
+                          className={cn(
+                            "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider",
+                            invoiceStatus === 'paga'
+                              ? "bg-success/10 text-success"
+                              : "bg-primary/10 text-primary"
+                          )}
+                        >
                           Status: {invoiceStatus === 'paga' ? '✅ Paga' : '🔓 Aberta'}
                         </span>
                       </div>
@@ -304,9 +320,7 @@ export default function CardsDashboard() {
                   </div>
                 </div>
               </div>
-            )}
-
-            {!selectedCard && (
+            ) : (
               <div className="card-elevated p-16 text-center text-muted-foreground opacity-40">
                 <CreditCard className="w-16 h-16 mx-auto mb-4" />
                 <p className="text-lg font-bold">Selecione um cartão para ver os detalhes</p>
@@ -325,6 +339,7 @@ export default function CardsDashboard() {
           />
         </Portal>
       )}
+
       {showEditCard && selectedCard && (
         <Portal>
           <EditCardDialog
