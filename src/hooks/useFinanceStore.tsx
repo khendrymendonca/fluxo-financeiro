@@ -1541,6 +1541,9 @@ function useFinanceProvider() {
   const getCardUsedLimit = useCallback((cardId: string): number => {
     if (!cardId) return 0;
 
+    const card = state.creditCards.find(c => c.id === cardId);
+    if (!card) return 0;
+
     // Faturas deste cartão que já foram quitadas (invoiceMonthYear pago)
     const paidInvoices = new Set(
       state.transactions
@@ -1562,16 +1565,14 @@ function useFinanceProvider() {
         // Ignora projeções virtuais de meses futuros (recorrentes ainda não cobradas)
         if (t.isVirtual) return false;
 
-        // Se tem invoiceMonthYear: consome limite SÓ se a fatura ainda não foi paga
-        if (t.invoiceMonthYear) {
-          return !paidInvoices.has(t.invoiceMonthYear);
-        }
+        // Determina a competência (usando o campo ou calculando on-the-fly)
+        const competence = t.invoiceMonthYear || calcInvoiceMonthYear(parseLocalDate(t.date), card);
 
-        // Sem invoiceMonthYear (dados antigos): considera comprometido
-        return true;
+        // Consome limite SÓ se a fatura correspondente ainda não foi paga
+        return !paidInvoices.has(competence);
       })
       .reduce((sum, t) => sum + Number(t.amount || 0), 0);
-  }, [state.transactions]);
+  }, [state.transactions, state.creditCards, calcInvoiceMonthYear, parseLocalDate]);
 
   const getCardAvailableLimit = useCallback((cardId: string): number => {
     const card = state.creditCards.find((c) => c.id === cardId);
