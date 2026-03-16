@@ -11,7 +11,7 @@ interface CreditCardVisualProps {
 }
 
 export function CreditCardVisual({ card, usedLimit, availableLimit, onClick, className }: CreditCardVisualProps) {
-    const percentageUsed = Math.min((usedLimit / card.limit) * 100, 100);
+    const percentageUsed = card.limit > 0 ? Math.min((usedLimit / card.limit) * 100, 100) : 0;
 
     return (
         <div

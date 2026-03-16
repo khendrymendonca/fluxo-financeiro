@@ -48,9 +48,10 @@ export default function CardsDashboard() {
   };
 
   const getInvoiceTransactions = (cardId: string) => {
-    if (!selectedCard) return [];
+    const card = creditCards.find(c => c.id === cardId);
+    if (!card) return [];
     const viewDateStr = format(viewDate, 'yyyy-MM');
-    const { closingDay } = getCardSettingsForDate(selectedCard, viewDate);
+    const { closingDay } = getCardSettingsForDate(card, viewDate);
     const viewYear = viewDate.getFullYear();
     const viewMonth = viewDate.getMonth();
     const endInv = new Date(viewYear, viewMonth, closingDay, 23, 59, 59);
