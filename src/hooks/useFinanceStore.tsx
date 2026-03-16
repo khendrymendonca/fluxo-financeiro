@@ -1538,23 +1538,63 @@ function useFinanceProvider() {
     return Math.max(0, totalSpent - paid);
   }, [state.transactions, viewDate, getTransactionTargetDate]);
 
-  // ✅ CORREÇÃO: getCardUsedLimit agora considera TODAS as transações e contas pendentes no cartão,
-  // indipendente do mês, para refletir o limite consumido real.
-  const getCardUsedLimit = useCallback((cardId: string) => {
-    const cardTransactions = state.transactions.filter(t => t.cardId === cardId);
+  const getCardUsedLimit = useCallback((cardId: string): number => {
+    if (!cardId) return 0;
 
-    // Transações não pagas (gastos - ganhos)
-    const spentTxs = cardTransactions
-      .filter(t => !t.isInvoicePayment && !t.isPaid)
-      .reduce((acc, curr) => acc + (curr.type === 'expense' ? curr.amount : -curr.amount), 0);
+    // Converte a data de hoje para YYYY-MM-DD para comparar
+    const todayStr = new Date().toISOString().split('T')[0];
 
-    // Contas pendentes no cartão
-    const spentBills = state.bills
-      .filter(b => b.cardId === cardId && b.status === 'pending' && b.categoryId !== 'card-payment')
-      .reduce((acc, curr) => acc + (curr.type === 'payable' ? curr.amount : -curr.amount), 0);
+    // Pega as faturas que já foram pagas deste cartão
+    const paidInvoices = new Set(
+      state.transactions
+        .filter(
+          (t) =>
+            t.cardId === cardId &&
+            t.isInvoicePayment === true &&
+            !!t.invoiceMonthYear
+        )
+        .map((t) => t.invoiceMonthYear as string)
+    );
 
-    return Math.max(0, spentTxs + spentBills);
-  }, [state.transactions, state.bills]);
+    return state.transactions
+      .filter((t) => {
+        // 1. Só aceita gastos do cartão específico
+        if (t.cardId !== cardId) return false;
+        if (t.type !== 'expense') return false;
+
+        // 2. Não conta transações de pagamento da fatura em si
+        if (t.isInvoicePayment === true) return false;
+
+        // 3. Ignora transações virtuais de meses futuros (senão as assinaturas 
+        // projetadas pros próximos 12 meses comeriam seu limite hoje)
+        if (t.isVirtual) return false;
+
+        // 4. Se a compra caiu numa fatura que já foi paga, o limite foi liberado
+        if (t.invoiceMonthYear && paidInvoices.has(t.invoiceMonthYear)) return false;
+
+        // 5. REGRA DE FIXOS / ASSINATURAS RECORRENTES:
+        // Uma Netflix/Spotify só começa a consumir limite a partir do dia 
+        // que cai na fatura. Despesas futuras não afetam o limite atual.
+        const isFixed = t.transactionType === 'recurring' || t.isRecurring;
+        if (isFixed) {
+          if (t.date > todayStr) {
+            return false; // Ainda não chegou a data de cobrança no cartão
+          }
+        }
+
+        // Se for parcelado ou se tudo acima passou, então está consumindo o limite!
+        return true;
+      })
+      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  }, [state.transactions]);
+
+  const getCardAvailableLimit = useCallback((cardId: string): number => {
+    const card = state.creditCards.find((c) => c.id === cardId);
+    if (!card) return 0;
+
+    const used = getCardUsedLimit(cardId);
+    return Math.max(0, Number(card.limit || 0) - used);
+  }, [state.creditCards, getCardUsedLimit]);
 
   const getCategoryExpenses = useCallback(() => {
     const expenses: Record<string, number> = {};
@@ -1729,6 +1769,7 @@ function useFinanceProvider() {
     currentMonthBills,
     getCardExpenses,
     getCardUsedLimit,
+    getCardAvailableLimit,
     getCategoryExpenses,
     getCardSettingsForDate,
     getEmergencyFundData,
