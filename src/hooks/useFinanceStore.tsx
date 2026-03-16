@@ -1538,8 +1538,23 @@ function useFinanceProvider() {
     return Math.max(0, totalSpent - paid);
   }, [state.transactions, viewDate, getTransactionTargetDate]);
 
-  // ✅ getCardUsedLimit mantido como alias de getCardExpenses (comportamento intencional)
-  const getCardUsedLimit = useCallback((cardId: string) => getCardExpenses(cardId), [getCardExpenses]);
+  // ✅ CORREÇÃO: getCardUsedLimit agora considera TODAS as transações e contas pendentes no cartão,
+  // indipendente do mês, para refletir o limite consumido real.
+  const getCardUsedLimit = useCallback((cardId: string) => {
+    const cardTransactions = state.transactions.filter(t => t.cardId === cardId);
+
+    // Transações não pagas (gastos - ganhos)
+    const spentTxs = cardTransactions
+      .filter(t => !t.isInvoicePayment && !t.isPaid)
+      .reduce((acc, curr) => acc + (curr.type === 'expense' ? curr.amount : -curr.amount), 0);
+
+    // Contas pendentes no cartão
+    const spentBills = state.bills
+      .filter(b => b.cardId === cardId && b.status === 'pending' && b.categoryId !== 'card-payment')
+      .reduce((acc, curr) => acc + (curr.type === 'payable' ? curr.amount : -curr.amount), 0);
+
+    return Math.max(0, spentTxs + spentBills);
+  }, [state.transactions, state.bills]);
 
   const getCategoryExpenses = useCallback(() => {
     const expenses: Record<string, number> = {};

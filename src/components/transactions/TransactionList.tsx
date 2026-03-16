@@ -38,6 +38,9 @@ const todayLocalString = (): string => {
 
 export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBill, onDeleteBill }: TransactionListProps) {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'account' | 'card'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'punctual' | 'installment' | 'fixed'>('all');
+  const [specificSourceId, setSpecificSourceId] = useState<string>('all');
   const [payingItem, setPayingItem] = useState<any>(null);
   const [paymentDate, setPaymentDate] = useState<string>(todayLocalString());
   const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
@@ -80,6 +83,9 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
         originalBillId: b.originalBillId,
         isVirtual: b.isVirtual,
         cardId: b.cardId,
+        accountId: b.accountId,
+        installmentTotal: 0,
+        isRecurring: b.isFixed,
         icon: b.categoryId === 'debt-payment' ? ShieldAlert : undefined
       }))
   ];
@@ -98,7 +104,32 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   };
 
   const filteredItems = displayItems
-    .filter(t => filter === 'all' || t.type === filter)
+    .filter(t => {
+      // Filtro de Categoria (Receita/Despesa)
+      if (filter !== 'all' && t.type !== filter) return false;
+
+      // Filtro de Origem (Conta vs Cartão)
+      if (sourceFilter === 'account') {
+        if (t.cardId) return false;
+        if (specificSourceId !== 'all' && t.accountId !== specificSourceId) return false;
+      } else if (sourceFilter === 'card') {
+        if (!t.cardId) return false;
+        if (specificSourceId !== 'all' && t.cardId !== specificSourceId) return false;
+      }
+
+      // Filtro de Tipo (Pontual, Parcelado, Fixo)
+      if (typeFilter !== 'all') {
+        if (typeFilter === 'punctual') {
+          if (t.isBill || t.installmentTotal || t.isRecurring) return false;
+        } else if (typeFilter === 'installment') {
+          if (!t.installmentTotal || t.installmentTotal <= 1) return false;
+        } else if (typeFilter === 'fixed') {
+          if (!t.isBill && !t.isRecurring) return false;
+        }
+      }
+
+      return true;
+    })
     .sort((a, b) => parseLocalDate(getGroupDate(b)).getTime() - parseLocalDate(getGroupDate(a)).getTime());
 
   const groupedItems = filteredItems.reduce((groups, item) => {
@@ -131,7 +162,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     if (payingItem.isBill) {
       await onPayBill(payingItem.billId, isCard ? undefined : targetId, paymentDate, isCard ? targetId : undefined);
     } else {
-      await togglePaid(payingItem.id, true, isCard ? undefined : targetId, paymentDate, isCard ? targetId : undefined);
+      await togglePaid((payingItem as Transaction).id, true, isCard ? undefined : targetId, paymentDate, isCard ? targetId : undefined);
     }
     setPayingItem(null);
   };
@@ -193,16 +224,74 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   return (
     <div className="space-y-4">
       {/* Filtros */}
-      <div className="card-elevated p-4 flex flex-wrap gap-3 items-center">
-        <div className="flex gap-2 p-1 bg-muted rounded-xl">
-          {(['all', 'income', 'expense'] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={cn("py-2 px-4 rounded-lg font-medium text-sm transition-all",
-                filter === f ? "bg-card shadow-sm text-foreground" : "text-muted-foreground")}>
-              {f === 'all' ? 'Todos' : f === 'income' ? 'Receitas' : 'Despesas'}
+      {/* Filtros Avançados */}
+      <div className="card-elevated p-4 space-y-4">
+        <div className="flex flex-wrap gap-4 items-center">
+          {/* Receita/Despesa */}
+          <div className="flex gap-1 p-1 bg-muted rounded-xl">
+            {(['all', 'income', 'expense'] as const).map(f => (
+              <button key={f} onClick={() => setFilter(f)}
+                className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
+                  filter === f ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                {f === 'all' ? 'Todos' : f === 'income' ? 'Receitas' : 'Despesas'}
+              </button>
+            ))}
+          </div>
+
+          {/* Origem */}
+          <div className="flex gap-1 p-1 bg-muted rounded-xl">
+            <button onClick={() => { setSourceFilter('all'); setSpecificSourceId('all'); }}
+              className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
+                sourceFilter === 'all' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+              Todas Origens
             </button>
-          ))}
+            <button onClick={() => { setSourceFilter('account'); setSpecificSourceId('all'); }}
+              className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
+                sourceFilter === 'account' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+              Débito
+            </button>
+            <button onClick={() => { setSourceFilter('card'); setSpecificSourceId('all'); }}
+              className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
+                sourceFilter === 'card' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+              Cartão
+            </button>
+          </div>
+
+          {/* Tipo */}
+          <div className="flex gap-1 p-1 bg-muted rounded-xl">
+            {(['all', 'punctual', 'installment', 'fixed'] as const).map(f => (
+              <button key={f} onClick={() => setTypeFilter(f)}
+                className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
+                  typeFilter === f ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                {f === 'all' ? 'Qualquer Tipo' : f === 'punctual' ? 'Pontual' : f === 'installment' ? 'Parcelado' : 'Fixo'}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Filtro Específico (Conta ou Cartão) */}
+        {sourceFilter !== 'all' && (
+          <div className="flex items-center gap-3 pt-2 border-t border-border animate-in slide-in-from-top-1">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+              {sourceFilter === 'account' ? 'Selecionar Conta:' : 'Selecionar Cartão:'}
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setSpecificSourceId('all')}
+                className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase transition-all border",
+                  specificSourceId === 'all' ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}>
+                Todos
+              </button>
+              {(sourceFilter === 'account' ? accounts : creditCards).map((item: any) => (
+                <button key={item.id} onClick={() => setSpecificSourceId(item.id)}
+                  className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase transition-all border flex items-center gap-2",
+                    specificSourceId === item.id ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}>
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                  {item.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Lista agrupada */}
