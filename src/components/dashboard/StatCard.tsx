@@ -30,17 +30,17 @@ export function StatCard({
 
   return (
     <div className={cn(
-      "card-elevated p-5 animate-fade-in",
+      "card-elevated p-4 sm:p-5 animate-fade-in overflow-hidden",
       variant === 'positive' && 'border-l-4 border-l-success',
       variant === 'negative' && 'border-l-4 border-l-danger',
       variant === 'neutral' && 'border-l-4 border-l-info',
       className
     )}>
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-1 min-w-0 flex-1">
+          <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</p>
           <p className={cn(
-            "text-2xl font-semibold tracking-tight",
+            "text-lg sm:text-xl lg:text-2xl font-semibold tracking-tight break-words",
             variant === 'positive' && 'text-success',
             variant === 'negative' && 'text-danger',
             variant === 'neutral' && 'text-info',
@@ -48,11 +48,11 @@ export function StatCard({
             {formatValue(value)}
           </p>
           {subtitle && (
-            <p className="text-xs text-muted-foreground">{subtitle}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground line-clamp-2">{subtitle}</p>
           )}
         </div>
         <div className={cn(
-          "p-2.5 rounded-xl",
+          "p-2 sm:p-2.5 rounded-xl shrink-0",
           variant === 'positive' && 'bg-success-light text-success',
           variant === 'negative' && 'bg-danger-light text-danger',
           variant === 'neutral' && 'bg-info-light text-info',

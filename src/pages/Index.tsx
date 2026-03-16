@@ -145,7 +145,7 @@ export default function Index() {
 
             <SmartInsights onNavigate={(view) => setCurrentView(view as ViewType)} />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <StatCard
                 title="Patrimônio Total"
                 value={totalNetWorth}
@@ -166,11 +166,11 @@ export default function Index() {
               />
               {/* ✅ FIX: usa periodBalance no lugar de balance */}
               <StatCard
-                title="Saldo do Período"
+                title="Saldo Projetado"
                 value={projectedBalance}
                 icon={<PiggyBank className="w-5 h-5" />}
                 variant={projectedBalance >= 0 ? 'positive' : 'negative'}
-                subtitle="Considerando todas as saídas pendentes"
+                subtitle="Considerando saídas pendentes"
               />
             </div>
 

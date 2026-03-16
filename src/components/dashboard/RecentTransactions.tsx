@@ -74,12 +74,12 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
           return (
             <div
               key={transaction.id}
-              className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors animate-fade-in group"
+              className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors animate-fade-in group gap-3"
               style={{ animationDelay: `${index * 50}ms` }}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className={cn(
-                  "p-2 rounded-xl transition-all group-hover:scale-110",
+                  "p-2 rounded-xl transition-all group-hover:scale-110 shrink-0",
                   isIncome ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
                 )}>
                   {isIncome
@@ -87,22 +87,22 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
                     : <ArrowDownLeft className="w-4 h-4" />
                   }
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-sm">{transaction.description}</p>
+                    <p className="font-semibold text-sm truncate">{transaction.description}</p>
                     {sourceLabel && (
-                      <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground shrink-0 max-w-[80px] truncate">
                         {sourceLabel}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground truncate">
                     {category?.label} • {formatDate(transaction.date)}
                   </p>
                 </div>
               </div>
               <span className={cn(
-                "font-bold text-sm",
+                "font-bold text-sm shrink-0 whitespace-nowrap",
                 isIncome ? "text-success" : "text-danger"
               )}>
                 {isIncome ? '+' : '-'} {formatCurrency(transaction.amount)}
