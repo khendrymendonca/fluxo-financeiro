@@ -1640,6 +1640,16 @@ function useFinanceProvider() {
         // Ignora projeções virtuais de meses futuros (recorrentes ainda não cobradas)
         if (t.isVirtual) return false;
 
+        // ✅ REGRA DE LIMITE:
+        // 1. Se for um lançamento recorrente (fixo) e a data for futura, NÃO consome limite ainda.
+        // 2. Se for um parcelamento (installmentTotal > 1), o valor total futuro DEVE consumir limite (comportamento padrão de cartão).
+        const isInstallment = t.installmentTotal && t.installmentTotal > 1;
+        const isFuture = parseLocalDate(t.date) > new Date();
+
+        if (t.isRecurring && isFuture && !isInstallment) {
+          return false;
+        }
+
         // Determina a competência (usando o campo ou calculando on-the-fly)
         const competence = t.invoiceMonthYear || calcInvoiceMonthYear(parseLocalDate(t.date), card);
 
