@@ -53,9 +53,6 @@ export default function CardsDashboard() {
     const { closingDay } = getCardSettingsForDate(selectedCard, viewDate);
     const viewYear = viewDate.getFullYear();
     const viewMonth = viewDate.getMonth();
-    const endOfInvoice = new Date(viewYear, month, closingDay, 23, 59, 59); // Note: Fix potential 'month' vs 'viewMonth' below if needed, but user provided version
-    // Re-checking user snippet for potential errors: startOfInvoice = new Date(viewYear, viewMonth - 1, closingDay + 1, 0, 0, 0);
-    // User snippet had `month` undefined? Let's fix based on logic
     const endInv = new Date(viewYear, viewMonth, closingDay, 23, 59, 59);
     const startInv = new Date(viewYear, viewMonth - 1, closingDay + 1, 0, 0, 0);
 
