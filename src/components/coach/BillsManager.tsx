@@ -145,12 +145,12 @@ export function BillsManager() {
                                 <div className={cn(
                                     "card-elevated p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:translate-x-1 border-l-4",
                                     bill.status === 'paid' ? "border-success opacity-80" :
-                                    isLate ? "border-danger bg-danger/5" : "border-info"
+                                        isLate ? "border-danger bg-danger/5" : "border-info"
                                 )}>
                                     <div className="flex items-center gap-4">
                                         <div className={cn("p-3 rounded-2xl",
                                             bill.categoryId === 'card-payment' ? "bg-primary/10 text-primary" :
-                                            (bill.type === 'payable' ? "bg-danger/10 text-danger" : "bg-success/10 text-success"))}>
+                                                (bill.type === 'payable' ? "bg-danger/10 text-danger" : "bg-success/10 text-success"))}>
                                             {bill.categoryId === 'card-payment' ? <CardIcon className="w-5 h-5" /> :
                                                 (bill.type === 'payable' ? <ArrowDownCircle className="w-5 h-5" /> : <ArrowUpCircle className="w-5 h-5" />)}
                                         </div>
@@ -180,24 +180,24 @@ export function BillsManager() {
                                                 )}
                                                 {bill.accountId && (
                                                     <><span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
-                                                    <span className="flex items-center gap-1 font-bold">
-                                                        <ShieldAlert className="w-3 h-3" />
-                                                        {accounts.find(a => a.id === bill.accountId)?.name}
-                                                    </span></>
+                                                        <span className="flex items-center gap-1 font-bold">
+                                                            <ShieldAlert className="w-3 h-3" />
+                                                            {accounts.find(a => a.id === bill.accountId)?.name}
+                                                        </span></>
                                                 )}
                                                 {bill.cardId && (
                                                     <><span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
-                                                    <span className="flex items-center gap-1 font-bold">
-                                                        <CardIcon className="w-3 h-3" />
-                                                        {creditCards.find(c => c.id === bill.cardId)?.name}
-                                                    </span></>
+                                                        <span className="flex items-center gap-1 font-bold">
+                                                            <CardIcon className="w-3 h-3" />
+                                                            {creditCards.find(c => c.id === bill.cardId)?.name}
+                                                        </span></>
                                                 )}
                                                 {bill.debtId && (
                                                     <><span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
-                                                    <span className="flex items-center gap-1 font-bold">
-                                                        <ShieldAlert className="w-3 h-3 text-warning" />
-                                                        {debts.find(d => d.id === bill.debtId)?.name}
-                                                    </span></>
+                                                        <span className="flex items-center gap-1 font-bold">
+                                                            <ShieldAlert className="w-3 h-3 text-warning" />
+                                                            {debts.find(d => d.id === bill.debtId)?.name}
+                                                        </span></>
                                                 )}
                                                 {bill.isFixed && <span className="ml-1 px-1.5 py-0.5 bg-primary/10 text-primary rounded-md text-[10px] font-bold">RECORRENTE</span>}
                                             </div>
@@ -237,7 +237,7 @@ export function BillsManager() {
                                                 <CheckCircle2 className="w-5 h-5" /> Baixar Conta
                                             </Button>
                                         )}
-                                        {bill.status === 'pending' && onDeleteBill !== undefined && (
+                                        {bill.status === 'pending' && deleteBill !== undefined && (
                                             <Button size="sm" variant="ghost"
                                                 onClick={() => setDeletingBill(bill)}
                                                 className="h-11 px-3 rounded-2xl hover:bg-danger/10 text-danger">
@@ -318,16 +318,16 @@ export function BillsManager() {
                                                     targetDate.getMonth() === viewDate.getMonth() &&
                                                     targetDate.getFullYear() === viewDate.getFullYear();
                                             }).length === 0 &&
-                                            bills.filter(b =>
-                                                b.cardId === bill.cardId && b.status === 'pending' &&
-                                                b.categoryId !== 'card-payment' &&
-                                                parseLocalDate(b.dueDate).getMonth() === viewDate.getMonth() &&
-                                                parseLocalDate(b.dueDate).getFullYear() === viewDate.getFullYear()
-                                            ).length === 0 && (
-                                                <p className="text-[10px] text-muted-foreground text-center py-2 italic">
-                                                    Nenhuma compra listada para esta fatura.
-                                                </p>
-                                            )}
+                                                bills.filter(b =>
+                                                    b.cardId === bill.cardId && b.status === 'pending' &&
+                                                    b.categoryId !== 'card-payment' &&
+                                                    parseLocalDate(b.dueDate).getMonth() === viewDate.getMonth() &&
+                                                    parseLocalDate(b.dueDate).getFullYear() === viewDate.getFullYear()
+                                                ).length === 0 && (
+                                                    <p className="text-[10px] text-muted-foreground text-center py-2 italic">
+                                                        Nenhuma compra listada para esta fatura.
+                                                    </p>
+                                                )}
                                         </div>
                                     </div>
                                 )}
@@ -413,7 +413,7 @@ export function BillsManager() {
                                                     disabled={insufficientFunds}
                                                     className={cn("w-full p-4 rounded-xl border-2 text-left transition-all",
                                                         insufficientFunds ? "border-border/30 opacity-40 cursor-not-allowed" :
-                                                        "border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] cursor-pointer")}>
+                                                            "border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] cursor-pointer")}>
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-3">
                                                             <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: acc.color }} />
