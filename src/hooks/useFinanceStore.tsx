@@ -1541,48 +1541,33 @@ function useFinanceProvider() {
   const getCardUsedLimit = useCallback((cardId: string): number => {
     if (!cardId) return 0;
 
-    // Converte a data de hoje para YYYY-MM-DD para comparar
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    // Pega as faturas que já foram pagas deste cartão
+    // Faturas deste cartão que já foram quitadas (invoiceMonthYear pago)
     const paidInvoices = new Set(
       state.transactions
-        .filter(
-          (t) =>
-            t.cardId === cardId &&
-            t.isInvoicePayment === true &&
-            !!t.invoiceMonthYear
+        .filter(t =>
+          t.cardId === cardId &&
+          t.isInvoicePayment === true &&
+          !!t.invoiceMonthYear
         )
-        .map((t) => t.invoiceMonthYear as string)
+        .map(t => t.invoiceMonthYear as string)
     );
 
     return state.transactions
-      .filter((t) => {
-        // 1. Só aceita gastos do cartão específico
+      .filter(t => {
+        // Só deste cartão
         if (t.cardId !== cardId) return false;
+        // Só despesas reais (não pagamento de fatura)
         if (t.type !== 'expense') return false;
-
-        // 2. Não conta transações de pagamento da fatura em si
         if (t.isInvoicePayment === true) return false;
-
-        // 3. Ignora transações virtuais de meses futuros (senão as assinaturas 
-        // projetadas pros próximos 12 meses comeriam seu limite hoje)
+        // Ignora projeções virtuais de meses futuros (recorrentes ainda não cobradas)
         if (t.isVirtual) return false;
 
-        // 4. Se a compra caiu numa fatura que já foi paga, o limite foi liberado
-        if (t.invoiceMonthYear && paidInvoices.has(t.invoiceMonthYear)) return false;
-
-        // 5. REGRA DE FIXOS / ASSINATURAS RECORRENTES:
-        // Uma Netflix/Spotify só começa a consumir limite a partir do dia 
-        // que cai na fatura. Despesas futuras não afetam o limite atual.
-        const isFixed = t.transactionType === 'recurring' || t.isRecurring;
-        if (isFixed) {
-          if (t.date > todayStr) {
-            return false; // Ainda não chegou a data de cobrança no cartão
-          }
+        // Se tem invoiceMonthYear: consome limite SÓ se a fatura ainda não foi paga
+        if (t.invoiceMonthYear) {
+          return !paidInvoices.has(t.invoiceMonthYear);
         }
 
-        // Se for parcelado ou se tudo acima passou, então está consumindo o limite!
+        // Sem invoiceMonthYear (dados antigos): considera comprometido
         return true;
       })
       .reduce((sum, t) => sum + Number(t.amount || 0), 0);
