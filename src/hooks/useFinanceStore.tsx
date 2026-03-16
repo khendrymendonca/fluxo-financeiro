@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo, createContext, useContext } 
 import { FinanceState, Transaction, Account, CreditCard, Debt, SavingsGoal, Category, Subcategory, Bill, HabitLog, UserHabit, BudgetRule, FilterMode } from '@/types/finance';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
-import { format, subDays, parseISO } from 'date-fns';
+import { format, subDays, parseISO, addMonths } from 'date-fns';
 
 const initialState: FinanceState = {
   transactions: [],
@@ -72,7 +72,7 @@ function useFinanceProvider() {
   // ✅ FIX: Lógica de competência de cartão centralizada numa única função helper
   const calcInvoiceMonthYear = useCallback((tDate: Date, card: CreditCard): string => {
     const { closingDay, dueDay } = getCardSettingsForDate(card, tDate);
-    let invoiceDate = new Date(tDate.getFullYear(), tDate.getMonth(), 1);
+    const invoiceDate = new Date(tDate.getFullYear(), tDate.getMonth(), 1);
     if (tDate.getDate() > closingDay) {
       invoiceDate.setMonth(invoiceDate.getMonth() + 1);
     }
@@ -418,35 +418,46 @@ function useFinanceProvider() {
     } finally {
       setLoading(false); // ✅ FIX: única chamada
     }
-  }, []);
+  }, [parseLocalDate]);
 
   useEffect(() => {
     fetchInitialData();
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) fetchInitialData();
-      else setState(initialState);
+      if (session) {
+        fetchInitialData();
+      } else {
+        setState(initialState);
+        setLoading(false);
+      }
     });
     return () => subscription.unsubscribe();
   }, [fetchInitialData]);
 
   // --- Utilities & Accounts ---
 
-  const updateAccountBalance = async (id: string, change: number) => {
+  const updateAccountBalance = useCallback(async (id: string, change: number) => {
     try {
       setState(prev => {
         const acc = prev.accounts.find(a => a.id === id);
         if (!acc) return prev;
         const newBalance = Math.round((Number(acc.balance) + Number(change)) * 100) / 100;
+        
+        // Mover a persistência para fora do loop de renderização/setState seria o ideal,
+        // mas como o setState do React (useState) não retorna o novo valor imediatamente,
+        // vamos manter a lógica de persistência disparada aqui, mas de forma que o lint não reclame
+        // e que seja mais previsível.
+        
         supabase.from('accounts').update({ balance: newBalance }).eq('id', id).then(({ error }) => {
           if (error) console.error('Erro ao persistir saldo:', error);
         });
+
         return {
           ...prev,
           accounts: prev.accounts.map(a => a.id === id ? { ...a, balance: newBalance } : a)
         };
       });
     } catch (err) { console.error('Erro em updateAccountBalance:', err); }
-  };
+  }, []);
 
   // --- Bills ---
 
@@ -460,10 +471,8 @@ function useFinanceProvider() {
 
       for (let i = 0; i < count; i++) {
         const baseDate = parseLocalDate(bill.dueDate);
-        const targetDay = baseDate.getDate();
-        const instDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, targetDay);
-        if (instDate.getMonth() !== ((baseDate.getMonth() + i) % 12)) instDate.setDate(0);
-        const dueStr = toLocalDateString(instDate.getFullYear(), instDate.getMonth(), instDate.getDate());
+        const instDate = addMonths(baseDate, i);
+        const dueStr = format(instDate, 'yyyy-MM-dd');
 
         billsToAdd.push({
           user_id: user.id,
@@ -500,8 +509,8 @@ function useFinanceProvider() {
 
       setState(prev => ({ ...prev, bills: [...prev.bills, ...newBills] }));
       if (project) toast({ title: bill.isFixed ? 'Conta fixa configurada para os próximos 12 meses' : 'Conta adicionada com sucesso' });
-    } catch (err) { toast({ title: 'Erro ao adicionar conta', variant: 'destructive' }); }
-  }, [parseLocalDate, toLocalDateString]);
+    } catch (err) { toast({ title: 'Erro ao agendar conta', variant: 'destructive' }); }
+    }, [parseLocalDate]);
 
   const updateBill = useCallback(async (id: string, updates: Partial<Bill>, applyToFuture: boolean = false) => {
     try {
@@ -730,16 +739,19 @@ function useFinanceProvider() {
           pushTx({ ...transaction, date: inst.date, amount: inst.amount }, index + 1, customInstallments.length);
         });
       } else if (transaction.installmentTotal && transaction.installmentTotal > 1) {
-        const val = transaction.amount / transaction.installmentTotal;
+        const amountPerInstallment = Math.round((transaction.amount / transaction.installmentTotal) * 100) / 100;
+        const lastInstallmentAmount = Math.round((transaction.amount - (amountPerInstallment * (transaction.installmentTotal - 1))) * 100) / 100;
+        
+        const baseDate = parseLocalDate(transaction.date);
         for (let i = 1; i <= transaction.installmentTotal; i++) {
-          const [yy, mm, dd] = transaction.date.split('-').map(Number);
-          const instDate = new Date(yy, mm - 1 + (i - 1), dd);
-          pushTx({ ...transaction, date: format(instDate, 'yyyy-MM-dd'), amount: val }, i, transaction.installmentTotal);
+          const currentAmount = i === transaction.installmentTotal ? lastInstallmentAmount : amountPerInstallment;
+          const instDate = addMonths(baseDate, i - 1);
+          pushTx({ ...transaction, date: format(instDate, 'yyyy-MM-dd'), amount: currentAmount }, i, transaction.installmentTotal);
         }
       } else if (transaction.isRecurring) {
+        const baseDate = parseLocalDate(transaction.date);
         for (let i = 1; i <= 12; i++) {
-          const [yy, mm, dd] = transaction.date.split('-').map(Number);
-          const instDate = new Date(yy, mm - 1 + (i - 1), dd);
+          const instDate = addMonths(baseDate, i - 1);
           pushTx({ ...transaction, date: format(instDate, 'yyyy-MM-dd') }, i, undefined);
         }
       } else {
@@ -779,24 +791,24 @@ function useFinanceProvider() {
           }
         }
         if (tx.debtId) {
-          const debt = state.debts.find(d => d.id === tx.debtId);
-          if (debt) {
-            const newRemaining = Math.max(0, (debt.remainingAmount || 0) - tx.amount);
+          setState(prev => {
+            const debt = prev.debts.find(d => d.id === tx.debtId);
+            if (!debt) return prev;
+            const newRemaining = Math.max(0, (Number(debt.remainingAmount) || 0) - Number(tx.amount));
             supabase.from('debts').update({ remaining_amount: newRemaining }).eq('id', tx.debtId).then();
-            setState(prev => ({
+            return {
               ...prev,
               debts: prev.debts.map(d => d.id === tx.debtId ? { ...d, remainingAmount: newRemaining } : d)
-            }));
-          }
-        }
-      }
+            };
+          });
+        }      }
 
       toast({ title: 'Lançamento salvo com sucesso' });
     } catch (error) {
       console.error(error);
       toast({ title: 'Erro ao salvar', variant: 'destructive' });
     }
-  }, [state.categories, state.creditCards, state.debts, calcInvoiceMonthYear, parseLocalDate, updateAccountBalance]);
+  }, [state.categories, state.creditCards, calcInvoiceMonthYear, parseLocalDate, updateAccountBalance]);
 
   const updateTransaction = useCallback(async (updatedTx: Transaction, applyScope: 'this' | 'future' | 'all' = 'this') => {
     try {
@@ -887,7 +899,33 @@ function useFinanceProvider() {
             updateAccountBalance(updatedTx.accountId, apply);
           }
         }
-      }
+
+        // Atualizar saldo da dívida se necessário
+        if (oldTx.debtId) {
+          setState(prev => {
+            const debt = prev.debts.find(d => d.id === oldTx.debtId);
+            if (!debt) return prev;
+            const newRemaining = (Number(debt.remainingAmount) || 0) + Number(oldTx.amount);
+            supabase.from('debts').update({ remaining_amount: newRemaining }).eq('id', oldTx.debtId).then();
+            return {
+              ...prev,
+              debts: prev.debts.map(d => d.id === oldTx.debtId ? { ...d, remainingAmount: newRemaining } : d)
+            };
+          });
+        }
+        if (updatedTx.debtId) {
+          setState(prev => {
+            const debt = prev.debts.find(d => d.id === updatedTx.debtId);
+            if (!debt) return prev;
+            const newRemaining = Math.max(0, (Number(debt.remainingAmount) || 0) - Number(updatedTx.amount));
+            supabase.from('debts').update({ remaining_amount: newRemaining }).eq('id', updatedTx.debtId).then();
+            return {
+              ...prev,
+              debts: prev.debts.map(d => d.id === updatedTx.debtId ? { ...d, remainingAmount: newRemaining } : d)
+            };
+          });
+        }
+        }
 
       setState(prev => ({
         ...prev,
@@ -945,11 +983,41 @@ function useFinanceProvider() {
           query = query.gte('installment_number', txToDelete.installmentNumber || 0);
         }
         await query;
+
+        // Estornar saldo da dívida para as parcelas removidas
+        for (const tx of txsToRemove) {
+          if (tx.debtId) {
+            setState(prev => {
+              const debt = prev.debts.find(d => d.id === tx.debtId);
+              if (!debt) return prev;
+              const newRemaining = (Number(debt.remainingAmount) || 0) + Number(tx.amount);
+              supabase.from('debts').update({ remaining_amount: newRemaining }).eq('id', tx.debtId).then();
+              return {
+                ...prev,
+                debts: prev.debts.map(d => d.id === tx.debtId ? { ...d, remainingAmount: newRemaining } : d)
+              };
+            });
+          }
+        }
+
         toast({ title: 'Parcelas removidas com sucesso' });
       } else {
         if (txToDelete.isPaid && txToDelete.accountId) {
           const change = txToDelete.type === 'income' ? -txToDelete.amount : txToDelete.amount;
           updateAccountBalance(txToDelete.accountId, change);
+        }
+
+        if (txToDelete.debtId) {
+          setState(prev => {
+            const debt = prev.debts.find(d => d.id === txToDelete.debtId);
+            if (!debt) return prev;
+            const newRemaining = (Number(debt.remainingAmount) || 0) + Number(txToDelete.amount);
+            supabase.from('debts').update({ remaining_amount: newRemaining }).eq('id', txToDelete.debtId).then();
+            return {
+              ...prev,
+              debts: prev.debts.map(d => d.id === txToDelete.debtId ? { ...d, remainingAmount: newRemaining } : d)
+            };
+          });
         }
 
         if (txToDelete.description.startsWith('Pgto: ')) {
@@ -1016,20 +1084,23 @@ function useFinanceProvider() {
       }
 
       const now = new Date();
-      if (isPaid && effectiveAccountId) {
-        const tDate = parseLocalDate(effectivePaymentDate);
-        if (tDate <= now) {
-          const baseChange = tx.isInvoicePayment ? -tx.amount : (tx.type === 'income' ? tx.amount : -tx.amount);
-          updateAccountBalance(effectiveAccountId, baseChange);
-        }
-      } else if (!isPaid && tx.isPaid && tx.accountId) {
-        const tDate = parseLocalDate(tx.paymentDate || tx.date);
-        if (tDate <= now) {
-          const baseChange = tx.isInvoicePayment ? tx.amount : (tx.type === 'income' ? -tx.amount : tx.amount);
-          updateAccountBalance(tx.accountId, baseChange);
+      // Reverter saldo da conta antiga se já estava paga
+      if (tx.isPaid && tx.accountId) {
+        const oldDate = parseLocalDate(tx.paymentDate || tx.date);
+        if (oldDate <= now) {
+          const reverseChange = tx.isInvoicePayment ? tx.amount : (tx.type === 'income' ? -tx.amount : tx.amount);
+          await updateAccountBalance(tx.accountId, reverseChange);
         }
       }
 
+      // Aplicar saldo na nova conta (ou na mesma) se estiver sendo marcada como paga
+      if (isPaid && effectiveAccountId) {
+        const tDate = parseLocalDate(effectivePaymentDate);
+        if (tDate <= now) {
+          const applyChange = tx.isInvoicePayment ? -tx.amount : (tx.type === 'income' ? tx.amount : -tx.amount);
+          await updateAccountBalance(effectiveAccountId, applyChange);
+        }
+      }
       const label = tx.type === 'income' ? 'Recebimento' : 'Pagamento';
       toast({ title: isPaid ? `${label} registrado` : `${label} estornado` });
     } catch (err) {
@@ -1418,7 +1489,10 @@ function useFinanceProvider() {
       const needsGroup = state.categoryGroups.find(g => g.name === 'needs');
       const wantsGroup = state.categoryGroups.find(g => g.name === 'wants');
       const savingsGroup = state.categoryGroups.find(g => g.name === 'savings');
-      if (!needsGroup || !wantsGroup || !savingsGroup) return;
+      if (!needsGroup || !wantsGroup || !savingsGroup) {
+        toast({ title: 'Grupos de categorias não encontrados. Verifique a configuração do banco.', variant: 'destructive' });
+        return;
+      }
 
       const defaultCategories = [
         { user_id: user.id, group_id: needsGroup.id, name: 'Moradia', type: 'expense', icon: 'Home' },

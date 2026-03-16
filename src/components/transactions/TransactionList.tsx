@@ -463,7 +463,8 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                     onChange={e => {
                                       setAnticipatingIds(prev => {
                                         const next = new Set(prev);
-                                        e.target.checked ? next.add(inst.id) : next.delete(inst.id);
+                                        if (e.target.checked) next.add(inst.id);
+                                        else next.delete(inst.id);
                                         return next;
                                       });
                                     }} className="w-4 h-4 rounded" />
