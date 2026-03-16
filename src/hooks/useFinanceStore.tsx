@@ -347,7 +347,8 @@ function useFinanceProvider() {
           userId: c.user_id,
           dueDay: c.due_day,
           closingDay: c.closing_day,
-          history: c.history
+          history: c.history,
+          limit: Number(c.limit || 0),
         })),
         savingsGoals: (goalsRes.data || []).map((g: any) => ({
           ...g,
@@ -1571,7 +1572,11 @@ function useFinanceProvider() {
         // Consome limite SÓ se a fatura correspondente ainda não foi paga
         return !paidInvoices.has(competence);
       })
-      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      .reduce((sum, t) => {
+        const amt = Number(t.amount || 0);
+        // expense soma, income (estorno) subtrai
+        return sum + (t.type === 'expense' ? amt : -amt);
+      }, 0);
   }, [state.transactions, state.creditCards, calcInvoiceMonthYear, parseLocalDate]);
 
   const getCardAvailableLimit = useCallback((cardId: string): number => {
