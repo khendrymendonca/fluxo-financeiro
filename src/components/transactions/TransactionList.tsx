@@ -21,7 +21,6 @@ interface TransactionListProps {
   onDeleteBill?: (id: string, applyToFuture?: boolean) => void;
 }
 
-// ✅ FIX: helper local para evitar bug de fuso em todas as conversões de data
 const parseLocalDate = (dateString: string): Date => {
   if (!dateString) return new Date();
   const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
@@ -29,11 +28,9 @@ const parseLocalDate = (dateString: string): Date => {
   return new Date(year, month - 1, day);
 };
 
-// ✅ FIX: formata data como string local sem passar por UTC
 const toLocalDateString = (year: number, month: number, day: number): string =>
   `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-// ✅ FIX: "hoje" como string local
 const todayLocalString = (): string => {
   const n = new Date();
   return toLocalDateString(n.getFullYear(), n.getMonth(), n.getDate());
@@ -46,13 +43,10 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [expandedBillId, setExpandedBillId] = useState<string | null>(null);
-  // ✅ FIX: anticipatingIds mantido para UX visual, mas botão "Pagar Selecionadas" adicionado
   const [anticipatingIds, setAnticipatingIds] = useState<Set<string>>(new Set());
   const [anticipateAccount, setAnticipateAccount] = useState('');
-
   const [deletingBill, setDeletingBill] = useState<any>(null);
   const [deleteFutureBills, setDeleteFutureBills] = useState(false);
-
   const [showOverdraftWarning, setShowOverdraftWarning] = useState(false);
   const [overdraftAmountUsed, setOverdraftAmountUsed] = useState(0);
   const [overdraftAccountName, setOverdraftAccountName] = useState('');
@@ -69,11 +63,8 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   const formatShortDate = (dateString: string) =>
     parseLocalDate(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' });
 
-  // ✅ FIX: formatLongDate removido — não era usado
-
   const displayItems = [
     ...transactions.map(t => ({ ...t, isBill: false, isPending: !t.isPaid })),
-    // ✅ FIX: card-payment já filtrado aqui — bloco "Ver Detalhes" removido do JSX abaixo
     ...bills
       .filter(b => b.status === 'pending' && b.categoryId !== 'card-payment')
       .map(b => ({
@@ -93,7 +84,6 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
       }))
   ];
 
-  // ✅ FIX: getGroupDate constrói string local sem toISOString
   const getGroupDate = (item: any): string => {
     if (!item.isPending && item.paymentDate) {
       return item.paymentDate.split('T')[0];
@@ -107,7 +97,6 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     return item.date?.split('T')[0] || todayLocalString();
   };
 
-  // ✅ FIX: sort usa parseLocalDate (sem UTC)
   const filteredItems = displayItems
     .filter(t => filter === 'all' || t.type === filter)
     .sort((a, b) => parseLocalDate(getGroupDate(b)).getTime() - parseLocalDate(getGroupDate(a)).getTime());
@@ -166,7 +155,6 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
       toast({ title: 'Selecione uma conta para pagamento', variant: 'destructive' });
       return;
     }
-    // ✅ FIX: usa todayLocalString — sem bug de fuso
     await togglePaid(installment.id, true, anticipateAccount, todayLocalString());
     setAnticipatingIds(prev => { const next = new Set(prev); next.delete(installment.id); return next; });
   };
@@ -184,7 +172,6 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     toast({ title: `${installments.length} parcelas antecipadas com sucesso!` });
   };
 
-  // ✅ FIX: ação real para parcelas selecionadas via checkbox
   const handleAnticipateSelected = async (installments: Transaction[]) => {
     if (!anticipateAccount) {
       toast({ title: 'Selecione uma conta para pagamento', variant: 'destructive' });
@@ -224,7 +211,6 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
           Nenhuma transação ou pendência encontrada
         </div>
       ) : (
-        // ✅ FIX: sort usa parseLocalDate
         Object.keys(groupedItems)
           .sort((a, b) => parseLocalDate(b).getTime() - parseLocalDate(a).getTime())
           .map(date => (
@@ -326,9 +312,17 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                     <Pencil className="w-4 h-4" />
                                   </Button>
                                 )}
-                                {(!item.isBill || (item.isBill && onDeleteBill)) && (
+                                {/* ✅ FIX: separado em dois blocos — elimina o ReferenceError no bundle */}
+                                {!item.isBill && (
                                   <Button variant="ghost" size="icon"
-                                    onClick={() => item.isBill ? setDeletingBill(item) : onDelete(item.id)}
+                                    onClick={() => onDelete(item.id)}
+                                    className="h-9 w-9 rounded-lg hover:bg-danger/10 hover:text-danger">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                {item.isBill && onDeleteBill && (
+                                  <Button variant="ghost" size="icon"
+                                    onClick={() => setDeletingBill(item)}
                                     className="h-9 w-9 rounded-lg hover:bg-danger/10 hover:text-danger">
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
@@ -355,7 +349,6 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                 <option value="">Debitar de...</option>
                                 {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
                               </select>
-                              {/* ✅ FIX: botão "Selecionadas" agora tem ação real */}
                               {anticipatingIds.size > 0 && (
                                 <Button size="sm"
                                   onClick={() => handleAnticipateSelected(futureInstallments)}
@@ -370,7 +363,6 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                               </Button>
                             </div>
                           </div>
-
                           <div className="space-y-1 max-h-60 overflow-y-auto">
                             {futureInstallments.map(inst => (
                               <div key={inst.id} className={cn(
@@ -429,7 +421,6 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                   </span>{' — '}{payingItem.description}
                 </p>
               </div>
-
               <div className="p-4 space-y-4">
                 <div className="space-y-2 relative">
                   <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Data do Pagamento</label>
@@ -452,7 +443,6 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                   </button>
                 </div>
               </div>
-
               <div className="flex-1 overflow-y-auto p-3 pt-0 space-y-2">
                 {paymentMethod === 'account' && (
                   accounts.length === 0 ? (
@@ -510,7 +500,6 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                   )
                 )}
               </div>
-
               <div className="px-5 py-3 border-t border-border">
                 <Button variant="ghost" onClick={() => setPayingItem(null)} className="w-full rounded-xl text-sm font-bold">
                   Cancelar
