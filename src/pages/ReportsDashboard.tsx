@@ -32,81 +32,79 @@ export default function ReportsDashboard() {
   const avgDailyExpense = totalExpenses / daysInMonth;
 
   return (
-    <div className="space-y-8 animate-fade-in pb-20">
+    <div className="space-y-6 animate-fade-in pb-24">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Relatórios Detalhados</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary font-mono lowercase">Relatórios</h1>
           <p className="text-muted-foreground mt-1">Análise profunda das suas finanças.</p>
         </div>
-        <Button variant="outline" className="gap-2 w-full md:w-auto">
+        <Button variant="outline" className="gap-2 w-full md:w-auto rounded-xl shadow-sm hover:bg-muted/50 transition-all">
           <Download className="w-4 h-4" /> Exportar Dados
         </Button>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        <div className="card-elevated p-4 md:p-6">
-          <h3 className="text-xs md:text-sm font-medium text-muted-foreground mb-2">Taxa de Economia</h3>
-          <div className="text-2xl md:text-3xl font-bold text-primary">
+      {/* KPI Cards - Grid Responsivo 2 colunas no mobile */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+        <div className="card-elevated p-4 md:p-6 border-l-4 border-l-primary">
+          <h3 className="text-[10px] md:text-sm font-black uppercase tracking-widest text-muted-foreground mb-2">Taxa Economia</h3>
+          <div className="text-xl md:text-3xl font-bold text-primary truncate">
             {savingsRate.toFixed(1)}%
           </div>
-          <p className="text-[10px] md:text-xs text-muted-foreground mt-1">da sua receita mensal</p>
+          <p className="text-[10px] md:text-xs text-muted-foreground mt-1 truncate">da receita mensal</p>
         </div>
 
-        <div className="card-elevated p-4 md:p-6">
-          <h3 className="text-xs md:text-sm font-medium text-muted-foreground mb-2">Média de Gastos Diários</h3>
-          <div className="text-2xl md:text-3xl font-bold text-danger">
-            {/* ✅ FIX: divide pelo número real de dias do mês */}
-            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(avgDailyExpense)}
+        <div className="card-elevated p-4 md:p-6 border-l-4 border-l-danger">
+          <h3 className="text-[10px] md:text-sm font-black uppercase tracking-widest text-muted-foreground mb-2">Gasto Diário</h3>
+          <div className="text-xl md:text-3xl font-bold text-danger truncate">
+            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(avgDailyExpense)}
           </div>
-          <p className="text-[10px] md:text-xs text-muted-foreground mt-1">neste mês ({daysInMonth} dias)</p>
+          <p className="text-[10px] md:text-xs text-muted-foreground mt-1 truncate">neste mês</p>
         </div>
 
-        <div className="card-elevated p-4 md:p-6 sm:col-span-2 lg:col-span-1">
-          <h3 className="text-xs md:text-sm font-medium text-muted-foreground mb-2">Balanço Líquido</h3>
-          {/* ✅ FIX: usa variáveis do sistema de design (text-success / text-danger) */}
+        <div className="card-elevated p-4 md:p-6 border-l-4 border-l-success col-span-2 lg:col-span-1">
+          <h3 className="text-[10px] md:text-sm font-black uppercase tracking-widest text-muted-foreground mb-2">Balanço Líquido</h3>
           <div className={cn(
-            "text-2xl md:text-3xl font-bold",
+            "text-xl md:text-3xl font-bold truncate",
             balance >= 0 ? "text-success" : "text-danger"
           )}>
-            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(balance)}
+            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(balance)}
           </div>
-          <p className="text-[10px] md:text-xs text-muted-foreground mt-1">receitas - despesas</p>
+          <p className="text-[10px] md:text-xs text-muted-foreground mt-1 truncate">receitas - despesas</p>
         </div>
       </div>
 
-      {/* Main Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight">Distribuição de Despesas</h2>
-          <div className="min-h-[300px] h-full">
-            <ExpenseChart
-              data={getCategoryExpenses().reduce(
-                (acc, curr) => ({ ...acc, [curr.name]: curr.value }),
-                {} as Record<string, number>
-              )}
-            />
-          </div>
+      {/* Main Charts - Grid de Gráficos */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        <div className="h-[280px] md:h-[320px]">
+          <ExpenseChart
+            data={getCategoryExpenses().reduce(
+              (acc, curr) => ({ ...acc, [curr.name]: curr.value }),
+              {} as Record<string, number>
+            )}
+          />
         </div>
 
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight">Evolução Patrimonial</h2>
-          <div className="min-h-[300px] h-full">
-            {/* ✅ FIX: initialBalance agora é o saldo real do início do período */}
-            <BalanceEvolutionChart
-              transactions={transactions}
-              viewDate={viewDate}
-              initialBalance={initialBalance}
-            />
-          </div>
+        <div className="h-[280px] md:h-[320px]">
+          <BalanceEvolutionChart
+            transactions={transactions}
+            viewDate={viewDate}
+            initialBalance={initialBalance}
+          />
         </div>
       </div>
 
-      {/* Placeholder para gráfico futuro */}
-      <div className="card-elevated p-6">
-        <h2 className="text-xl font-semibold mb-4">Fluxo de Caixa Mensal</h2>
-        <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-xl bg-muted/20">
-          <p>Gráfico de Barras (Receita vs Despesa) em breve...</p>
+      {/* Footer Chart / Placeholder */}
+      <div className="card-elevated p-5 md:p-6">
+        <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+          <div className="w-1.5 h-4 bg-primary rounded-full" />
+          Fluxo de Caixa Mensal
+        </h3>
+        <div className="h-[200px] md:h-[250px] w-full flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-2xl bg-muted/10 p-4 text-center">
+          <div className="bg-muted p-3 rounded-full mb-3">
+            <Download className="w-6 h-6 opacity-20" />
+          </div>
+          <p className="text-sm font-medium">Gráfico de Barras em breve...</p>
+          <p className="text-xs opacity-60 max-w-[200px] mt-1">Estamos processando seus dados para gerar novos insights.</p>
         </div>
       </div>
     </div>
