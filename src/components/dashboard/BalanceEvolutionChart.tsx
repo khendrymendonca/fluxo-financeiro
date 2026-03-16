@@ -18,8 +18,13 @@ export function BalanceEvolutionChart({ transactions, initialBalance, viewDate }
   const monthStartLabel = format(monthStart, 'dd MMM', { locale: ptBR });
   const monthEndLabel = format(monthEnd, 'dd MMM', { locale: ptBR });
 
+  const parseLocalDate = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
   const sortedTransactions = [...transactions].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    (a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime()
   );
 
   const dailyBalances: Record<string, number> = {
@@ -29,7 +34,7 @@ export function BalanceEvolutionChart({ transactions, initialBalance, viewDate }
   let runningBalance = initialBalance;
 
   sortedTransactions.forEach((t) => {
-    const date = new Date(t.date).toLocaleDateString('pt-BR', {
+    const date = parseLocalDate(t.date).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'short'
     });

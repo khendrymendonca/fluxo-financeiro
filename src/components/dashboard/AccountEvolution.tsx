@@ -11,10 +11,15 @@ import {
     ReferenceLine
 } from 'recharts';
 import { TrendingUp, Target, ChevronRight, AlertTriangle } from 'lucide-react';
-import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+
+const parseLocalDate = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
+    return new Date(year, month - 1, day);
+};
 
 export function AccountEvolution() {
     const { transactions, categories, viewDate } = useFinanceStore();
@@ -32,10 +37,11 @@ export function AccountEvolution() {
         const monthLabel = format(monthDate, 'MMM', { locale: ptBR });
 
         const monthExpenses = transactions
-            .filter(t => t.type === 'expense' && isWithinInterval(new Date(t.date), {
-                start: startOfMonth(monthDate),
-                end: endOfMonth(monthDate)
-            }))
+            .filter(t => {
+                if (t.type !== 'expense') return false;
+                const d = parseLocalDate(t.date);
+                return d >= startOfMonth(monthDate) && d <= endOfMonth(monthDate);
+            })
             .reduce((sum, t) => sum + t.amount, 0);
 
         return {
@@ -52,7 +58,7 @@ export function AccountEvolution() {
     const latestMonth = data[data.length - 1];
     const previousMonth = data[data.length - 2];
     const trend = latestMonth.valor > previousMonth.valor ? 'up' : 'down';
-    const percentChange = ((latestMonth.valor - previousMonth.valor) / previousMonth.valor) * 100;
+    const percentChange = previousMonth.valor > 0 ? ((latestMonth.valor - previousMonth.valor) / previousMonth.valor) * 100 : 0;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -162,7 +168,7 @@ export function AccountEvolution() {
                         <div>
                             <div className="flex justify-between text-xs mb-1">
                                 <span className="font-medium">Meta Global de Gastos</span>
-                                <span className="font-bold">{Math.round((latestMonth.valor / target) * 100)}%</span>
+                                <span className="font-bold">{target > 0 ? Math.round((latestMonth.valor / target) * 100) : 0}%</span>
                             </div>
                             <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                                 <div
@@ -170,7 +176,7 @@ export function AccountEvolution() {
                                         "h-full rounded-full transition-all duration-500",
                                         latestMonth.valor > target ? "bg-danger" : "bg-amber-500"
                                     )}
-                                    style={{ width: `${Math.min((latestMonth.valor / target) * 100, 100)}%` }}
+                                    style={{ width: `${target > 0 ? Math.min((latestMonth.valor / target) * 100, 100) : 0}%` }}
                                 />
                             </div>
                         </div>

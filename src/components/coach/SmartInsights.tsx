@@ -12,8 +12,16 @@ import {
     X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+const parseLocalDate = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
+    return new Date(year, month - 1, day);
+};
+
+const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
 interface Insight {
     id: string;
@@ -49,8 +57,9 @@ export function SmartInsights({ onNavigate }: SmartInsightsProps) {
     const insights = useMemo(() => {
         const list: Insight[] = [];
         const now = new Date();
-        const currentMonth = startOfMonth(now);
-        const lastMonth = startOfMonth(subMonths(now, 1));
+        const currentMonthStart = startOfMonth(now);
+        const lastMonthStart = startOfMonth(subMonths(now, 1));
+        const lastMonthEnd = endOfMonth(subMonths(now, 1));
 
         // 1. Check if total expenses > income (Warning)
         if (totalExpenses > totalIncome && totalIncome > 0) {
@@ -66,14 +75,20 @@ export function SmartInsights({ onNavigate }: SmartInsightsProps) {
         // 2. Category Growth (Tip)
         // Find category with highest growth vs last month
         const categoryTotalsCurrent = transactions
-            .filter(t => isWithinInterval(parseISO(t.date), { start: currentMonth, end: endOfMonth(now) }))
+            .filter(t => {
+                const d = parseLocalDate(t.date);
+                return d >= currentMonthStart && d <= endOfMonth(now);
+            })
             .reduce((acc, t) => {
                 if (t.categoryId) acc[t.categoryId] = (acc[t.categoryId] || 0) + t.amount;
                 return acc;
             }, {} as Record<string, number>);
 
         const categoryTotalsLast = transactions
-            .filter(t => isWithinInterval(parseISO(t.date), { start: lastMonth, end: endOfMonth(subMonths(now, 1)) }))
+            .filter(t => {
+                const d = parseLocalDate(t.date);
+                return d >= lastMonthStart && d <= lastMonthEnd;
+            })
             .reduce((acc, t) => {
                 if (t.categoryId) acc[t.categoryId] = (acc[t.categoryId] || 0) + t.amount;
                 return acc;
@@ -102,7 +117,7 @@ export function SmartInsights({ onNavigate }: SmartInsightsProps) {
                 id: 'positive-balance',
                 type: 'success',
                 title: 'Parabéns, você está no azul!',
-                description: `Você tem uma sobra de R$ ${surplus.toFixed(2)} este mês. Que tal aportar parte disso em uma meta?`,
+                description: `Você tem uma sobra de ${formatCurrency(surplus)} este mês. Que tal aportar parte disso em uma meta?`,
                 icon: CheckCircle2,
                 actionLabel: 'Ver Metas',
                 onAction: () => onNavigate && onNavigate('goals')

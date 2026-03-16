@@ -1,6 +1,12 @@
 import { Transaction, Account, CreditCard as CreditCardType } from '@/types/finance';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { cn } from '@/lib/utils';
+import { ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+
+const parseLocalDate = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
 
 interface RecentTransactionsProps {
   transactions: Transaction[];
@@ -17,7 +23,7 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
+    return parseLocalDate(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'short',
     });
@@ -42,7 +48,7 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
 
   const paidTransactions = transactions
     .filter(t => t.isPaid)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime())
     .slice(0, 5);
 
   if (paidTransactions.length === 0) {
@@ -76,7 +82,10 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
                   "p-2 rounded-xl transition-all group-hover:scale-110",
                   isIncome ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
                 )}>
-                  <div dangerouslySetInnerHTML={{ __html: isIncome ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="m7 7 10 10"></path><path d="M17 7v10H7"></path></svg>' }} />
+                  {isIncome
+                    ? <ArrowUpRight className="w-4 h-4" />
+                    : <ArrowDownLeft className="w-4 h-4" />
+                  }
                 </div>
                 <div>
                   <div className="flex items-center gap-2">

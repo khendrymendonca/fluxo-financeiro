@@ -124,8 +124,12 @@ export function DebtsManager({
           </div>
         ) : (
           debts.map((debt) => {
-            const progress = ((debt.totalAmount - debt.remainingAmount) / debt.totalAmount) * 100;
-            const monthsRemaining = Math.ceil(debt.remainingAmount / debt.monthlyPayment);
+            const progress = debt.totalAmount > 0
+              ? ((debt.totalAmount - debt.remainingAmount) / debt.totalAmount) * 100
+              : 0;
+            const monthsRemaining = debt.monthlyPayment > 0
+              ? Math.ceil(debt.remainingAmount / debt.monthlyPayment)
+              : 0;
 
             return (
               <div

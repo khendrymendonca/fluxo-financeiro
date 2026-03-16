@@ -4,6 +4,11 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 
+const parseLocalDate = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
+    return new Date(year, month - 1, day);
+};
+
 interface PendingPaymentsProps {
     transactions: Transaction[];
     accounts: Account[];
@@ -15,7 +20,7 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
 
     const pending = transactions
         .filter(t => !t.isPaid && t.type === 'expense')
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
 
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('pt-BR', {
@@ -25,7 +30,7 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
     };
 
     const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
+        const date = parseLocalDate(dateString);
         return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
     };
 
