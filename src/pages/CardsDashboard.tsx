@@ -11,14 +11,12 @@ import { EditCardDialog } from '@/components/cards/EditCardDialog';
 import { Portal } from '@/components/ui/Portal';
 
 export default function CardsDashboard() {
-  // ✅ FIX: única chamada ao hook, payBill e accounts removidos (não usados)
   const {
     creditCards,
     transactions,
     categories,
     updateCreditCard,
     addCreditCard,
-    getCardUsedLimit,
     getCardSettingsForDate,
   } = useFinanceStore();
 
@@ -29,50 +27,53 @@ export default function CardsDashboard() {
 
   const selectedCard = creditCards.find(c => c.id === selectedCardId);
 
-  // ✅ FIX: parseLocalDate inline para evitar dependência do hook — corrige bug de fuso
   const parseLocalDate = (dateStr: string) => {
     if (!dateStr) return new Date();
     const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
     return new Date(year, month - 1, day);
   };
 
+  // ✅ FIX: calcula o limite consumido REAL considerando TODAS as parcelas não pagas
+  // independente do mês filtrado na tela — parcelas de Abril e Maio que ainda não foram
+  // pagas continuam consumindo o limite do cartão hoje
   const getCardStats = (cardId: string) => {
-    const currentUsedResult = getCardUsedLimit(cardId);
     const card = creditCards.find(c => c.id === cardId);
     const limit = card?.limit || 0;
-    const available = Math.max(0, limit - currentUsedResult);
-    const percentUsed = limit > 0 ? (currentUsedResult / limit) * 100 : 0;
-    return { used: currentUsedResult, available, limit, percentUsed };
+
+    const totalCommitted = transactions
+      .filter(t =>
+        t.cardId === cardId &&
+        !t.isPaid &&
+        !t.isInvoicePayment &&
+        t.type === 'expense'
+      )
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const available = Math.max(0, limit - totalCommitted);
+    const percentUsed = limit > 0 ? (totalCommitted / limit) * 100 : 0;
+
+    return { used: totalCommitted, available, limit, percentUsed };
   };
 
   const getInvoiceTransactions = (cardId: string) => {
     if (!selectedCard) return [];
-
     const viewDateStr = format(viewDate, 'yyyy-MM');
     const { closingDay } = getCardSettingsForDate(selectedCard, viewDate);
-
     const viewYear = viewDate.getFullYear();
     const viewMonth = viewDate.getMonth();
-
-    // ✅ FIX: datas locais para evitar bug de fuso
     const endOfInvoice = new Date(viewYear, viewMonth, closingDay, 23, 59, 59);
     const startOfInvoice = new Date(viewYear, viewMonth - 1, closingDay + 1, 0, 0, 0);
 
     return transactions.filter(t => {
       if (t.cardId !== cardId || t.isInvoicePayment) return false;
-
-      // Prioridade 1: usa invoiceMonthYear gravado (caminho principal)
       if (t.invoiceMonthYear) {
         return t.invoiceMonthYear === viewDateStr;
       }
-
-      // ✅ FIX: fallback usa parseLocalDate em vez de parseISO (corrige fuso UTC)
       const tDate = parseLocalDate(t.date);
       return tDate >= startOfInvoice && tDate <= endOfInvoice;
     }).sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
   };
 
-  // ✅ FIX: status da fatura calculado dinamicamente
   const getInvoiceStatus = (cardId: string): 'paga' | 'aberta' => {
     const viewDateStr = format(viewDate, 'yyyy-MM');
     const hasPaid = transactions.some(
@@ -85,11 +86,9 @@ export default function CardsDashboard() {
   const currentInvoiceTotal = currentInvoiceTransactions.reduce(
     (sum, t) => sum + (t.type === 'income' ? -t.amount : t.amount), 0
   );
-
   const stats = selectedCardId
     ? getCardStats(selectedCardId)
     : { used: 0, available: 0, limit: 0, percentUsed: 0 };
-
   const invoiceStatus = selectedCardId ? getInvoiceStatus(selectedCardId) : 'aberta';
 
   const handlePrevMonth = () => setViewDate(prev => subMonths(prev, 1));
@@ -171,6 +170,8 @@ export default function CardsDashboard() {
                     <div>
                       <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Limite Consumido</p>
                       <p className="text-3xl font-black text-primary">{formatCurrency(stats.used)}</p>
+                      {/* ✅ INFO: mostra que o valor considera todas as faturas abertas */}
+                      <p className="text-[10px] text-muted-foreground mt-1">Inclui parcelas de meses futuros ainda não pagas</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-muted-foreground">
@@ -207,7 +208,6 @@ export default function CardsDashboard() {
                         </div>
                       </div>
                     </div>
-
                     <div className="flex flex-wrap items-center gap-x-8 gap-y-4 pt-2 border-t border-border/50">
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="icon" onClick={handlePrevMonth} className="rounded-xl h-8 w-8 text-xs">{'<'}</Button>
@@ -224,7 +224,6 @@ export default function CardsDashboard() {
                           <Calendar className="w-3.5 h-3.5" /> Vencimento: Dia {selectedCard.dueDay}
                         </span>
                       </div>
-                      {/* ✅ FIX: status calculado dinamicamente */}
                       <div className="ml-auto">
                         <span className={cn(
                           "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider",
@@ -257,7 +256,6 @@ export default function CardsDashboard() {
                               <div>
                                 <p className="font-bold text-sm text-foreground leading-none mb-1">{t.description}</p>
                                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
-                                  {/* ✅ FIX: parseLocalDate em vez de parseISO */}
                                   <span>{format(parseLocalDate(t.date), 'dd MMM', { locale: ptBR })}</span>
                                   {category && (
                                     <>
@@ -299,7 +297,6 @@ export default function CardsDashboard() {
           />
         </Portal>
       )}
-
       {showEditCard && selectedCard && (
         <Portal>
           <EditCardDialog
