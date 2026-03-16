@@ -718,8 +718,8 @@ function useFinanceProvider() {
           debt_id: txData.debtId || null,
           is_paid: txData.isPaid !== undefined ? txData.isPaid : (parseLocalDate(txData.date) <= new Date()),
           payment_date: txData.isPaid
-          ? (txData.paymentDate || txData.date)
-          : null,
+            ? (txData.paymentDate || txData.date)
+            : null,
           is_invoice_payment: txData.isInvoicePayment || false
         });
       };
@@ -1575,7 +1575,7 @@ function useFinanceProvider() {
     };
   }, [currentMonthTransactions, state.accounts, state.emergencyMonths, state.categories, state.categoryGroups]);
 
-  // ✅ FIX: getViewBalance agora usa paymentDate para calcular impacto real no saldo
+  // ✅ FIX: getViewBalance agora segue a definição do usuário: apenas carteiras (corrente/benefícios)
   const getViewBalance = useCallback(() => {
     let periodEnd: Date;
     if (viewMode === 'day') {
@@ -1587,11 +1587,18 @@ function useFinanceProvider() {
       periodEnd = new Date(viewDate.getFullYear(), 11, 31, 23, 59, 59, 999);
     }
 
-    const currentRealBalance = state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+    // Apenas contas que o usuário considera "Carteira" (Corrente e Benefícios)
+    const walletAccounts = state.accounts.filter(a =>
+      a.accountType === 'checking' || a.accountType.startsWith('benefit_')
+    );
+    const currentRealBalance = walletAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
 
     const delta = state.transactions.filter(t => {
       if (!t.isPaid || !t.accountId) return false;
-      // ✅ FIX: usa paymentDate se disponível
+      // Verifica se a conta da transação é uma carteira
+      const isWallet = walletAccounts.some(acc => acc.id === t.accountId);
+      if (!isWallet) return false;
+
       const tDate = parseLocalDate(t.paymentDate || t.date);
       return tDate > periodEnd;
     }).reduce((acc, t) => {
@@ -1656,6 +1663,23 @@ function useFinanceProvider() {
 
   const viewBalance = getViewBalance();
 
+  // ✅ NOVO: Patrimônio é a soma das carteiras (conforme definição do usuário)
+  const totalNetWorth = state.accounts
+    .filter(a => a.accountType === 'checking' || a.accountType.startsWith('benefit_'))
+    .reduce((sum, acc) => sum + Number(acc.balance), 0);
+
+  // ✅ NOVO: Saldo Projetado = Carteiras - Saídas Programadas (Contas Pendentes)
+  const totalPendingOutflows = currentMonthBills
+    .filter(b => b.status === 'pending' && b.type === 'payable')
+    .reduce((sum, b) => sum + b.amount, 0);
+
+  // Também considera transações de saída não pagas do mês (que não são cartão)
+  const pendingTransactionsAmount = currentMonthTransactions
+    .filter(t => !t.isPaid && t.type === 'expense' && !t.cardId)
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const projectedBalance = totalNetWorth - totalPendingOutflows - pendingTransactionsAmount;
+
   // ✅ FIX: totalIncome e totalExpenses baseados APENAS em transactions
   // Bills pendentes não são somadas para evitar dupla contagem
   const totalIncome = currentMonthTransactions
@@ -1681,6 +1705,8 @@ function useFinanceProvider() {
     setViewMode,
     totalBalance: state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0),
     viewBalance,
+    totalNetWorth,
+    projectedBalance, // ✅ Exportando Saldo Projetado
     getAccountViewBalance,
     totalIncome,
     totalExpenses,

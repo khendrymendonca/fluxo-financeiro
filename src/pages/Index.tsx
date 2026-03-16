@@ -83,6 +83,8 @@ export default function Index() {
     seedCoach,
     loading,
     viewBalance,
+    totalNetWorth,
+    projectedBalance,
     getPeriodStartBalance,
   } = useFinanceStore();
 
@@ -146,9 +148,9 @@ export default function Index() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
                 title="Patrimônio Total"
-                value={viewBalance}
+                value={totalNetWorth}
                 icon={<Wallet className="w-5 h-5" />}
-                variant={viewBalance >= 0 ? 'positive' : 'negative'}
+                variant={totalNetWorth >= 0 ? 'positive' : 'negative'}
               />
               <StatCard
                 title="Receitas"
@@ -165,9 +167,10 @@ export default function Index() {
               {/* ✅ FIX: usa periodBalance no lugar de balance */}
               <StatCard
                 title="Saldo do Período"
-                value={periodBalance}
+                value={projectedBalance}
                 icon={<PiggyBank className="w-5 h-5" />}
-                variant={periodBalance >= 0 ? 'positive' : 'negative'}
+                variant={projectedBalance >= 0 ? 'positive' : 'negative'}
+                subtitle="Considerando todas as saídas pendentes"
               />
             </div>
 

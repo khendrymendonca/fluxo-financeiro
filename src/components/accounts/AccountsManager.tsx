@@ -23,7 +23,7 @@ export function AccountsManager({
   onUpdateAccount,
   onDeleteAccount,
 }: AccountsManagerProps) {
-  const { transferBetweenAccounts, getAccountViewBalance, viewBalance } = useFinanceStore();
+  const { transferBetweenAccounts, getAccountViewBalance, viewBalance, totalNetWorth } = useFinanceStore();
   const [showAccountForm, setShowAccountForm] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
@@ -159,8 +159,11 @@ export function AccountsManager({
         </div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <p className="text-sm font-bold text-primary/70 uppercase tracking-widest mb-1">Patrimônio Total em Contas</p>
-            <h2 className="text-4xl font-black tracking-tight">{formatCurrency(totalBalanceToDisplay)}</h2>
+            <p className="text-sm font-bold text-primary/70 uppercase tracking-widest mb-1">Patrimônio (Soma das Carteiras)</p>
+            <h2 className="text-4xl font-black tracking-tight">{formatCurrency(totalNetWorth)}</h2>
+            <p className="text-[10px] text-muted-foreground mt-1 font-medium">
+              Apenas Contas Corrente e Benefícios. Poupança e Investimentos não inclusos.
+            </p>
           </div>
           <div className="flex gap-3 flex-wrap">
             {accounts.length >= 2 && (
