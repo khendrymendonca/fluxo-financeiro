@@ -73,12 +73,18 @@ function useFinanceProvider() {
   const calcInvoiceMonthYear = useCallback((tDate: Date, card: CreditCard): string => {
     const { closingDay, dueDay } = getCardSettingsForDate(card, tDate);
     const invoiceDate = new Date(tDate.getFullYear(), tDate.getMonth(), 1);
+    
+    // Se a compra foi feita após o fechamento, ela pula para a próxima fatura
     if (tDate.getDate() > closingDay) {
       invoiceDate.setMonth(invoiceDate.getMonth() + 1);
     }
-    if (dueDay <= closingDay && tDate.getDate() <= closingDay) {
+    
+    // Se o vencimento é num dia menor que o fechamento, significa que a fatura
+    // sempre vence no mês seguinte ao ciclo de compras.
+    if (dueDay <= closingDay) {
       invoiceDate.setMonth(invoiceDate.getMonth() + 1);
     }
+    
     return format(invoiceDate, 'yyyy-MM');
   }, [getCardSettingsForDate]);
 
