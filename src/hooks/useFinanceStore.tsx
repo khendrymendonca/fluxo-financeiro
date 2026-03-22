@@ -115,56 +115,8 @@ function useFinanceProvider() {
   // --- Computed ---
 
   const currentMonthTransactions = useMemo(() => {
-    const virtualTxs: Transaction[] = [];
-    
-    // Pegar templates de transações fixas
-    const fixedTemplates = state.transactions
-      .filter(t => t.isRecurring)
-      .reduce((acc, tx) => {
-        const key = `${tx.description}-${tx.categoryId}-${tx.amount}`;
-        if (!acc[key]) acc[key] = tx;
-        return acc;
-      }, {} as Record<string, Transaction>);
-
-    Object.values(fixedTemplates).forEach(tx => {
-      const tDate = parseLocalDate(tx.date);
-      // ✅ FIX: A data da transação virtual deve refletir o mês/ano da visualização atual
-      const targetDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), tDate.getDate());
-      
-      if (targetDate.getMonth() !== viewDate.getMonth()) {
-        targetDate.setDate(0);
-      }
-
-      const exists = state.transactions.find(t => 
-        t.description === tx.description && 
-        parseLocalDate(t.date).getMonth() === viewDate.getMonth() &&
-        parseLocalDate(t.date).getFullYear() === viewDate.getFullYear()
-      );
-
-      if (!exists) {
-        virtualTxs.push({
-          ...tx,
-          id: `virtual-tx-${tx.id}-${viewDate.getFullYear()}-${viewDate.getMonth()}`,
-          // ✅ FIX: Garante que a data exibida na lista seja a do mês atual (ex: 20/04/2026)
-          date: format(targetDate, 'yyyy-MM-dd'),
-          isPaid: false,
-          isVirtual: true,
-        } as Transaction);
-      }
-    });
-
-    const allTxs = [...state.transactions, ...virtualTxs];
-
-    return allTxs.filter(t => {
-      // Se for a transação original de um lançamento fixo, só mostra ela no seu mês de origem
-      // para evitar que o "20/03" apareça na lista de Abril.
-      if (t.isRecurring && !t.isVirtual) {
-        const originalDate = parseLocalDate(t.date);
-        if (originalDate.getMonth() !== viewDate.getMonth() || originalDate.getFullYear() !== viewDate.getFullYear()) {
-          return false;
-        }
-      }
-
+    // 1. Filtrar transações reais que pertencem ao período atual
+    const realTxs = state.transactions.filter(t => {
       const targetDate = getTransactionTargetDate(t);
       if (viewMode === 'day') {
         return targetDate.getDate() === viewDate.getDate() &&
@@ -177,6 +129,45 @@ function useFinanceProvider() {
       }
       return targetDate.getFullYear() === viewDate.getFullYear();
     });
+
+    const virtualTxs: Transaction[] = [];
+    
+    // 2. Projetar templates fixos se não houver um real no mês atual
+    if (viewMode === 'month' || viewMode === 'day') {
+      const fixedTemplates = state.transactions
+        .filter(t => t.isRecurring && !t.isVirtual)
+        .reduce((acc, tx) => {
+          const key = `${tx.description}-${tx.categoryId}-${tx.amount}`;
+          if (!acc[key]) acc[key] = tx;
+          return acc;
+        }, {} as Record<string, Transaction>);
+
+      Object.values(fixedTemplates).forEach(tx => {
+        // Se já existe um lançamento real com essa descrição neste mês, não projetar o virtual
+        const alreadyExists = realTxs.some(t => t.description === tx.description && !t.isVirtual);
+        if (alreadyExists) return;
+
+        const tDate = parseLocalDate(tx.date);
+        const targetDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), tDate.getDate());
+        
+        if (targetDate.getMonth() !== viewDate.getMonth()) {
+          targetDate.setDate(0);
+        }
+
+        virtualTxs.push({
+          ...tx,
+          id: `virtual-tx-${tx.id}-${viewDate.getFullYear()}-${viewDate.getMonth()}`,
+          date: format(targetDate, 'yyyy-MM-dd'),
+          isPaid: false,
+          isVirtual: true,
+        } as Transaction);
+      });
+    }
+
+    // 3. Unir e retornar, garantindo que não haja duplicidade visual
+    return [...realTxs, ...virtualTxs].sort((a, b) => 
+      parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime()
+    );
   }, [state.transactions, viewDate, viewMode, getTransactionTargetDate, parseLocalDate]);
 
   const currentMonthBills = useMemo(() => {
