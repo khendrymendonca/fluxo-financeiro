@@ -571,6 +571,7 @@ function useFinanceProvider() {
               cardId: t.card_id,
               isPaid: t.is_paid !== undefined ? t.is_paid : parseLocalDate(t.date) <= new Date(),
               isRecurring: t.is_recurring,
+              isAutomatic: t.is_automatic,
               installmentGroupId: t.installment_group_id,
               installmentNumber: t.installment_number,
               installmentTotal: t.installment_total,
@@ -892,6 +893,7 @@ function useFinanceProvider() {
           card_id: txData.cardId || null,
           invoice_month_year: invoiceMonthYear,
           is_recurring: txData.isRecurring || false,
+          is_automatic: txData.isAutomatic || false,
           installment_group_id: installmentGroupId,
           installment_number: instNum || txData.installmentNumber || null,
           installment_total: instTotal || txData.installmentTotal || null,
@@ -1042,7 +1044,13 @@ function useFinanceProvider() {
         card_id: updatedTx.cardId || null,
         invoice_month_year: updatedTx.invoiceMonthYear || null,
         is_paid: updatedTx.isPaid,
-        payment_date: updatedTx.paymentDate
+        payment_date: updatedTx.paymentDate,
+        is_automatic: updatedTx.isAutomatic || false,
+        is_recurring: updatedTx.isRecurring || false,
+        installment_total: updatedTx.installmentTotal || null,
+        recurrence: updatedTx.recurrence || null,
+        debt_id: updatedTx.debtId || null,
+        installment_group_id: updatedTx.installmentGroupId || null
       };
 
       if (applyScope !== 'this' && updatedTx.installmentGroupId) {
