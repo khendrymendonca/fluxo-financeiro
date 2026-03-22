@@ -571,7 +571,7 @@ function useFinanceProvider() {
               cardId: t.card_id,
               isPaid: t.is_paid !== undefined ? t.is_paid : parseLocalDate(t.date) <= new Date(),
               isRecurring: t.is_recurring,
-              isAutomatic: t.is_automatic,
+              isAutomatic: t.is_automatic || false, // Fallback se a coluna não existir
               installmentGroupId: t.installment_group_id,
               installmentNumber: t.installment_number,
               installmentTotal: t.installment_total,
