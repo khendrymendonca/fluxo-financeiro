@@ -522,8 +522,37 @@ function useFinanceProvider() {
         emergencyMonths: Number(localStorage.getItem('emergencyMonths')) || 12,
       });
 
-      // ✅ Revalida faturas em background para corrigir erros de lógica passados
+      // ✅ FIX: Revalida faturas em background para corrigir erros de lógica passados
       const changed = await revalidateInvoiceMonths(loadedTransactions, loadedCards);
+
+      // ✅ NOVO: Baixa Automática Silenciosa
+      // Se houver transações marcadas como automáticas (ex: seu salário dia 20)
+      // e hoje for dia 20 ou mais, o sistema as marca como pagas automaticamente.
+      const today = new Date();
+      const autoPayUpdates = loadedTransactions.filter(t => 
+        (t.isAutomatic || (t as any).is_automatic) && 
+        !t.isPaid && 
+        parseLocalDate(t.date) <= today &&
+        t.accountId
+      );
+
+      if (autoPayUpdates.length > 0) {
+        console.log(`[AutoPay] Processando ${autoPayUpdates.length} baixas automáticas...`);
+        for (const tx of autoPayUpdates) {
+          const change = tx.type === 'income' ? tx.amount : -tx.amount;
+          await supabase.from('transactions').update({ is_paid: true, payment_date: tx.date }).eq('id', tx.id);
+          
+          const account = (accountsRes.data || []).find(a => a.id === tx.accountId);
+          if (account) {
+            const newBalance = Number(account.balance) + change;
+            await supabase.from('accounts').update({ balance: newBalance }).eq('id', tx.accountId);
+          }
+        }
+        // Recarregar silenciosamente os novos estados
+        await fetchInitialData();
+        return;
+      }
+
       if (changed) {
         console.log('Dados de faturas atualizados. Recarregando...');
         // Recarregar silenciosamente ou apenas atualizar estado local?

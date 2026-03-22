@@ -52,6 +52,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [cardId, setCardId] = useState<string>(initialData?.cardId || '');
   const [paymentMethod, setPaymentMethod] = useState<'account' | 'card'>(initialData?.cardId ? 'card' : 'account');
   const [selectedDebtId, setSelectedDebtId] = useState<string>(initialData?.debtId || '');
+  const [isAutomatic, setIsAutomatic] = useState<boolean>((initialData as any)?.isAutomatic || false);
 
   const [installmentsCount, setInstallmentsCount] = useState('2');
   const [areInstallmentsEqual, setAreInstallmentsEqual] = useState(true);
@@ -246,6 +247,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       installmentTotal: activeTab === 'parcelamento' ? parseInt(installmentsCount) : undefined,
       isRecurring: activeTab === 'fixo',
       recurrence: activeTab === 'fixo' ? recurrence : undefined,
+      isAutomatic: (activeTab === 'pontual' || activeTab === 'fixo') ? isAutomatic : false,
       debtId: selectedDebtId || undefined,
       // ✅ FIX: invoiceMonthYear só é enviado na edição — criação deixa o store calcular
       invoiceMonthYear: (paymentMethod === 'card' && initialData) ? invoiceReference : undefined,
@@ -613,12 +615,28 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               )}
 
               {(activeTab === 'pontual' || activeTab === 'fixo') && (
-                <div className="space-y-2">
-                  <Label>Data</Label>
-                  <Input type="date" value={date} onChange={e => {
-                    setDate(e.target.value);
-                    setInvoiceReference(e.target.value.slice(0, 7));
-                  }} />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Data</Label>
+                    <Input type="date" value={date} onChange={e => {
+                      setDate(e.target.value);
+                      setInvoiceReference(e.target.value.slice(0, 7));
+                    }} />
+                  </div>
+
+                  <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-2xl border-2 border-transparent hover:border-primary/20 transition-all cursor-pointer"
+                    onClick={() => setIsAutomatic(!isAutomatic)}>
+                    <input
+                      type="checkbox"
+                      checked={isAutomatic}
+                      onChange={(e) => setIsAutomatic(e.target.checked)}
+                      className="w-5 h-5 rounded-lg border-2 border-primary text-primary focus:ring-0 transition-all"
+                    />
+                    <div className="flex-1">
+                      <Label className="text-sm font-bold cursor-pointer">Efetivar automaticamente na data</Label>
+                      <p className="text-[10px] text-muted-foreground leading-tight">O sistema marcará como pago e atualizará o saldo assim que chegar o dia.</p>
+                    </div>
+                  </div>
                 </div>
               )}
 
