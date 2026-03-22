@@ -114,19 +114,70 @@ function useFinanceProvider() {
 
   // --- Computed ---
 
-  const currentMonthTransactions = state.transactions.filter(t => {
-    const targetDate = getTransactionTargetDate(t);
-    if (viewMode === 'day') {
-      return targetDate.getDate() === viewDate.getDate() &&
-        targetDate.getMonth() === viewDate.getMonth() &&
-        targetDate.getFullYear() === viewDate.getFullYear();
-    }
-    if (viewMode === 'month') {
-      return targetDate.getMonth() === viewDate.getMonth() &&
-        targetDate.getFullYear() === viewDate.getFullYear();
-    }
-    return targetDate.getFullYear() === viewDate.getFullYear();
-  });
+  const currentMonthTransactions = useMemo(() => {
+    const virtualTxs: Transaction[] = [];
+    
+    // Pegar templates de transações fixas
+    const fixedTemplates = state.transactions
+      .filter(t => t.isRecurring)
+      .reduce((acc, tx) => {
+        const key = `${tx.description}-${tx.categoryId}-${tx.amount}`;
+        if (!acc[key]) acc[key] = tx;
+        return acc;
+      }, {} as Record<string, Transaction>);
+
+    Object.values(fixedTemplates).forEach(tx => {
+      const tDate = parseLocalDate(tx.date);
+      // ✅ FIX: A data da transação virtual deve refletir o mês/ano da visualização atual
+      const targetDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), tDate.getDate());
+      
+      if (targetDate.getMonth() !== viewDate.getMonth()) {
+        targetDate.setDate(0);
+      }
+
+      const exists = state.transactions.find(t => 
+        t.description === tx.description && 
+        parseLocalDate(t.date).getMonth() === viewDate.getMonth() &&
+        parseLocalDate(t.date).getFullYear() === viewDate.getFullYear()
+      );
+
+      if (!exists) {
+        virtualTxs.push({
+          ...tx,
+          id: `virtual-tx-${tx.id}-${viewDate.getFullYear()}-${viewDate.getMonth()}`,
+          // ✅ FIX: Garante que a data exibida na lista seja a do mês atual (ex: 20/04/2026)
+          date: format(targetDate, 'yyyy-MM-dd'),
+          isPaid: false,
+          isVirtual: true,
+        } as Transaction);
+      }
+    });
+
+    const allTxs = [...state.transactions, ...virtualTxs];
+
+    return allTxs.filter(t => {
+      // Se for a transação original de um lançamento fixo, só mostra ela no seu mês de origem
+      // para evitar que o "20/03" apareça na lista de Abril.
+      if (t.isRecurring && !t.isVirtual) {
+        const originalDate = parseLocalDate(t.date);
+        if (originalDate.getMonth() !== viewDate.getMonth() || originalDate.getFullYear() !== viewDate.getFullYear()) {
+          return false;
+        }
+      }
+
+      const targetDate = getTransactionTargetDate(t);
+      if (viewMode === 'day') {
+        return targetDate.getDate() === viewDate.getDate() &&
+          targetDate.getMonth() === viewDate.getMonth() &&
+          targetDate.getFullYear() === viewDate.getFullYear();
+      }
+      if (viewMode === 'month') {
+        return targetDate.getMonth() === viewDate.getMonth() &&
+          targetDate.getFullYear() === viewDate.getFullYear();
+      }
+      return targetDate.getFullYear() === viewDate.getFullYear();
+    });
+  }, [state.transactions, viewDate, viewMode, getTransactionTargetDate, parseLocalDate]);
 
   const currentMonthBills = useMemo(() => {
     const maxDate = new Date(2030, 11, 31);
@@ -1957,14 +2008,14 @@ function useFinanceProvider() {
 
   const projectedBalance = totalNetWorth - totalPendingOutflows - pendingTransactionsAmount;
 
-  // ✅ FIX: totalIncome e totalExpenses baseados APENAS em transactions
-  // Bills pendentes não são somadas para evitar dupla contagem
+  // ✅ FIX: totalIncome e totalExpenses consideram APENAS o que já foi pago ou é do passado
+  // Isso evita que o salário de Abril seja somado no balanço antes do dia chegar.
   const totalIncome = currentMonthTransactions
-    .filter(t => t.type === 'income' && !t.isInvoicePayment)
+    .filter(t => t.type === 'income' && !t.isInvoicePayment && (t.isPaid || parseLocalDate(t.date) <= new Date()))
     .reduce((acc, t) => acc + Number(t.amount), 0);
 
   const totalExpenses = currentMonthTransactions
-    .filter(t => t.type === 'expense' && !t.isInvoicePayment)
+    .filter(t => t.type === 'expense' && !t.isInvoicePayment && (t.isPaid || parseLocalDate(t.date) <= new Date()))
     .reduce((acc, t) => acc + Number(t.amount), 0);
 
   return {
