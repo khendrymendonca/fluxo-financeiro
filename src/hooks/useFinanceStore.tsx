@@ -1763,9 +1763,16 @@ function useFinanceProvider() {
         // Ignora projeções virtuais de meses futuros (recorrentes ainda não cobradas)
         if (t.isVirtual) return false;
 
-        // ✅ REGRA DE LIMITE:
-        // 1. Se for um lançamento recorrente (fixo) e a data for futura, NÃO consome limite ainda.
-        // 2. Se for um parcelamento (installmentTotal > 1), o valor total futuro DEVE consumir limite (comportamento padrão de cartão).
+        // ✅ REGRA DE LIMITE: 
+        // 1. Ignora ajustes de saldo (como Saldo Anterior) para não duplicar consumo de limite
+        const desc = (t.description || '').toLowerCase();
+        const categoryName = state.categories.find(c => c.id === t.categoryId)?.name?.toLowerCase() || '';
+        if (desc.includes('saldo anterior') || categoryName.includes('ajuste') || desc.includes('ajuste')) {
+          return false;
+        }
+
+        // 2. Se for um lançamento recorrente (fixo) e a data for futura, NÃO consome limite ainda.
+        // 3. Se for um parcelamento (installmentTotal > 1), o valor total futuro DEVE consumir limite (comportamento padrão de cartão).
         const isInstallment = t.installmentTotal && t.installmentTotal > 1;
         const isFuture = parseLocalDate(t.date) > new Date();
 
