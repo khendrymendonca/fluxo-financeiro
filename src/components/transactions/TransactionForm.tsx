@@ -141,7 +141,16 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       return;
     }
 
-    if (!description || !amount || !categoryId) return;
+    if (!description || !amount) return;
+    if (activeTab !== 'renda_fixa' && !categoryId) return;
+
+    let finalCategoryId = categoryId;
+    if (activeTab === 'renda_fixa' && !categoryId) {
+      // Tentar encontrar uma categoria de "Salário" ou "Rendas" ou usar a primeira de receita
+      const salaryCat = categories.find(c => c.name.toLowerCase().includes('salário') || c.name.toLowerCase().includes('renda'));
+      const firstIncomeCat = categories.find(c => c.type === 'income');
+      finalCategoryId = salaryCat?.id || firstIncomeCat?.id || '';
+    }
 
     const parsedAmount = parseFloat(amount);
     const isPayingNow = initialData ? isPaidLocally : isDateTodayOrPast(date);
@@ -166,10 +175,10 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       }
     }
 
-    executeSubmit(parsedAmount);
+    executeSubmit(parsedAmount, finalCategoryId);
   };
 
-  const executeSubmit = (parsedAmount: number) => {
+  const executeSubmit = (parsedAmount: number, finalCategoryId?: string) => {
     let finalCustomInstallments: { date: string, amount: number }[] | undefined = undefined;
 
     if (activeTab === 'parcelamento' && (!areInstallmentsEqual || !fixedPaymentDay)) {
@@ -197,7 +206,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       transactionType: activeTab === 'parcelamento' ? 'installment' : (activeTab === 'fixo' || activeTab === 'renda_fixa') ? 'recurring' : 'punctual',
       description,
       amount: parsedAmount,
-      categoryId,
+      categoryId: finalCategoryId || categoryId,
       subcategoryId: subcategoryId || undefined,
       date,
       accountId: paymentMethod === 'account' ? accountId : undefined,
