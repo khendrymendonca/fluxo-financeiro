@@ -115,57 +115,22 @@ function useFinanceProvider() {
   // --- Computed ---
 
   const currentMonthTransactions = useMemo(() => {
-    // 1. Filtrar transações reais que pertencem ao período atual
-    const realTxs = state.transactions.filter(t => {
+    // Filtrar transações que pertencem ao período de visualização atual
+    return state.transactions.filter(t => {
       const targetDate = getTransactionTargetDate(t);
+      const tMonth = targetDate.getMonth();
+      const tYear = targetDate.getFullYear();
+      const vMonth = viewDate.getMonth();
+      const vYear = viewDate.getFullYear();
+
       if (viewMode === 'day') {
-        return targetDate.getDate() === viewDate.getDate() &&
-          targetDate.getMonth() === viewDate.getMonth() &&
-          targetDate.getFullYear() === viewDate.getFullYear();
+        return targetDate.getDate() === viewDate.getDate() && tMonth === vMonth && tYear === vYear;
       }
       if (viewMode === 'month') {
-        return targetDate.getMonth() === viewDate.getMonth() &&
-          targetDate.getFullYear() === viewDate.getFullYear();
+        return tMonth === vMonth && tYear === vYear;
       }
-      return targetDate.getFullYear() === viewDate.getFullYear();
-    });
-
-    const virtualTxs: Transaction[] = [];
-    
-    // 2. Projetar templates fixos se não houver um real no mês atual
-    if (viewMode === 'month' || viewMode === 'day') {
-      const fixedTemplates = state.transactions
-        .filter(t => t.isRecurring && !t.isVirtual)
-        .reduce((acc, tx) => {
-          const key = `${tx.description}-${tx.categoryId}-${tx.amount}`;
-          if (!acc[key]) acc[key] = tx;
-          return acc;
-        }, {} as Record<string, Transaction>);
-
-      Object.values(fixedTemplates).forEach(tx => {
-        // Se já existe um lançamento real com essa descrição neste mês, não projetar o virtual
-        const alreadyExists = realTxs.some(t => t.description === tx.description && !t.isVirtual);
-        if (alreadyExists) return;
-
-        const tDate = parseLocalDate(tx.date);
-        const targetDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), tDate.getDate());
-        
-        if (targetDate.getMonth() !== viewDate.getMonth()) {
-          targetDate.setDate(0);
-        }
-
-        virtualTxs.push({
-          ...tx,
-          id: `virtual-tx-${tx.id}-${viewDate.getFullYear()}-${viewDate.getMonth()}`,
-          date: format(targetDate, 'yyyy-MM-dd'),
-          isPaid: false,
-          isVirtual: true,
-        } as Transaction);
-      });
-    }
-
-    // 3. Unir e retornar, garantindo que não haja duplicidade visual
-    return [...realTxs, ...virtualTxs].sort((a, b) => 
+      return tYear === vYear;
+    }).sort((a, b) => 
       parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime()
     );
   }, [state.transactions, viewDate, viewMode, getTransactionTargetDate, parseLocalDate]);
@@ -939,20 +904,11 @@ function useFinanceProvider() {
         }
       } else if (transaction.isRecurring) {
         const baseDate = parseLocalDate(transaction.date);
-        const baseCard = transaction.cardId ? state.creditCards.find(c => c.id === transaction.cardId) : null;
-        let firstInv: string | null = null;
-        if (baseCard) firstInv = calcInvoiceMonthYear(baseDate, baseCard);
-
+        
         for (let i = 1; i <= 12; i++) {
           const instDate = addMonths(baseDate, i - 1);
-
-          let instInv = undefined;
-          if (firstInv) {
-            const [y, m] = firstInv.split('-').map(Number);
-            instInv = format(new Date(y, m - 1 + i - 1, 1), 'yyyy-MM');
-          }
-
-          pushTx({ ...transaction, date: format(instDate, 'yyyy-MM-dd'), invoiceMonthYear: instInv }, i, undefined);
+          // ✅ FIX: Garante que cada mês tenha sua própria data física correta
+          pushTx({ ...transaction, date: format(instDate, 'yyyy-MM-dd') }, i, undefined);
         }
       } else {
         pushTx(transaction);
