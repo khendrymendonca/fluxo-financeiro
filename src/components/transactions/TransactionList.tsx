@@ -46,6 +46,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [expandedBillId, setExpandedBillId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [anticipatingIds, setAnticipatingIds] = useState<Set<string>>(new Set());
   const [anticipateAccount, setAnticipateAccount] = useState('');
   const [deletingBill, setDeletingBill] = useState<any>(null);
@@ -105,6 +106,14 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
 
   const filteredItems = displayItems
     .filter(t => {
+      // Filtro de Busca por Texto
+      if (searchQuery.trim() !== '') {
+        const query = searchQuery.toLowerCase();
+        const matchesDescription = t.description.toLowerCase().includes(query);
+        const matchesCategory = categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(query);
+        if (!matchesDescription && !matchesCategory) return false;
+      }
+
       // Filtro de Categoria (Receita/Despesa)
       if (filter !== 'all' && t.type !== filter) return false;
 
@@ -223,6 +232,25 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
 
   return (
     <div className="space-y-4">
+      {/* Pesquisa */}
+      <div className="relative">
+        <input
+          type="text"
+          placeholder="Pesquisar lançamentos ou categorias..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full h-12 pl-4 pr-10 rounded-2xl border-2 border-border bg-card focus:border-primary focus:ring-0 transition-all outline-none font-medium"
+        />
+        {searchQuery && (
+          <button 
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-full text-muted-foreground"
+          >
+            <Plus className="w-5 h-5 rotate-45" />
+          </button>
+        )}
+      </div>
+
       {/* Filtros */}
       {/* Filtros Avançados */}
       <div className="card-elevated p-4 space-y-4">

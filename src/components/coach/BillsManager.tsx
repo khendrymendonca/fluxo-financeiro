@@ -52,6 +52,7 @@ export function BillsManager() {
     const [paymentAmount, setPaymentAmount] = useState<string>('');
     const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
     const [expandedBillId, setExpandedBillId] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const [deletingBill, setDeletingBill] = useState<any>(null);
     const [deleteFutureBills, setDeleteFutureBills] = useState(false);
@@ -77,6 +78,14 @@ export function BillsManager() {
 
     // ✅ FIX: sort usa parseLocalDate — sem bug de fuso
     const filteredBills = currentMonthBills.filter(b => {
+        // Busca por Texto
+        if (searchQuery.trim() !== '') {
+            const query = searchQuery.toLowerCase();
+            const matchesName = b.name.toLowerCase().includes(query);
+            const matchesCategory = categories.find(c => c.id === b.categoryId)?.name.toLowerCase().includes(query);
+            if (!matchesName && !matchesCategory) return false;
+        }
+
         if (b.cardId && !b.isVirtual && b.categoryId !== 'card-payment') return false;
         if (b.categoryId === 'card-payment' && b.amount <= 0) return false;
         if (filter === 'all') return true;
@@ -111,20 +120,40 @@ export function BillsManager() {
                 </div>
             </div>
 
-            {/* Filtros */}
-            <div className="flex items-center gap-2 p-1 bg-muted rounded-2xl w-full overflow-x-auto no-scrollbar md:w-fit">
-                {([
-                    { id: 'all', label: 'Todas', icon: Filter },
-                    { id: 'payable', label: 'A Pagar', icon: ArrowDownCircle },
-                    { id: 'receivable', label: 'A Receber', icon: ArrowUpCircle },
-                ] as const).map(btn => (
-                    <button key={btn.id} onClick={() => setFilter(btn.id)}
-                        className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all",
-                            filter === btn.id ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}>
-                        <btn.icon className="w-4 h-4" />
-                        {btn.label}
-                    </button>
-                ))}
+            {/* Busca e Filtros */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="relative flex-1 max-w-md">
+                    <input
+                        type="text"
+                        placeholder="Pesquisar contas ou categorias..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full h-11 pl-4 pr-10 rounded-2xl border-2 border-border bg-card focus:border-primary focus:ring-0 transition-all outline-none font-medium text-sm"
+                    />
+                    {searchQuery && (
+                        <button 
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-full text-muted-foreground"
+                        >
+                            <Plus className="w-4 h-4 rotate-45" />
+                        </button>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-2 p-1 bg-muted rounded-2xl w-full overflow-x-auto no-scrollbar md:w-fit">
+                    {([
+                        { id: 'all', label: 'Todas', icon: Filter },
+                        { id: 'payable', label: 'A Pagar', icon: ArrowDownCircle },
+                        { id: 'receivable', label: 'A Receber', icon: ArrowUpCircle },
+                    ] as const).map(btn => (
+                        <button key={btn.id} onClick={() => setFilter(btn.id)}
+                            className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all",
+                                filter === btn.id ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                            <btn.icon className="w-4 h-4" />
+                            {btn.label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* Lista de Contas */}

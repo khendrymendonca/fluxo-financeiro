@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
+import { format } from 'date-fns';
 
 export function HabitTracker() {
     const { habits, habitLogs, fetchInitialData } = useFinanceStore();
@@ -12,11 +13,11 @@ export function HabitTracker() {
         const d = new Date();
         const day = d.getDay();
         const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Monday start
-        return new Date(d.setDate(diff)).toISOString().split('T')[0];
+        return format(new Date(d.setDate(diff)), 'yyyy-MM-dd');
     };
 
     const startOfWeek = getStartOfWeek();
-    const today = new Date().toISOString().split('T')[0];
+    const today = format(new Date(), 'yyyy-MM-dd');
 
     const logHabit = async (habitId: string) => {
         try {
@@ -50,7 +51,7 @@ export function HabitTracker() {
                 .map(l => {
                     const d = new Date(l.loggedDate);
                     const start = d.getDate() - d.getDay() + (d.getDay() === 0 ? -6 : 1);
-                    return new Date(d.setDate(start)).toISOString().split('T')[0];
+                    return format(new Date(d.setDate(start)), 'yyyy-MM-dd');
                 })
         );
         return uniqueWeeks.size;

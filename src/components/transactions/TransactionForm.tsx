@@ -47,7 +47,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
   const [categoryId, setCategoryId] = useState<string>(initialData?.categoryId || '');
   const [subcategoryId, setSubcategoryId] = useState<string>(initialData?.subcategoryId || '');
-  const [date, setDate] = useState((initialData?.date || new Date().toISOString()).split('T')[0]);
+  const [date, setDate] = useState(initialData?.date || format(new Date(), 'yyyy-MM-dd'));
   const [accountId, setAccountId] = useState<string>(initialData?.accountId || '');
   const [cardId, setCardId] = useState<string>(initialData?.cardId || '');
   const [paymentMethod, setPaymentMethod] = useState<'account' | 'card'>(initialData?.cardId ? 'card' : 'account');
@@ -62,12 +62,12 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
   const [debtTotal, setDebtTotal] = useState('');
   const [debtInstallments, setDebtInstallments] = useState('');
-  const [debtFirstPaymentDate, setDebtFirstPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [debtFirstPaymentDate, setDebtFirstPaymentDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   const [invoiceReference, setInvoiceReference] = useState(() => {
     if (initialData?.invoiceMonthYear) return initialData.invoiceMonthYear;
     if (initialData?.date) return initialData.date.slice(0, 7);
-    return new Date().toISOString().slice(0, 7);
+    return format(new Date(), 'yyyy-MM');
   });
 
   const [applyScope, setApplyScope] = useState<'this' | 'future' | 'all'>('this');
@@ -160,7 +160,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         remainingAmount: parseFloat(debtTotal),
         monthlyPayment: parseFloat(debtTotal) / parseInt(debtInstallments),
         interestRateMonthly: 0,
-        startDate: new Date().toISOString(),
+        startDate: format(new Date(), 'yyyy-MM-dd'),
       }, debtFirstPaymentDate);
       onClose();
       return;

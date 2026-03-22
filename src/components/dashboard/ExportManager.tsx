@@ -76,7 +76,7 @@ export function ExportManager() {
 
                     // Map basic fields (approximation)
                     await addTransaction({
-                        date: values[0] || new Date().toISOString(),
+                        date: values[0] || new Date().toISOString().split('T')[0],
                         description: values[1] || 'Importado',
                         amount: parseFloat(values[2]) || 0,
                         type: (values[3] as 'income' | 'expense') || 'expense',

@@ -160,7 +160,7 @@ function useFinanceProvider() {
           virtualBills.push({
             ...bill,
             id: `virtual-${bill.id}-${viewDate.getFullYear()}-${viewDate.getMonth()}`,
-            dueDate: targetDate.toISOString(),
+            dueDate: format(targetDate, 'yyyy-MM-dd'),
             status: 'pending',
             isFixed: true,
             isVirtual: true,
@@ -210,7 +210,7 @@ function useFinanceProvider() {
           name: `Dívida: ${debt.name}`,
           amount: debt.monthlyPayment,
           type: 'payable',
-          dueDate: d.toISOString(),
+          dueDate: format(d, 'yyyy-MM-dd'),
           status: 'pending',
           isFixed: true,
           categoryId: 'debt-payment',
@@ -264,7 +264,7 @@ function useFinanceProvider() {
           name: `Fatura: ${card.bank} - ${card.name}`,
           amount: amount,
           type: 'payable',
-          dueDate: d.toISOString(),
+          dueDate: format(d, 'yyyy-MM-dd'),
           status: 'pending',
           isFixed: true,
           categoryId: 'card-payment',
@@ -278,32 +278,37 @@ function useFinanceProvider() {
     return filteredBills.sort((a, b) => parseLocalDate(a.dueDate).getTime() - parseLocalDate(b.dueDate).getTime());
   }, [state.bills, state.debts, state.creditCards, state.transactions, viewDate, viewMode, parseLocalDate, getTransactionTargetDate]);
 
-  // ✅ FIX: revalida e sincroniza faturas de cartão se a lógica mudar ou houver erro nos dados
+  // ✅ FIX: Sincronização Silenciosa e Automática (Backend-Style)
+  // Garante que todas as faturas (antigas e novas) estejam 100% corretas no banco
   const revalidateInvoiceMonths = useCallback(async (allTransactions: Transaction[], allCards: CreditCard[]) => {
     const updates: { id: string, invoice_month_year: string }[] = [];
+    
+    // Agrupar por grupo de parcelamento para manter a sequência correta
     const grouped = allTransactions.reduce((acc, t) => {
-      if (!t.cardId || t.isInvoicePayment) return acc;
-      if (t.installmentGroupId) {
-        if (!acc[t.installmentGroupId]) acc[t.installmentGroupId] = [];
-        acc[t.installmentGroupId].push(t);
-      } else {
-        const singleId = `single-${t.id}`;
-        acc[singleId] = [t];
-      }
+      if (!t.cardId || t.isInvoicePayment || t.isVirtual) return acc;
+      
+      const groupId = t.installmentGroupId || `single-${t.id}`;
+      if (!acc[groupId]) acc[groupId] = [];
+      acc[groupId].push(t);
       return acc;
     }, {} as Record<string, Transaction[]>);
 
     Object.values(grouped).forEach(txs => {
+      // Ordenar parcelas pelo número
       const sorted = [...txs].sort((a, b) => (a.installmentNumber || 0) - (b.installmentNumber || 0));
       const first = sorted[0];
       const card = allCards.find(c => c.id === first.cardId);
       if (!card) return;
 
+      // Calcular a fatura da primeira parcela (ou compra única)
       const firstCorrectInv = calcInvoiceMonthYear(parseLocalDate(first.date), card);
-      const [y, m] = firstCorrectInv.split('-').map(Number);
+      const [year, month] = firstCorrectInv.split('-').map(Number);
 
       sorted.forEach((t, index) => {
-        const correctInv = format(new Date(y, m - 1 + index, 1), 'yyyy-MM');
+        // Para parcelamentos, a fatura progride mês a mês a partir da primeira
+        const invoiceDate = new Date(year, month - 1 + index, 1);
+        const correctInv = format(invoiceDate, 'yyyy-MM');
+        
         if (t.invoiceMonthYear !== correctInv) {
           updates.push({ id: t.id, invoice_month_year: correctInv });
         }
@@ -311,11 +316,12 @@ function useFinanceProvider() {
     });
 
     if (updates.length > 0) {
-      console.log(`Revalidando ${updates.length} faturas de cartão...`);
-      for (const update of updates) {
-        await supabase.from('transactions').update({ invoice_month_year: update.invoice_month_year }).eq('id', update.id);
+      console.log(`[Sync] Sincronizando faturas de ${updates.length} lançamentos...`);
+      // Dividir e Conquistar: Atualizar o banco silenciosamente
+      for (const upd of updates) {
+        await supabase.from('transactions').update({ invoice_month_year: upd.invoice_month_year }).eq('id', upd.id);
       }
-      return true; // houve mudanças
+      return true; // Indica que houve mudanças
     }
     return false;
   }, [calcInvoiceMonthYear, parseLocalDate]);
@@ -769,7 +775,7 @@ function useFinanceProvider() {
       console.error('Erro inesperado no deleteBill:', err);
       toast({ title: 'Erro ao remover conta', variant: 'destructive' });
     }
-  }, [state.bills, state.transactions, parseLocalDate]);
+  }, [state.bills, state.transactions, parseLocalDate, updateAccountBalance]);
 
   // --- Transactions ---
 
@@ -933,6 +939,14 @@ function useFinanceProvider() {
 
   const updateTransaction = useCallback(async (updatedTx: Transaction, applyScope: 'this' | 'future' | 'all' = 'this') => {
     try {
+      // ✅ FIX: Se for cartão, recalcular a fatura se a data ou o cartão mudarem
+      if (updatedTx.cardId && !updatedTx.isInvoicePayment) {
+        const card = state.creditCards.find(c => c.id === updatedTx.cardId);
+        if (card) {
+          updatedTx.invoiceMonthYear = calcInvoiceMonthYear(parseLocalDate(updatedTx.date), card);
+        }
+      }
+
       const categoryName = state.categories.find(c => c.id === updatedTx.categoryId)?.name || 'Outros';
 
       const updateData = {
@@ -1539,16 +1553,19 @@ function useFinanceProvider() {
     }
   }, [state.budgetRule]);
 
-  // ✅ FIX: payBill sem criar próximo mês (addBill com project=true já cria 12 meses)
+  // ✅ FIX: payBill agora busca corretamente contas virtuais (virtual-, card-, debt-)
   const payBill = useCallback(async (billId: string, accountId: string | undefined, paymentDate: string, cardId?: string, customAmount?: number) => {
     try {
       let bill = state.bills.find(b => b.id === billId);
-      if (!bill && billId.startsWith('virtual-')) {
+      if (!bill) {
         bill = currentMonthBills.find(b => b.id === billId);
       }
-      if (!bill) return;
+      if (!bill) {
+        console.warn(`Conta não encontrada: ${billId}`);
+        return;
+      }
 
-      const isVirtual = billId.startsWith('virtual-');
+      const isVirtual = billId.startsWith('virtual-') || billId.startsWith('card-') || billId.startsWith('debt-');
       const finalAmount = customAmount !== undefined ? customAmount : bill.amount;
       const isPartial = customAmount !== undefined && Math.abs(customAmount - bill.amount) > 0.01;
 
@@ -1791,7 +1808,7 @@ function useFinanceProvider() {
         // expense soma, income (estorno) subtrai
         return sum + (t.type === 'expense' ? amt : -amt);
       }, 0);
-  }, [state.transactions, state.creditCards, calcInvoiceMonthYear, parseLocalDate]);
+  }, [state.transactions, state.creditCards, state.categories, calcInvoiceMonthYear, parseLocalDate]);
 
   const getCardAvailableLimit = useCallback((cardId: string): number => {
     const card = state.creditCards.find((c) => c.id === cardId);

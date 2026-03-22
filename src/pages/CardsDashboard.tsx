@@ -26,6 +26,7 @@ export default function CardsDashboard() {
   const [viewDate, setViewDate] = useState(new Date());
   const [showAddCard, setShowAddCard] = useState(false);
   const [showEditCard, setShowEditCard] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const selectedCard = creditCards.find(c => c.id === selectedCardId);
 
@@ -57,7 +58,7 @@ export default function CardsDashboard() {
     const endInv = new Date(viewYear, viewMonth, closingDay, 23, 59, 59);
     const startInv = new Date(viewYear, viewMonth - 1, closingDay + 1, 0, 0, 0);
 
-    return transactions
+    const allInvoiceTransactions = transactions
       .filter(t => {
         if (t.cardId !== cardId || t.isInvoicePayment) return false;
         if (t.isVirtual) return false; // ✅ nunca mostrar projeções na fatura
@@ -66,8 +67,18 @@ export default function CardsDashboard() {
         }
         const tDate = parseLocalDate(t.date);
         return tDate >= startInv && tDate <= endInv;
-      })
-      .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
+      });
+
+    // Filtro de Busca por Texto
+    const filteredInvoiceTransactions = allInvoiceTransactions.filter(t => {
+      if (searchQuery.trim() === '') return true;
+      const query = searchQuery.toLowerCase();
+      const matchesDescription = t.description.toLowerCase().includes(query);
+      const matchesCategory = categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(query);
+      return matchesDescription || matchesCategory;
+    });
+
+    return filteredInvoiceTransactions.sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
   };
 
   const getInvoiceStatus = (cardId: string): 'paga' | 'aberta' => {
@@ -220,6 +231,25 @@ export default function CardsDashboard() {
                           </p>
                           <p className="text-4xl font-black">{formatCurrency(currentInvoiceTotal)}</p>
                         </div>
+                      </div>
+
+                      {/* Busca na Fatura */}
+                      <div className="relative flex-1 max-w-xs">
+                        <input
+                          type="text"
+                          placeholder="Buscar na fatura..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full h-10 pl-4 pr-10 rounded-xl border-2 border-border bg-background focus:border-primary focus:ring-0 transition-all outline-none font-medium text-xs"
+                        />
+                        {searchQuery && (
+                          <button 
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-full text-muted-foreground"
+                          >
+                            <Plus className="w-3.5 h-3.5 rotate-45" />
+                          </button>
+                        )}
                       </div>
                     </div>
 

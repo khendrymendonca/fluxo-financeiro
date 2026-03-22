@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +22,7 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
     const [dueDay, setDueDay] = useState(card.dueDay.toString());
     const [closingDay, setClosingDay] = useState(card.closingDay.toString());
     const [showEffectiveDate, setShowEffectiveDate] = useState(false);
-    const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().split('T')[0]);
+    const [effectiveDate, setEffectiveDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
     useEffect(() => {
         if (parseInt(dueDay) !== card.dueDay || parseInt(closingDay) !== card.closingDay) {
