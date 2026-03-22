@@ -278,6 +278,48 @@ function useFinanceProvider() {
     return filteredBills.sort((a, b) => parseLocalDate(a.dueDate).getTime() - parseLocalDate(b.dueDate).getTime());
   }, [state.bills, state.debts, state.creditCards, state.transactions, viewDate, viewMode, parseLocalDate, getTransactionTargetDate]);
 
+  // ✅ FIX: revalida e sincroniza faturas de cartão se a lógica mudar ou houver erro nos dados
+  const revalidateInvoiceMonths = useCallback(async (allTransactions: Transaction[], allCards: CreditCard[]) => {
+    const updates: { id: string, invoice_month_year: string }[] = [];
+    const grouped = allTransactions.reduce((acc, t) => {
+      if (!t.cardId || t.isInvoicePayment) return acc;
+      if (t.installmentGroupId) {
+        if (!acc[t.installmentGroupId]) acc[t.installmentGroupId] = [];
+        acc[t.installmentGroupId].push(t);
+      } else {
+        const singleId = `single-${t.id}`;
+        acc[singleId] = [t];
+      }
+      return acc;
+    }, {} as Record<string, Transaction[]>);
+
+    Object.values(grouped).forEach(txs => {
+      const sorted = [...txs].sort((a, b) => (a.installmentNumber || 0) - (b.installmentNumber || 0));
+      const first = sorted[0];
+      const card = allCards.find(c => c.id === first.cardId);
+      if (!card) return;
+
+      const firstCorrectInv = calcInvoiceMonthYear(parseLocalDate(first.date), card);
+      const [y, m] = firstCorrectInv.split('-').map(Number);
+
+      sorted.forEach((t, index) => {
+        const correctInv = format(new Date(y, m - 1 + index, 1), 'yyyy-MM');
+        if (t.invoiceMonthYear !== correctInv) {
+          updates.push({ id: t.id, invoice_month_year: correctInv });
+        }
+      });
+    });
+
+    if (updates.length > 0) {
+      console.log(`Revalidando ${updates.length} faturas de cartão...`);
+      for (const update of updates) {
+        await supabase.from('transactions').update({ invoice_month_year: update.invoice_month_year }).eq('id', update.id);
+      }
+      return true; // houve mudanças
+    }
+    return false;
+  }, [calcInvoiceMonthYear, parseLocalDate]);
+
   // ✅ FIX: setLoading(false) duplicado removido — apenas o finally garante o estado
   const fetchInitialData = useCallback(async () => {
     try {
@@ -322,24 +364,35 @@ function useFinanceProvider() {
       if (goalsRes.error) throw goalsRes.error;
       if (debtsRes.error) throw debtsRes.error;
 
+      const loadedTransactions = (transactionsRes.data || []).map((t: any) => ({
+        ...t,
+        userId: t.user_id,
+        transactionType: t.transaction_type,
+        categoryId: t.category_id,
+        subcategoryId: t.subcategory_id,
+        accountId: t.account_id,
+        cardId: t.card_id,
+        isPaid: t.is_paid !== undefined ? t.is_paid : parseLocalDate(t.date) <= new Date(),
+        isRecurring: t.is_recurring,
+        installmentGroupId: t.installment_group_id,
+        installmentNumber: t.installment_number,
+        installmentTotal: t.installment_total,
+        invoiceMonthYear: t.invoice_month_year,
+        debtId: t.debt_id,
+        paymentDate: t.payment_date
+      }));
+
+      const loadedCards = (cardsRes.data || []).map((c: any) => ({
+        ...c,
+        userId: c.user_id,
+        dueDay: c.due_day,
+        closingDay: c.closing_day,
+        history: c.history,
+        limit: Number(c.limit || 0),
+      }));
+
       setState({
-        transactions: (transactionsRes.data || []).map((t: any) => ({
-          ...t,
-          userId: t.user_id,
-          transactionType: t.transaction_type,
-          categoryId: t.category_id,
-          subcategoryId: t.subcategory_id,
-          accountId: t.account_id,
-          cardId: t.card_id,
-          isPaid: t.is_paid !== undefined ? t.is_paid : parseLocalDate(t.date) <= new Date(),
-          isRecurring: t.is_recurring,
-          installmentGroupId: t.installment_group_id,
-          installmentNumber: t.installment_number,
-          installmentTotal: t.installment_total,
-          invoiceMonthYear: t.invoice_month_year,
-          debtId: t.debt_id,
-          paymentDate: t.payment_date
-        })),
+        transactions: loadedTransactions,
         accounts: (accountsRes.data || []).map((a: any) => ({
           ...a,
           userId: a.user_id,
@@ -348,14 +401,7 @@ function useFinanceProvider() {
           overdraftLimit: a.overdraft_limit || 0,
           monthlyYieldRate: a.monthly_yield_rate || 0
         })),
-        creditCards: (cardsRes.data || []).map((c: any) => ({
-          ...c,
-          userId: c.user_id,
-          dueDay: c.due_day,
-          closingDay: c.closing_day,
-          history: c.history,
-          limit: Number(c.limit || 0),
-        })),
+        creditCards: loadedCards,
         savingsGoals: (goalsRes.data || []).map((g: any) => ({
           ...g,
           userId: g.user_id,
@@ -418,13 +464,44 @@ function useFinanceProvider() {
         })),
         emergencyMonths: Number(localStorage.getItem('emergencyMonths')) || 12,
       });
+
+      // ✅ Revalida faturas em background para corrigir erros de lógica passados
+      const changed = await revalidateInvoiceMonths(loadedTransactions, loadedCards);
+      if (changed) {
+        console.log('Dados de faturas atualizados. Recarregando...');
+        // Recarregar silenciosamente ou apenas atualizar estado local?
+        // Vamos recarregar uma vez para garantir consistência total.
+        const { data: updatedTxs } = await supabase.from('transactions').select('*');
+        if (updatedTxs) {
+          setState(prev => ({
+            ...prev,
+            transactions: updatedTxs.map((t: any) => ({
+              ...t,
+              userId: t.user_id,
+              transactionType: t.transaction_type,
+              categoryId: t.category_id,
+              subcategoryId: t.subcategory_id,
+              accountId: t.account_id,
+              cardId: t.card_id,
+              isPaid: t.is_paid !== undefined ? t.is_paid : parseLocalDate(t.date) <= new Date(),
+              isRecurring: t.is_recurring,
+              installmentGroupId: t.installment_group_id,
+              installmentNumber: t.installment_number,
+              installmentTotal: t.installment_total,
+              invoiceMonthYear: t.invoice_month_year,
+              debtId: t.debt_id,
+              paymentDate: t.payment_date
+            }))
+          }));
+        }
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({ title: 'Erro ao carregar dados', variant: 'destructive' });
     } finally {
       setLoading(false); // ✅ FIX: única chamada
     }
-  }, [parseLocalDate]);
+  }, [parseLocalDate, revalidateInvoiceMonths]);
 
   useEffect(() => {
     fetchInitialData();
@@ -710,7 +787,8 @@ function useFinanceProvider() {
         const card = txData.cardId ? state.creditCards.find(c => c.id === txData.cardId) : null;
         let invoiceMonthYear = txData.invoiceMonthYear || null;
 
-        if (card && !txData.isInvoicePayment) {
+        // ✅ FIX: só calcula se não foi explicitamente passado (importante para parcelamentos)
+        if (card && !txData.isInvoicePayment && !invoiceMonthYear) {
           invoiceMonthYear = calcInvoiceMonthYear(parseLocalDate(txData.date), card);
         }
 
@@ -741,24 +819,61 @@ function useFinanceProvider() {
       };
 
       if (customInstallments && customInstallments.length > 0) {
+        // Para parcelas customizadas, se for cartão, tentamos projetar o invoiceMonthYear
+        // baseado no primeiro, para garantir que sigam meses subsequentes se as datas forem próximas
+        const baseCard = transaction.cardId ? state.creditCards.find(c => c.id === transaction.cardId) : null;
+        let firstInv: string | null = null;
+
         customInstallments.forEach((inst, index) => {
-          pushTx({ ...transaction, date: inst.date, amount: inst.amount }, index + 1, customInstallments.length);
+          let instInv = undefined;
+          if (baseCard) {
+            if (!firstInv) {
+              firstInv = calcInvoiceMonthYear(parseLocalDate(inst.date), baseCard);
+              instInv = firstInv;
+            } else {
+              const [y, m] = firstInv.split('-').map(Number);
+              instInv = format(new Date(y, m - 1 + index, 1), 'yyyy-MM');
+            }
+          }
+          pushTx({ ...transaction, date: inst.date, amount: inst.amount, invoiceMonthYear: instInv }, index + 1, customInstallments.length);
         });
       } else if (transaction.installmentTotal && transaction.installmentTotal > 1) {
         const amountPerInstallment = Math.round((transaction.amount / transaction.installmentTotal) * 100) / 100;
         const lastInstallmentAmount = Math.round((transaction.amount - (amountPerInstallment * (transaction.installmentTotal - 1))) * 100) / 100;
         
         const baseDate = parseLocalDate(transaction.date);
+        const baseCard = transaction.cardId ? state.creditCards.find(c => c.id === transaction.cardId) : null;
+        let firstInv: string | null = null;
+        if (baseCard) firstInv = calcInvoiceMonthYear(baseDate, baseCard);
+
         for (let i = 1; i <= transaction.installmentTotal; i++) {
           const currentAmount = i === transaction.installmentTotal ? lastInstallmentAmount : amountPerInstallment;
           const instDate = addMonths(baseDate, i - 1);
-          pushTx({ ...transaction, date: format(instDate, 'yyyy-MM-dd'), amount: currentAmount }, i, transaction.installmentTotal);
+          
+          let instInv = undefined;
+          if (firstInv) {
+            const [y, m] = firstInv.split('-').map(Number);
+            instInv = format(new Date(y, m - 1 + i - 1, 1), 'yyyy-MM');
+          }
+
+          pushTx({ ...transaction, date: format(instDate, 'yyyy-MM-dd'), amount: currentAmount, invoiceMonthYear: instInv }, i, transaction.installmentTotal);
         }
       } else if (transaction.isRecurring) {
         const baseDate = parseLocalDate(transaction.date);
+        const baseCard = transaction.cardId ? state.creditCards.find(c => c.id === transaction.cardId) : null;
+        let firstInv: string | null = null;
+        if (baseCard) firstInv = calcInvoiceMonthYear(baseDate, baseCard);
+
         for (let i = 1; i <= 12; i++) {
           const instDate = addMonths(baseDate, i - 1);
-          pushTx({ ...transaction, date: format(instDate, 'yyyy-MM-dd') }, i, undefined);
+
+          let instInv = undefined;
+          if (firstInv) {
+            const [y, m] = firstInv.split('-').map(Number);
+            instInv = format(new Date(y, m - 1 + i - 1, 1), 'yyyy-MM');
+          }
+
+          pushTx({ ...transaction, date: format(instDate, 'yyyy-MM-dd'), invoiceMonthYear: instInv }, i, undefined);
         }
       } else {
         pushTx(transaction);

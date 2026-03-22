@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar, CreditCard, RotateCw, Coins, Check, ChevronsUpDown, Trash2, ArrowRightLeft } from 'lucide-react';
+import { format, addMonths } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -91,17 +92,17 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const filteredCategories = categories.filter(c => c.type === type);
   const currentCategorySubcategories = subcategories.filter(s => s.categoryId === categoryId);
 
-  // ✅ FIX: geração de parcelas com parseLocalDate (sem bug de fuso)
+  // ✅ FIX: geração de parcelas com parseLocalDate e addMonths (sem bug de fuso ou pulo de mês)
   const generateCustomInstallments = () => {
     const count = parseInt(installmentsCount) || 2;
     const baseAmount = parseFloat(amount) || 0;
     const val = parseFloat((baseAmount / count).toFixed(2));
-    const [y, m, d] = date.split('-').map(Number);
+    const baseDate = parseLocalDate(date);
 
     const newInst = Array.from({ length: count }, (_, i) => {
-      const instDate = new Date(y, m - 1 + i, d);
+      const instDate = addMonths(baseDate, i);
       return {
-        date: `${instDate.getFullYear()}-${String(instDate.getMonth() + 1).padStart(2, '0')}-${String(instDate.getDate()).padStart(2, '0')}`,
+        date: format(instDate, 'yyyy-MM-dd'),
         amount: val
       };
     });
@@ -210,14 +211,14 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       if (customInstallmentDates.length > 0) {
         finalCustomInstallments = customInstallmentDates;
       } else {
-        // Gera inline com a mesma lógica corrigida de fuso
+        // Gera inline com a mesma lógica corrigida de fuso e addMonths
         const count = parseInt(installmentsCount) || 2;
         const val = parseFloat((parsedAmount / count).toFixed(2));
-        const [y, m, d] = date.split('-').map(Number);
+        const baseDate = parseLocalDate(date);
         finalCustomInstallments = Array.from({ length: count }, (_, i) => {
-          const instDate = new Date(y, m - 1 + i, d);
+          const instDate = addMonths(baseDate, i);
           return {
-            date: `${instDate.getFullYear()}-${String(instDate.getMonth() + 1).padStart(2, '0')}-${String(instDate.getDate()).padStart(2, '0')}`,
+            date: format(instDate, 'yyyy-MM-dd'),
             amount: val
           };
         });
