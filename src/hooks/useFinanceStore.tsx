@@ -275,7 +275,8 @@ function useFinanceProvider() {
           categoryId: 'card-payment',
           isVirtual: true,
           cardId: card.id,
-          userId: card.userId
+          userId: card.userId,
+          invoiceMonthYear: currentInvoiceMonthYear
         } as Bill);
       }
     });
@@ -611,11 +612,11 @@ function useFinanceProvider() {
       const billsToAdd = [];
       const count = (project && bill.isFixed) ? 12 : 1;
 
-      // ✅ FIX: Garante que IDs sejam UUIDs válidos ou null
+      // ✅ FIX: Garante que IDs sejam UUIDs válidos ou null (Padrão Profissional)
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const validCategoryId = (bill.categoryId && uuidRegex.test(bill.categoryId)) ? bill.categoryId : null;
-      const validAccountId = (bill.accountId && uuidRegex.test(bill.accountId)) ? bill.accountId : null;
-      const validCardId = (bill.cardId && uuidRegex.test(bill.cardId)) ? bill.cardId : null;
+      const validCategoryId = bill.categoryId && uuidRegex.test(bill.categoryId) ? bill.categoryId : null;
+      const validAccountId  = bill.accountId  && uuidRegex.test(bill.accountId)  ? bill.accountId  : null;
+      const validCardId     = bill.cardId     && uuidRegex.test(bill.cardId)     ? bill.cardId     : null;
 
       for (let i = 0; i < count; i++) {
         const baseDate = parseLocalDate(bill.dueDate);
@@ -1684,7 +1685,7 @@ function useFinanceProvider() {
         isPaid: true,
         userId: bill.userId,
         isInvoicePayment: isCardBill,
-        invoiceMonthYear: isCardBill ? format(parseLocalDate(bill.dueDate), 'yyyy-MM') : undefined
+        invoiceMonthYear: isCardBill ? ((bill as any).invoiceMonthYear || format(parseLocalDate(bill.dueDate), 'yyyy-MM')) : undefined
       });
 
       toast({ title: isPartial ? 'Abatimento registrado' : 'Pagamento concluído!' });
