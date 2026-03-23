@@ -228,46 +228,64 @@ function useFinanceProvider() {
 
     state.creditCards.forEach(card => {
       const cardTransactions = state.transactions.filter(t => t.cardId === card.id);
-      const spentTxs = cardTransactions.filter(t => {
-        const targetDate = getTransactionTargetDate(t);
-        return !t.isInvoicePayment &&
-          targetDate.getMonth() === viewDate.getMonth() &&
-          targetDate.getFullYear() === viewDate.getFullYear();
-      }).reduce((acc, curr) => {
-        const amt = Number(curr.amount);
-        return acc + (curr.type === 'income' ? -amt : amt);
-      }, 0);
 
-      const spentBills = state.bills.filter(b =>
-        b.cardId === card.id &&
-        b.status === 'pending' &&
-        b.categoryId !== 'card-payment' &&
-        parseLocalDate(b.dueDate).getMonth() === viewDate.getMonth() &&
-        parseLocalDate(b.dueDate).getFullYear() === viewDate.getFullYear()
-      ).reduce((acc, curr) => acc + (curr.type === 'payable' ? curr.amount : -curr.amount), 0);
+      const spentTxs = cardTransactions
+        .filter(t => {
+          const targetDate = getTransactionTargetDate(t);
+          return (
+            !t.isInvoicePayment &&
+            targetDate.getMonth() === viewDate.getMonth() &&
+            targetDate.getFullYear() === viewDate.getFullYear()
+          );
+        })
+        .reduce((acc, curr) => {
+          const amt = Number(curr.amount);
+          return acc + (curr.type === 'income' ? -amt : amt);
+        }, 0);
+
+      const spentBills = state.bills
+        .filter(b =>
+          b.cardId === card.id &&
+          b.status === 'pending' &&
+          b.categoryId !== 'card-payment' &&
+          parseLocalDate(b.dueDate).getMonth() === viewDate.getMonth() &&
+          parseLocalDate(b.dueDate).getFullYear() === viewDate.getFullYear()
+        )
+        .reduce((acc, curr) => acc + (curr.type === 'payable' ? curr.amount : -curr.amount), 0);
 
       const spent = spentTxs + spentBills;
       const currentInvoiceMonthYear = format(viewDate, 'yyyy-MM');
-      const paid = cardTransactions.filter(t =>
-        t.isInvoicePayment && t.invoiceMonthYear === currentInvoiceMonthYear
-      ).reduce((acc, curr) => acc + curr.amount, 0);
+
+      const paid = cardTransactions
+        .filter(t => t.isInvoicePayment && t.invoiceMonthYear === currentInvoiceMonthYear)
+        .reduce((acc, curr) => acc + curr.amount, 0);
 
       const amount = Math.max(0, spent - paid);
+
       const d = new Date(viewDate);
       d.setDate(card.dueDay || 1);
 
-      const exists = state.bills.find(b =>
-        b.cardId === card.id &&
-        b.categoryId === 'card-payment' &&
-        parseLocalDate(b.dueDate).getMonth() === viewDate.getMonth() &&
-        parseLocalDate(b.dueDate).getFullYear() === viewDate.getFullYear()
+      const exists = state.bills.find(
+        b =>
+          b.cardId === card.id &&
+          b.categoryId === 'card-payment' &&
+          parseLocalDate(b.dueDate).getMonth() === viewDate.getMonth() &&
+          parseLocalDate(b.dueDate).getFullYear() === viewDate.getFullYear()
       );
 
-      if (!exists) {
+      // ✅ FIX: não exibe conta virtual se já existe transação de pagamento confirmada
+      const alreadyPaid = cardTransactions.some(
+        t =>
+          t.isInvoicePayment &&
+          t.invoiceMonthYear === currentInvoiceMonthYear &&
+          t.isPaid
+      );
+
+      if (!exists && amount > 0 && !alreadyPaid) {
         filteredBills.push({
           id: `card-${card.id}-${currentInvoiceMonthYear}`,
           name: `Fatura: ${card.bank} - ${card.name}`,
-          amount: amount,
+          amount,
           type: 'payable',
           dueDate: format(d, 'yyyy-MM-dd'),
           status: 'pending',
@@ -276,7 +294,7 @@ function useFinanceProvider() {
           isVirtual: true,
           cardId: card.id,
           userId: card.userId,
-          invoiceMonthYear: currentInvoiceMonthYear
+          invoiceMonthYear: currentInvoiceMonthYear,
         } as Bill);
       }
     });
