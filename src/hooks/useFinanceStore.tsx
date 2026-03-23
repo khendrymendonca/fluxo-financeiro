@@ -116,30 +116,21 @@ function useFinanceProvider() {
 
   const currentMonthTransactions = useMemo(() => {
     return state.transactions.filter(t => {
-      // ✅ REGRA DE OURO: Se não é pagamento de fatura, a data FÍSICA manda.
-      // Se o registro é de Março, ele SÓ aparece em Março.
-      if (!t.isInvoicePayment && !t.cardId) {
+      // ✅ REGRA DE OURO REFORÇADA: 
+      // Se não é um pagamento de fatura de cartão (que é um consolidado), 
+      // a data FÍSICA do lançamento é a única verdade.
+      if (!t.isInvoicePayment) {
         const tDate = parseLocalDate(t.date);
         return tDate.getMonth() === viewDate.getMonth() && tDate.getFullYear() === viewDate.getFullYear();
       }
 
+      // Apenas para pagamentos de fatura, usamos a lógica de competência
       const targetDate = getTransactionTargetDate(t);
-      const tMonth = targetDate.getMonth();
-      const tYear = targetDate.getFullYear();
-      const vMonth = viewDate.getMonth();
-      const vYear = viewDate.getFullYear();
-
-      if (viewMode === 'day') {
-        return targetDate.getDate() === viewDate.getDate() && tMonth === vMonth && tYear === vYear;
-      }
-      if (viewMode === 'month') {
-        return tMonth === vMonth && tYear === vYear;
-      }
-      return tYear === vYear;
+      return targetDate.getMonth() === viewDate.getMonth() && targetDate.getFullYear() === viewDate.getFullYear();
     }).sort((a, b) => 
       parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime()
     );
-  }, [state.transactions, viewDate, viewMode, getTransactionTargetDate, parseLocalDate]);
+  }, [state.transactions, viewDate, getTransactionTargetDate, parseLocalDate]);
 
   const currentMonthBills = useMemo(() => {
     const maxDate = new Date(2030, 11, 31);
