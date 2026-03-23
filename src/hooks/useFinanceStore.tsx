@@ -432,18 +432,127 @@ function useFinanceProvider() {
     await fetchInitialData();
   }, [updateAccountBalance, fetchInitialData]);
 
-  const getCardExpenses = useCallback((id: string) => {
-    const inv = format(viewDate, 'yyyy-MM');
-    const txs = state.transactions.filter(t => t.cardId === id);
-    const paid = txs.filter(t => t.isInvoicePayment && t.invoiceMonthYear === inv).reduce((s, t) => s + t.amount, 0);
-    const spent = txs.filter(t => !t.isInvoicePayment && getTransactionTargetDate(t).getMonth() === viewDate.getMonth()).reduce((s, t) => s + (t.type === 'expense' ? t.amount : -t.amount), 0);
-    return Math.max(0, spent - paid);
+  const getCardExpenses = useCallback((cardId: string) => {
+    const cardTransactions = state.transactions.filter(t => t.cardId === cardId);
+    const currentInvoiceMonthYear = format(viewDate, 'yyyy-MM');
+    const paid = cardTransactions.filter(t =>
+      t.isInvoicePayment && t.invoiceMonthYear === currentInvoiceMonthYear
+    ).reduce((acc, curr) => acc + curr.amount, 0);
+
+    const totalSpent = cardTransactions.filter(t => {
+      const targetDate = getTransactionTargetDate(t);
+      return !t.isInvoicePayment &&
+        targetDate.getMonth() === viewDate.getMonth() &&
+        targetDate.getFullYear() === viewDate.getFullYear();
+    }).reduce((acc, curr) => acc + (curr.type === 'expense' ? curr.amount : -curr.amount), 0);
+
+    return Math.max(0, totalSpent - paid);
   }, [state.transactions, viewDate, getTransactionTargetDate]);
 
-  const getAccountViewBalance = useCallback((id: string) => {
-    const acc = state.accounts.find(a => a.id === id);
-    return acc ? acc.balance : 0;
-  }, [state.accounts]);
+  const getCardUsedLimit = useCallback((cardId: string): number => {
+    if (!cardId) return 0;
+    const card = state.creditCards.find(c => c.id === cardId);
+    if (!card) return 0;
+    const paidInvoices = new Set(
+      state.transactions
+        .filter(t => t.cardId === cardId && t.isInvoicePayment === true && !!t.invoiceMonthYear)
+        .map(t => t.invoiceMonthYear as string)
+    );
+    return state.transactions
+      .filter(t => {
+        if (t.cardId !== cardId) return false;
+        if (t.isInvoicePayment === true) return false;
+        if (t.isVirtual) return false;
+        const desc = (t.description || '').toLowerCase();
+        const categoryName = state.categories.find(c => c.id === t.categoryId)?.name?.toLowerCase() || '';
+        if (desc.includes('saldo anterior') || categoryName.includes('ajuste') || desc.includes('ajuste')) return false;
+        const isInstallment = t.installmentTotal && t.installmentTotal > 1;
+        const isFuture = parseLocalDate(t.date) > new Date();
+        if (t.isRecurring && isFuture && !isInstallment) return false;
+        const competence = t.invoiceMonthYear || calcInvoiceMonthYear(parseLocalDate(t.date), card);
+        return !paidInvoices.has(competence);
+      })
+      .reduce((sum, t) => sum + (t.type === 'expense' ? Number(t.amount) : -Number(t.amount)), 0);
+  }, [state.transactions, state.creditCards, state.categories, calcInvoiceMonthYear, parseLocalDate]);
+
+  const getCardAvailableLimit = useCallback((cardId: string): number => {
+    const card = state.creditCards.find((c) => c.id === cardId);
+    if (!card) return 0;
+    const used = getCardUsedLimit(cardId);
+    return Math.max(0, Number(card.limit || 0) - used);
+  }, [state.creditCards, getCardUsedLimit]);
+
+  const getCategoryExpenses = useCallback(() => {
+    const expenses: Record<string, number> = {};
+    currentMonthTransactions.filter(t => t.type === 'expense').forEach(t => {
+      const cat = state.categories.find(c => c.id === t.categoryId);
+      const name = cat ? cat.name : 'Outros';
+      expenses[name] = (expenses[name] || 0) + t.amount;
+    });
+    return Object.entries(expenses).map(([name, value]) => ({ name, value }));
+  }, [currentMonthTransactions, state.categories]);
+
+  const setEmergencyMonths = useCallback((months: number) => {
+    localStorage.setItem('emergencyMonths', String(months));
+    setState(prev => ({ ...prev, emergencyMonths: months }));
+  }, []);
+
+  const getEmergencyFundData = useCallback(() => {
+    const needsGroup = state.categoryGroups.find(g => g.name === 'needs');
+    const needsCategoryIds = state.categories.filter(c => c.groupId === needsGroup?.id).map(c => c.id);
+    const fixedExpenses = currentMonthTransactions
+      .filter(t => t.type === 'expense' && (t.categoryId && needsCategoryIds.includes(t.categoryId)))
+      .reduce((acc, curr) => acc + curr.amount, 0);
+    const target = fixedExpenses * state.emergencyMonths;
+    const reserveAccounts = state.accounts.filter(acc => ['savings', 'caixinha', 'investment'].includes(acc.accountType));
+    const current = reserveAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+    return {
+      monthlyFixed: fixedExpenses,
+      targetAmount: target,
+      currentAmount: current,
+      progress: target > 0 ? (current / target) * 100 : 0,
+      months: state.emergencyMonths,
+      reserveAccounts
+    };
+  }, [currentMonthTransactions, state.accounts, state.emergencyMonths, state.categories, state.categoryGroups]);
+
+  const getAccountViewBalance = useCallback((accountId: string) => {
+    const account = state.accounts.find(a => a.id === accountId);
+    if (!account) return 0;
+    const currentBalance = Number(account.balance);
+    let periodEnd: Date;
+    if (viewMode === 'day') {
+      periodEnd = new Date(viewDate);
+      periodEnd.setHours(23, 59, 59, 999);
+    } else if (viewMode === 'month') {
+      periodEnd = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else {
+      periodEnd = new Date(viewDate.getFullYear(), 11, 31, 23, 59, 59, 999);
+    }
+    const delta = state.transactions
+      .filter(t => t.accountId === accountId && t.isPaid)
+      .filter(t => parseLocalDate(t.paymentDate || t.date) > periodEnd)
+      .reduce((acc, t) => acc + (t.type === 'income' ? -Number(t.amount) : Number(t.amount)), 0);
+    return currentBalance + delta;
+  }, [state.accounts, state.transactions, viewDate, viewMode, parseLocalDate]);
+
+  const getPeriodStartBalance = useCallback(() => {
+    let periodStart: Date;
+    if (viewMode === 'day') {
+      periodStart = new Date(viewDate);
+      periodStart.setHours(0, 0, 0, 0);
+    } else if (viewMode === 'month') {
+      periodStart = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1, 0, 0, 0, 0);
+    } else {
+      periodStart = new Date(viewDate.getFullYear(), 0, 1, 0, 0, 0, 0);
+    }
+    const currentBalance = state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+    const delta = state.transactions
+      .filter(t => t.isPaid && t.accountId)
+      .filter(t => parseLocalDate(t.paymentDate || t.date).getTime() >= periodStart.getTime())
+      .reduce((acc, t) => acc + (t.type === 'income' ? -t.amount : t.amount), 0);
+    return currentBalance + delta;
+  }, [state.accounts, state.transactions, viewDate, viewMode, parseLocalDate]);
 
   const nextMonth = useCallback(() => setViewDate(prev => addMonths(prev, 1)), []);
   const prevMonth = useCallback(() => setViewDate(prev => addMonths(prev, -1)), []);
@@ -462,14 +571,161 @@ function useFinanceProvider() {
   const updateDebt = useCallback(async (id: string, upd: any) => { await supabase.from('debts').update(upd).eq('id', id); await fetchInitialData(); }, [fetchInitialData]);
   const deleteDebt = useCallback(async (id: string) => { await supabase.from('debts').delete().eq('id', id); await fetchInitialData(); }, [fetchInitialData]);
 
-  const seedCoach = useCallback(async () => { toast({ title: 'Em breve!' }); }, []);
+  const seedCoach = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const needsGroup = state.categoryGroups.find(g => g.name === 'needs');
+      const wantsGroup = state.categoryGroups.find(g => g.name === 'wants');
+      const savingsGroup = state.categoryGroups.find(g => g.name === 'savings');
+      if (!needsGroup || !wantsGroup || !savingsGroup) {
+        toast({ title: 'Grupos de categorias não encontrados. Verifique a configuração do banco.', variant: 'destructive' });
+        return;
+      }
+      const defaultCategories = [
+        { user_id: user.id, group_id: needsGroup.id, name: 'Moradia', type: 'expense', icon: 'Home' },
+        { user_id: user.id, group_id: needsGroup.id, name: 'Alimentação', type: 'expense', icon: 'Utensils' },
+        { user_id: user.id, group_id: needsGroup.id, name: 'Transporte', type: 'expense', icon: 'Car' },
+        { user_id: user.id, group_id: needsGroup.id, name: 'Saúde', type: 'expense', icon: 'Heart' },
+        { user_id: user.id, group_id: wantsGroup.id, name: 'Lazer', type: 'expense', icon: 'PartyPopper' },
+        { user_id: user.id, group_id: wantsGroup.id, name: 'Delivery', type: 'expense', icon: 'ShoppingBag' },
+        { user_id: user.id, group_id: wantsGroup.id, name: 'Assinaturas', type: 'expense', icon: 'Repeat' },
+        { user_id: user.id, group_id: savingsGroup.id, name: 'Investimentos', type: 'expense', icon: 'TrendingUp' },
+        { user_id: user.id, group_id: savingsGroup.id, name: 'Reserva', type: 'expense', icon: 'PiggyBank' },
+        { user_id: user.id, group_id: needsGroup.id, name: 'Salário', type: 'income', icon: 'Briefcase' },
+      ];
+      await supabase.from('categories').insert(defaultCategories);
+      await fetchInitialData();
+      toast({ title: 'Coach Ativado! Categorias prontas. 🚀' });
+    } catch (err) { toast({ title: 'Erro ao ativar Coach', variant: 'destructive' }); }
+  }, [state.categoryGroups, fetchInitialData]);
 
-  const totalNetWorth = state.accounts.filter(a => a.accountType === 'checking' || a.accountType.startsWith('benefit_')).reduce((s, a) => s + Number(a.balance), 0);
-  const totalIncome = currentMonthTransactions.filter(t => t.type === 'income' && (t.isPaid || parseLocalDate(t.date) <= new Date())).reduce((s, t) => s + Number(t.amount), 0);
-  const totalExpenses = currentMonthTransactions.filter(t => t.type === 'expense' && (t.isPaid || parseLocalDate(t.date) <= new Date())).reduce((s, t) => s + Number(t.amount), 0);
+  const updateSavingsGoal = useCallback(async (id: string, updates: Partial<SavingsGoal>) => {
+    try {
+      const payload: any = {};
+      if (updates.name !== undefined) payload.name = updates.name;
+      if (updates.targetAmount !== undefined) payload.target_amount = updates.targetAmount;
+      if (updates.currentAmount !== undefined) payload.current_amount = updates.currentAmount;
+      if (updates.deadline !== undefined) payload.deadline = updates.deadline;
+      if (updates.color !== undefined) payload.color = updates.color;
+      if (updates.icon !== undefined) payload.icon = updates.icon;
+      await supabase.from('savings_goals').update(payload).eq('id', id);
+      setState(prev => ({ ...prev, savingsGoals: prev.savingsGoals.map(g => g.id === id ? { ...g, ...updates } : g) }));
+    } catch (err) { toast({ title: 'Erro ao atualizar meta', variant: 'destructive' }); }
+  }, []);
+
+  const deleteSavingsGoal = useCallback(async (id: string) => {
+    try {
+      await supabase.from('savings_goals').delete().eq('id', id);
+      setState(prev => ({ ...prev, savingsGoals: prev.savingsGoals.filter(g => g.id !== id) }));
+    } catch (err) { toast({ title: 'Erro ao deletar meta', variant: 'destructive' }); }
+  }, []);
+
+  const totalNetWorth = state.accounts
+    .filter(a => a.accountType === 'checking' || a.accountType.startsWith('benefit_'))
+    .reduce((sum, acc) => sum + Number(acc.balance), 0);
+
+  const getViewBalance = useCallback(() => {
+    let periodEnd: Date;
+    if (viewMode === 'day') {
+      periodEnd = new Date(viewDate);
+      periodEnd.setHours(23, 59, 59, 999);
+    } else if (viewMode === 'month') {
+      periodEnd = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else {
+      periodEnd = new Date(viewDate.getFullYear(), 11, 31, 23, 59, 59, 999);
+    }
+    const walletAccounts = state.accounts.filter(a => a.accountType === 'checking' || a.accountType.startsWith('benefit_'));
+    const currentRealBalance = walletAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+    const delta = state.transactions.filter(t => {
+      if (!t.isPaid || !t.accountId) return false;
+      const isWallet = walletAccounts.some(acc => acc.id === t.accountId);
+      if (!isWallet) return false;
+      const tDate = parseLocalDate(t.paymentDate || t.date);
+      return tDate > periodEnd;
+    }).reduce((acc, t) => acc + (t.type === 'income' ? -Number(t.amount) : Number(t.amount)), 0);
+    return currentRealBalance + delta;
+  }, [state.accounts, state.transactions, viewDate, viewMode, parseLocalDate]);
+
+  const viewBalance = getViewBalance();
+
+  const totalPendingOutflows = currentMonthBills
+    .filter(b => b.status === 'pending' && b.type === 'payable')
+    .reduce((sum, b) => sum + b.amount, 0);
+
+  const pendingTransactionsAmount = currentMonthTransactions
+    .filter(t => !t.isPaid && t.type === 'expense' && !t.cardId)
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const projectedBalance = totalNetWorth - totalPendingOutflows - pendingTransactionsAmount;
+
+  const totalIncome = currentMonthTransactions
+    .filter(t => t.type === 'income' && (t.isPaid || parseLocalDate(t.date) <= new Date()))
+    .reduce((s, t) => s + Number(t.amount), 0);
+
+  const totalExpenses = currentMonthTransactions
+    .filter(t => t.type === 'expense' && (t.isPaid || parseLocalDate(t.date) <= new Date()))
+    .reduce((s, t) => s + Number(t.amount), 0);
 
   return {
-    ...state, loading, viewDate, viewMode, setViewDate, setViewMode, totalNetWorth, projectedBalance: totalNetWorth - currentMonthBills.filter(b => b.status === 'pending' && b.type === 'payable').reduce((s, b) => s + b.amount, 0), totalIncome, totalExpenses, currentMonthTransactions, currentMonthBills,
-    nextMonth, prevMonth, nextDay, prevDay, nextYear, prevYear, getCardExpenses, getAccountViewBalance, addCategory, updateCategory, deleteCategory, addSubcategory, deleteSubcategory, addBill, updateBill, deleteBill, payBill, fetchInitialData, addTransaction, updateTransaction, deleteTransaction, togglePaid, addAccount, updateAccount, deleteAccount, transferBetweenAccounts, addCreditCard, updateCreditCard, deleteCreditCard, addSavingsGoal, depositToGoal, addDebt, updateDebt, deleteDebt, seedCoach, getTransactionTargetDate, createDebtWithInstallments: addDebt
+    ...state,
+    loading,
+    viewDate,
+    viewMode,
+    setViewDate,
+    setViewMode,
+    totalBalance: state.accounts.reduce((sum, acc) => sum + Number(acc.balance), 0),
+    totalNetWorth,
+    projectedBalance,
+    totalIncome,
+    totalExpenses,
+    currentMonthTransactions,
+    currentMonthBills,
+    nextMonth,
+    prevMonth,
+    nextDay,
+    prevDay,
+    nextYear,
+    prevYear,
+    getCardExpenses,
+    getCardUsedLimit,
+    getCardAvailableLimit,
+    getCategoryExpenses,
+    getCardSettingsForDate,
+    getEmergencyFundData,
+    setEmergencyMonths,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    addSubcategory,
+    deleteSubcategory,
+    addBill,
+    updateBill,
+    deleteBill,
+    payBill,
+    fetchInitialData,
+    addTransaction,
+    updateTransaction,
+    deleteTransaction,
+    togglePaid,
+    addAccount,
+    updateAccount,
+    deleteAccount,
+    transferBetweenAccounts,
+    addCreditCard,
+    updateCreditCard,
+    deleteCreditCard,
+    addSavingsGoal,
+    updateSavingsGoal,
+    deleteSavingsGoal,
+    depositToGoal,
+    addDebt,
+    updateDebt,
+    deleteDebt,
+    getTransactionTargetDate,
+    getAccountViewBalance,
+    getPeriodStartBalance,
+    seedCoach,
+    createDebtWithInstallments: addDebt
   };
 }
