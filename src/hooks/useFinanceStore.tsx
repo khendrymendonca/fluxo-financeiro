@@ -204,14 +204,12 @@ function useFinanceProvider() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          await supabase.from('transactions').upsert(updates.map(u => ({
-            id: u.id,
-            invoice_month_year: u.invoice_month_year,
-            user_id: user.id // Adicionado para satisfazer RLS
-          })));
+          for (const u of updates) {
+            await supabase.from('transactions').update({ invoice_month_year: u.invoice_month_year }).eq('id', u.id);
+          }
           return true;
         }
-      } catch (e) { console.error('Upsert failed', e); }
+      } catch (e) { console.error('Update failed', e); }
     }
     return false;
   }, [calcInvoiceMonthYear, parseLocalDate]);
@@ -266,11 +264,11 @@ function useFinanceProvider() {
         return { ...acc, balance: Math.round(balance * 100) / 100, userId: acc.user_id, accountType: acc.account_type, hasOverdraft: acc.has_overdraft || false, overdraftLimit: acc.overdraft_limit || 0 };
       });
 
-      if (txUpdates.length > 0 && user) await supabase.from('transactions').upsert(txUpdates.map(u => ({
-        id: u.id,
-        is_paid: u.is_paid,
-        user_id: user.id
-      })));
+      if (txUpdates.length > 0 && user) {
+        for (const u of txUpdates) {
+          await supabase.from('transactions').update({ is_paid: u.is_paid }).eq('id', u.id);
+        }
+      }
       for (const [id, bal] of Object.entries(accUpdates)) await supabase.from('accounts').update({ balance: bal }).eq('id', id);
 
       setState({
@@ -377,7 +375,22 @@ function useFinanceProvider() {
         const date = format(addMonths(baseDate, i), 'yyyy-MM-dd');
         const isPaid = transaction.cardId ? true : (parseLocalDate(date) <= new Date());
         txs.push({
-          user_id: user.id, description: transaction.description, amount: transaction.amount / (transaction.installmentTotal || 1), type: transaction.type, date, category_id: validCat, account_id: transaction.accountId || null, card_id: transaction.cardId || null, is_paid: isPaid, installment_group_id: groupId, installment_number: (transaction.installmentTotal ? i + 1 : null), installment_total: transaction.installmentTotal || null, is_recurring: transaction.isRecurring, is_automatic: transaction.isAutomatic, is_invoice_payment: transaction.isInvoicePayment,
+          user_id: user.id,
+          description: transaction.description,
+          amount: transaction.amount / (transaction.installmentTotal || 1),
+          type: transaction.type,
+          date,
+          category_id: validCat,
+          account_id: transaction.accountId || null,
+          card_id: transaction.cardId || null,
+          is_paid: isPaid,
+          payment_date: isPaid ? date : null,
+          installment_group_id: groupId,
+          installment_number: (transaction.installmentTotal ? i + 1 : null),
+          installment_total: transaction.installmentTotal || null,
+          is_recurring: transaction.isRecurring,
+          is_automatic: transaction.isAutomatic,
+          is_invoice_payment: transaction.isInvoicePayment,
           invoice_month_year: (card && !transaction.isInvoicePayment) ? calcInvoiceMonthYear(parseLocalDate(date), card) : transaction.invoiceMonthYear
         });
       }
@@ -393,7 +406,7 @@ function useFinanceProvider() {
     try {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const validCat = (tx.categoryId && uuidRegex.test(tx.categoryId)) ? tx.categoryId : null;
-      const payload = { description: tx.description, amount: tx.amount, category_id: validCat, account_id: tx.accountId, card_id: tx.cardId, is_paid: tx.isPaid, is_automatic: tx.isAutomatic };
+      const payload = { description: tx.description, amount: tx.amount, category_id: validCat, account_id: tx.accountId, card_id: tx.cardId, is_paid: tx.isPaid, payment_date: tx.paymentDate, is_automatic: tx.isAutomatic };
       await supabase.from('transactions').update(payload).eq('id', tx.id);
       await fetchInitialData();
     } catch (err) { toast({ title: 'Erro ao atualizar', variant: 'destructive' }); }
@@ -412,6 +425,7 @@ function useFinanceProvider() {
       if (!tx) return;
       const payload: any = {
         is_paid: isPaid,
+        payment_date: isPaid ? (date || todayLocalString()) : null,
         account_id: cardId ? null : (accId || tx.accountId),
         card_id: cardId || tx.cardId
       };
