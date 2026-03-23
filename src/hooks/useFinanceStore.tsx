@@ -1657,33 +1657,39 @@ function useFinanceProvider() {
   ) => {
     try {
       const cleanPaymentDate = paymentDate ?? todayLocalString();
-      const payAmount = isPartial && partialAmount ? partialAmount : bill.amount;
+      const payAmount = isPartial && partialAmount ? partialAmount : (bill.amount ?? 0);
 
       const isCardBill = !!(bill as any).cardId && bill.categoryId === 'card-payment';
       const isDebtBill = !!(bill as any).debtId && bill.categoryId === 'debt-payment';
       const isVirtual = !!(bill as any).isVirtual;
 
-      // ✅ Sempre registra a transação de pagamento
+      // Extrai invoiceMonthYear de forma 100% segura
+      const safeInvoiceMonthYear: string | undefined = isCardBill
+        ? ((bill as any).invoiceMonthYear ?? format(viewDate, 'yyyy-MM'))
+        : undefined;
+
+      // Extrai dueDate de forma segura
+      const safeDueDate: string =
+        (bill.dueDate ?? '').split('T')[0] || cleanPaymentDate;
+
+      // Sempre registra a transação de pagamento
       await addTransaction({
-        description: isPartial ? `Abatimento: ${bill.name}` : `Pgto: ${bill.name}`,
+        description: `Pgto: ${bill.name ?? 'Conta'}`,
         amount: payAmount,
         type: 'expense',
-        categoryId: (bill.categoryId && !['card-payment', 'debt-payment'].includes(bill.categoryId)) ? bill.categoryId : undefined,
-        date: bill.dueDate?.split('T')[0] ?? todayLocalString(),
+        categoryId: undefined,
+        date: cleanPaymentDate,
         accountId: accountId ?? undefined,
         cardId: undefined,
         isPaid: true,
         paymentDate: cleanPaymentDate,
         isInvoicePayment: isCardBill,
-        // ✅ FIX: usa invoiceMonthYear direto da bill virtual, ou viewDate (robusto)
-        invoiceMonthYear: isCardBill
-          ? ((bill as any).invoiceMonthYear ?? format(viewDate, 'yyyy-MM'))
-          : undefined,
+        invoiceMonthYear: safeInvoiceMonthYear,
         debtId: isDebtBill ? (bill as any).debtId : undefined,
         transactionType: 'punctual',
       });
 
-      // ✅ Para bills REAIS (não virtuais): atualiza status no banco
+      // Bills reais: só atualiza status
       if (!isVirtual) {
         await updateBill(bill.id, {
           status: 'paid',
@@ -1692,21 +1698,17 @@ function useFinanceProvider() {
         return;
       }
 
-      // ✅ Para bills VIRTUAIS de cartão: NÃO cria bill no banco
-      // A transação de pagamento já é suficiente — o currentMonthBills
-      // vai detectar via alreadyPaid e sumir automaticamente
-      if (isCardBill) {
-        return;
-      }
+      // Faturas virtuais de cartão: NÃO cria bill, a transação já basta
+      if (isCardBill) return;
 
-      // ✅ Para bills VIRTUAIS de dívida e fixas recorrentes: cria bill real com status paid
+      // Bills virtuais normais (fixas recorrentes e dívidas): cria registro paid
       if (!isPartial) {
         await addBill(
           {
-            name: bill.name,
+            name: bill.name ?? 'Conta',
             amount: payAmount,
-            type: bill.type,
-            dueDate: bill.dueDate?.split('T')[0] ?? cleanPaymentDate,
+            type: bill.type ?? 'payable',
+            dueDate: safeDueDate,
             paymentDate: cleanPaymentDate,
             status: 'paid',
             categoryId: bill.categoryId,
@@ -1724,7 +1726,7 @@ function useFinanceProvider() {
       console.error('Erro no payBill:', err);
       toast({ title: 'Erro ao baixar conta', variant: 'destructive' });
     }
-  }, [todayLocalString, addTransaction, addBill, updateBill, parseLocalDate]);
+  }, [todayLocalString, addTransaction, addBill, updateBill, viewDate]);
 
   const seedCoach = useCallback(async () => {
     try {
