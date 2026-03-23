@@ -4,6 +4,9 @@ import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useAccounts } from '@/hooks/useFinanceQueries';
 import { useEmergencyFund } from '@/hooks/useEmergencyFund';
+import { parseLocalDate, todayLocalString, toLocalDateString } from '@/utils/dateUtils';
+import { formatCurrency } from '@/utils/formatters';
+import { usePayBill, useDeleteBill } from '@/hooks/useBillMutations';
 import { useSeedCoach } from '@/hooks/useBudgetCoach';
 import { NavigationRail } from '@/components/layout/NavigationRail';
 import { MobileNav } from '@/components/layout/MobileNav';
@@ -79,8 +82,6 @@ export default function Index() {
     depositToGoal,
     categories,
     currentMonthBills,
-    payBill,
-    deleteBill,
     transferBetweenAccounts,
     seedCoach,
     loading,
@@ -90,6 +91,9 @@ export default function Index() {
 
   const { cashflow } = useDashboardMetrics(viewDate);
   const { data: accountsData = [] } = useAccounts();
+
+  const { mutateAsync: payBill } = usePayBill();
+  const { mutateAsync: deleteBill } = useDeleteBill();
 
   const totalNetWorth = accountsData.reduce((sum, acc) => sum + Number(acc.balance), 0);
   const projectedBalance = totalNetWorth - totalPendingOutflows;
@@ -145,7 +149,7 @@ export default function Index() {
                   Para começar a usar a regra 50-30-20 e ter inteligência sobre seus gastos,
                   precisamos configurar suas categorias iniciais.
                 </p>
-                <Button onClick={seedCoachAction} className="rounded-xl px-8 py-6 text-lg h-auto shadow-xl shadow-primary/20">
+                <Button onClick={() => seedCoachAction()} className="rounded-xl px-8 py-6 text-lg h-auto shadow-xl shadow-primary/20">
                   Ativar Coach Agora
                 </Button>
               </div>
@@ -195,7 +199,10 @@ export default function Index() {
                 data={emergencyData}
                 onMonthsChange={setEmergencyMonths}
                 accounts={accounts}
-                onTransfer={transferBetweenAccounts}
+                onTransfer={(from, to, amount, desc) => {
+                  transferBetweenAccounts(from, to, amount, desc, todayLocalString());
+                  return Promise.resolve();
+                }}
               />
               <PendingPayments
                 transactions={currentMonthTransactions}
@@ -241,10 +248,11 @@ export default function Index() {
             <TransactionList
               transactions={currentMonthTransactions}
               bills={currentMonthBills}
-              onDelete={deleteTransaction}
               onEdit={handleEditTransaction}
-              onPayBill={payBill}
-              onDeleteBill={deleteBill}
+              onPayBill={async (bill, accountId, paymentDate, isPartial, partialAmount, cardId) => {
+                await payBill({ bill, accountId, paymentDate, isPartial, partialAmount, cardId })
+              }}
+              onDeleteBill={(id) => deleteBill(id)}
             />
           </div>
         );
@@ -307,8 +315,8 @@ export default function Index() {
       case 'simulator':
         return (
           <WhatIfSimulator
-            totalIncome={totalIncome}
-            totalExpenses={totalExpenses}
+            totalIncome={cashflow.totalIncome}
+            totalExpenses={cashflow.totalExpenses}
             categoryExpenses={categoryExpenses.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)}
           />
         );
@@ -359,13 +367,13 @@ export default function Index() {
           initialData={editingTransaction}
           onSubmit={(data, custom, applyScope) => {
             if (editingTransaction) {
-              // ✅ FIX: tipagem explícita sem double cast as any
               updateTransaction(
-                { ...editingTransaction, ...data } as Transaction,
-                applyScope as 'this' | 'future' | 'all'
+                editingTransaction.id,
+                data
               );
             } else {
-              addTransaction(data, custom);
+              // Custom handling se necessário, mas addTransaction aceita 1 obj
+              addTransaction(data as Omit<Transaction, 'id' | 'userId'>);
             }
             setShowTransactionForm(false);
             setEditingTransaction(undefined);
@@ -375,7 +383,7 @@ export default function Index() {
             setEditingTransaction(undefined);
           }}
           onDelete={(id, scope) => {
-            deleteTransaction(id, scope);
+            deleteTransaction(id, scope === 'future');
             setShowTransactionForm(false);
             setEditingTransaction(undefined);
           }}

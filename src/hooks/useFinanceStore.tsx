@@ -165,8 +165,8 @@ function useFinanceProvider() {
       .filter(t => !t.isPaid && t.type === 'expense')
       .reduce((sum, t) => sum + Number(t.amount), 0) +
       currentMonthBills
-      .filter(b => b.status === 'pending' && b.type === 'payable')
-      .reduce((sum, b) => sum + Number(b.amount), 0);
+        .filter(b => b.status === 'pending' && b.type === 'payable')
+        .reduce((sum, b) => sum + Number(b.amount), 0);
   }, [currentMonthTransactions, currentMonthBills]);
 
   const setEmergencyMonths = useCallback((m: number) => {
@@ -215,12 +215,6 @@ function useFinanceProvider() {
     deleteAccount: deleteAccountMutation.mutateAsync,
     transferBetweenAccounts: (from: string, to: string, amount: number, desc: string, date: string, toType: 'account' | 'card' = 'account') =>
       transferMutation.mutateAsync({ fromAccountId: from, [toType === 'account' ? 'toAccountId' : 'toCardId']: to, amount: Number(amount), description: desc, date } as any),
-
-    addBill: addBillMutation.mutateAsync,
-    updateBill: updateBillMutation.mutateAsync,
-    deleteBill: deleteBillMutation.mutateAsync,
-    payBill: (bill: Bill, accountId?: string, paymentDate?: string, isPartial?: boolean, partialAmount?: number, cardId?: string) =>
-      payBillMutation.mutateAsync({ bill, accountId, paymentDate, isPartial, partialAmount, cardId }),
 
     addCreditCard: addCardMutation.mutateAsync,
     updateCreditCard: updateCardMutation.mutateAsync,

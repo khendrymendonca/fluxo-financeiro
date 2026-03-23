@@ -15,7 +15,8 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
 
-import { parseLocalDate, todayLocalString } from '@/utils/dateUtils';
+import { parseLocalDate, todayLocalString, toLocalDateString } from '@/utils/dateUtils';
+import { formatCurrency } from '@/utils/formatters';
 
 export function BillsManager() {
     const {
@@ -24,7 +25,7 @@ export function BillsManager() {
         accounts,
         creditCards,
         debts,
-        // âœ… FIX: addBill e updateBill removidos da desestruturaÃ§Ã£o â€” nÃ£o sÃ£o usados no componente
+        // ✅ FIX: addBill e updateBill removidos da desestruturação — não são usados no componente
         getCardExpenses,
         viewDate,
         currentMonthBills,
@@ -37,7 +38,7 @@ export function BillsManager() {
 
     const [filter, setFilter] = useState<'all' | 'payable' | 'receivable'>('all');
     const [isPaying, setIsPaying] = useState<any>(null);
-    // âœ… FIX: usa todayLocalString() para evitar bug de fuso
+    // ✅ FIX: usa todayLocalString() para evitar bug de fuso
     const [paymentDate, setPaymentDate] = useState<string>(todayLocalString());
     const [paymentAmount, setPaymentAmount] = useState<string>('');
     const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
@@ -46,9 +47,6 @@ export function BillsManager() {
 
     const [deletingBill, setDeletingBill] = useState<any>(null);
     const [deleteFutureBills, setDeleteFutureBills] = useState(false);
-
-    const formatCurrency = (value: number) =>
-        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
     const handleMarkAsPaid = async (targetId: string, isCard: boolean) => {
         if (!isPaying) return;
@@ -61,13 +59,13 @@ export function BillsManager() {
     const handleConfirmDeleteBill = () => {
         if (deletingBill) {
             const targetId = deletingBill.originalBillId || deletingBill.id;
-            deleteBillMutation({ id: targetId, future: deleteFutureBills });
+            deleteBillMutation(targetId);
         }
         setDeletingBill(null);
         setDeleteFutureBills(false);
     };
 
-    // âœ… FIX: sort usa parseLocalDate â€” sem bug de fuso
+    // ✅ FIX: sort usa parseLocalDate — sem bug de fuso
     const filteredBills = currentMonthBills.filter(b => {
         // Busca por Texto
         if (searchQuery.trim() !== '') {
@@ -83,7 +81,7 @@ export function BillsManager() {
         return b.type === filter;
     }).sort((a, b) => parseLocalDate(a.dueDate).getTime() - parseLocalDate(b.dueDate).getTime());
 
-    // âœ… FIX: totalPendingPayable exclui card-payment com valor zero â€” consistente com filteredBills
+    // ✅ FIX: totalPendingPayable exclui card-payment com valor zero — consistente com filteredBills
     const totalPendingPayable = currentMonthBills
         .filter(b => b.type === 'payable' && b.status === 'pending' && !(b.categoryId === 'card-payment' && b.amount <= 0))
         .reduce((acc, b) => acc + b.amount, 0);
@@ -98,7 +96,7 @@ export function BillsManager() {
                         <Receipt className="w-6 h-6" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold">GestÃ£o de Contas</h2>
+                        <h2 className="text-2xl font-bold">Gestão de Contas</h2>
                         <p className="text-muted-foreground">A pagar e a receber de forma organizada.</p>
                     </div>
                 </div>
@@ -156,7 +154,7 @@ export function BillsManager() {
                     </div>
                 ) : (
                     filteredBills.map(bill => {
-                        // âœ… FIX: isLate usa parseLocalDate â€” sem bug de fuso
+                        // ✅ FIX: isLate usa parseLocalDate — sem bug de fuso
                         const isLate = parseLocalDate(bill.dueDate) < new Date() && bill.status === 'pending';
                         const category = categories.find(c => c.id === bill.categoryId);
 
@@ -267,12 +265,12 @@ export function BillsManager() {
                                     </div>
                                 </div>
 
-                                {/* Detalhamento da fatura de cartÃ£o */}
+                                {/* Detalhamento da fatura de cartão */}
                                 {expandedBillId === bill.id && bill.categoryId === 'card-payment' && (
                                     <div className="mt-2 ml-14 p-4 rounded-2xl bg-muted/20 border border-border/50 animate-in slide-in-from-top-2 duration-300">
                                         <div className="flex items-center gap-2 mb-3">
                                             <div className="w-1 h-3 bg-primary rounded-full" />
-                                            <h5 className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Compras no PerÃ­odo</h5>
+                                            <h5 className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Compras no Período</h5>
                                         </div>
                                         <div className="space-y-2">
                                             {transactions
@@ -294,8 +292,8 @@ export function BillsManager() {
                                                             <div>
                                                                 <p className="text-xs font-bold leading-none">{t.description}</p>
                                                                 <p className="text-[9px] text-muted-foreground mt-0.5">
-                                                                    {format(parseLocalDate(t.date), "dd/MM")} â€¢ {categories.find(c => c.id === t.categoryId)?.name || 'Outros'}
-                                                                    {t.installmentNumber && ` â€¢ Parcela ${t.installmentNumber}${t.installmentTotal ? `/${t.installmentTotal}` : ''}`}
+                                                                    {format(parseLocalDate(t.date), "dd/MM")} • {categories.find(c => c.id === t.categoryId)?.name || 'Outros'}
+                                                                    {t.installmentNumber && ` • Parcela ${t.installmentNumber}${t.installmentTotal ? `/${t.installmentTotal}` : ''}`}
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -306,7 +304,7 @@ export function BillsManager() {
                                                     </div>
                                                 ))}
 
-                                            {/* âœ… FIX: filtro de bills no detalhamento usa parseLocalDate */}
+                                            {/* ✅ FIX: filtro de bills no detalhamento usa parseLocalDate */}
                                             {bills
                                                 .filter(b =>
                                                     b.cardId === bill.cardId &&
@@ -371,7 +369,7 @@ export function BillsManager() {
                                 <p className="text-xs text-muted-foreground mt-0.5">
                                     <span className={cn("font-bold", isPaying.type === 'receivable' ? "text-success" : "text-danger")}>
                                         {formatCurrency(isPaying.amount)}
-                                    </span>{' â€” '}{isPaying.name}
+                                    </span>{' — '}{isPaying.name}
                                 </p>
                             </div>
 
@@ -385,18 +383,18 @@ export function BillsManager() {
                                     </label>
                                 </div>
 
-                                {/* âœ… FIX: usa categoryId === 'card-payment' em vez de id.startsWith('card-') */}
+                                {/* ✅ FIX: usa categoryId === 'card-payment' em vez de id.startsWith('card-') */}
                                 {isPaying.categoryId !== 'card-payment' && !isPaying.cardId && (
                                     <div className="flex rounded-xl bg-muted/40 p-1">
                                         <button onClick={() => setPaymentMethod('account')}
                                             className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
                                                 paymentMethod === 'account' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                                            Conta BancÃ¡ria
+                                            Conta Bancária
                                         </button>
                                         <button onClick={() => setPaymentMethod('credit_card')}
                                             className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
                                                 paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                                            CartÃ£o de CrÃ©dito
+                                            Cartão de Crédito
                                         </button>
                                     </div>
                                 )}
@@ -409,16 +407,17 @@ export function BillsManager() {
                                             onChange={e => setPaymentAmount(e.target.value)}
                                             className="pl-10 h-11 rounded-xl font-bold bg-muted/20" placeholder="0.00" />
                                     </div>
-                                    {/* âœ… FIX: usa categoryId === 'card-payment' */}
+                                    {/* ✅ FIX: usa categoryId === 'card-payment' */}
                                     {isPaying.categoryId === 'card-payment' && (
                                         <p className="text-[10px] text-primary font-bold leading-tight">
-                                            Este pagamento serÃ¡ registrado como um abatimento na fatura deste mÃªs.
+                                            Este pagamento será registrado como um abatimento na fatura deste mês.
                                         </p>
                                     )}
                                 </div>
                             </div>
 
                             <div className="p-3 pt-0 space-y-2">
+                                {/* Pagamento de Fatura (Mostra Contas de Origem) */}
                                 {paymentMethod === 'account' && (
                                     accounts.length === 0 ? (
                                         <p className="text-center text-muted-foreground py-8 text-sm">Nenhuma conta cadastrada.</p>

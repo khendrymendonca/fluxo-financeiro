@@ -17,15 +17,14 @@ import { OverdraftWarningDialog } from '@/components/ui/OverdraftWarningDialog';
 interface TransactionListProps {
   transactions: Transaction[];
   bills: Bill[];
-  onDelete: (id: string) => void;
   onEdit: (transaction: Transaction) => void;
   onPayBill: (bill: Bill, accountId?: string, paymentDate?: string, isPartial?: boolean, partialAmount?: number, cardId?: string) => Promise<void>;
   onDeleteBill?: (id: string, applyToFuture?: boolean) => void;
 }
 
-import { parseLocalDate, todayLocalString } from '@/utils/dateUtils';
+import { parseLocalDate, todayLocalString, toLocalDateString } from '@/utils/dateUtils';
 
-export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBill, onDeleteBill }: TransactionListProps) {
+export function TransactionList({ transactions, bills, onEdit, onPayBill, onDeleteBill }: TransactionListProps) {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [sourceFilter, setSourceFilter] = useState<'all' | 'account' | 'card'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'punctual' | 'installment' | 'fixed'>('all');
@@ -60,8 +59,8 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
 
   const displayItems = [
     ...transactions.map(t => {
-      // âœ… REGRA DE BOM SENSO: Compras no cartÃ£o (cardId presente e nÃ£o Ã© pagamento de fatura) 
-      // NUNCA sÃ£o pendentes, elas jÃ¡ estÃ£o na fatura.
+      // ✅ REGRA DE BOM SENSO: Compras no cartão (cardId presente e não é pagamento de fatura) 
+      // NUNCA são pendentes, elas já estão na fatura.
       const isPending = (t.cardId && !t.isInvoicePayment) ? false : !t.isPaid;
       return { ...t, isBill: false, isPending };
     }),
@@ -88,8 +87,8 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   ];
 
   const getGroupDate = (item: any): string => {
-    // TransaÃ§Ãµes recorrentes sempre agrupam pela data fÃ­sica do mÃªs,
-    // independente de quando foram pagas â€” evita que apareÃ§am com data do mÃªs original
+    // Transações recorrentes sempre agrupam pela data física do mês,
+    // independente de quando foram pagas — evita que apareçam com data do mês original
     if (item.isRecurring) {
       return item.date?.split('T')[0] || todayLocalString();
     }
@@ -118,7 +117,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
       // Filtro de Categoria (Receita/Despesa)
       if (filter !== 'all' && t.type !== filter) return false;
 
-      // Filtro de Origem (Conta vs CartÃ£o)
+      // Filtro de Origem (Conta vs Cartão)
       if (sourceFilter === 'account') {
         if (t.cardId) return false;
         if (specificSourceId !== 'all' && t.accountId !== specificSourceId) return false;
@@ -172,7 +171,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     if (payingItem.isBill) {
       const bill = bills.find(b => b.id === payingItem.billId);
       if (bill) {
-        // âœ… FIX: passa cardId se for pagamento via cartÃ£o
+        // ✅ FIX: passa cardId se for pagamento via cartão
         await onPayBill(bill, isCard ? undefined : targetId, paymentDate, false, undefined, isCard ? targetId : undefined);
       }
     } else {
@@ -241,7 +240,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
       <div className="relative">
         <input
           type="text"
-          placeholder="Pesquisar lanÃ§amentos ou categorias..."
+          placeholder="Pesquisar lançamentos ou categorias..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full h-12 pl-4 pr-10 rounded-2xl border-2 border-border bg-card focus:border-primary focus:ring-0 transition-all outline-none font-medium"
@@ -257,7 +256,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
       </div>
 
       {/* Filtros */}
-      {/* Filtros AvanÃ§ados */}
+      {/* Filtros Avançados */}
       <div className="card-elevated p-4 space-y-4">
         <div className="flex flex-wrap gap-4 items-center">
           {/* Receita/Despesa */}
@@ -281,12 +280,12 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
             <button onClick={() => { setSourceFilter('account'); setSpecificSourceId('all'); }}
               className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
                 sourceFilter === 'account' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              DÃ©bito
+              Débito
             </button>
             <button onClick={() => { setSourceFilter('card'); setSpecificSourceId('all'); }}
               className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
                 sourceFilter === 'card' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              CartÃ£o
+              Cartão
             </button>
           </div>
 
@@ -302,11 +301,11 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
           </div>
         </div>
 
-        {/* Filtro EspecÃ­fico (Conta ou CartÃ£o) */}
+        {/* Filtro Específico (Conta ou Cartão) */}
         {sourceFilter !== 'all' && (
           <div className="flex items-center gap-3 pt-2 border-t border-border animate-in slide-in-from-top-1">
             <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              {sourceFilter === 'account' ? 'Selecionar Conta:' : 'Selecionar CartÃ£o:'}
+              {sourceFilter === 'account' ? 'Selecionar Conta:' : 'Selecionar Cartão:'}
             </span>
             <div className="flex flex-wrap gap-2">
               <button onClick={() => setSpecificSourceId('all')}
@@ -330,7 +329,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
       {/* Lista agrupada */}
       {Object.keys(groupedItems).length === 0 ? (
         <div className="card-elevated p-12 text-center text-muted-foreground">
-          Nenhuma transaÃ§Ã£o ou pendÃªncia encontrada
+          Nenhuma transação ou pendência encontrada
         </div>
       ) : (
         Object.keys(groupedItems)
@@ -373,9 +372,9 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              {item.categoryId === 'debt-payment' ? 'Pagamento de DÃ­vida' :
+                              {item.categoryId === 'debt-payment' ? 'Pagamento de Dívida' :
                                 item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || 'Outros' : 'Outros'}
-                              {item.isPending && item.cardId && <span> â€¢ Compra: {formatShortDate(item.date)}</span>}
+                              {item.isPending && item.cardId && <span> • Compra: {formatShortDate(item.date)}</span>}
                             </p>
                           </div>
                         </div>
@@ -434,7 +433,6 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                     <Pencil className="w-4 h-4" />
                                   </Button>
                                 )}
-                                {/* âœ… FIX: separado em dois blocos â€” elimina o ReferenceError no bundle */}
                                 {!item.isBill && (
                                   <Button variant="ghost" size="icon"
                                     onClick={() => deleteTransactionMutation(item.id)}
@@ -541,7 +539,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                 <p className="text-xs text-muted-foreground mt-0.5">
                   <span className={cn("font-bold", payingItem.type === 'income' ? "text-success" : "text-danger")}>
                     {formatCurrency(payingItem.amount)}
-                  </span>{' â€” '}{payingItem.description}
+                  </span>{' — '}{payingItem.description}
                 </p>
               </div>
               <div className="p-4 space-y-4">
@@ -557,12 +555,12 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                   <button onClick={() => setPaymentMethod('account')}
                     className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
                       paymentMethod === 'account' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                    Conta BancÃ¡ria
+                    Conta Bancária
                   </button>
                   <button onClick={() => setPaymentMethod('credit_card')}
                     className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
                       paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                    CartÃ£o de CrÃ©dito
+                    Cartão de Crédito
                   </button>
                 </div>
               </div>
@@ -606,7 +604,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                 )}
                 {paymentMethod === 'credit_card' && (
                   creditCards.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8 text-sm">Nenhum cartÃ£o cadastrado.</p>
+                    <p className="text-center text-muted-foreground py-8 text-sm">Nenhum cartão cadastrado.</p>
                   ) : (
                     creditCards.map(card => (
                       <button key={card.id} onClick={() => handleSubmitPayment(card.id, true)}
@@ -633,7 +631,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
         </Portal>
       )}
 
-      {/* Modal de ExclusÃ£o */}
+      {/* Modal de Exclusão */}
       {deletingBill && (
         <Portal>
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
@@ -654,7 +652,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                       className="mt-1 w-4 h-4 rounded text-primary focus:ring-primary" />
                     <div>
                       <span className="text-sm font-bold block">Aplicar a futuras?</span>
-                      <span className="text-xs text-muted-foreground">TambÃ©m exclui os lanÃ§amentos desta conta nos prÃ³ximos meses</span>
+                      <span className="text-xs text-muted-foreground">Também exclui os lançamentos desta conta nos próximos meses</span>
                     </div>
                   </label>
                 </div>
@@ -682,4 +680,3 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     </div>
   );
 }
-
