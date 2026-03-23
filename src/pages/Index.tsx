@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Plus, Wallet, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
+import { useAccounts } from '@/hooks/useFinanceQueries';
 import { useEmergencyFund } from '@/hooks/useEmergencyFund';
 import { useSeedCoach } from '@/hooks/useBudgetCoach';
 import { NavigationRail } from '@/components/layout/NavigationRail';
@@ -54,8 +56,6 @@ export default function Index() {
     creditCards,
     debts,
     savingsGoals,
-    totalIncome,
-    totalExpenses,
     currentMonthTransactions,
     getCardExpenses,
     getCategoryExpenses,
@@ -83,17 +83,22 @@ export default function Index() {
     deleteBill,
     transferBetweenAccounts,
     seedCoach,
-    loading
+    loading,
+    totalPendingOutflows,
+    viewDate
   } = useFinanceStore();
 
-  const totalNetWorth = accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
-  const projectedBalance = totalNetWorth + totalIncome - totalExpenses;
+  const { cashflow } = useDashboardMetrics(viewDate);
+  const { data: accountsData = [] } = useAccounts();
+
+  const totalNetWorth = accountsData.reduce((sum, acc) => sum + Number(acc.balance), 0);
+  const projectedBalance = totalNetWorth - totalPendingOutflows;
 
   const { mutate: seedCoachAction } = useSeedCoach();
   const emergencyData = useEmergencyFund(currentMonthTransactions);
 
   // ✅ FIX: renomeado para periodBalance para não confundir com viewBalance
-  const periodBalance = totalIncome - totalExpenses;
+  const periodBalance = cashflow.totalIncome - cashflow.totalExpenses;
   const categoryExpenses = getCategoryExpenses();
 
   const showCoachOnboarding = !loading && categories.length === 0;
@@ -148,7 +153,8 @@ export default function Index() {
 
             <SmartInsights onNavigate={(view) => setCurrentView(view as ViewType)} />
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* Dashboard Cards Gerais */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard
                 title="Patrimônio Total"
                 value={totalNetWorth}
@@ -157,14 +163,14 @@ export default function Index() {
               />
               <StatCard
                 title="Receitas"
-                value={totalIncome}
-                icon={<TrendingUp className="w-5 h-5 text-success" />}
+                value={cashflow.totalIncome}
+                icon={<TrendingUp className="w-4 h-4 text-success" />}
                 variant="positive"
               />
               <StatCard
                 title="Despesas"
-                value={totalExpenses}
-                icon={<TrendingDown className="w-5 h-5 text-danger" />}
+                value={cashflow.totalExpenses}
+                icon={<TrendingDown className="w-4 h-4 text-danger" />}
                 variant="negative"
               />
               {/* ✅ FIX: usa periodBalance no lugar de balance */}
