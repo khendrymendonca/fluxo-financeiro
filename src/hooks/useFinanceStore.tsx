@@ -73,18 +73,18 @@ function useFinanceProvider() {
   const calcInvoiceMonthYear = useCallback((tDate: Date, card: CreditCard): string => {
     const { closingDay, dueDay } = getCardSettingsForDate(card, tDate);
     const invoiceDate = new Date(tDate.getFullYear(), tDate.getMonth(), 1);
-    
+
     // Se a compra foi feita após o fechamento, ela pula para a próxima fatura
     if (tDate.getDate() > closingDay) {
       invoiceDate.setMonth(invoiceDate.getMonth() + 1);
     }
-    
+
     // Se o vencimento é num dia menor que o fechamento, significa que a fatura
     // sempre vence no mês seguinte ao ciclo de compras.
     if (dueDay <= closingDay) {
       invoiceDate.setMonth(invoiceDate.getMonth() + 1);
     }
-    
+
     return format(invoiceDate, 'yyyy-MM');
   }, [getCardSettingsForDate]);
 
@@ -127,7 +127,7 @@ function useFinanceProvider() {
       // Apenas para pagamentos de fatura, usamos a lógica de competência
       const targetDate = getTransactionTargetDate(t);
       return targetDate.getMonth() === viewDate.getMonth() && targetDate.getFullYear() === viewDate.getFullYear();
-    }).sort((a, b) => 
+    }).sort((a, b) =>
       parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime()
     );
   }, [state.transactions, viewDate, getTransactionTargetDate, parseLocalDate]);
@@ -286,11 +286,11 @@ function useFinanceProvider() {
   // Garante que todas as faturas (antigas e novas) estejam 100% corretas no banco
   const revalidateInvoiceMonths = useCallback(async (allTransactions: Transaction[], allCards: CreditCard[]) => {
     const updates: { id: string, invoice_month_year: string }[] = [];
-    
+
     // Agrupar por grupo de parcelamento para manter a sequência correta
     const grouped = allTransactions.reduce((acc, t) => {
       if (!t.cardId || t.isInvoicePayment || t.isVirtual) return acc;
-      
+
       const groupId = t.installmentGroupId || `single-${t.id}`;
       if (!acc[groupId]) acc[groupId] = [];
       acc[groupId].push(t);
@@ -312,7 +312,7 @@ function useFinanceProvider() {
         // Para parcelamentos, a fatura progride mês a mês a partir da primeira
         const invoiceDate = new Date(year, month - 1 + index, 1);
         const correctInv = format(invoiceDate, 'yyyy-MM');
-        
+
         if (t.invoiceMonthYear !== correctInv) {
           updates.push({ id: t.id, invoice_month_year: correctInv });
         }
@@ -475,46 +475,60 @@ function useFinanceProvider() {
         emergencyMonths: Number(localStorage.getItem('emergencyMonths')) || 12,
       });
 
-      // ✅ FIX: Revalida faturas em background para corrigir erros de lógica passados
-      const changed = await revalidateInvoiceMonths(loadedTransactions, loadedCards);
+      // 1. Revalidação de Faturas
+      await revalidateInvoiceMonths(loadedTransactions, loadedCards);
 
-      // ✅ NOVO: Baixa Automática Silenciosa
-      // Se houver transações marcadas como automáticas (ex: seu salário dia 20)
-      // e hoje for dia 20 ou mais, o sistema as marca como pagas automaticamente.
+      // 2. Correção de transações recorrentes e Baixas Automáticas
       const today = new Date();
-      const autoPayUpdates = loadedTransactions.filter(t => 
-        (t.isAutomatic || (t as any).is_automatic) && 
-        !t.isPaid && 
-        parseLocalDate(t.date) <= today &&
-        t.accountId
-      );
+      let hasChanges = false;
 
-      if (autoPayUpdates.length > 0) {
-        console.log(`[AutoPay] Processando ${autoPayUpdates.length} baixas automáticas...`);
-        for (const tx of autoPayUpdates) {
-          const change = tx.type === 'income' ? tx.amount : -tx.amount;
-          await supabase.from('transactions').update({ is_paid: true, payment_date: tx.date }).eq('id', tx.id);
-          
-          const account = (accountsRes.data || []).find(a => a.id === tx.accountId);
-          if (account) {
-            const newBalance = Number(account.balance) + change;
-            await supabase.from('accounts').update({ balance: newBalance }).eq('id', tx.accountId);
+      for (const t of loadedTransactions) {
+        let needsUpdate = false;
+        let updatePayload: any = {};
+
+        // Fix para transações recorrentes com payment_date errado
+        if (t.isRecurring && t.installmentGroupId && !t.isInvoicePayment) {
+          const txDate = parseLocalDate(t.date);
+          const shouldBePaid = txDate <= today;
+          const currentPaymentDate = t.paymentDate ? t.paymentDate.split('T')[0] : null;
+          const targetPaymentDate = t.date.split('T')[0];
+
+          if (shouldBePaid && currentPaymentDate !== targetPaymentDate) {
+            updatePayload = { ...updatePayload, is_paid: true, payment_date: targetPaymentDate };
+            needsUpdate = true;
+          } else if (!shouldBePaid && t.isPaid) {
+            updatePayload = { ...updatePayload, is_paid: false, payment_date: null };
+            needsUpdate = true;
           }
         }
-        // Recarregar silenciosamente os novos estados
-        await fetchInitialData();
-        return;
+
+        // Fix para Baixa Automática (isAutomatic)
+        if ((t.isAutomatic || (t as any).is_automatic) && !t.isPaid && parseLocalDate(t.date) <= today && t.accountId) {
+          const change = t.type === 'income' ? t.amount : -t.amount;
+          updatePayload = { ...updatePayload, is_paid: true, payment_date: t.date };
+          needsUpdate = true;
+          
+          // Atualiza saldo da conta correspondente
+          const account = (accountsRes.data || []).find(a => a.id === t.accountId);
+          if (account) {
+            const newBalance = Number(account.balance) + change;
+            await supabase.from('accounts').update({ balance: newBalance }).eq('id', t.accountId);
+          }
+        }
+
+        if (needsUpdate) {
+          await supabase.from('transactions').update(updatePayload).eq('id', t.id);
+          hasChanges = true;
+        }
       }
 
-      if (changed) {
-        console.log('Dados de faturas atualizados. Recarregando...');
-        // Recarregar silenciosamente ou apenas atualizar estado local?
-        // Vamos recarregar uma vez para garantir consistência total.
-        const { data: updatedTxs } = await supabase.from('transactions').select('*');
-        if (updatedTxs) {
+      // Se houve qualquer alteração estrutural, recarregamos uma última vez para garantir
+      if (hasChanges) {
+        const { data: finalTxs } = await supabase.from('transactions').select('*');
+        if (finalTxs) {
           setState(prev => ({
             ...prev,
-            transactions: updatedTxs.map((t: any) => ({
+            transactions: finalTxs.map((t: any) => ({
               ...t,
               userId: t.user_id,
               transactionType: t.transaction_type,
@@ -524,7 +538,7 @@ function useFinanceProvider() {
               cardId: t.card_id,
               isPaid: t.is_paid !== undefined ? t.is_paid : parseLocalDate(t.date) <= new Date(),
               isRecurring: t.is_recurring,
-              isAutomatic: t.is_automatic || false, // Fallback se a coluna não existir
+              isAutomatic: t.is_automatic || false,
               installmentGroupId: t.installment_group_id,
               installmentNumber: t.installment_number,
               installmentTotal: t.installment_total,
@@ -539,7 +553,7 @@ function useFinanceProvider() {
       console.error('Error fetching data:', error);
       toast({ title: 'Erro ao carregar dados', variant: 'destructive' });
     } finally {
-      setLoading(false); // ✅ FIX: única chamada
+      setLoading(false);
     }
   }, [parseLocalDate, revalidateInvoiceMonths]);
 
@@ -564,12 +578,12 @@ function useFinanceProvider() {
         const acc = prev.accounts.find(a => a.id === id);
         if (!acc) return prev;
         const newBalance = Math.round((Number(acc.balance) + Number(change)) * 100) / 100;
-        
+
         // Mover a persistência para fora do loop de renderização/setState seria o ideal,
         // mas como o setState do React (useState) não retorna o novo valor imediatamente,
         // vamos manter a lógica de persistência disparada aqui, mas de forma que o lint não reclame
         // e que seja mais previsível.
-        
+
         supabase.from('accounts').update({ balance: newBalance }).eq('id', id).then(({ error }) => {
           if (error) console.error('Erro ao persistir saldo:', error);
         });
@@ -633,7 +647,7 @@ function useFinanceProvider() {
       setState(prev => ({ ...prev, bills: [...prev.bills, ...newBills] }));
       if (project) toast({ title: bill.isFixed ? 'Conta fixa configurada para os próximos 12 meses' : 'Conta adicionada com sucesso' });
     } catch (err) { toast({ title: 'Erro ao agendar conta', variant: 'destructive' }); }
-    }, [parseLocalDate]);
+  }, [parseLocalDate]);
 
   const updateBill = useCallback(async (id: string, updates: Partial<Bill>, applyToFuture: boolean = false) => {
     try {
@@ -881,7 +895,7 @@ function useFinanceProvider() {
       } else if (transaction.installmentTotal && transaction.installmentTotal > 1) {
         const amountPerInstallment = Math.round((transaction.amount / transaction.installmentTotal) * 100) / 100;
         const lastInstallmentAmount = Math.round((transaction.amount - (amountPerInstallment * (transaction.installmentTotal - 1))) * 100) / 100;
-        
+
         const baseDate = parseLocalDate(transaction.date);
         const baseCard = transaction.cardId ? state.creditCards.find(c => c.id === transaction.cardId) : null;
         let firstInv: string | null = null;
@@ -890,7 +904,7 @@ function useFinanceProvider() {
         for (let i = 1; i <= transaction.installmentTotal; i++) {
           const currentAmount = i === transaction.installmentTotal ? lastInstallmentAmount : amountPerInstallment;
           const instDate = addMonths(baseDate, i - 1);
-          
+
           let instInv = undefined;
           if (firstInv) {
             const [y, m] = firstInv.split('-').map(Number);
@@ -901,11 +915,20 @@ function useFinanceProvider() {
         }
       } else if (transaction.isRecurring) {
         const baseDate = parseLocalDate(transaction.date);
-        
+
         for (let i = 1; i <= 12; i++) {
           const instDate = addMonths(baseDate, i - 1);
-          // ✅ FIX: Garante que cada mês tenha sua própria data física correta
-          pushTx({ ...transaction, date: format(instDate, 'yyyy-MM-dd') }, i, undefined);
+          const instDateStr = format(instDate, 'yyyy-MM-dd');
+          // ✅ FIX: Calcula isPaid e paymentDate individualmente por instância!
+          // Sem isso, todas as 12 instâncias herdavam o isPaid/paymentDate do mês original,
+          // fazendo com que todas aparecessem com a data do primeiro lançamento.
+          const instIsPaid = parseLocalDate(instDateStr) <= new Date();
+          pushTx({
+            ...transaction,
+            date: instDateStr,
+            isPaid: instIsPaid,
+            paymentDate: instIsPaid ? instDateStr : undefined,
+          }, i, undefined);
         }
       } else {
         pushTx(transaction);
@@ -954,7 +977,8 @@ function useFinanceProvider() {
               debts: prev.debts.map(d => d.id === tx.debtId ? { ...d, remainingAmount: newRemaining } : d)
             };
           });
-        }      }
+        }
+      }
 
       toast({ title: 'Lançamento salvo com sucesso' });
     } catch (error) {
@@ -1092,7 +1116,7 @@ function useFinanceProvider() {
             };
           });
         }
-        }
+      }
 
       setState(prev => ({
         ...prev,
@@ -1804,10 +1828,10 @@ function useFinanceProvider() {
       .filter(t => {
         // Só deste cartão
         if (t.cardId !== cardId) return false;
-        
+
         // Removido: if (t.type !== 'expense') return false; 
         // Agora permitimos 'income' para processar abatimentos/créditos
-        
+
         if (t.isInvoicePayment === true) return false;
         // Ignora projeções virtuais de meses futuros (recorrentes ainda não cobradas)
         if (t.isVirtual) return false;
