@@ -16,10 +16,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
-const parseLocalDate = (dateStr: string): Date => {
-    const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
-    return new Date(year, month - 1, day);
-};
+import { parseLocalDate } from '@/utils/dateUtils';
 
 export function AccountEvolution() {
     const { transactions, categories, viewDate } = useFinanceStore();

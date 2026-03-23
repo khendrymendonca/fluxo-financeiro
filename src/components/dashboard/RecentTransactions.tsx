@@ -3,10 +3,7 @@ import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { cn } from '@/lib/utils';
 import { ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 
-const parseLocalDate = (dateStr: string): Date => {
-  const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
-  return new Date(year, month - 1, day);
-};
+import { parseLocalDate } from '@/utils/dateUtils';
 
 interface RecentTransactionsProps {
   transactions: Transaction[];

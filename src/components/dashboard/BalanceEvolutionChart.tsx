@@ -1,6 +1,7 @@
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts';
 import { startOfMonth, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { parseLocalDate } from '@/utils/dateUtils';
 
 interface BalanceEvolutionChartProps {
   transactions: Array<{
@@ -18,10 +19,6 @@ export function BalanceEvolutionChart({ transactions, initialBalance, viewDate }
   const monthStartLabel = format(monthStart, 'dd MMM', { locale: ptBR });
   const monthEndLabel = format(monthEnd, 'dd MMM', { locale: ptBR });
 
-  const parseLocalDate = (dateStr: string): Date => {
-    const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
-    return new Date(year, month - 1, day);
-  };
 
   const sortedTransactions = [...transactions].sort(
     (a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime()

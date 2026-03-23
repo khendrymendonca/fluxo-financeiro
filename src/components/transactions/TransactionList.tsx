@@ -22,20 +22,7 @@ interface TransactionListProps {
   onDeleteBill?: (id: string, applyToFuture?: boolean) => void;
 }
 
-const parseLocalDate = (dateString: string): Date => {
-  if (!dateString) return new Date();
-  const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
-  if (isNaN(year) || isNaN(month) || isNaN(day)) return new Date();
-  return new Date(year, month - 1, day);
-};
-
-const toLocalDateString = (year: number, month: number, day: number): string =>
-  `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-
-const todayLocalString = (): string => {
-  const n = new Date();
-  return toLocalDateString(n.getFullYear(), n.getMonth(), n.getDate());
-};
+import { parseLocalDate, todayLocalString } from '@/utils/dateUtils';
 
 export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBill, onDeleteBill }: TransactionListProps) {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');

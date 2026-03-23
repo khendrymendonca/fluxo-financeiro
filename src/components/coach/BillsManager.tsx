@@ -15,19 +15,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
 
-// âœ… FIX: helper de data local reutilizÃ¡vel
-const parseLocalDate = (dateString: string): Date => {
-    if (!dateString) return new Date();
-    const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
-    if (isNaN(year) || isNaN(month) || isNaN(day)) return new Date();
-    return new Date(year, month - 1, day);
-};
-
-// âœ… FIX: "hoje" como string local sem bug de fuso
-const todayLocalString = (): string => {
-    const n = new Date();
-    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
-};
+import { parseLocalDate, todayLocalString } from '@/utils/dateUtils';
 
 export function BillsManager() {
     const {
@@ -37,14 +25,15 @@ export function BillsManager() {
         creditCards,
         debts,
         // âœ… FIX: addBill e updateBill removidos da desestruturaÃ§Ã£o â€” nÃ£o sÃ£o usados no componente
-        deleteBill,
-        payBill,
         getCardExpenses,
         viewDate,
         currentMonthBills,
         transactions,
         getTransactionTargetDate
     } = useFinanceStore();
+
+    const { mutateAsync: payBillMutation } = usePayBill();
+    const { mutate: deleteBillMutation } = useDeleteBill();
 
     const [filter, setFilter] = useState<'all' | 'payable' | 'receivable'>('all');
     const [isPaying, setIsPaying] = useState<any>(null);
@@ -133,7 +122,7 @@ export function BillsManager() {
                         className="w-full h-11 pl-4 pr-10 rounded-2xl border-2 border-border bg-card focus:border-primary focus:ring-0 transition-all outline-none font-medium text-sm"
                     />
                     {searchQuery && (
-                        <button 
+                        <button
                             onClick={() => setSearchQuery('')}
                             className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-full text-muted-foreground"
                         >

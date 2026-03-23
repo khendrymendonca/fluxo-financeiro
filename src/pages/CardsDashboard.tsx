@@ -4,6 +4,7 @@ import { CreditCardVisual } from '@/components/cards/CreditCardVisual';
 import { AddCardDialog } from '@/components/cards/AddCardDialog';
 import { Button } from '@/components/ui/button';
 import { Plus, Receipt, Calendar, CreditCard, Pencil } from 'lucide-react';
+import { parseLocalDate } from '@/utils/dateUtils';
 import { cn } from '@/lib/utils';
 import { format, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -29,12 +30,6 @@ export default function CardsDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const selectedCard = creditCards.find(c => c.id === selectedCardId);
-
-  const parseLocalDate = (dateStr: string) => {
-    if (!dateStr) return new Date();
-    const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
-    return new Date(year, month - 1, day);
-  };
 
   // ✅ CORRIGIDO: usa getCardUsedLimit e getCardAvailableLimit do store
   // que já filtram isVirtual, isInvoicePayment, paidInvoices e cardId corretamente
@@ -243,7 +238,7 @@ export default function CardsDashboard() {
                           className="w-full h-10 pl-4 pr-10 rounded-xl border-2 border-border bg-background focus:border-primary focus:ring-0 transition-all outline-none font-medium text-xs"
                         />
                         {searchQuery && (
-                          <button 
+                          <button
                             onClick={() => setSearchQuery('')}
                             className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-full text-muted-foreground"
                           >

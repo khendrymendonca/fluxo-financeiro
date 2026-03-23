@@ -27,10 +27,7 @@ interface TransactionFormProps {
 type TabType = 'pontual' | 'parcelamento' | 'fixo' | 'divida' | 'transfer' | 'renda_fixa';
 type Step = 'SELECT_TYPE' | 'SELECT_SUBTYPE' | 'DETAILS';
 
-const parseLocalDate = (dateStr: string): Date => {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
-};
+import { parseLocalDate } from '@/utils/dateUtils';
 
 const isDateTodayOrPast = (dateStr: string): boolean => {
   const d = parseLocalDate(dateStr);
@@ -102,9 +99,9 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     if (initialData) {
       if (initialData.transactionType === 'recurring' || initialData.isRecurring) {
         if (initialData.type === 'income' && (initialData as any).isAutomatic) {
-            setActiveTab('renda_fixa');
+          setActiveTab('renda_fixa');
         } else {
-            setActiveTab('fixo');
+          setActiveTab('fixo');
         }
       } else if (initialData.transactionType === 'installment' || (initialData.installmentTotal && initialData.installmentTotal > 1)) {
         setActiveTab('parcelamento');
@@ -272,27 +269,27 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   );
 
   const renderStep2 = () => {
-    const options = type === 'income' 
+    const options = type === 'income'
       ? [
-          { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Recebi hoje ou em data única.' },
-          { id: 'renda_fixa', label: 'Renda Fixa', icon: RotateCw, desc: 'Salário ou renda mensal automática.' },
-          { id: 'transfer', label: 'Transferência', icon: ArrowRightLeft, desc: 'Mover dinheiro entre contas.' },
-        ]
+        { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Recebi hoje ou em data única.' },
+        { id: 'renda_fixa', label: 'Renda Fixa', icon: RotateCw, desc: 'Salário ou renda mensal automática.' },
+        { id: 'transfer', label: 'Transferência', icon: ArrowRightLeft, desc: 'Mover dinheiro entre contas.' },
+      ]
       : [
-          { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Compra à vista no débito ou dinheiro.' },
-          { id: 'parcelamento', label: 'Parcelado', icon: CreditCard, desc: 'Compra no cartão de crédito.' },
-          { id: 'fixo', label: 'Fixo', icon: RotateCw, desc: 'Contas que repetem todo mês.' },
-          { id: 'divida', label: 'Dívida', icon: Calendar, desc: 'Empréstimos ou acordos judiciais.' },
-          { id: 'transfer', label: 'Transferência', icon: ArrowRightLeft, desc: 'Mover entre contas ou pagar cartão.' },
-        ];
+        { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Compra à vista no débito ou dinheiro.' },
+        { id: 'parcelamento', label: 'Parcelado', icon: CreditCard, desc: 'Compra no cartão de crédito.' },
+        { id: 'fixo', label: 'Fixo', icon: RotateCw, desc: 'Contas que repetem todo mês.' },
+        { id: 'divida', label: 'Dívida', icon: Calendar, desc: 'Empréstimos ou acordos judiciais.' },
+        { id: 'transfer', label: 'Transferência', icon: ArrowRightLeft, desc: 'Mover entre contas ou pagar cartão.' },
+      ];
 
     return (
       <div className="p-6 space-y-4 animate-in fade-in slide-in-from-right duration-300">
         <div className="flex items-center gap-2 mb-2">
-            <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_TYPE')} className="rounded-xl text-xs font-bold uppercase tracking-tighter">← Voltar</Button>
-            <span className={cn("text-[10px] font-black uppercase px-2 py-0.5 rounded-md", type === 'income' ? "bg-success/10 text-success" : "bg-danger/10 text-danger")}>
-                {type === 'income' ? 'Receita' : 'Despesa'} selecionada
-            </span>
+          <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_TYPE')} className="rounded-xl text-xs font-bold uppercase tracking-tighter">← Voltar</Button>
+          <span className={cn("text-[10px] font-black uppercase px-2 py-0.5 rounded-md", type === 'income' ? "bg-success/10 text-success" : "bg-danger/10 text-danger")}>
+            {type === 'income' ? 'Receita' : 'Despesa'} selecionada
+          </span>
         </div>
         <div className="grid grid-cols-1 gap-3">
           {options.map((opt) => (
@@ -321,19 +318,19 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/20 backdrop-blur-sm">
       <div className="bg-card rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col border border-border/50">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border bg-muted/5">
           <div>
             <h2 className="text-xl font-extrabold tracking-tight">
-                {step === 'SELECT_TYPE' ? 'O que deseja lançar?' : 
-                 step === 'SELECT_SUBTYPE' ? 'Qual o tipo de lançamento?' :
-                 initialData ? 'Editar Lançamento' : 'Detalhes do Lançamento'}
+              {step === 'SELECT_TYPE' ? 'O que deseja lançar?' :
+                step === 'SELECT_SUBTYPE' ? 'Qual o tipo de lançamento?' :
+                  initialData ? 'Editar Lançamento' : 'Detalhes do Lançamento'}
             </h2>
             <p className="text-xs text-muted-foreground font-medium">
-                {step === 'SELECT_TYPE' ? 'Selecione a natureza da transação.' :
-                 step === 'SELECT_SUBTYPE' ? 'Escolha como este valor será processado.' :
-                 'Preencha as informações para concluir.'}
+              {step === 'SELECT_TYPE' ? 'Selecione a natureza da transação.' :
+                step === 'SELECT_SUBTYPE' ? 'Escolha como este valor será processado.' :
+                  'Preencha as informações para concluir.'}
             </p>
           </div>
           <button onClick={onClose} className="p-2.5 rounded-2xl hover:bg-muted transition-colors text-muted-foreground">
@@ -344,23 +341,23 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         <div className="flex-1 overflow-y-auto">
           {step === 'SELECT_TYPE' && renderStep1()}
           {step === 'SELECT_SUBTYPE' && renderStep2()}
-          
+
           {step === 'DETAILS' && (
             <form onSubmit={handleSubmit} className="p-6 space-y-6 animate-in fade-in slide-in-from-right duration-300">
-              
+
               {/* Context Header for Details Step */}
               {!initialData && (
                 <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/50 mb-2">
-                    <div className="flex items-center gap-2">
-                        <div className={cn("p-2 rounded-xl", type === 'income' ? "bg-success text-success-foreground" : "bg-danger text-danger-foreground")}>
-                            {activeTab === 'renda_fixa' ? <RotateCw className="w-4 h-4" /> : <Coins className="w-4 h-4" />}
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest opacity-50">{type === 'income' ? 'Receita' : 'Despesa'}</p>
-                            <p className="text-sm font-black">{activeTab === 'renda_fixa' ? 'Renda Fixa' : activeTab === 'transfer' ? 'Transferência' : 'Lançamento Pontual'}</p>
-                        </div>
+                  <div className="flex items-center gap-2">
+                    <div className={cn("p-2 rounded-xl", type === 'income' ? "bg-success text-success-foreground" : "bg-danger text-danger-foreground")}>
+                      {activeTab === 'renda_fixa' ? <RotateCw className="w-4 h-4" /> : <Coins className="w-4 h-4" />}
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_SUBTYPE')} className="text-[10px] font-bold uppercase">Alterar</Button>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-50">{type === 'income' ? 'Receita' : 'Despesa'}</p>
+                      <p className="text-sm font-black">{activeTab === 'renda_fixa' ? 'Renda Fixa' : activeTab === 'transfer' ? 'Transferência' : 'Lançamento Pontual'}</p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_SUBTYPE')} className="text-[10px] font-bold uppercase">Alterar</Button>
                 </div>
               )}
 
@@ -468,131 +465,131 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 <>
                   <div className="space-y-2">
                     <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
-                        {activeTab === 'renda_fixa' ? 'Nome da Renda' : 'Descrição'}
+                      {activeTab === 'renda_fixa' ? 'Nome da Renda' : 'Descrição'}
                     </Label>
                     <Input value={description} onChange={e => setDescription(e.target.value)} placeholder={activeTab === 'renda_fixa' ? "Ex: Salário Torp" : "Ex: Supermercado"} className="h-12 rounded-2xl border-2 font-bold" required />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Valor (R$)</Label>
-                        <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="h-12 rounded-2xl border-2 font-black text-xl" required />
+                      <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Valor (R$)</Label>
+                      <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="h-12 rounded-2xl border-2 font-black text-xl" required />
                     </div>
                     <div className="space-y-2">
-                        <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
-                            {activeTab === 'renda_fixa' ? 'Dia do Crédito' : 'Data'}
-                        </Label>
-                        <Input type="date" value={date} onChange={e => { setDate(e.target.value); setInvoiceReference(e.target.value.slice(0, 7)); }} className="h-12 rounded-2xl border-2" required />
+                      <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
+                        {activeTab === 'renda_fixa' ? 'Dia do Crédito' : 'Data'}
+                      </Label>
+                      <Input type="date" value={date} onChange={e => { setDate(e.target.value); setInvoiceReference(e.target.value.slice(0, 7)); }} className="h-12 rounded-2xl border-2" required />
                     </div>
                   </div>
 
                   {activeTab !== 'renda_fixa' && (
                     <div className="space-y-2 flex flex-col">
-                        <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Categoria</Label>
-                        <Popover open={openCategory} onOpenChange={setOpenCategory}>
+                      <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Categoria</Label>
+                      <Popover open={openCategory} onOpenChange={setOpenCategory}>
                         <PopoverTrigger asChild>
-                            <Button variant="outline" role="combobox" aria-expanded={openCategory}
+                          <Button variant="outline" role="combobox" aria-expanded={openCategory}
                             className={cn("w-full justify-between rounded-2xl h-12 border-2", !categoryId && "text-muted-foreground",
-                                type === 'income' && categoryId ? "border-success/30 text-success bg-success/5" :
+                              type === 'income' && categoryId ? "border-success/30 text-success bg-success/5" :
                                 type === 'expense' && categoryId ? "border-danger/30 text-danger bg-danger/5" : "")}>
                             {categoryId ? filteredCategories.find(c => c.id === categoryId)?.name : "Selecione uma categoria..."}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
+                          </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-2xl" align="start">
-                            <Command>
+                          <Command>
                             <CommandInput placeholder="Buscar categoria..." />
                             <CommandList>
-                                <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
-                                <CommandGroup>
+                              <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
+                              <CommandGroup>
                                 {filteredCategories.map(cat => (
-                                    <CommandItem key={cat.id} value={cat.name} onSelect={() => { setCategoryId(cat.id); setSubcategoryId(''); setOpenCategory(false); }}>
+                                  <CommandItem key={cat.id} value={cat.name} onSelect={() => { setCategoryId(cat.id); setSubcategoryId(''); setOpenCategory(false); }}>
                                     <Check className={cn("mr-2 h-4 w-4", categoryId === cat.id ? "opacity-100" : "opacity-0")} />
                                     {cat.name}
-                                    </CommandItem>
+                                  </CommandItem>
                                 ))}
-                                </CommandGroup>
+                              </CommandGroup>
                             </CommandList>
-                            </Command>
+                          </Command>
                         </PopoverContent>
-                        </Popover>
+                      </Popover>
                     </div>
                   )}
 
                   {/* Account / Card Selection */}
                   <div className="space-y-3">
                     <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
-                        {type === 'income' ? 'Em qual conta vai cair?' : 'Forma de Pagamento'}
+                      {type === 'income' ? 'Em qual conta vai cair?' : 'Forma de Pagamento'}
                     </Label>
                     <div className="flex gap-2">
-                        <button type="button" onClick={() => setPaymentMethod('account')}
-                            className={cn("flex-1 py-3 px-4 rounded-2xl font-bold text-sm transition-all border-2 flex items-center justify-center gap-2",
-                            paymentMethod === 'account' ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted/50 border-transparent text-muted-foreground")}>
-                            <Wallet className="w-4 h-4" /> Conta
+                      <button type="button" onClick={() => setPaymentMethod('account')}
+                        className={cn("flex-1 py-3 px-4 rounded-2xl font-bold text-sm transition-all border-2 flex items-center justify-center gap-2",
+                          paymentMethod === 'account' ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted/50 border-transparent text-muted-foreground")}>
+                        <Wallet className="w-4 h-4" /> Conta
+                      </button>
+                      {activeTab !== 'renda_fixa' && (
+                        <button type="button" onClick={() => setPaymentMethod('card')}
+                          className={cn("flex-1 py-3 px-4 rounded-2xl font-bold text-sm transition-all border-2 flex items-center justify-center gap-2",
+                            paymentMethod === 'card' ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted/50 border-transparent text-muted-foreground")}>
+                          <CreditCard className="w-4 h-4" /> Cartão
                         </button>
-                        {activeTab !== 'renda_fixa' && (
-                            <button type="button" onClick={() => setPaymentMethod('card')}
-                                className={cn("flex-1 py-3 px-4 rounded-2xl font-bold text-sm transition-all border-2 flex items-center justify-center gap-2",
-                                paymentMethod === 'card' ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted/50 border-transparent text-muted-foreground")}>
-                                <CreditCard className="w-4 h-4" /> Cartão
-                            </button>
-                        )}
+                      )}
                     </div>
 
                     {paymentMethod === 'account' && (
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                            {accounts.map(acc => (
-                                <button key={acc.id} type="button" onClick={() => setAccountId(acc.id)}
-                                    className={cn("py-3 px-3 rounded-xl text-xs font-bold transition-all border-2 flex items-center gap-2",
-                                    accountId === acc.id ? "border-primary bg-primary/5 text-primary" : "bg-muted/30 border-transparent hover:bg-muted/50")}>
-                                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: acc.color }} />
-                                    <span className="truncate">{acc.bank} - {acc.name}</span>
-                                </button>
-                            ))}
-                        </div>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        {accounts.map(acc => (
+                          <button key={acc.id} type="button" onClick={() => setAccountId(acc.id)}
+                            className={cn("py-3 px-3 rounded-xl text-xs font-bold transition-all border-2 flex items-center gap-2",
+                              accountId === acc.id ? "border-primary bg-primary/5 text-primary" : "bg-muted/30 border-transparent hover:bg-muted/50")}>
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: acc.color }} />
+                            <span className="truncate">{acc.bank} - {acc.name}</span>
+                          </button>
+                        ))}
+                      </div>
                     )}
 
                     {paymentMethod === 'card' && (
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                            {creditCards.map(card => (
-                                <button key={card.id} type="button" onClick={() => setCardId(card.id)}
-                                    className={cn("py-3 px-3 rounded-xl text-xs font-bold transition-all border-2",
-                                    cardId === card.id ? "border-primary bg-primary/5 text-primary" : "bg-muted/30 border-transparent hover:bg-muted/50")}>
-                                    {card.name}
-                                </button>
-                            ))}
-                        </div>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        {creditCards.map(card => (
+                          <button key={card.id} type="button" onClick={() => setCardId(card.id)}
+                            className={cn("py-3 px-3 rounded-xl text-xs font-bold transition-all border-2",
+                              cardId === card.id ? "border-primary bg-primary/5 text-primary" : "bg-muted/30 border-transparent hover:bg-muted/50")}>
+                            {card.name}
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
 
                   {activeTab === 'renda_fixa' && (
                     <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 flex gap-3">
-                        <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                        <div className="space-y-1">
-                            <p className="text-xs font-bold text-primary">Automação Ativa</p>
-                            <p className="text-[10px] text-primary/70 leading-tight">Esta renda será lançada automaticamente na sua carteira todo mês no dia selecionado. Você poderá editar o valor a qualquer momento.</p>
-                        </div>
+                      <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-primary">Automação Ativa</p>
+                        <p className="text-[10px] text-primary/70 leading-tight">Esta renda será lançada automaticamente na sua carteira todo mês no dia selecionado. Você poderá editar o valor a qualquer momento.</p>
+                      </div>
                     </div>
                   )}
 
                   {activeTab === 'parcelamento' && (
                     <div className="space-y-4 border-t border-border pt-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-muted-foreground">Nº Parcelas</Label>
-                                <Input type="number" value={installmentsCount} onChange={e => { setInstallmentsCount(e.target.value); setCustomInstallmentDates([]); }} min="2" className="h-10 rounded-xl" />
-                            </div>
-                            <div className="flex flex-col gap-2 justify-center">
-                                <div className="flex items-center justify-between">
-                                    <Label className="text-[10px] font-black uppercase text-muted-foreground cursor-pointer" htmlFor="equal-inst">Iguais?</Label>
-                                    <input type="checkbox" id="equal-inst" checked={areInstallmentsEqual} onChange={e => setAreInstallmentsEqual(e.target.checked)} className="w-4 h-4" />
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <Label className="text-[10px] font-black uppercase text-muted-foreground cursor-pointer" htmlFor="fixed-pay">Data Fixa?</Label>
-                                    <input type="checkbox" id="fixed-pay" checked={fixedPaymentDay} onChange={e => setFixedPaymentDay(e.target.checked)} className="w-4 h-4" />
-                                </div>
-                            </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase text-muted-foreground">Nº Parcelas</Label>
+                          <Input type="number" value={installmentsCount} onChange={e => { setInstallmentsCount(e.target.value); setCustomInstallmentDates([]); }} min="2" className="h-10 rounded-xl" />
                         </div>
+                        <div className="flex flex-col gap-2 justify-center">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground cursor-pointer" htmlFor="equal-inst">Iguais?</Label>
+                            <input type="checkbox" id="equal-inst" checked={areInstallmentsEqual} onChange={e => setAreInstallmentsEqual(e.target.checked)} className="w-4 h-4" />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground cursor-pointer" htmlFor="fixed-pay">Data Fixa?</Label>
+                            <input type="checkbox" id="fixed-pay" checked={fixedPaymentDay} onChange={e => setFixedPaymentDay(e.target.checked)} className="w-4 h-4" />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </>
@@ -603,13 +600,13 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 <div className="flex flex-col gap-2 p-4 bg-primary/5 rounded-2xl border border-primary/20 animate-in fade-in zoom-in duration-300">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="p-1.5 rounded-lg bg-primary text-primary-foreground">
-                        <RotateCw className="w-3 h-3" />
+                      <RotateCw className="w-3 h-3" />
                     </div>
                     <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Alcance da Alteração / Exclusão</Label>
                   </div>
-                  <select 
+                  <select
                     className="h-11 rounded-xl border-2 border-primary/20 bg-background px-3 text-xs font-bold focus:ring-2 focus:ring-primary outline-none transition-all cursor-pointer hover:border-primary/40"
-                    value={applyScope} 
+                    value={applyScope}
                     onChange={e => setApplyScope(e.target.value as any)}
                   >
                     <option value="this">Somente este lançamento</option>
@@ -617,9 +614,9 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     <option value="all">Todo o grupo (todos os meses)</option>
                   </select>
                   <p className="text-[9px] text-primary/60 font-medium leading-tight px-1">
-                    {applyScope === 'this' ? 'A alteração afetará apenas o mês selecionado.' : 
-                     applyScope === 'future' ? 'A alteração será replicada para os próximos meses.' : 
-                     'A alteração será aplicada em todo o histórico deste lançamento.'}
+                    {applyScope === 'this' ? 'A alteração afetará apenas o mês selecionado.' :
+                      applyScope === 'future' ? 'A alteração será replicada para os próximos meses.' :
+                        'A alteração será aplicada em todo o histórico deste lançamento.'}
                   </p>
                 </div>
               )}
@@ -627,16 +624,16 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               {/* Action Buttons */}
               <div className="flex flex-col gap-3 pt-2">
                 <Button type="submit" className={cn("w-full rounded-2xl py-7 text-lg font-black shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]",
-                    type === 'income' ? "bg-success hover:bg-success/90 shadow-success/20" : "bg-danger hover:bg-danger/90 shadow-danger/20")}>
-                    {initialData ? 'Salvar Alterações' : 
-                     activeTab === 'renda_fixa' ? 'Confirmar Renda Fixa' : 
-                     activeTab === 'transfer' ? 'Confirmar Transferência' : 'Concluir Lançamento'}
+                  type === 'income' ? "bg-success hover:bg-success/90 shadow-success/20" : "bg-danger hover:bg-danger/90 shadow-danger/20")}>
+                  {initialData ? 'Salvar Alterações' :
+                    activeTab === 'renda_fixa' ? 'Confirmar Renda Fixa' :
+                      activeTab === 'transfer' ? 'Confirmar Transferência' : 'Concluir Lançamento'}
                 </Button>
-                
+
                 {initialData && onDelete && (
-                    <Button type="button" variant="ghost" onClick={() => onDelete(initialData.id, applyScope)} className="w-full text-danger hover:bg-danger/5 font-bold rounded-xl py-6 h-auto">
-                        <Trash2 className="w-4 h-4 mr-2" /> Excluir permanentemente
-                    </Button>
+                  <Button type="button" variant="ghost" onClick={() => onDelete(initialData.id, applyScope)} className="w-full text-danger hover:bg-danger/5 font-bold rounded-xl py-6 h-auto">
+                    <Trash2 className="w-4 h-4 mr-2" /> Excluir permanentemente
+                  </Button>
                 )}
               </div>
             </form>

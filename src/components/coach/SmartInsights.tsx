@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { useBudgetRule } from '@/hooks/useBudgetCoach';
 import {
     Sparkles,
     TrendingUp,
@@ -15,10 +16,7 @@ import { cn } from '@/lib/utils';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-const parseLocalDate = (dateStr: string): Date => {
-    const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
-    return new Date(year, month - 1, day);
-};
+import { parseLocalDate } from '@/utils/dateUtils';
 
 const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -38,7 +36,8 @@ interface SmartInsightsProps {
 }
 
 export function SmartInsights({ onNavigate }: SmartInsightsProps) {
-    const { transactions, categories, totalIncome, totalExpenses, budgetRule } = useFinanceStore();
+    const { transactions, categories, totalIncome, totalExpenses } = useFinanceStore();
+    const { budgetRule } = useBudgetRule();
     const [dismissedInsights, setDismissedInsights] = useState<string[]>([]);
 
     useEffect(() => {

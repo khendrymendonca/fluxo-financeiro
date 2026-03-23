@@ -1,63 +1,58 @@
 import { useState, useMemo, createContext, useContext, useCallback } from 'react';
 import { FilterMode, Transaction, Bill } from '@/types/finance';
 import { addMonths, subMonths, format } from 'date-fns';
-import { 
-  useAccounts, 
-  useTransactions, 
-  useBills, 
-  useCreditCards, 
-  useCategories, 
-  useSubcategories, 
-  useCategoryGroups, 
-  useDebts, 
+import {
+  useAccounts,
+  useTransactions,
+  useBills,
+  useCreditCards,
+  useCategories,
+  useSubcategories,
+  useCategoryGroups,
+  useDebts,
   useSavingsGoals
 } from './useFinanceQueries';
 import { useProjectedTransactions } from './useProjectedTransactions';
 import { useProjectedBills } from './useProjectedBills';
-import { 
-  useAddTransaction, 
-  useDeleteTransaction, 
-  useToggleTransactionPaid 
+import {
+  useAddTransaction,
+  useDeleteTransaction,
+  useToggleTransactionPaid
 } from './useTransactionMutations';
-import { 
-  useAddAccount, 
-  useUpdateAccount, 
-  useDeleteAccount, 
-  useTransferBetweenAccounts 
+import {
+  useAddAccount,
+  useUpdateAccount,
+  useDeleteAccount,
+  useTransferBetweenAccounts
 } from './useAccountMutations';
-import { 
-  useAddBill, 
-  useUpdateBill, 
-  useDeleteBill, 
-  usePayBill 
+import {
+  useAddBill,
+  useUpdateBill,
+  useDeleteBill,
+  usePayBill
 } from './useBillMutations';
-import { 
-  useAddCreditCard, 
-  useUpdateCreditCard, 
-  useDeleteCreditCard 
+import {
+  useAddCreditCard,
+  useUpdateCreditCard,
+  useDeleteCreditCard
 } from './useCreditCardMutations';
-import { 
-  useAddGoal, 
-  useUpdateGoal, 
-  useDeleteGoal, 
-  useDepositToGoal 
+import {
+  useAddGoal,
+  useUpdateGoal,
+  useDeleteGoal,
+  useDepositToGoal
 } from './useGoalMutations';
-import { 
-  useAddDebt, 
-  useUpdateDebt, 
-  useDeleteDebt 
+import {
+  useAddDebt,
+  useUpdateDebt,
+  useDeleteDebt
 } from './useDebtMutations';
 
 export type FinanceContextData = ReturnType<typeof useFinanceProvider>;
 
 const FinanceContext = createContext<FinanceContextData | undefined>(undefined);
 
-// --- Helpers ---
-const parseLocalDate = (dateStr: string): Date => {
-  if (!dateStr) return new Date();
-  const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
-  return new Date(year, month - 1, day);
-};
+import { parseLocalDate } from '@/utils/dateUtils';
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const data = useFinanceProvider();
@@ -97,7 +92,7 @@ function useFinanceProvider() {
   const addTransactionMutation = useAddTransaction();
   const deleteTransactionMutation = useDeleteTransaction();
   const togglePaidMutation = useToggleTransactionPaid();
-  
+
   const addAccountMutation = useAddAccount();
   const updateAccountMutation = useUpdateAccount();
   const deleteAccountMutation = useDeleteAccount();
@@ -126,7 +121,7 @@ function useFinanceProvider() {
   const prevMonth = useCallback(() => setViewDate(prev => subMonths(prev, 1)), []);
   const nextDay = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setDate(d.getDate() + 1); return d; }), []);
   const prevDay = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setDate(d.getDate() - 1); return d; }), []);
-  
+
   // --- Computed ---
   const currentMonthTransactions = useMemo(() => {
     return transactions.filter(t => {
@@ -136,7 +131,7 @@ function useFinanceProvider() {
   }, [transactions, viewDate]);
 
   const currentMonthBills = useMemo(() => {
-    // 1. Separamos o que é REAL (está no banco para este mês)
+    // 1. Filtramos o que é REAL no banco para este mês
     const realBills = rawBills.filter(b => {
       if (b.isVirtual) return false;
       const bDate = parseLocalDate(b.dueDate);
@@ -144,23 +139,18 @@ function useFinanceProvider() {
       return bDate.getMonth() === viewDate.getMonth() && bDate.getFullYear() === viewDate.getFullYear();
     });
 
-    // 2. Filtramos as VIRTUAIS (projeções que vêm de useProjectedBills)
-    // Só deixamos passar a virtual se não houver uma REAL com o mesmo nome/id original
-    const filteredVirtualBills = projectedBills.filter(v => {
+    // 2. Filtramos as VIRTUAIS (projeções)
+    const filteredVirtual = projectedBills.filter(v => {
+      // Só mostramos a virtual se NÃO existir uma real com o mesmo nome e valor
       if (!v.isVirtual) return false;
-      const hasRealVersion = realBills.some(r => 
-        r.originalBillId === v.originalBillId || 
-        (r.name === v.name && Math.abs(r.amount - v.amount) < 0.01)
+      return !realBills.some(r =>
+        r.originalBillId === v.originalBillId ||
+        (r.name === v.name && Math.abs(Number(r.amount) - Number(v.amount)) < 0.01)
       );
-      
-      return !hasRealVersion;
     });
 
-    // 3. Juntamos as REAIS com as VIRTUAIS que sobraram
-    const allBills = [...realBills, ...filteredVirtualBills];
-
-    return allBills.sort((a, b) => 
-      parseLocalDate(a.dueDate).getTime() - parseLocalDate(b.dueDate).getTime()
+    return [...realBills, ...filteredVirtual].sort(
+      (a, b) => parseLocalDate(a.dueDate).getTime() - parseLocalDate(b.dueDate).getTime()
     );
   }, [rawBills, projectedBills, viewDate, viewMode]);
 
@@ -201,41 +191,55 @@ function useFinanceProvider() {
     nextDay,
     prevDay,
     setEmergencyMonths,
-    
+
     // Mutations exposed as direct functions for UI compatibility
     addTransaction: addTransactionMutation.mutateAsync,
     deleteTransaction: deleteTransactionMutation.mutateAsync,
     togglePaid: togglePaidMutation.mutateAsync,
-    
+
     addAccount: addAccountMutation.mutateAsync,
     updateAccount: updateAccountMutation.mutateAsync,
     deleteAccount: deleteAccountMutation.mutateAsync,
-    transferBetweenAccounts: transferMutation.mutateAsync,
-    
+    transferBetweenAccounts: (from: string, to: string, amount: number, desc: string, date: string, toType: 'account' | 'card' = 'account') =>
+      transferMutation.mutateAsync({ fromAccountId: from, [toType === 'account' ? 'toAccountId' : 'toCardId']: to, amount: Number(amount), description: desc, date } as any),
+
     addBill: addBillMutation.mutateAsync,
     updateBill: updateBillMutation.mutateAsync,
     deleteBill: deleteBillMutation.mutateAsync,
-    payBill: (bill: Bill, accountId?: string, paymentDate?: string, isPartial?: boolean, partialAmount?: number, cardId?: string) => 
+    payBill: (bill: Bill, accountId?: string, paymentDate?: string, isPartial?: boolean, partialAmount?: number, cardId?: string) =>
       payBillMutation.mutateAsync({ bill, accountId, paymentDate, isPartial, partialAmount, cardId }),
-    
+
     addCreditCard: addCardMutation.mutateAsync,
     updateCreditCard: updateCardMutation.mutateAsync,
     deleteCreditCard: deleteCardMutation.mutateAsync,
-    
+
     addSavingsGoal: addGoalMutation.mutateAsync,
     updateSavingsGoal: updateGoalMutation.mutateAsync,
     deleteSavingsGoal: deleteGoalMutation.mutateAsync,
     depositToGoal: depositGoalMutation.mutateAsync,
-    
+
     addDebt: addDebtMutation.mutateAsync,
     updateDebt: updateDebtMutation.mutateAsync,
     deleteDebt: deleteDebtMutation.mutateAsync,
 
     // Placeholders or helpers needed by UI
-    fetchInitialData: async () => {},
+    fetchInitialData: async () => { },
     getTransactionTargetDate: (t: Transaction) => new Date(t.date),
     getEmergencyFundData: () => ({ monthlyFixed: 0, targetAmount: 0, currentAmount: 0, progress: 0, months: emergencyMonths, reserveAccounts: [] }),
-    seedCoach: async () => {},
-    createDebtWithInstallments: async () => {}
+    seedCoach: async () => { },
+    createDebtWithInstallments: async (debtData: any, firstPayment: string) => { },
+
+    getAccountViewBalance: (id: string) => accounts.find(a => a.id === id)?.balance || 0,
+    getCardExpenses: (id: string) => currentMonthTransactions.filter(t => t.cardId === id && t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0),
+    getCategoryExpenses: () => {
+      const categoryMap = new Map<string, number>();
+      currentMonthTransactions.filter(t => t.type === 'expense').forEach(t => {
+        const cat = categories.find(c => c.id === t.categoryId);
+        const name = cat?.name || 'Sem Categoria';
+        categoryMap.set(name, (categoryMap.get(name) || 0) + Number(t.amount));
+      });
+      return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    },
+    getCardUsedLimit: (id: string) => currentMonthTransactions.filter(t => t.cardId === id && t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0)
   };
 }
