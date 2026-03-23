@@ -62,8 +62,9 @@ export function BillsManager() {
 
     const handleMarkAsPaid = async (targetId: string, isCard: boolean) => {
         if (!isPaying) return;
-        const amount = paymentAmount ? parseFloat(paymentAmount) : isPaying.amount;
-        await payBill(isPaying.id, isCard ? undefined : targetId, paymentDate, isCard ? targetId : undefined, amount);
+        const amountValue = paymentAmount ? parseFloat(paymentAmount) : isPaying.amount;
+        const isPartial = Math.abs(amountValue - isPaying.amount) > 0.01;
+        await payBill(isPaying, isCard ? undefined : targetId, paymentDate, isPartial, amountValue, isCard ? targetId : undefined);
         setIsPaying(null);
     };
 

@@ -261,8 +261,7 @@ function useFinanceProvider() {
 
       if (txUpdates.length > 0 && user) await supabase.from('transactions').upsert(txUpdates.map(u => ({
         id: u.id,
-        is_paid: u.isPaid,
-        payment_date: u.paymentDate,
+        is_paid: u.is_paid,
         user_id: user.id
       })));
       for (const [id, bal] of Object.entries(accUpdates)) await supabase.from('accounts').update({ balance: bal }).eq('id', id);
@@ -318,6 +317,7 @@ function useFinanceProvider() {
 
   const updateBill = useCallback(async (id: string, updates: Partial<Bill>) => {
     try {
+      if (!id) return;
       const dbUpdates: any = { ...updates };
       if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
       if (updates.accountId !== undefined) dbUpdates.account_id = updates.accountId;
@@ -329,6 +329,7 @@ function useFinanceProvider() {
 
   const deleteBill = useCallback(async (id: string, future: boolean = false) => {
     try {
+      if (!id) return;
       const bill = state.bills.find(b => b.id === id);
       if (!bill) return;
       if (future && bill.isFixed) {
@@ -357,7 +358,7 @@ function useFinanceProvider() {
         const date = format(addMonths(baseDate, i), 'yyyy-MM-dd');
         const isPaid = transaction.cardId ? true : (parseLocalDate(date) <= new Date());
         txs.push({
-          user_id: user.id, description: transaction.description, amount: transaction.amount / (transaction.installmentTotal || 1), type: transaction.type, date, category_id: validCat, account_id: transaction.accountId || null, card_id: transaction.cardId || null, is_paid: isPaid, payment_date: isPaid ? date : null, installment_group_id: groupId, installment_number: (transaction.installmentTotal ? i + 1 : null), installment_total: transaction.installmentTotal || null, is_recurring: transaction.isRecurring, is_automatic: transaction.isAutomatic, is_invoice_payment: transaction.isInvoicePayment,
+          user_id: user.id, description: transaction.description, amount: transaction.amount / (transaction.installmentTotal || 1), type: transaction.type, date, category_id: validCat, account_id: transaction.accountId || null, card_id: transaction.cardId || null, is_paid: isPaid, installment_group_id: groupId, installment_number: (transaction.installmentTotal ? i + 1 : null), installment_total: transaction.installmentTotal || null, is_recurring: transaction.isRecurring, is_automatic: transaction.isAutomatic, is_invoice_payment: transaction.isInvoicePayment,
           invoice_month_year: (card && !transaction.isInvoicePayment) ? calcInvoiceMonthYear(parseLocalDate(date), card) : transaction.invoiceMonthYear
         });
       }
@@ -373,7 +374,7 @@ function useFinanceProvider() {
     try {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const validCat = (tx.categoryId && uuidRegex.test(tx.categoryId)) ? tx.categoryId : null;
-      const payload = { description: tx.description, amount: tx.amount, category_id: validCat, account_id: tx.accountId, card_id: tx.cardId, is_paid: tx.isPaid, payment_date: tx.paymentDate, is_automatic: tx.isAutomatic };
+      const payload = { description: tx.description, amount: tx.amount, category_id: validCat, account_id: tx.accountId, card_id: tx.cardId, is_paid: tx.isPaid, is_automatic: tx.isAutomatic };
       await supabase.from('transactions').update(payload).eq('id', tx.id);
       await fetchInitialData();
     } catch (err) { toast({ title: 'Erro ao atualizar', variant: 'destructive' }); }
@@ -392,7 +393,6 @@ function useFinanceProvider() {
       if (!tx) return;
       const payload: any = {
         is_paid: isPaid,
-        payment_date: isPaid ? (date || todayLocalString()) : null,
         account_id: cardId ? null : (accId || tx.accountId),
         card_id: cardId || tx.cardId
       };
@@ -401,7 +401,7 @@ function useFinanceProvider() {
     } catch (err) { toast({ title: 'Erro ao alterar status', variant: 'destructive' }); }
   }, [state.transactions, todayLocalString, fetchInitialData]);
 
-  const payBill = useCallback(async (bill: Bill, accountId?: string, paymentDate?: string, isPartial?: boolean, partialAmount?: number) => {
+  const payBill = useCallback(async (bill: Bill, accountId?: string, paymentDate?: string, isPartial?: boolean, partialAmount?: number, cardId?: string) => {
     try {
       const cleanPaymentDate = (paymentDate ?? todayLocalString()).split('T')[0];
       const payAmount = isPartial && partialAmount ? partialAmount : (bill.amount ?? 0);
@@ -412,15 +412,15 @@ function useFinanceProvider() {
       await addTransaction({
         description: isPartial ? `Abatimento: ${bill.name}` : `Pgto: ${bill.name}`,
         amount: payAmount, type: 'expense', date: cleanPaymentDate, accountId: accountId ?? undefined,
-        cardId: (bill as any).cardId ?? undefined, isPaid: true, paymentDate: cleanPaymentDate,
+        cardId: cardId || (bill as any).cardId || undefined, isPaid: true, paymentDate: cleanPaymentDate,
         isInvoicePayment: isCardBill, invoiceMonthYear: safeInv, debtId: isDebtBill ? (bill as any).debtId : undefined, transactionType: 'punctual'
-      });
+      } as any);
 
-      if (!bill.isVirtual) await updateBill(bill.id, { status: 'paid', paymentDate: cleanPaymentDate });
+      if (!bill.isVirtual && bill.id) await updateBill(bill.id, { status: 'paid', paymentDate: cleanPaymentDate });
       else if (isCardBill) {
         setState(prev => {
           if (prev.transactions.some(t => t.isInvoicePayment && t.invoiceMonthYear === safeInv && t.isPaid && t.cardId === (bill as any).cardId)) return prev;
-          return { ...prev, transactions: [...prev.transactions, { id: crypto.randomUUID(), description: `Pgto: ${bill.name}`, amount: payAmount, type: 'expense', date: cleanPaymentDate, accountId, cardId: (bill as any).cardId, isPaid: true, paymentDate: cleanPaymentDate, isInvoicePayment: true, invoiceMonthYear: safeInv, transactionType: 'punctual', userId: prev.transactions[0]?.userId || '' } as any] };
+          return { ...prev, transactions: [...prev.transactions, { id: crypto.randomUUID(), description: `Pgto: ${bill.name}`, amount: payAmount, type: 'expense', date: cleanPaymentDate, accountId, cardId: cardId || (bill as any).cardId, isPaid: true, paymentDate: cleanPaymentDate, isInvoicePayment: true, invoiceMonthYear: safeInv, transactionType: 'punctual', userId: prev.transactions[0]?.userId || '' } as any] };
         });
         return;
       } else if (!isPartial) {

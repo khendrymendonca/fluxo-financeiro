@@ -17,7 +17,7 @@ interface TransactionListProps {
   bills: Bill[];
   onDelete: (id: string) => void;
   onEdit: (transaction: Transaction) => void;
-  onPayBill: (bill: Bill, accountId?: string, paymentDate?: string, isPartial?: boolean, partialAmount?: number, isAutomatic?: boolean) => Promise<void>;
+  onPayBill: (bill: Bill, accountId?: string, paymentDate?: string, isPartial?: boolean, partialAmount?: number, cardId?: string) => Promise<void>;
   onDeleteBill?: (id: string, applyToFuture?: boolean) => void;
 }
 
@@ -181,7 +181,8 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     if (payingItem.isBill) {
       const bill = bills.find(b => b.id === payingItem.billId);
       if (bill) {
-        await onPayBill(bill, isCard ? undefined : targetId, paymentDate, false);
+        // ✅ FIX: passa cardId se for pagamento via cartão
+        await onPayBill(bill, isCard ? undefined : targetId, paymentDate, false, undefined, isCard ? targetId : undefined);
       }
     } else {
       await togglePaid((payingItem as Transaction).id, true, isCard ? undefined : targetId, paymentDate, isCard ? targetId : undefined);
