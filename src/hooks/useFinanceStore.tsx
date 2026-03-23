@@ -55,6 +55,13 @@ function useFinanceProvider() {
     return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
   }, []);
 
+  const nextMonth = useCallback(() => setViewDate(prev => addMonths(prev, 1)), []);
+  const prevMonth = useCallback(() => setViewDate(prev => addMonths(prev, -1)), []);
+  const nextDay = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setDate(d.getDate() + 1); return d; }), []);
+  const prevDay = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setDate(d.getDate() - 1); return d; }), []);
+  const nextYear = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setFullYear(d.getFullYear() + 1); return d; }), []);
+  const prevYear = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setFullYear(d.getFullYear() - 1); return d; }), []);
+
   const getCardSettingsForDate = useCallback((card: CreditCard, targetDate: Date) => {
     if (!card.history || card.history.length === 0) return { dueDay: card.dueDay, closingDay: card.closingDay };
     const sortedHistory = [...card.history].sort(
@@ -584,13 +591,6 @@ function useFinanceProvider() {
       .reduce((acc, t) => acc + (t.type === 'income' ? -t.amount : t.amount), 0);
     return currentBalance + delta;
   }, [state.accounts, state.transactions, viewDate, viewMode, parseLocalDate]);
-
-  const nextMonth = useCallback(() => setViewDate(prev => addMonths(prev, 1)), []);
-  const prevMonth = useCallback(() => setViewDate(prev => addMonths(prev, -1)), []);
-  const nextDay = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setDate(d.getDate() + 1); return d; }), []);
-  const prevDay = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setDate(d.getDate() - 1); return d; }), []);
-  const nextYear = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setFullYear(d.getFullYear() + 1); return d; }), []);
-  const prevYear = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setFullYear(d.getFullYear() - 1); return d; }), []);
 
   const addCategory = useCallback(async (cat: any) => { await supabase.from('categories').insert({ ...cat, user_id: (await supabase.auth.getUser()).data.user?.id }); await fetchInitialData(); }, [fetchInitialData]);
   const updateCategory = useCallback(async (id: string, upd: any) => { await supabase.from('categories').update(upd).eq('id', id); await fetchInitialData(); }, [fetchInitialData]);
