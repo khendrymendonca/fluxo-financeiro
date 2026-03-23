@@ -53,6 +53,7 @@ export interface Transaction {
   isInvoicePayment?: boolean;
   // ✅ ADICIONADO: rastreabilidade de origem para bills convertidas
   isVirtual?: boolean;
+  isAutomatic?: boolean;
   originalBillId?: string;
 }
 

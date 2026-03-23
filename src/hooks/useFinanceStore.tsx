@@ -194,8 +194,17 @@ function useFinanceProvider() {
     });
 
     if (updates.length > 0) {
-      await supabase.from('transactions').upsert(updates.map(u => ({ id: u.id, invoice_month_year: u.invoice_month_year })));
-      return true;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('transactions').upsert(updates.map(u => ({
+            id: u.id,
+            invoice_month_year: u.invoice_month_year,
+            user_id: user.id // Adicionado para satisfazer RLS
+          })));
+          return true;
+        }
+      } catch (e) { console.error('Upsert failed', e); }
     }
     return false;
   }, [calcInvoiceMonthYear, parseLocalDate]);
@@ -250,7 +259,12 @@ function useFinanceProvider() {
         return { ...acc, balance: Math.round(balance * 100) / 100, userId: acc.user_id, accountType: acc.account_type, hasOverdraft: acc.has_overdraft || false, overdraftLimit: acc.overdraft_limit || 0 };
       });
 
-      if (txUpdates.length > 0) await supabase.from('transactions').upsert(txUpdates.map(u => ({ id: u.id, is_paid: u.is_paid, payment_date: u.payment_date })));
+      if (txUpdates.length > 0 && user) await supabase.from('transactions').upsert(txUpdates.map(u => ({
+        id: u.id,
+        is_paid: u.isPaid,
+        payment_date: u.paymentDate,
+        user_id: user.id
+      })));
       for (const [id, bal] of Object.entries(accUpdates)) await supabase.from('accounts').update({ balance: bal }).eq('id', id);
 
       setState({
@@ -327,7 +341,7 @@ function useFinanceProvider() {
     } catch (err) { toast({ title: 'Erro ao remover conta', variant: 'destructive' }); }
   }, [state.bills, parseLocalDate]);
 
-  const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id'>) => {
+  const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id' | 'userId'>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -359,7 +373,7 @@ function useFinanceProvider() {
     try {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const validCat = (tx.categoryId && uuidRegex.test(tx.categoryId)) ? tx.categoryId : null;
-      const payload = { description: tx.description, amount: tx.amount, category_id: validCat, account_id: tx.accountId, card_id: tx.card_id, is_paid: tx.isPaid, payment_date: tx.paymentDate, is_automatic: tx.isAutomatic };
+      const payload = { description: tx.description, amount: tx.amount, category_id: validCat, account_id: tx.accountId, card_id: tx.cardId, is_paid: tx.isPaid, payment_date: tx.paymentDate, is_automatic: tx.isAutomatic };
       await supabase.from('transactions').update(payload).eq('id', tx.id);
       await fetchInitialData();
     } catch (err) { toast({ title: 'Erro ao atualizar', variant: 'destructive' }); }
@@ -372,11 +386,16 @@ function useFinanceProvider() {
     } catch (err) { toast({ title: 'Erro ao deletar', variant: 'destructive' }); }
   }, []);
 
-  const togglePaid = useCallback(async (id: string, isPaid: boolean, accId?: string, date?: string) => {
+  const togglePaid = useCallback(async (id: string, isPaid: boolean, accId?: string, date?: string, cardId?: string) => {
     try {
       const tx = state.transactions.find(t => t.id === id);
       if (!tx) return;
-      const payload = { is_paid: isPaid, payment_date: isPaid ? (date || todayLocalString()) : null, account_id: accId || tx.accountId };
+      const payload: any = {
+        is_paid: isPaid,
+        payment_date: isPaid ? (date || todayLocalString()) : null,
+        account_id: cardId ? null : (accId || tx.accountId),
+        card_id: cardId || tx.cardId
+      };
       await supabase.from('transactions').update(payload).eq('id', id);
       await fetchInitialData();
     } catch (err) { toast({ title: 'Erro ao alterar status', variant: 'destructive' }); }

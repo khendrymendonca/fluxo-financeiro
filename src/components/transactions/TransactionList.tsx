@@ -17,7 +17,7 @@ interface TransactionListProps {
   bills: Bill[];
   onDelete: (id: string) => void;
   onEdit: (transaction: Transaction) => void;
-  onPayBill: (bill: Bill, accountId?: string, paymentDate?: string, isPartial?: boolean, partialAmount?: number) => Promise<void>;
+  onPayBill: (bill: Bill, accountId?: string, paymentDate?: string, isPartial?: boolean, partialAmount?: number, isAutomatic?: boolean) => Promise<void>;
   onDeleteBill?: (id: string, applyToFuture?: boolean) => void;
 }
 
@@ -179,7 +179,10 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   const executePayment = async (targetId: string, isCard: boolean) => {
     if (!payingItem) return;
     if (payingItem.isBill) {
-      await onPayBill(payingItem.billId, isCard ? undefined : targetId, paymentDate, isCard ? targetId : undefined);
+      const bill = bills.find(b => b.id === payingItem.billId);
+      if (bill) {
+        await onPayBill(bill, isCard ? undefined : targetId, paymentDate, false);
+      }
     } else {
       await togglePaid((payingItem as Transaction).id, true, isCard ? undefined : targetId, paymentDate, isCard ? targetId : undefined);
     }
