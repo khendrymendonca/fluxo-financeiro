@@ -68,7 +68,12 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     parseLocalDate(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' });
 
   const displayItems = [
-    ...transactions.map(t => ({ ...t, isBill: false, isPending: !t.isPaid })),
+    ...transactions.map(t => {
+      // ✅ REGRA DE BOM SENSO: Compras no cartão (cardId presente e não é pagamento de fatura) 
+      // NUNCA são pendentes, elas já estão na fatura.
+      const isPending = (t.cardId && !t.isInvoicePayment) ? false : !t.isPaid;
+      return { ...t, isBill: false, isPending };
+    }),
     ...bills
       .filter(b => b.status === 'pending' && b.categoryId !== 'card-payment')
       .map(b => ({

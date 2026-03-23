@@ -383,8 +383,11 @@ function useFinanceProvider() {
         subcategoryId: t.subcategory_id,
         accountId: t.account_id,
         cardId: t.card_id,
-        isPaid: t.is_paid !== undefined ? t.is_paid : parseLocalDate(t.date) <= new Date(),
+        // ✅ REGRA DE BOM SENSO: Se tem cardId e não é pagamento de fatura, já está "pago" (abateu limite)
+        // Se for débito em conta, segue a regra da data ou status de pago.
+        isPaid: (t.card_id && !t.is_invoice_payment) ? true : (t.is_paid !== undefined ? t.is_paid : parseLocalDate(t.date) <= new Date()),
         isRecurring: t.is_recurring,
+        isAutomatic: t.is_automatic || false,
         installmentGroupId: t.installment_group_id,
         installmentNumber: t.installment_number,
         installmentTotal: t.installment_total,
