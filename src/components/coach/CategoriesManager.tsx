@@ -1,6 +1,7 @@
 ﻿import { useState } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { useCategories, useSubcategories, useCategoryGroups, useBudgetRule } from '@/hooks/useFinanceQueries';
+import { useCategories, useSubcategories, useCategoryGroups } from '@/hooks/useFinanceQueries';
+import { useBudgetRule } from '@/hooks/useBudgetCoach';
 import { 
   useAddCategory, 
   useDeleteCategory, 
