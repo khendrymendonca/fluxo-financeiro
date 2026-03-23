@@ -462,30 +462,30 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
 
                       {/* Painel de parcelas futuras */}
                       {isGroupExpanded && hasInstallmentGroup && (
-                        <div className="bg-info/5 border-t border-info/20 p-4 animate-fade-in">
+                        <div className={cn("border-t p-4 animate-fade-in", isIncome ? "bg-success/5 border-success/20" : "bg-info/5 border-info/20")}>
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
                             <div>
-                              <h4 className="text-sm font-black uppercase text-info tracking-wider flex items-center gap-2">
-                                <FastForward className="w-4 h-4" /> Antecipar Parcelas Futuras
+                              <h4 className={cn("text-sm font-black uppercase tracking-wider flex items-center gap-2", isIncome ? "text-success" : "text-info")}>
+                                <FastForward className="w-4 h-4" /> {isIncome ? 'Receber Parcelas Futuras' : 'Antecipar Parcelas Futuras'}
                               </h4>
                               <p className="text-xs text-muted-foreground mt-1">{futureInstallments.length} parcela(s) pendente(s).</p>
                             </div>
                             <div className="flex items-center gap-2">
                               <select className="h-9 rounded-lg border border-input bg-background px-2 py-1 text-xs font-bold flex-1 md:w-40"
                                 value={anticipateAccount} onChange={e => setAnticipateAccount(e.target.value)}>
-                                <option value="">Debitar de...</option>
+                                <option value="">{isIncome ? 'Entrar na conta...' : 'Debitar de...'}</option>
                                 {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
                               </select>
                               {anticipatingIds.size > 0 && (
                                 <Button size="sm"
                                   onClick={() => handleAnticipateSelected(futureInstallments)}
-                                  className="h-9 px-4 rounded-xl bg-info/80 hover:bg-info/70 text-white font-black uppercase text-[10px] tracking-wider">
+                                  className={cn("h-9 px-4 rounded-xl text-white font-black uppercase text-[10px] tracking-wider", isIncome ? "bg-success/80 hover:bg-success/70" : "bg-info/80 hover:bg-info/70")}>
                                   Selecionadas ({anticipatingIds.size})
                                 </Button>
                               )}
                               <Button size="sm"
                                 onClick={() => handleAnticipateAll(futureInstallments)}
-                                className="h-9 px-4 rounded-xl bg-info hover:bg-info/90 text-white font-black uppercase text-[10px] tracking-wider">
+                                className={cn("h-9 px-4 rounded-xl text-white font-black uppercase text-[10px] tracking-wider", isIncome ? "bg-success hover:bg-success/90" : "bg-info hover:bg-info/90")}>
                                 Tudo ({futureInstallments.length})
                               </Button>
                             </div>
@@ -494,7 +494,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                             {futureInstallments.map(inst => (
                               <div key={inst.id} className={cn(
                                 "flex items-center justify-between p-3 rounded-xl bg-background/60 border border-border/50",
-                                anticipatingIds.has(inst.id) && "border-info/50 bg-info/10"
+                                anticipatingIds.has(inst.id) && (isIncome ? "border-success/50 bg-success/10" : "border-info/50 bg-info/10")
                               )}>
                                 <div className="flex items-center gap-3">
                                   <input type="checkbox" checked={anticipatingIds.has(inst.id)}
@@ -507,16 +507,16 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                       });
                                     }} className="w-4 h-4 rounded" />
                                   <div>
-                                    <span className="text-xs font-black text-info">Parcela {inst.installmentNumber}/{inst.installmentTotal}</span>
+                                    <span className={cn("text-xs font-black", isIncome ? "text-success" : "text-info")}>Parcela {inst.installmentNumber}/{inst.installmentTotal}</span>
                                     <p className="text-[10px] text-muted-foreground">Vence em {formatShortDate(inst.date)}</p>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-sm font-black text-danger">{formatCurrency(inst.amount)}</span>
+                                  <span className={cn("text-sm font-black", isIncome ? "text-success" : "text-danger")}>{formatCurrency(inst.amount)}</span>
                                   <Button size="sm" variant="outline"
                                     onClick={() => handleAnticipatePayment(inst)}
-                                    className="h-8 px-3 rounded-lg border-info/30 text-info hover:bg-info/20 text-[10px] font-black uppercase">
-                                    Pagar
+                                    className={cn("h-8 px-3 rounded-lg text-[10px] font-black uppercase", isIncome ? "border-success/30 text-success hover:bg-success/20" : "border-info/30 text-info hover:bg-info/20")}>
+                                    {isIncome ? 'Receber' : 'Pagar'}
                                   </Button>
                                 </div>
                               </div>
