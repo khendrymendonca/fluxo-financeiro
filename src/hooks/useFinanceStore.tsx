@@ -393,7 +393,8 @@ function useFinanceProvider() {
         installmentTotal: t.installment_total,
         invoiceMonthYear: t.invoice_month_year,
         debtId: t.debt_id,
-        paymentDate: t.payment_date
+        date: t.date?.split('T')[0],
+        paymentDate: t.payment_date?.split('T')[0]
       }));
 
       const loadedCards = (cardsRes.data || []).map((c: any) => ({
@@ -473,7 +474,12 @@ function useFinanceProvider() {
       // 3. Persistir tudo em background (Dividir e Conquistar)
       if (transactionsToUpdate.length > 0) {
         console.log(`[Sync] Persistindo ${transactionsToUpdate.length} correções...`);
-        await supabase.from('transactions').upsert(transactionsToUpdate);
+        // ✅ FIX: Envia apenas campos básicos para evitar erro 400 caso colunas novas não existam
+        await supabase.from('transactions').upsert(transactionsToUpdate.map(t => ({
+          id: t.id,
+          is_paid: t.is_paid,
+          payment_date: t.payment_date
+        })));
       }
 
       for (const [accId, balance] of Object.entries(accountsToUpdate)) {
@@ -1623,6 +1629,7 @@ function useFinanceProvider() {
       const isVirtual = billId.startsWith('virtual-') || billId.startsWith('card-') || billId.startsWith('debt-');
       const finalAmount = customAmount !== undefined ? customAmount : bill.amount;
       const isPartial = customAmount !== undefined && Math.abs(customAmount - bill.amount) > 0.01;
+      const cleanPaymentDate = paymentDate.split('T')[0];
 
       if (isVirtual) {
         if (!isPartial) {
@@ -1630,8 +1637,8 @@ function useFinanceProvider() {
             name: bill.name,
             amount: bill.amount,
             type: bill.type,
-            dueDate: bill.dueDate,
-            paymentDate: paymentDate,
+            dueDate: bill.dueDate.split('T')[0],
+            paymentDate: cleanPaymentDate,
             status: 'paid',
             categoryId: bill.categoryId,
             subcategoryId: bill.subcategoryId,
@@ -1642,15 +1649,15 @@ function useFinanceProvider() {
         }
       } else {
         if (!isPartial) {
-          await updateBill(billId, { status: 'paid', paymentDate, accountId: accountId || undefined });
+          await updateBill(billId, { status: 'paid', paymentDate: cleanPaymentDate, accountId: accountId || undefined });
         }
       }
 
       const isCardBill = bill.id.startsWith('card-') || !!bill.cardId;
 
       await addTransaction({
-        date: bill.dueDate,
-        paymentDate: paymentDate,
+        date: bill.dueDate.split('T')[0],
+        paymentDate: cleanPaymentDate,
         description: isPartial ? `Abatimento: ${bill.name}` : `Pgto: ${bill.name}`,
         amount: finalAmount,
         type: bill.type === 'payable' ? 'expense' : 'income',
@@ -1658,15 +1665,12 @@ function useFinanceProvider() {
         categoryId: bill.categoryId,
         subcategoryId: bill.subcategoryId,
         accountId: accountId || undefined,
-        cardId: bill.cardId || cardId || undefined,
+        cardId: isCardBill ? undefined : (bill.cardId || cardId || undefined), // se for pgto de fatura, sai da conta
         isPaid: true,
         userId: bill.userId,
         isInvoicePayment: isCardBill,
-        invoiceMonthYear: isCardBill ? format(parseLocalDate(bill.dueDate), 'yyyy-MM') : undefined
+        invoiceMonthYear: isCardBill ? bill.id.split('-').slice(-2).join('-') : undefined
       });
-
-      // ✅ FIX: bloco "if (bill.isFixed) { addBill próximo mês }" REMOVIDO
-      // As 12 instâncias já foram criadas no addBill com project=true.
 
       toast({ title: isPartial ? 'Abatimento registrado' : 'Pagamento concluído!' });
     } catch (err) {
