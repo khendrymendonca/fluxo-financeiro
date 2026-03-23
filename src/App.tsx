@@ -1,3 +1,5 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,9 +13,16 @@ import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 
-// ✅ FIX: CardsDashboard e ReportsDashboard removidos como rotas diretas —
-// a navegação real acontece dentro do Index via currentView.
-// Se no futuro migrar para rotas por URL, adicionar de volta aqui.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 30, // 30 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const AppRoutes = () => {
   const { user, loading } = useAuth();
@@ -39,21 +48,23 @@ const AppRoutes = () => {
 };
 
 // ✅ FIX: BrowserRouter movido para fora — envolve tudo
-// ✅ FIX: QueryClientProvider removido — react-query não é usado no projeto
 const App = () => (
-  <BrowserRouter>
-    <ThemeProvider>
-      <TooltipProvider>
-        <AuthProvider>
-          <FinanceProvider>
-            <Toaster />
-            <Sonner />
-            <AppRoutes />
-          </FinanceProvider>
-        </AuthProvider>
-      </TooltipProvider>
-    </ThemeProvider>
-  </BrowserRouter>
+  <QueryClientProvider client={queryClient}>
+    <BrowserRouter>
+      <ThemeProvider>
+        <TooltipProvider>
+          <AuthProvider>
+            <FinanceProvider>
+              <Toaster />
+              <Sonner />
+              <AppRoutes />
+            </FinanceProvider>
+          </AuthProvider>
+        </TooltipProvider>
+      </ThemeProvider>
+    </BrowserRouter>
+    <ReactQueryDevtools initialIsOpen={false} />
+  </QueryClientProvider>
 );
 
 export default App;
