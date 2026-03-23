@@ -851,13 +851,18 @@ function useFinanceProvider() {
           invoiceMonthYear = calcInvoiceMonthYear(parseLocalDate(txData.date), card);
         }
 
+        // ✅ FIX: Garante que category_id seja um UUID válido ou null
+        // O banco de dados quebra se enviarmos strings como 'card-payment' ou 'others'
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const validCategoryId = (txData.categoryId && uuidRegex.test(txData.categoryId)) ? txData.categoryId : null;
+
         transactionsToAdd.push({
           user_id: user.id,
           description: txData.description,
           amount: txData.amount,
           type: txData.type,
           transaction_type: txData.transactionType || 'punctual',
-          category_id: txData.categoryId || null,
+          category_id: validCategoryId,
           category: categoryName,
           subcategory_id: txData.subcategoryId || null,
           date: txData.date,
@@ -1004,12 +1009,16 @@ function useFinanceProvider() {
 
       const categoryName = state.categories.find(c => c.id === updatedTx.categoryId)?.name || 'Outros';
 
+      // ✅ FIX: Garante UUID válido no update
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const validCategoryId = (updatedTx.categoryId && uuidRegex.test(updatedTx.categoryId)) ? updatedTx.categoryId : null;
+
       const updateData = {
         description: updatedTx.description,
         amount: updatedTx.amount,
         type: updatedTx.type,
         transaction_type: updatedTx.transactionType,
-        category_id: updatedTx.categoryId || null,
+        category_id: validCategoryId,
         category: categoryName,
         subcategory_id: updatedTx.subcategoryId || null,
         date: updatedTx.date,
@@ -1034,7 +1043,7 @@ function useFinanceProvider() {
             .update({
               description: updatedTx.description,
               amount: updatedTx.amount,
-              category_id: updatedTx.categoryId,
+              category_id: validCategoryId,
               category: categoryName,
               subcategory_id: updatedTx.subcategoryId,
               account_id: updatedTx.accountId,
