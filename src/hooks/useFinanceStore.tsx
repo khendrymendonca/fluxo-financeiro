@@ -445,6 +445,25 @@ function useFinanceProvider() {
     return acc ? acc.balance : 0;
   }, [state.accounts]);
 
+  const nextMonth = useCallback(() => setViewDate(prev => addMonths(prev, 1)), []);
+  const prevMonth = useCallback(() => setViewDate(prev => addMonths(prev, -1)), []);
+  const nextDay = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setDate(d.getDate() + 1); return d; }), []);
+  const prevDay = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setDate(d.getDate() - 1); return d; }), []);
+  const nextYear = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setFullYear(d.getFullYear() + 1); return d; }), []);
+  const prevYear = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setFullYear(d.getFullYear() - 1); return d; }), []);
+
+  const addCategory = useCallback(async (cat: any) => { await supabase.from('categories').insert({ ...cat, user_id: (await supabase.auth.getUser()).data.user?.id }); await fetchInitialData(); }, [fetchInitialData]);
+  const updateCategory = useCallback(async (id: string, upd: any) => { await supabase.from('categories').update(upd).eq('id', id); await fetchInitialData(); }, [fetchInitialData]);
+  const deleteCategory = useCallback(async (id: string) => { await supabase.from('categories').delete().eq('id', id); await fetchInitialData(); }, [fetchInitialData]);
+  const addSubcategory = useCallback(async (sub: any) => { await supabase.from('subcategories').insert(sub); await fetchInitialData(); }, [fetchInitialData]);
+  const deleteSubcategory = useCallback(async (id: string) => { await supabase.from('subcategories').delete().eq('id', id); await fetchInitialData(); }, [fetchInitialData]);
+
+  const addDebt = useCallback(async (debt: any) => { await supabase.from('debts').insert({ ...debt, user_id: (await supabase.auth.getUser()).data.user?.id }); await fetchInitialData(); }, [fetchInitialData]);
+  const updateDebt = useCallback(async (id: string, upd: any) => { await supabase.from('debts').update(upd).eq('id', id); await fetchInitialData(); }, [fetchInitialData]);
+  const deleteDebt = useCallback(async (id: string) => { await supabase.from('debts').delete().eq('id', id); await fetchInitialData(); }, [fetchInitialData]);
+
+  const seedCoach = useCallback(async () => { toast({ title: 'Em breve!' }); }, []);
+
   const totalNetWorth = state.accounts.filter(a => a.accountType === 'checking' || a.accountType.startsWith('benefit_')).reduce((s, a) => s + Number(a.balance), 0);
   const totalIncome = currentMonthTransactions.filter(t => t.type === 'income' && (t.isPaid || parseLocalDate(t.date) <= new Date())).reduce((s, t) => s + Number(t.amount), 0);
   const totalExpenses = currentMonthTransactions.filter(t => t.type === 'expense' && (t.isPaid || parseLocalDate(t.date) <= new Date())).reduce((s, t) => s + Number(t.amount), 0);
