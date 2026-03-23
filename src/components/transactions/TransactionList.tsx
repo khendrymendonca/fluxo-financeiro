@@ -399,7 +399,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                   className="flex-1 md:flex-none h-9 px-4 rounded-xl border-primary/30 text-primary hover:bg-primary/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider transition-all hover:scale-105 active:scale-95">
                                   <CheckCircle2 className="w-4 h-4" /> Baixar Agora
                                 </Button>
-                                {hasInstallmentGroup && futureInstallments.length > 0 && (
+                                {hasInstallmentGroup && futureInstallments.length > 0 && !item.isRecurring && (
                                   <Button size="sm" variant="outline"
                                     onClick={() => setExpandedGroup(isGroupExpanded ? null : item.installmentGroupId)}
                                     className="h-9 px-3 rounded-xl border-info/30 text-info hover:bg-info/10 flex items-center gap-1 font-black uppercase text-[10px] tracking-wider transition-all">
@@ -424,7 +424,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                               </div>
                             ) : (
                               <div className="flex opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all gap-1 justify-end w-full">
-                                {hasInstallmentGroup && futureInstallments.length > 0 && (
+                                {hasInstallmentGroup && futureInstallments.length > 0 && !item.isRecurring && (
                                   <Button size="sm" variant="outline"
                                     onClick={() => setExpandedGroup(isGroupExpanded ? null : item.installmentGroupId)}
                                     className="h-9 px-3 rounded-xl border-info/30 text-info hover:bg-info/10 flex items-center gap-1 font-black uppercase text-[10px] tracking-wider transition-all">
