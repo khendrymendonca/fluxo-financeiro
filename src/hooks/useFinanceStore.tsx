@@ -1699,7 +1699,44 @@ function useFinanceProvider() {
       }
 
       // Faturas virtuais de cartão: NÃO cria bill, a transação já basta
-      if (isCardBill) return;
+      if (isCardBill) {
+        // ✅ Atualiza o estado local imediatamente com a transação de pagamento
+        // sem precisar de re-fetch — o setState já vai re-computar o currentMonthBills
+        setState(prev => {
+          const alreadySaved = prev.transactions.some(
+            t => t.isInvoicePayment &&
+                 t.invoiceMonthYear === safeInvoiceMonthYear &&
+                 t.isPaid &&
+                 (t.cardId === (bill as any).cardId || t.description === `Pgto: ${bill.name}`)
+          );
+          if (alreadySaved) return prev;
+          return {
+            ...prev,
+            transactions: [
+              ...prev.transactions,
+              {
+                id: crypto.randomUUID(),
+                description: `Pgto: ${bill.name ?? 'Conta'}`,
+                amount: payAmount,
+                type: 'expense' as const,
+                categoryId: undefined,
+                date: cleanPaymentDate,
+                accountId: accountId ?? undefined,
+                cardId: undefined,
+                isPaid: true,
+                paymentDate: cleanPaymentDate,
+                isInvoicePayment: true,
+                invoiceMonthYear: safeInvoiceMonthYear,
+                transactionType: 'punctual' as const,
+                isRecurring: false,
+                isAutomatic: false,
+                userId: prev.transactions[0]?.userId ?? '',
+              } as any,
+            ],
+          };
+        });
+        return;
+      }
 
       // Bills virtuais normais (fixas recorrentes e dívidas): cria registro paid
       if (!isPartial) {
@@ -1726,7 +1763,7 @@ function useFinanceProvider() {
       console.error('Erro no payBill:', err);
       toast({ title: 'Erro ao baixar conta', variant: 'destructive' });
     }
-  }, [todayLocalString, addTransaction, addBill, updateBill, viewDate]);
+  }, [todayLocalString, addTransaction, addBill, updateBill, viewDate, setState]);
 
   const seedCoach = useCallback(async () => {
     try {
