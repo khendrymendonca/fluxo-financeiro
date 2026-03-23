@@ -405,16 +405,84 @@ function useFinanceProvider() {
         limit: Number(c.limit || 0),
       }));
 
+      // --- MÁQUINA DE SINCRONIZAÇÃO SMART (Requisição Única) ---
+      const today = new Date();
+      const transactionsToUpdate: any[] = [];
+      const accountsToUpdate: Record<string, number> = {};
+
+      // 1. Identificar reparos necessários em transações
+      loadedTransactions.forEach(t => {
+        let modified = false;
+        let updatePayload: any = {};
+
+        // Fix payment_date em recorrentes
+        if (t.isRecurring && t.installmentGroupId && !t.isInvoicePayment) {
+          const txDate = parseLocalDate(t.date);
+          const shouldBePaid = txDate <= today;
+          const targetPaymentDate = t.date.split('T')[0];
+          if (shouldBePaid && t.paymentDate !== targetPaymentDate) {
+            updatePayload.is_paid = true;
+            updatePayload.payment_date = targetPaymentDate;
+            modified = true;
+          }
+        }
+
+        // Baixa Automática
+        if ((t.isAutomatic || (t as any).is_automatic) && !t.isPaid && parseLocalDate(t.date) <= today && t.accountId) {
+          updatePayload.is_paid = true;
+          updatePayload.payment_date = t.date;
+          modified = true;
+        }
+
+        if (modified) {
+          transactionsToUpdate.push({ id: t.id, ...updatePayload });
+          t.isPaid = updatePayload.is_paid ?? t.isPaid;
+          t.paymentDate = updatePayload.payment_date ?? t.paymentDate;
+        }
+      });
+
+      // 2. AUTO-HEALING: Recalcular saldos de contas baseado na HISTÓRIA REAL
+      const finalAccounts = (accountsRes.data || []).map((acc: any) => {
+        const accountTransactions = loadedTransactions.filter(t => 
+          t.accountId === acc.id && 
+          t.isPaid && 
+          parseLocalDate(t.paymentDate || t.date) <= today
+        );
+
+        const realBalance = accountTransactions.reduce((sum, t) => {
+          const amount = Number(t.amount);
+          if (t.isInvoicePayment) return sum - amount;
+          return sum + (t.type === 'income' ? amount : -amount);
+        }, 0);
+
+        if (Math.abs(acc.balance - realBalance) > 0.01) {
+          accountsToUpdate[acc.id] = Math.round(realBalance * 100) / 100;
+        }
+
+        return {
+          ...acc,
+          balance: Math.round(realBalance * 100) / 100,
+          userId: acc.user_id,
+          accountType: acc.account_type,
+          hasOverdraft: acc.has_overdraft || false,
+          overdraftLimit: acc.overdraft_limit || 0,
+          monthlyYieldRate: acc.monthly_yield_rate || 0
+        };
+      });
+
+      // 3. Persistir tudo em background (Dividir e Conquistar)
+      if (transactionsToUpdate.length > 0) {
+        console.log(`[Sync] Persistindo ${transactionsToUpdate.length} correções...`);
+        await supabase.from('transactions').upsert(transactionsToUpdate);
+      }
+
+      for (const [accId, balance] of Object.entries(accountsToUpdate)) {
+        await supabase.from('accounts').update({ balance }).eq('id', accId);
+      }
+
       setState({
         transactions: loadedTransactions,
-        accounts: (accountsRes.data || []).map((a: any) => ({
-          ...a,
-          userId: a.user_id,
-          accountType: a.account_type,
-          hasOverdraft: a.has_overdraft || false,
-          overdraftLimit: a.overdraft_limit || 0,
-          monthlyYieldRate: a.monthly_yield_rate || 0
-        })),
+        accounts: finalAccounts,
         creditCards: loadedCards,
         savingsGoals: (goalsRes.data || []).map((g: any) => ({
           ...g,
@@ -479,80 +547,7 @@ function useFinanceProvider() {
         emergencyMonths: Number(localStorage.getItem('emergencyMonths')) || 12,
       });
 
-      // 1. Revalidação de Faturas
       await revalidateInvoiceMonths(loadedTransactions, loadedCards);
-
-      // 2. Correção de transações recorrentes e Baixas Automáticas
-      const today = new Date();
-      let hasChanges = false;
-
-      for (const t of loadedTransactions) {
-        let needsUpdate = false;
-        let updatePayload: any = {};
-
-        // Fix para transações recorrentes com payment_date errado
-        if (t.isRecurring && t.installmentGroupId && !t.isInvoicePayment) {
-          const txDate = parseLocalDate(t.date);
-          const shouldBePaid = txDate <= today;
-          const currentPaymentDate = t.paymentDate ? t.paymentDate.split('T')[0] : null;
-          const targetPaymentDate = t.date.split('T')[0];
-
-          if (shouldBePaid && currentPaymentDate !== targetPaymentDate) {
-            updatePayload = { ...updatePayload, is_paid: true, payment_date: targetPaymentDate };
-            needsUpdate = true;
-          } else if (!shouldBePaid && t.isPaid) {
-            updatePayload = { ...updatePayload, is_paid: false, payment_date: null };
-            needsUpdate = true;
-          }
-        }
-
-        // Fix para Baixa Automática (isAutomatic)
-        if ((t.isAutomatic || (t as any).is_automatic) && !t.isPaid && parseLocalDate(t.date) <= today && t.accountId) {
-          const change = t.type === 'income' ? t.amount : -t.amount;
-          updatePayload = { ...updatePayload, is_paid: true, payment_date: t.date };
-          needsUpdate = true;
-          
-          // Atualiza saldo da conta correspondente
-          const account = (accountsRes.data || []).find(a => a.id === t.accountId);
-          if (account) {
-            const newBalance = Number(account.balance) + change;
-            await supabase.from('accounts').update({ balance: newBalance }).eq('id', t.accountId);
-          }
-        }
-
-        if (needsUpdate) {
-          await supabase.from('transactions').update(updatePayload).eq('id', t.id);
-          hasChanges = true;
-        }
-      }
-
-      // Se houve qualquer alteração estrutural, recarregamos uma última vez para garantir
-      if (hasChanges) {
-        const { data: finalTxs } = await supabase.from('transactions').select('*');
-        if (finalTxs) {
-          setState(prev => ({
-            ...prev,
-            transactions: finalTxs.map((t: any) => ({
-              ...t,
-              userId: t.user_id,
-              transactionType: t.transaction_type,
-              categoryId: t.category_id,
-              subcategoryId: t.subcategory_id,
-              accountId: t.account_id,
-              cardId: t.card_id,
-              isPaid: t.is_paid !== undefined ? t.is_paid : parseLocalDate(t.date) <= new Date(),
-              isRecurring: t.is_recurring,
-              isAutomatic: t.is_automatic || false,
-              installmentGroupId: t.installment_group_id,
-              installmentNumber: t.installment_number,
-              installmentTotal: t.installment_total,
-              invoiceMonthYear: t.invoice_month_year,
-              debtId: t.debt_id,
-              paymentDate: t.payment_date
-            }))
-          }));
-        }
-      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({ title: 'Erro ao carregar dados', variant: 'destructive' });
