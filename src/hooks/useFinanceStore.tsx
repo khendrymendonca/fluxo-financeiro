@@ -116,22 +116,23 @@ function useFinanceProvider() {
 
   const currentMonthTransactions = useMemo(() => {
     return state.transactions.filter(t => {
-      // ✅ REGRA DE OURO REFORÇADA: 
-      // Se não é um pagamento de fatura de cartão (que é um consolidado), 
-      // a data FÍSICA do lançamento é a única verdade.
-      if (!t.isInvoicePayment) {
-        const tDate = parseLocalDate(t.date);
-        return tDate.getMonth() === viewDate.getMonth() && tDate.getFullYear() === viewDate.getFullYear();
+      // ✅ REGRA DE OURO ABSOLUTA: 
+      // O registro físico manda. Se a data do registro é Março, ele SÓ aparece em Março.
+      // Isso impede que lançamentos de outros meses "vazem" para o mês atual.
+      const tDate = parseLocalDate(t.date);
+      const isSameMonth = tDate.getMonth() === viewDate.getMonth() && tDate.getFullYear() === viewDate.getFullYear();
+
+      // Única exceção: Pagamentos de fatura que são lançados em um mês mas pertencem a outro (competência)
+      if (t.isInvoicePayment) {
+        const targetDate = getTransactionTargetDate(t);
+        return targetDate.getMonth() === viewDate.getMonth() && targetDate.getFullYear() === viewDate.getFullYear();
       }
 
-      // Apenas para pagamentos de fatura, usamos a lógica de competência
-      const targetDate = getTransactionTargetDate(t);
-      return targetDate.getMonth() === viewDate.getMonth() && targetDate.getFullYear() === viewDate.getFullYear();
-    }).sort((a, b) =>
+      return isSameMonth;
+    }).sort((a, b) => 
       parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime()
     );
   }, [state.transactions, viewDate, getTransactionTargetDate, parseLocalDate]);
-
   const currentMonthBills = useMemo(() => {
     const maxDate = new Date(2030, 11, 31);
     const virtualBills: Bill[] = [];
@@ -2013,14 +2014,14 @@ function useFinanceProvider() {
 
   const projectedBalance = totalNetWorth - totalPendingOutflows - pendingTransactionsAmount;
 
-  // ✅ FIX: totalIncome e totalExpenses consideram APENAS o que já foi pago ou é do passado
-  // Isso evita que o salário de Abril seja somado no balanço antes do dia chegar.
+  // ✅ FIX: totalIncome e totalExpenses consideram APENAS o que pertence ao mês de visualização
+  // seguindo a mesma regra estrita do currentMonthTransactions.
   const totalIncome = currentMonthTransactions
-    .filter(t => t.type === 'income' && !t.isInvoicePayment && (t.isPaid || parseLocalDate(t.date) <= new Date()))
+    .filter(t => t.type === 'income' && (t.isPaid || parseLocalDate(t.date) <= new Date()))
     .reduce((acc, t) => acc + Number(t.amount), 0);
 
   const totalExpenses = currentMonthTransactions
-    .filter(t => t.type === 'expense' && !t.isInvoicePayment && (t.isPaid || parseLocalDate(t.date) <= new Date()))
+    .filter(t => t.type === 'expense' && (t.isPaid || parseLocalDate(t.date) <= new Date()))
     .reduce((acc, t) => acc + Number(t.amount), 0);
 
   return {

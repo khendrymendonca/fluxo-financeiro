@@ -92,6 +92,11 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   ];
 
   const getGroupDate = (item: any): string => {
+    // Transações recorrentes sempre agrupam pela data física do mês,
+    // independente de quando foram pagas — evita que apareçam com data do mês original
+    if (item.isRecurring) {
+      return item.date?.split('T')[0] || todayLocalString();
+    }
     if (!item.isPending && item.paymentDate) {
       return item.paymentDate.split('T')[0];
     }
@@ -242,7 +247,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
           className="w-full h-12 pl-4 pr-10 rounded-2xl border-2 border-border bg-card focus:border-primary focus:ring-0 transition-all outline-none font-medium"
         />
         {searchQuery && (
-          <button 
+          <button
             onClick={() => setSearchQuery('')}
             className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-full text-muted-foreground"
           >
