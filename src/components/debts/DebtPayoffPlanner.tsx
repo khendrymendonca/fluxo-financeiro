@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/utils/formatters';
 import { useState, useMemo } from 'react';
 import { Debt } from '@/types/finance';
 import { Calculator, Zap, Snowflake, TrendingDown, Clock, ShieldCheck } from 'lucide-react';

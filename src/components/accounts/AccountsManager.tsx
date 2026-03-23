@@ -1,4 +1,5 @@
 ﻿import { useState } from 'react';
+import { formatCurrency } from '@/utils/formatters';
 import { Building2, Plus, Trash2, X, Wallet, Pencil, ShieldCheck, ArrowRightLeft, TrendingUp } from 'lucide-react';
 import { Account, AccountType } from '@/types/finance';
 import { Button } from '@/components/ui/button';
@@ -48,11 +49,7 @@ export function AccountsManager({
   const [overdraftLimit, setOverdraftLimit] = useState('');
   const [monthlyYieldRate, setMonthlyYieldRate] = useState('');     
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
+  ).format(value);
   };
 
   // Helper function to calculate view balance locally since the store version might be deprecated or inconsistent

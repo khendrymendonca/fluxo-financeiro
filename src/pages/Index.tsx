@@ -83,12 +83,11 @@ export default function Index() {
     deleteBill,
     transferBetweenAccounts,
     seedCoach,
-    loading,
-    viewBalance,
-    totalNetWorth,
-    projectedBalance,
-    getPeriodStartBalance,
+    loading
   } = useFinanceStore();
+
+  const totalNetWorth = accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+  const projectedBalance = totalNetWorth + totalIncome - totalExpenses;
 
   const { mutate: seedCoachAction } = useSeedCoach();
   const emergencyData = useEmergencyFund(currentMonthTransactions);

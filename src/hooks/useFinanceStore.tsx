@@ -1,5 +1,5 @@
 import { useState, useMemo, createContext, useContext, useCallback } from 'react';
-import { FilterMode, Transaction, Bill } from '@/types/finance';
+import { FilterMode, Transaction, Bill, Account, SavingsGoal, Debt } from '@/types/finance';
 import { addMonths, subMonths, format } from 'date-fns';
 import {
   useAccounts,
@@ -17,6 +17,7 @@ import { useProjectedBills } from './useProjectedBills';
 import {
   useAddTransaction,
   useDeleteTransaction,
+  useUpdateTransaction,
   useToggleTransactionPaid
 } from './useTransactionMutations';
 import {
@@ -90,6 +91,7 @@ function useFinanceProvider() {
 
   // --- Mutations ---
   const addTransactionMutation = useAddTransaction();
+  const updateTransactionMutation = useUpdateTransaction();
   const deleteTransactionMutation = useDeleteTransaction();
   const togglePaidMutation = useToggleTransactionPaid();
 
@@ -194,11 +196,12 @@ function useFinanceProvider() {
 
     // Mutations exposed as direct functions for UI compatibility
     addTransaction: addTransactionMutation.mutateAsync,
-    deleteTransaction: deleteTransactionMutation.mutateAsync,
+    updateTransaction: (id: string, updates: Partial<Transaction>) => updateTransactionMutation.mutateAsync({ id, updates } as any),
+    deleteTransaction: (id: string, applyToFuture?: boolean) => deleteTransactionMutation.mutateAsync(id as any, { applyToFuture } as any),
     togglePaid: togglePaidMutation.mutateAsync,
 
     addAccount: addAccountMutation.mutateAsync,
-    updateAccount: updateAccountMutation.mutateAsync,
+    updateAccount: (id: string, updates: Partial<Account>) => updateAccountMutation.mutateAsync({ id, updates }),
     deleteAccount: deleteAccountMutation.mutateAsync,
     transferBetweenAccounts: (from: string, to: string, amount: number, desc: string, date: string, toType: 'account' | 'card' = 'account') =>
       transferMutation.mutateAsync({ fromAccountId: from, [toType === 'account' ? 'toAccountId' : 'toCardId']: to, amount: Number(amount), description: desc, date } as any),
@@ -214,12 +217,12 @@ function useFinanceProvider() {
     deleteCreditCard: deleteCardMutation.mutateAsync,
 
     addSavingsGoal: addGoalMutation.mutateAsync,
-    updateSavingsGoal: updateGoalMutation.mutateAsync,
+    updateSavingsGoal: (id: string, updates: Partial<SavingsGoal>) => updateGoalMutation.mutateAsync({ id, updates }),
     deleteSavingsGoal: deleteGoalMutation.mutateAsync,
-    depositToGoal: depositGoalMutation.mutateAsync,
+    depositToGoal: (goalId: string, amount: number, accountId: string) => depositGoalMutation.mutateAsync({ id: goalId, amount, accountId, goalName: '' }),
 
     addDebt: addDebtMutation.mutateAsync,
-    updateDebt: updateDebtMutation.mutateAsync,
+    updateDebt: (id: string, updates: Partial<Debt>) => updateDebtMutation.mutateAsync({ id, updates }),
     deleteDebt: deleteDebtMutation.mutateAsync,
 
     // Placeholders or helpers needed by UI

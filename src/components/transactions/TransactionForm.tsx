@@ -380,7 +380,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Data 1º Pagamento</Label>
-                    <Input type="date" value={debtFirstPaymentDate} onChange={e => setDebtFirstPaymentDate(e.target.value)} className="h-12 rounded-2xl border-2" required />
+                    <Input type="date" value={debtFirstPaymentDate?.split('T')[0] || ''} onChange={e => setDebtFirstPaymentDate(e.target.value)} className="h-12 rounded-2xl border-2" required />
                   </div>
                 </div>
 
@@ -456,7 +456,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Data</Label>
-                      <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-12 rounded-2xl border-2" />
+                      <Input type="date" value={date?.split('T')[0] || ''} onChange={e => setDate(e.target.value)} className="h-12 rounded-2xl border-2" />
                     </div>
                   </div>
                 </div>
@@ -479,7 +479,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                       <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
                         {activeTab === 'renda_fixa' ? 'Dia do Crédito' : 'Data'}
                       </Label>
-                      <Input type="date" value={date} onChange={e => { setDate(e.target.value); setInvoiceReference(e.target.value.slice(0, 7)); }} className="h-12 rounded-2xl border-2" required />
+                      <Input type="date" value={date?.split('T')[0] || ''} onChange={e => { setDate(e.target.value); setInvoiceReference(e.target.value.slice(0, 7)); }} className="h-12 rounded-2xl border-2" required />
                     </div>
                   </div>
 

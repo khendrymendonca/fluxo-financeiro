@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/utils/formatters';
 import { useState, useEffect, useMemo } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useBudgetRule } from '@/hooks/useBudgetCoach';

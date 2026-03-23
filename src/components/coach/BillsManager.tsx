@@ -380,7 +380,7 @@ export function BillsManager() {
                                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Data do Pagamento</label>
                                     <label className="relative flex items-center bg-muted/30 border border-input rounded-xl p-3 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all cursor-pointer">
                                         <Calendar className="absolute left-3 w-4 h-4 text-primary" />
-                                        <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)}
+                                        <input type="date" value={paymentDate?.split('T')[0] || ''} onChange={e => setPaymentDate(e.target.value)}
                                             className="w-full pl-8 pr-2 bg-transparent text-sm font-bold focus:outline-none appearance-none cursor-pointer text-foreground" />
                                     </label>
                                 </div>

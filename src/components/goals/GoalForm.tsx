@@ -112,7 +112,7 @@ export function GoalForm({ onSubmit, onClose }: GoalFormProps) {
             <Input
               id="deadline"
               type="date"
-              value={deadline}
+              value={deadline?.split('T')[0] || ''}
               onChange={(e) => setDeadline(e.target.value)}
               className="rounded-xl"
             />

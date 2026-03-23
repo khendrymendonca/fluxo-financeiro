@@ -120,7 +120,7 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
                             <div className="pt-2 border-t border-dashed border-border animate-in slide-in-from-top-2">
                                 <Label className="text-primary font-semibold">A partir de quando?</Label>
                                 <p className="text-xs text-muted-foreground mb-2">As faturas anteriores a esta data manterão os dias antigos.</p>
-                                <Input type="date" value={effectiveDate} onChange={e => setEffectiveDate(e.target.value)} className="bg-background" />
+                                <Input type="date" value={effectiveDate?.split('T')[0] || ''} onChange={e => setEffectiveDate(e.target.value)} className="bg-background" />
                             </div>
                         )}
                     </div>
