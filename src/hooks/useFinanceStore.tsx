@@ -52,6 +52,13 @@ export type FinanceContextData = ReturnType<typeof useFinanceProvider>;
 
 const FinanceContext = createContext<FinanceContextData | undefined>(undefined);
 
+// --- Helpers ---
+const parseLocalDate = (dateStr: string): Date => {
+  if (!dateStr) return new Date();
+  const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const data = useFinanceProvider();
   return <FinanceContext.Provider value={data}> {children} </FinanceContext.Provider>;
@@ -129,12 +136,33 @@ function useFinanceProvider() {
   }, [transactions, viewDate]);
 
   const currentMonthBills = useMemo(() => {
-    return projectedBills.filter(b => {
-      const bDate = new Date(b.dueDate);
+    // 1. Separamos o que é REAL (está no banco para este mês)
+    const realBills = rawBills.filter(b => {
+      if (b.isVirtual) return false;
+      const bDate = parseLocalDate(b.dueDate);
       if (viewMode === 'day') return bDate.getDate() === viewDate.getDate() && bDate.getMonth() === viewDate.getMonth() && bDate.getFullYear() === viewDate.getFullYear();
       return bDate.getMonth() === viewDate.getMonth() && bDate.getFullYear() === viewDate.getFullYear();
-    }).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-  }, [projectedBills, viewDate, viewMode]);
+    });
+
+    // 2. Filtramos as VIRTUAIS (projeções que vêm de useProjectedBills)
+    // Só deixamos passar a virtual se não houver uma REAL com o mesmo nome/id original
+    const filteredVirtualBills = projectedBills.filter(v => {
+      if (!v.isVirtual) return false;
+      const hasRealVersion = realBills.some(r => 
+        r.originalBillId === v.originalBillId || 
+        (r.name === v.name && Math.abs(r.amount - v.amount) < 0.01)
+      );
+      
+      return !hasRealVersion;
+    });
+
+    // 3. Juntamos as REAIS com as VIRTUAIS que sobraram
+    const allBills = [...realBills, ...filteredVirtualBills];
+
+    return allBills.sort((a, b) => 
+      parseLocalDate(a.dueDate).getTime() - parseLocalDate(b.dueDate).getTime()
+    );
+  }, [rawBills, projectedBills, viewDate, viewMode]);
 
   const totalBalance = useMemo(() => accounts.reduce((sum, acc) => sum + Number(acc.balance), 0), [accounts]);
   const totalIncome = useMemo(() => currentMonthTransactions.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
