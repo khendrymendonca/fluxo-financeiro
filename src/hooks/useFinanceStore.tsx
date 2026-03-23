@@ -611,6 +611,12 @@ function useFinanceProvider() {
       const billsToAdd = [];
       const count = (project && bill.isFixed) ? 12 : 1;
 
+      // ✅ FIX: Garante que IDs sejam UUIDs válidos ou null
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const validCategoryId = (bill.categoryId && uuidRegex.test(bill.categoryId)) ? bill.categoryId : null;
+      const validAccountId = (bill.accountId && uuidRegex.test(bill.accountId)) ? bill.accountId : null;
+      const validCardId = (bill.cardId && uuidRegex.test(bill.cardId)) ? bill.cardId : null;
+
       for (let i = 0; i < count; i++) {
         const baseDate = parseLocalDate(bill.dueDate);
         const instDate = addMonths(baseDate, i);
@@ -618,9 +624,9 @@ function useFinanceProvider() {
 
         billsToAdd.push({
           user_id: user.id,
-          category_id: bill.categoryId,
-          account_id: bill.accountId,
-          card_id: bill.cardId,
+          category_id: validCategoryId,
+          account_id: validAccountId,
+          card_id: validCardId,
           name: bill.name,
           amount: bill.amount,
           type: bill.type,
@@ -629,7 +635,7 @@ function useFinanceProvider() {
           status: bill.status,
           is_fixed: bill.isFixed,
           recurrence_rule: bill.recurrenceRule,
-          start_date: bill.startDate || bill.dueDate
+          start_date: (bill.startDate || bill.dueDate)?.split('T')[0]
         });
       }
 
@@ -1678,7 +1684,7 @@ function useFinanceProvider() {
         isPaid: true,
         userId: bill.userId,
         isInvoicePayment: isCardBill,
-        invoiceMonthYear: isCardBill ? bill.id.split('-').slice(-2).join('-') : undefined
+        invoiceMonthYear: isCardBill ? format(parseLocalDate(bill.dueDate), 'yyyy-MM') : undefined
       });
 
       toast({ title: isPartial ? 'Abatimento registrado' : 'Pagamento concluído!' });
