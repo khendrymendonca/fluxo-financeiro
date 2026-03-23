@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Plus, Wallet, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { useEmergencyFund } from '@/hooks/useEmergencyFund';
+import { useSeedCoach } from '@/hooks/useBudgetCoach';
 import { NavigationRail } from '@/components/layout/NavigationRail';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -88,10 +90,12 @@ export default function Index() {
     getPeriodStartBalance,
   } = useFinanceStore();
 
+  const { mutate: seedCoachAction } = useSeedCoach();
+  const emergencyData = useEmergencyFund(currentMonthTransactions);
+
   // ✅ FIX: renomeado para periodBalance para não confundir com viewBalance
   const periodBalance = totalIncome - totalExpenses;
   const categoryExpenses = getCategoryExpenses();
-  const emergencyData = getEmergencyFundData();
 
   const showCoachOnboarding = !loading && categories.length === 0;
 
@@ -137,7 +141,7 @@ export default function Index() {
                   Para começar a usar a regra 50-30-20 e ter inteligência sobre seus gastos,
                   precisamos configurar suas categorias iniciais.
                 </p>
-                <Button onClick={seedCoach} className="rounded-xl px-8 py-6 text-lg h-auto shadow-xl shadow-primary/20">
+                <Button onClick={seedCoachAction} className="rounded-xl px-8 py-6 text-lg h-auto shadow-xl shadow-primary/20">
                   Ativar Coach Agora
                 </Button>
               </div>
