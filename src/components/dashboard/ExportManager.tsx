@@ -1,18 +1,20 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { useAddTransaction } from '@/hooks/useTransactionMutations';
 import { Button } from '@/components/ui/button';
 import { Download, Upload, FileText, CheckCircle2, AlertCircle, HardDrive } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export function ExportManager() {
-    const { transactions, categories, accounts, addTransaction } = useFinanceStore();
+    const { transactions, categories, accounts } = useFinanceStore();
+    const { mutateAsync: addTransaction } = useAddTransaction();
     const [isImporting, setIsImporting] = useState(false);
 
     const exportToCSV = () => {
         try {
             if (transactions.length === 0) {
-                toast.error("Nenhuma transação para exportar.");
+                toast.error("Nenhuma transaÃ§Ã£o para exportar.");
                 return;
             }
 
@@ -25,7 +27,7 @@ export function ExportManager() {
                 categories.find(c => c.id === t.categoryId)?.name || '',
                 accounts.find(a => a.id === t.accountId)?.name || '',
                 t.transactionType,
-                t.isPaid ? 'Sim' : 'Não'
+                t.isPaid ? 'Sim' : 'NÃ£o'
             ]);
 
             const csvContent = [
@@ -42,7 +44,7 @@ export function ExportManager() {
             link.click();
             document.body.removeChild(link);
 
-            toast.success("Exportação concluída com sucesso!");
+            toast.success("ExportaÃ§Ã£o concluÃ­da com sucesso!");
         } catch (error) {
             console.error(error);
             toast.error("Erro ao exportar dados.");
@@ -65,7 +67,7 @@ export function ExportManager() {
 
                 // Basic validation of headers
                 if (!headers.includes('Valor') || !headers.includes('Tipo')) {
-                    toast.error("Formato de CSV inválido.");
+                    toast.error("Formato de CSV invÃ¡lido.");
                     return;
                 }
 
@@ -90,10 +92,10 @@ export function ExportManager() {
                     importedCount++;
                 }
 
-                toast.success(`${importedCount} transações importadas!`);
+                toast.success(`${importedCount} transaÃ§Ãµes importadas!`);
             } catch (error) {
                 console.error(error);
-                toast.error("Erro durante a importação.");
+                toast.error("Erro durante a importaÃ§Ã£o.");
             } finally {
                 setIsImporting(false);
             }
@@ -121,7 +123,7 @@ export function ExportManager() {
                     </div>
                     <div>
                         <h4 className="font-bold">Exportar CSV</h4>
-                        <p className="text-xs text-muted-foreground px-4">Baixe todas as suas transações em formato compatível com Excel.</p>
+                        <p className="text-xs text-muted-foreground px-4">Baixe todas as suas transaÃ§Ãµes em formato compatÃ­vel com Excel.</p>
                     </div>
                     <Button onClick={exportToCSV} className="w-full rounded-2xl h-12 font-bold gap-2">
                         Iniciar Download
@@ -135,7 +137,7 @@ export function ExportManager() {
                     </div>
                     <div>
                         <h4 className="font-bold">Importar Dados</h4>
-                        <p className="text-xs text-muted-foreground px-4">Sincronize transações de outros apps via arquivo CSV.</p>
+                        <p className="text-xs text-muted-foreground px-4">Sincronize transaÃ§Ãµes de outros apps via arquivo CSV.</p>
                     </div>
 
                     <label className="w-full">
@@ -159,13 +161,14 @@ export function ExportManager() {
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-start gap-4">
                 <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                    <p className="text-xs font-bold text-amber-600 uppercase">Atenção ao Importar</p>
+                    <p className="text-xs font-bold text-amber-600 uppercase">AtenÃ§Ã£o ao Importar</p>
                     <p className="text-[10px] text-amber-800 leading-tight">
-                        A importação espera um arquivo CSV com as colunas na ordem padrão: Data, Descrição, Valor, Tipo.
-                        Registros duplicados não são removidos automaticamente.
+                        A importaÃ§Ã£o espera um arquivo CSV com as colunas na ordem padrÃ£o: Data, DescriÃ§Ã£o, Valor, Tipo.
+                        Registros duplicados nÃ£o sÃ£o removidos automaticamente.
                     </p>
                 </div>
             </div>
         </div>
     );
 }
+

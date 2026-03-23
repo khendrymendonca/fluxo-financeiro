@@ -1,15 +1,34 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { useCategories, useSubcategories, useCategoryGroups, useBudgetRule } from '@/hooks/useFinanceQueries';
+import { 
+  useAddCategory, 
+  useDeleteCategory, 
+  useAddSubcategory, 
+  useDeleteSubcategory, 
+  useUpdateBudgetRule 
+} from '@/hooks/useCategoryMutations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Trash2, Edit2, Settings2, FolderTree, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
 
 export function CategoriesManager() {
-    const { categories, subcategories, categoryGroups, budgetRule, addCategory, deleteCategory, addSubcategory, deleteSubcategory, updateBudgetRule } = useFinanceStore();
+    // Queries
+    const { data: categories = [] } = useCategories();
+    const { data: subcategories = [] } = useSubcategories();
+    const { data: categoryGroups = [] } = useCategoryGroups();
+    const { data: budgetRule } = useBudgetRule();
+
+    // Mutations
+    const { mutate: addCategory } = useAddCategory();
+    const { mutate: deleteCategory } = useDeleteCategory();
+    const { mutate: addSubcategory } = useAddSubcategory();
+    const { mutate: deleteSubcategory } = useDeleteSubcategory();
+    const { mutate: updateBudgetRule } = useUpdateBudgetRule();
 
     // Budget Rules UI State
     const [needs, setNeeds] = useState(budgetRule?.needsPercent || 50);
@@ -19,8 +38,8 @@ export function CategoriesManager() {
     // New Category State
     const [newCatName, setNewCatName] = useState('');
     const [newCatType, setNewCatType] = useState<'expense' | 'income'>('expense');
-    const [newCatGroup, setNewCatGroup] = useState<string>('');
-    const [newCatColor, setNewCatColor] = useState(APP_COLORS[0]);
+    const [newCatGroup, setNewCatGroup] = useState<string>('');     
+    const [newCatColor, setNewCatColor] = useState(APP_COLORS[0]);  
 
     // New Subcategory State
     const [newSubName, setNewSubName] = useState('');
@@ -31,7 +50,7 @@ export function CategoriesManager() {
             toast({ title: 'A soma deve ser 100%', variant: 'destructive' });
             return;
         }
-        updateBudgetRule(needs, wants, savings);
+        updateBudgetRule({ needsPercent: needs, wantsPercent: wants, savingsPercent: savings });
     };
 
     const handleAddCategory = () => {
@@ -40,7 +59,7 @@ export function CategoriesManager() {
         // Auto-assign group if income (or default)
         let groupId = newCatGroup;
         if (newCatType === 'income') {
-            groupId = categoryGroups.find(g => g.name === 'needs')?.id || ''; // Income is typically mapped to root available group
+            groupId = categoryGroups.find(g => g.name === 'needs')?.id || ''; // Income is typically mapped to root available group     
         } else if (!groupId) {
             toast({ title: 'Selecione um grupo para a despesa', variant: 'destructive' });
             return;
@@ -51,7 +70,7 @@ export function CategoriesManager() {
             type: newCatType,
             groupId: groupId,
             icon: 'Tag',
-            color: '#CBD5E1'
+            color: newCatColor
         });
         setNewCatName('');
     };
@@ -82,29 +101,29 @@ export function CategoriesManager() {
 
             {/* Regra de Orçamento */}
             <div className="card-elevated p-6 space-y-6 border border-primary/20 bg-gradient-to-br from-card to-primary/5">
-                <div className="flex items-center gap-2 mb-4">
-                    <Target className="w-5 h-5 text-primary" />
+                <div className="flex items-center gap-2 mb-4">      
+                    <Target className="w-5 h-5 text-primary" />     
                     <h3 className="text-lg font-bold">A Regra de Ouro (Orçamento Recomendado)</h3>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-2">
-                        <Label>Essenciais (Moradia, Saúde)</Label>
-                        <div className="flex items-center gap-2">
+                        <Label>Essenciais (Moradia, Saúde)</Label> 
+                        <div className="flex items-center gap-2">   
                             <Input type="number" value={needs} onChange={e => setNeeds(Number(e.target.value))} className="font-bold text-lg" />
                             <span className="text-muted-foreground">%</span>
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <Label>Desejos (Lazer, Delivery)</Label>
-                        <div className="flex items-center gap-2">
+                        <Label>Desejos (Lazer, Delivery)</Label>    
+                        <div className="flex items-center gap-2">   
                             <Input type="number" value={wants} onChange={e => setWants(Number(e.target.value))} className="font-bold text-lg" />
                             <span className="text-muted-foreground">%</span>
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <Label>Metas (Aportes, Reserva)</Label>
-                        <div className="flex items-center gap-2">
+                        <Label>Metas (Aportes, Reserva)</Label>     
+                        <div className="flex items-center gap-2">   
                             <Input type="number" value={savings} onChange={e => setSavings(Number(e.target.value))} className="font-bold text-lg" />
                             <span className="text-muted-foreground">%</span>
                         </div>
@@ -126,8 +145,8 @@ export function CategoriesManager() {
 
             {/* Criar Nova Categoria */}
             <div className="card-elevated p-6 space-y-6">
-                <div className="flex items-center gap-2 mb-4">
-                    <Plus className="w-5 h-5 text-primary" />
+                <div className="flex items-center gap-2 mb-4">      
+                    <Plus className="w-5 h-5 text-primary" />       
                     <h3 className="text-lg font-bold">Nova Categoria</h3>
                 </div>
 
@@ -135,22 +154,22 @@ export function CategoriesManager() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2">
                             <Label>Tipo</Label>
-                            <select className="w-full h-12 rounded-xl border-2 border-input bg-background px-4 text-sm font-bold" value={newCatType} onChange={e => setNewCatType(e.target.value as any)}>
+                            <select className="w-full h-12 rounded-xl border-2 border-input bg-background px-4 text-sm font-bold" value={newCatType} onChange={e => setNewCatType(e.target.value as any)}>  
                                 <option value="expense">Despesa</option>
                                 <option value="income">Receita</option>
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <Label>Nome da Categoria</Label>
+                            <Label>Nome da Categoria</Label>        
                             <Input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Ex: Farmácia" className="h-12 rounded-xl border-2" />
                         </div>
 
                         {newCatType === 'expense' && (
                             <div className="space-y-2">
-                                <Label>Grupo do Orçamento</Label>
-                                <select className="w-full h-12 rounded-xl border-2 border-input bg-background px-4 text-sm font-bold" value={newCatGroup} onChange={e => setNewCatGroup(e.target.value)}>
+                                <Label>Grupo do Orçamento</Label>  
+                                <select className="w-full h-12 rounded-xl border-2 border-input bg-background px-4 text-sm font-bold" value={newCatGroup} onChange={e => setNewCatGroup(e.target.value)}>   
                                     <option value="">Selecione...</option>
-                                    {categoryGroups.map(g => (
+                                    {categoryGroups.map(g => (      
                                         <option key={g.id} value={g.id}>
                                             {g.name === 'needs' ? 'Essencial (Necessidade)' : g.name === 'wants' ? 'Desejos (Estilo de Vida)' : 'Metas (Investimentos)'}
                                         </option>
@@ -174,8 +193,8 @@ export function CategoriesManager() {
 
             {/* Lista de Categorias Árvore */}
             <div className="card-elevated p-6 space-y-6">
-                <div className="flex items-center gap-2 mb-4">
-                    <FolderTree className="w-5 h-5 text-primary" />
+                <div className="flex items-center gap-2 mb-4">      
+                    <FolderTree className="w-5 h-5 text-primary" /> 
                     <h3 className="text-lg font-bold">Painel de Categorias</h3>
                 </div>
 
@@ -197,7 +216,7 @@ export function CategoriesManager() {
                                 <div key={group.id} className="space-y-2">
                                     <p className="text-xs font-semibold text-muted-foreground bg-muted/50 p-2 rounded-lg">{groupNameDisplay}</p>
                                     <div className="space-y-2 pl-2 border-l-2 border-muted ml-2">
-                                        {groupCats.map(cat => (
+                                        {groupCats.map(cat => (     
                                             <div key={cat.id} className="group">
                                                 <div className="flex items-center justify-between p-2 rounded-xl hover:bg-muted/50 transition-colors">
                                                     <span className="font-medium text-sm">{cat.name}</span>
@@ -222,7 +241,7 @@ export function CategoriesManager() {
                                                         <div key={sub.id} className="flex items-center justify-between p-1.5 text-xs text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/30 group/sub">
                                                             <span>↳ {sub.name}</span>
                                                             <button onClick={() => deleteSubcategory(sub.id)} className="opacity-100 md:opacity-0 md:group-hover/sub:opacity-100 text-danger/70 hover:text-danger pr-2 px-2"><Trash2 className="w-3 h-3" /></button>
-                                                        </div>
+                                                        </div>      
                                                     ))}
                                                 </div>
                                             </div>

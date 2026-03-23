@@ -1,5 +1,6 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { usePayBill, useDeleteBill } from '@/hooks/useBillMutations';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
 
-// ✅ FIX: helper de data local reutilizável
+// âœ… FIX: helper de data local reutilizÃ¡vel
 const parseLocalDate = (dateString: string): Date => {
     if (!dateString) return new Date();
     const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
@@ -22,7 +23,7 @@ const parseLocalDate = (dateString: string): Date => {
     return new Date(year, month - 1, day);
 };
 
-// ✅ FIX: "hoje" como string local sem bug de fuso
+// âœ… FIX: "hoje" como string local sem bug de fuso
 const todayLocalString = (): string => {
     const n = new Date();
     return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
@@ -35,7 +36,7 @@ export function BillsManager() {
         accounts,
         creditCards,
         debts,
-        // ✅ FIX: addBill e updateBill removidos da desestruturação — não são usados no componente
+        // âœ… FIX: addBill e updateBill removidos da desestruturaÃ§Ã£o â€” nÃ£o sÃ£o usados no componente
         deleteBill,
         payBill,
         getCardExpenses,
@@ -47,7 +48,7 @@ export function BillsManager() {
 
     const [filter, setFilter] = useState<'all' | 'payable' | 'receivable'>('all');
     const [isPaying, setIsPaying] = useState<any>(null);
-    // ✅ FIX: usa todayLocalString() para evitar bug de fuso
+    // âœ… FIX: usa todayLocalString() para evitar bug de fuso
     const [paymentDate, setPaymentDate] = useState<string>(todayLocalString());
     const [paymentAmount, setPaymentAmount] = useState<string>('');
     const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
@@ -64,20 +65,20 @@ export function BillsManager() {
         if (!isPaying) return;
         const amountValue = paymentAmount ? parseFloat(paymentAmount) : isPaying.amount;
         const isPartial = Math.abs(amountValue - isPaying.amount) > 0.01;
-        await payBill(isPaying, isCard ? undefined : targetId, paymentDate, isPartial, amountValue, isCard ? targetId : undefined);
+        await payBillMutation({ bill: isPaying, accountId: isCard ? undefined : targetId, paymentDate, isPartial, partialAmount: amountValue, cardId: isCard ? targetId : undefined });
         setIsPaying(null);
     };
 
     const handleConfirmDeleteBill = () => {
         if (deletingBill) {
             const targetId = deletingBill.originalBillId || deletingBill.id;
-            deleteBill(targetId, deleteFutureBills);
+            deleteBillMutation({ id: targetId, future: deleteFutureBills });
         }
         setDeletingBill(null);
         setDeleteFutureBills(false);
     };
 
-    // ✅ FIX: sort usa parseLocalDate — sem bug de fuso
+    // âœ… FIX: sort usa parseLocalDate â€” sem bug de fuso
     const filteredBills = currentMonthBills.filter(b => {
         // Busca por Texto
         if (searchQuery.trim() !== '') {
@@ -93,7 +94,7 @@ export function BillsManager() {
         return b.type === filter;
     }).sort((a, b) => parseLocalDate(a.dueDate).getTime() - parseLocalDate(b.dueDate).getTime());
 
-    // ✅ FIX: totalPendingPayable exclui card-payment com valor zero — consistente com filteredBills
+    // âœ… FIX: totalPendingPayable exclui card-payment com valor zero â€” consistente com filteredBills
     const totalPendingPayable = currentMonthBills
         .filter(b => b.type === 'payable' && b.status === 'pending' && !(b.categoryId === 'card-payment' && b.amount <= 0))
         .reduce((acc, b) => acc + b.amount, 0);
@@ -108,7 +109,7 @@ export function BillsManager() {
                         <Receipt className="w-6 h-6" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold">Gestão de Contas</h2>
+                        <h2 className="text-2xl font-bold">GestÃ£o de Contas</h2>
                         <p className="text-muted-foreground">A pagar e a receber de forma organizada.</p>
                     </div>
                 </div>
@@ -166,7 +167,7 @@ export function BillsManager() {
                     </div>
                 ) : (
                     filteredBills.map(bill => {
-                        // ✅ FIX: isLate usa parseLocalDate — sem bug de fuso
+                        // âœ… FIX: isLate usa parseLocalDate â€” sem bug de fuso
                         const isLate = parseLocalDate(bill.dueDate) < new Date() && bill.status === 'pending';
                         const category = categories.find(c => c.id === bill.categoryId);
 
@@ -267,7 +268,7 @@ export function BillsManager() {
                                                 <CheckCircle2 className="w-5 h-5" /> Baixar Conta
                                             </Button>
                                         )}
-                                        {bill.status === 'pending' && deleteBill !== undefined && (
+                                        {bill.status === 'pending' && (
                                             <Button size="sm" variant="ghost"
                                                 onClick={() => setDeletingBill(bill)}
                                                 className="h-11 px-3 rounded-2xl hover:bg-danger/10 text-danger">
@@ -277,12 +278,12 @@ export function BillsManager() {
                                     </div>
                                 </div>
 
-                                {/* Detalhamento da fatura de cartão */}
+                                {/* Detalhamento da fatura de cartÃ£o */}
                                 {expandedBillId === bill.id && bill.categoryId === 'card-payment' && (
                                     <div className="mt-2 ml-14 p-4 rounded-2xl bg-muted/20 border border-border/50 animate-in slide-in-from-top-2 duration-300">
                                         <div className="flex items-center gap-2 mb-3">
                                             <div className="w-1 h-3 bg-primary rounded-full" />
-                                            <h5 className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Compras no Período</h5>
+                                            <h5 className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Compras no PerÃ­odo</h5>
                                         </div>
                                         <div className="space-y-2">
                                             {transactions
@@ -304,8 +305,8 @@ export function BillsManager() {
                                                             <div>
                                                                 <p className="text-xs font-bold leading-none">{t.description}</p>
                                                                 <p className="text-[9px] text-muted-foreground mt-0.5">
-                                                                    {format(parseLocalDate(t.date), "dd/MM")} • {categories.find(c => c.id === t.categoryId)?.name || 'Outros'}
-                                                                    {t.installmentNumber && ` • Parcela ${t.installmentNumber}${t.installmentTotal ? `/${t.installmentTotal}` : ''}`}
+                                                                    {format(parseLocalDate(t.date), "dd/MM")} â€¢ {categories.find(c => c.id === t.categoryId)?.name || 'Outros'}
+                                                                    {t.installmentNumber && ` â€¢ Parcela ${t.installmentNumber}${t.installmentTotal ? `/${t.installmentTotal}` : ''}`}
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -316,7 +317,7 @@ export function BillsManager() {
                                                     </div>
                                                 ))}
 
-                                            {/* ✅ FIX: filtro de bills no detalhamento usa parseLocalDate */}
+                                            {/* âœ… FIX: filtro de bills no detalhamento usa parseLocalDate */}
                                             {bills
                                                 .filter(b =>
                                                     b.cardId === bill.cardId &&
@@ -381,7 +382,7 @@ export function BillsManager() {
                                 <p className="text-xs text-muted-foreground mt-0.5">
                                     <span className={cn("font-bold", isPaying.type === 'receivable' ? "text-success" : "text-danger")}>
                                         {formatCurrency(isPaying.amount)}
-                                    </span>{' — '}{isPaying.name}
+                                    </span>{' â€” '}{isPaying.name}
                                 </p>
                             </div>
 
@@ -395,18 +396,18 @@ export function BillsManager() {
                                     </label>
                                 </div>
 
-                                {/* ✅ FIX: usa categoryId === 'card-payment' em vez de id.startsWith('card-') */}
+                                {/* âœ… FIX: usa categoryId === 'card-payment' em vez de id.startsWith('card-') */}
                                 {isPaying.categoryId !== 'card-payment' && !isPaying.cardId && (
                                     <div className="flex rounded-xl bg-muted/40 p-1">
                                         <button onClick={() => setPaymentMethod('account')}
                                             className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
                                                 paymentMethod === 'account' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                                            Conta Bancária
+                                            Conta BancÃ¡ria
                                         </button>
                                         <button onClick={() => setPaymentMethod('credit_card')}
                                             className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
                                                 paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                                            Cartão de Crédito
+                                            CartÃ£o de CrÃ©dito
                                         </button>
                                     </div>
                                 )}
@@ -419,10 +420,10 @@ export function BillsManager() {
                                             onChange={e => setPaymentAmount(e.target.value)}
                                             className="pl-10 h-11 rounded-xl font-bold bg-muted/20" placeholder="0.00" />
                                     </div>
-                                    {/* ✅ FIX: usa categoryId === 'card-payment' */}
+                                    {/* âœ… FIX: usa categoryId === 'card-payment' */}
                                     {isPaying.categoryId === 'card-payment' && (
                                         <p className="text-[10px] text-primary font-bold leading-tight">
-                                            Este pagamento será registrado como um abatimento na fatura deste mês.
+                                            Este pagamento serÃ¡ registrado como um abatimento na fatura deste mÃªs.
                                         </p>
                                     )}
                                 </div>
@@ -471,7 +472,7 @@ export function BillsManager() {
                                 )}
                                 {paymentMethod === 'credit_card' && (
                                     creditCards.length === 0 ? (
-                                        <p className="text-center text-muted-foreground py-8 text-sm">Nenhum cartão cadastrado.</p>
+                                        <p className="text-center text-muted-foreground py-8 text-sm">Nenhum cartÃ£o cadastrado.</p>
                                     ) : (
                                         creditCards.map(card => (
                                             <button key={card.id} onClick={() => handleMarkAsPaid(card.id, true)}
@@ -499,7 +500,7 @@ export function BillsManager() {
                 </Portal>
             )}
 
-            {/* Modal de Exclusão */}
+            {/* Modal de ExclusÃ£o */}
             {deletingBill && (
                 <Portal>
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
@@ -522,7 +523,7 @@ export function BillsManager() {
                                         <div>
                                             <span className="text-sm font-bold block">Aplicar a futuras?</span>
                                             <span className="text-xs text-muted-foreground">
-                                                Também exclui os lançamentos desta conta nos próximos meses
+                                                TambÃ©m exclui os lanÃ§amentos desta conta nos prÃ³ximos meses
                                             </span>
                                         </div>
                                     </label>
@@ -539,3 +540,4 @@ export function BillsManager() {
         </div>
     );
 }
+

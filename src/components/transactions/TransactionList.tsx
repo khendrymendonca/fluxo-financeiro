@@ -1,7 +1,8 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { ArrowUpRight, ArrowDownRight, Trash2, Pencil, FastForward, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { useToggleTransactionPaid, useDeleteTransaction } from '@/hooks/useTransactionMutations';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Bill } from '@/types/finance';
@@ -56,7 +57,9 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   const [overdraftAccountName, setOverdraftAccountName] = useState('');
   const [pendingPaymentData, setPendingPaymentData] = useState<{ id: string, isCard: boolean } | null>(null);
 
-  const { categories, accounts, debts, creditCards, getCardExpenses, togglePaid, transactions: allTransactions, viewDate, getTransactionTargetDate } = useFinanceStore();
+  const { categories, accounts, creditCards, transactions: allTransactions, viewDate } = useFinanceStore();
+  const { mutateAsync: togglePaidMutation } = useToggleTransactionPaid();
+  const { mutateAsync: deleteTransactionMutation } = useDeleteTransaction();
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -69,8 +72,8 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
 
   const displayItems = [
     ...transactions.map(t => {
-      // ✅ REGRA DE BOM SENSO: Compras no cartão (cardId presente e não é pagamento de fatura) 
-      // NUNCA são pendentes, elas já estão na fatura.
+      // âœ… REGRA DE BOM SENSO: Compras no cartÃ£o (cardId presente e nÃ£o Ã© pagamento de fatura) 
+      // NUNCA sÃ£o pendentes, elas jÃ¡ estÃ£o na fatura.
       const isPending = (t.cardId && !t.isInvoicePayment) ? false : !t.isPaid;
       return { ...t, isBill: false, isPending };
     }),
@@ -97,8 +100,8 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
   ];
 
   const getGroupDate = (item: any): string => {
-    // Transações recorrentes sempre agrupam pela data física do mês,
-    // independente de quando foram pagas — evita que apareçam com data do mês original
+    // TransaÃ§Ãµes recorrentes sempre agrupam pela data fÃ­sica do mÃªs,
+    // independente de quando foram pagas â€” evita que apareÃ§am com data do mÃªs original
     if (item.isRecurring) {
       return item.date?.split('T')[0] || todayLocalString();
     }
@@ -127,7 +130,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
       // Filtro de Categoria (Receita/Despesa)
       if (filter !== 'all' && t.type !== filter) return false;
 
-      // Filtro de Origem (Conta vs Cartão)
+      // Filtro de Origem (Conta vs CartÃ£o)
       if (sourceFilter === 'account') {
         if (t.cardId) return false;
         if (specificSourceId !== 'all' && t.accountId !== specificSourceId) return false;
@@ -181,11 +184,11 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     if (payingItem.isBill) {
       const bill = bills.find(b => b.id === payingItem.billId);
       if (bill) {
-        // ✅ FIX: passa cardId se for pagamento via cartão
+        // âœ… FIX: passa cardId se for pagamento via cartÃ£o
         await onPayBill(bill, isCard ? undefined : targetId, paymentDate, false, undefined, isCard ? targetId : undefined);
       }
     } else {
-      await togglePaid((payingItem as Transaction).id, true, isCard ? undefined : targetId, paymentDate, isCard ? targetId : undefined);
+      await togglePaidMutation({ id: (payingItem as Transaction).id, isPaid: true, date: paymentDate });
     }
     setPayingItem(null);
   };
@@ -209,7 +212,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
       toast({ title: 'Selecione uma conta para pagamento', variant: 'destructive' });
       return;
     }
-    await togglePaid(installment.id, true, anticipateAccount, todayLocalString());
+    await togglePaidMutation({ id: installment.id, isPaid: true, date: todayLocalString() });
     setAnticipatingIds(prev => { const next = new Set(prev); next.delete(installment.id); return next; });
   };
 
@@ -220,7 +223,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     }
     const today = todayLocalString();
     for (const inst of installments) {
-      if (!inst.isPaid) await togglePaid(inst.id, true, anticipateAccount, today);
+      if (!inst.isPaid) await togglePaidMutation({ id: inst.id, isPaid: true, date: today });
     }
     setExpandedGroup(null);
     toast({ title: `${installments.length} parcelas antecipadas com sucesso!` });
@@ -238,7 +241,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     }
     const today = todayLocalString();
     for (const inst of selected) {
-      await togglePaid(inst.id, true, anticipateAccount, today);
+      await togglePaidMutation({ id: inst.id, isPaid: true, date: today });
     }
     setAnticipatingIds(new Set());
     toast({ title: `${selected.length} parcela(s) antecipada(s)!` });
@@ -250,7 +253,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
       <div className="relative">
         <input
           type="text"
-          placeholder="Pesquisar lançamentos ou categorias..."
+          placeholder="Pesquisar lanÃ§amentos ou categorias..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full h-12 pl-4 pr-10 rounded-2xl border-2 border-border bg-card focus:border-primary focus:ring-0 transition-all outline-none font-medium"
@@ -266,7 +269,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
       </div>
 
       {/* Filtros */}
-      {/* Filtros Avançados */}
+      {/* Filtros AvanÃ§ados */}
       <div className="card-elevated p-4 space-y-4">
         <div className="flex flex-wrap gap-4 items-center">
           {/* Receita/Despesa */}
@@ -290,12 +293,12 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
             <button onClick={() => { setSourceFilter('account'); setSpecificSourceId('all'); }}
               className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
                 sourceFilter === 'account' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              Débito
+              DÃ©bito
             </button>
             <button onClick={() => { setSourceFilter('card'); setSpecificSourceId('all'); }}
               className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
                 sourceFilter === 'card' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              Cartão
+              CartÃ£o
             </button>
           </div>
 
@@ -311,11 +314,11 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
           </div>
         </div>
 
-        {/* Filtro Específico (Conta ou Cartão) */}
+        {/* Filtro EspecÃ­fico (Conta ou CartÃ£o) */}
         {sourceFilter !== 'all' && (
           <div className="flex items-center gap-3 pt-2 border-t border-border animate-in slide-in-from-top-1">
             <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              {sourceFilter === 'account' ? 'Selecionar Conta:' : 'Selecionar Cartão:'}
+              {sourceFilter === 'account' ? 'Selecionar Conta:' : 'Selecionar CartÃ£o:'}
             </span>
             <div className="flex flex-wrap gap-2">
               <button onClick={() => setSpecificSourceId('all')}
@@ -339,7 +342,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
       {/* Lista agrupada */}
       {Object.keys(groupedItems).length === 0 ? (
         <div className="card-elevated p-12 text-center text-muted-foreground">
-          Nenhuma transação ou pendência encontrada
+          Nenhuma transaÃ§Ã£o ou pendÃªncia encontrada
         </div>
       ) : (
         Object.keys(groupedItems)
@@ -382,9 +385,9 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              {item.categoryId === 'debt-payment' ? 'Pagamento de Dívida' :
+                              {item.categoryId === 'debt-payment' ? 'Pagamento de DÃ­vida' :
                                 item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || 'Outros' : 'Outros'}
-                              {item.isPending && item.cardId && <span> • Compra: {formatShortDate(item.date)}</span>}
+                              {item.isPending && item.cardId && <span> â€¢ Compra: {formatShortDate(item.date)}</span>}
                             </p>
                           </div>
                         </div>
@@ -443,10 +446,10 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                                     <Pencil className="w-4 h-4" />
                                   </Button>
                                 )}
-                                {/* ✅ FIX: separado em dois blocos — elimina o ReferenceError no bundle */}
+                                {/* âœ… FIX: separado em dois blocos â€” elimina o ReferenceError no bundle */}
                                 {!item.isBill && (
                                   <Button variant="ghost" size="icon"
-                                    onClick={() => onDelete(item.id)}
+                                    onClick={() => deleteTransactionMutation(item.id)}
                                     className="h-9 w-9 rounded-lg hover:bg-danger/10 hover:text-danger">
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
@@ -550,7 +553,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                 <p className="text-xs text-muted-foreground mt-0.5">
                   <span className={cn("font-bold", payingItem.type === 'income' ? "text-success" : "text-danger")}>
                     {formatCurrency(payingItem.amount)}
-                  </span>{' — '}{payingItem.description}
+                  </span>{' â€” '}{payingItem.description}
                 </p>
               </div>
               <div className="p-4 space-y-4">
@@ -566,12 +569,12 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                   <button onClick={() => setPaymentMethod('account')}
                     className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
                       paymentMethod === 'account' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                    Conta Bancária
+                    Conta BancÃ¡ria
                   </button>
                   <button onClick={() => setPaymentMethod('credit_card')}
                     className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
                       paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                    Cartão de Crédito
+                    CartÃ£o de CrÃ©dito
                   </button>
                 </div>
               </div>
@@ -615,7 +618,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                 )}
                 {paymentMethod === 'credit_card' && (
                   creditCards.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8 text-sm">Nenhum cartão cadastrado.</p>
+                    <p className="text-center text-muted-foreground py-8 text-sm">Nenhum cartÃ£o cadastrado.</p>
                   ) : (
                     creditCards.map(card => (
                       <button key={card.id} onClick={() => handleSubmitPayment(card.id, true)}
@@ -642,7 +645,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
         </Portal>
       )}
 
-      {/* Modal de Exclusão */}
+      {/* Modal de ExclusÃ£o */}
       {deletingBill && (
         <Portal>
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
@@ -663,7 +666,7 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
                       className="mt-1 w-4 h-4 rounded text-primary focus:ring-primary" />
                     <div>
                       <span className="text-sm font-bold block">Aplicar a futuras?</span>
-                      <span className="text-xs text-muted-foreground">Também exclui os lançamentos desta conta nos próximos meses</span>
+                      <span className="text-xs text-muted-foreground">TambÃ©m exclui os lanÃ§amentos desta conta nos prÃ³ximos meses</span>
                     </div>
                   </label>
                 </div>
@@ -691,3 +694,4 @@ export function TransactionList({ transactions, bills, onDelete, onEdit, onPayBi
     </div>
   );
 }
+
