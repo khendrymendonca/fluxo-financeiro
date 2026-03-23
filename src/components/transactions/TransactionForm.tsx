@@ -598,6 +598,32 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 </>
               )}
 
+              {/* ✅ NOVO: Alcance da Atualização / Exclusão */}
+              {initialData?.installmentGroupId && (
+                <div className="flex flex-col gap-2 p-4 bg-primary/5 rounded-2xl border border-primary/20 animate-in fade-in zoom-in duration-300">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="p-1.5 rounded-lg bg-primary text-primary-foreground">
+                        <RotateCw className="w-3 h-3" />
+                    </div>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Alcance da Alteração / Exclusão</Label>
+                  </div>
+                  <select 
+                    className="h-11 rounded-xl border-2 border-primary/20 bg-background px-3 text-xs font-bold focus:ring-2 focus:ring-primary outline-none transition-all cursor-pointer hover:border-primary/40"
+                    value={applyScope} 
+                    onChange={e => setApplyScope(e.target.value as any)}
+                  >
+                    <option value="this">Somente este lançamento</option>
+                    <option value="future">Este e todos os futuros</option>
+                    <option value="all">Todo o grupo (todos os meses)</option>
+                  </select>
+                  <p className="text-[9px] text-primary/60 font-medium leading-tight px-1">
+                    {applyScope === 'this' ? 'A alteração afetará apenas o mês selecionado.' : 
+                     applyScope === 'future' ? 'A alteração será replicada para os próximos meses.' : 
+                     'A alteração será aplicada em todo o histórico deste lançamento.'}
+                  </p>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex flex-col gap-3 pt-2">
                 <Button type="submit" className={cn("w-full rounded-2xl py-7 text-lg font-black shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]",
