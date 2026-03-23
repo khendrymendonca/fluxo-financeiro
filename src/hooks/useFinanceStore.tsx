@@ -160,6 +160,15 @@ function useFinanceProvider() {
   const totalIncome = useMemo(() => currentMonthTransactions.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
   const totalExpenses = useMemo(() => currentMonthTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
 
+  const totalPendingOutflows = useMemo(() => {
+    return currentMonthTransactions
+      .filter(t => !t.isPaid && t.type === 'expense')
+      .reduce((sum, t) => sum + Number(t.amount), 0) +
+      currentMonthBills
+      .filter(b => b.status === 'pending' && b.type === 'payable')
+      .reduce((sum, b) => sum + Number(b.amount), 0);
+  }, [currentMonthTransactions, currentMonthBills]);
+
   const setEmergencyMonths = useCallback((m: number) => {
     localStorage.setItem('emergencyMonths', String(m));
     setEmergencyMonthsLocal(m);
@@ -186,6 +195,7 @@ function useFinanceProvider() {
     totalBalance,
     totalIncome,
     totalExpenses,
+    totalPendingOutflows,
     currentMonthTransactions,
     currentMonthBills,
     nextMonth,

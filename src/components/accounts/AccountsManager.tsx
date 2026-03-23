@@ -49,7 +49,11 @@ export function AccountsManager({
   const [overdraftLimit, setOverdraftLimit] = useState('');
   const [monthlyYieldRate, setMonthlyYieldRate] = useState('');     
 
-  ).format(value);
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
   };
 
   // Helper function to calculate view balance locally since the store version might be deprecated or inconsistent
