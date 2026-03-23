@@ -216,18 +216,18 @@ function useFinanceProvider() {
       if (!user) { setState(initialState); return; }
 
       const [transactionsRes, accountsRes, cardsRes, goalsRes, debtsRes, categoriesRes, subcategoriesRes, groupsRes, billsRes, budgetRes, habitsRes, habitLogsRes] = await Promise.all([
-        supabase.from('transactions').select('*'),
-        supabase.from('accounts').select('*'),
-        supabase.from('credit_cards').select('*'),
-        supabase.from('savings_goals').select('*'),
-        supabase.from('debts').select('*').order('strategy_priority', { ascending: true }),
-        supabase.from('categories').select('*'),
-        supabase.from('subcategories').select('*'),
-        supabase.from('category_groups').select('*'),
-        supabase.from('bills').select('*'),
+        supabase.from('transactions').select('*').eq('user_id', user.id),
+        supabase.from('accounts').select('*').eq('user_id', user.id),
+        supabase.from('credit_cards').select('*').eq('user_id', user.id),
+        supabase.from('savings_goals').select('*').eq('user_id', user.id),
+        supabase.from('debts').select('*').eq('user_id', user.id).order('strategy_priority', { ascending: true }),
+        supabase.from('categories').select('*').eq('user_id', user.id),
+        supabase.from('subcategories').select('*'), // Depende de categories.user_id, mas subcategories não tem user_id direto no schema 
+        supabase.from('category_groups').select('*'), // Global
+        supabase.from('bills').select('*').eq('user_id', user.id),
         supabase.from('budget_rules').select('*').eq('user_id', user.id).maybeSingle(),
-        supabase.from('user_habits').select('*'),
-        supabase.from('habit_logs').select('*'),
+        supabase.from('user_habits').select('*').eq('user_id', user.id),
+        supabase.from('habit_logs').select('*'), // Relacionado a habits
       ]);
 
       const loadedTransactions = (transactionsRes.data || []).map((t: any) => ({
@@ -318,13 +318,25 @@ function useFinanceProvider() {
   const updateBill = useCallback(async (id: string, updates: Partial<Bill>) => {
     try {
       if (!id) return;
-      const dbUpdates: any = { ...updates };
+      const dbUpdates: any = {};
+
+      // Mapeamento manual para garantir snake_case e evitar erros 400 (Bad Request)
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.paymentDate !== undefined) dbUpdates.payment_date = updates.paymentDate;
       if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
       if (updates.accountId !== undefined) dbUpdates.account_id = updates.accountId;
+      if (updates.amount !== undefined) dbUpdates.amount = updates.amount;
+      if (updates.name !== undefined) dbUpdates.name = updates.name;
+      if (updates.dueDate !== undefined) dbUpdates.due_date = updates.dueDate;
+      if (updates.cardId !== undefined) dbUpdates.card_id = updates.cardId;
+
       const { error } = await supabase.from('bills').update(dbUpdates).eq('id', id);
       if (error) throw error;
       setState(prev => ({ ...prev, bills: prev.bills.map(b => b.id === id ? { ...b, ...updates } : b) }));
-    } catch (err) { toast({ title: 'Erro ao atualizar conta', variant: 'destructive' }); }
+    } catch (err) {
+      console.error('Update bill error:', err);
+      toast({ title: 'Erro ao atualizar conta', variant: 'destructive' });
+    }
   }, []);
 
   const deleteBill = useCallback(async (id: string, future: boolean = false) => {
