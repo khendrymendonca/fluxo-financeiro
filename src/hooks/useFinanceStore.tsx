@@ -1669,15 +1669,15 @@ function useFinanceProvider() {
         amount: payAmount,
         type: 'expense',
         categoryId: (bill.categoryId && !['card-payment', 'debt-payment'].includes(bill.categoryId)) ? bill.categoryId : undefined,
-        date: bill.dueDate.split('T')[0],
+        date: bill.dueDate?.split('T')[0] ?? todayLocalString(),
         accountId: accountId ?? undefined,
         cardId: undefined,
         isPaid: true,
         paymentDate: cleanPaymentDate,
         isInvoicePayment: isCardBill,
-        // ✅ FIX: usa invoiceMonthYear direto da bill virtual, sem split frágil
+        // ✅ FIX: usa invoiceMonthYear direto da bill virtual, ou viewDate (robusto)
         invoiceMonthYear: isCardBill
-          ? ((bill as any).invoiceMonthYear ?? format(parseLocalDate(bill.dueDate), 'yyyy-MM'))
+          ? ((bill as any).invoiceMonthYear ?? format(viewDate, 'yyyy-MM'))
           : undefined,
         debtId: isDebtBill ? (bill as any).debtId : undefined,
         transactionType: 'punctual',
@@ -1706,7 +1706,7 @@ function useFinanceProvider() {
             name: bill.name,
             amount: payAmount,
             type: bill.type,
-            dueDate: bill.dueDate.split('T')[0],
+            dueDate: bill.dueDate?.split('T')[0] ?? cleanPaymentDate,
             paymentDate: cleanPaymentDate,
             status: 'paid',
             categoryId: bill.categoryId,
