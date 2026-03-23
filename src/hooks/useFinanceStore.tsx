@@ -445,18 +445,12 @@ function useFinanceProvider() {
       await addTransaction({
         description: isPartial ? `Abatimento: ${bill.name}` : `Pgto: ${bill.name}`,
         amount: payAmount, type: 'expense', date: cleanPaymentDate, accountId: accountId ?? undefined,
-        cardId: cardId || (bill as any).cardId || undefined, isPaid: true, paymentDate: cleanPaymentDate,
+        cardId: isCardBill ? undefined : (cardId || (bill as any).cardId || undefined), isPaid: true, paymentDate: cleanPaymentDate,
         isInvoicePayment: isCardBill, invoiceMonthYear: safeInv, debtId: isDebtBill ? (bill as any).debtId : undefined, transactionType: 'punctual'
       } as any);
 
       if (!bill.isVirtual && bill.id) await updateBill(bill.id, { status: 'paid', paymentDate: cleanPaymentDate });
-      else if (isCardBill) {
-        setState(prev => {
-          if (prev.transactions.some(t => t.isInvoicePayment && t.invoiceMonthYear === safeInv && t.isPaid && t.cardId === (bill as any).cardId)) return prev;
-          return { ...prev, transactions: [...prev.transactions, { id: crypto.randomUUID(), description: `Pgto: ${bill.name}`, amount: payAmount, type: 'expense', date: cleanPaymentDate, accountId, cardId: cardId || (bill as any).cardId, isPaid: true, paymentDate: cleanPaymentDate, isInvoicePayment: true, invoiceMonthYear: safeInv, transactionType: 'punctual', userId: prev.transactions[0]?.userId || '' } as any] };
-        });
-        return;
-      } else if (!isPartial) {
+      else if (!isCardBill && !isPartial) {
         await addBill({ name: bill.name, amount: payAmount, type: bill.type, dueDate: (bill.dueDate ?? '').split('T')[0] || cleanPaymentDate, paymentDate: cleanPaymentDate, status: 'paid', categoryId: bill.categoryId, subcategoryId: bill.subcategoryId, isFixed: false, accountId: accountId ?? undefined, originalBillId: (bill as any).originalBillId }, false);
       }
       toast({ title: 'Pagamento concluído!' });
