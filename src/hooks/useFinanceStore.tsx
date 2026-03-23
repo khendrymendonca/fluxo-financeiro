@@ -115,8 +115,14 @@ function useFinanceProvider() {
   // --- Computed ---
 
   const currentMonthTransactions = useMemo(() => {
-    // Filtrar transações que pertencem ao período de visualização atual
     return state.transactions.filter(t => {
+      // ✅ REGRA DE OURO: Se não é pagamento de fatura, a data FÍSICA manda.
+      // Se o registro é de Março, ele SÓ aparece em Março.
+      if (!t.isInvoicePayment && !t.cardId) {
+        const tDate = parseLocalDate(t.date);
+        return tDate.getMonth() === viewDate.getMonth() && tDate.getFullYear() === viewDate.getFullYear();
+      }
+
       const targetDate = getTransactionTargetDate(t);
       const tMonth = targetDate.getMonth();
       const tYear = targetDate.getFullYear();
