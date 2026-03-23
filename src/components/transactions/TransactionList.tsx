@@ -17,7 +17,7 @@ interface TransactionListProps {
   bills: Bill[];
   onDelete: (id: string) => void;
   onEdit: (transaction: Transaction) => void;
-  onPayBill: (billId: string, accountId: string | undefined, paymentDate: string, cardId?: string) => Promise<void>;
+  onPayBill: (bill: Bill, accountId?: string, paymentDate?: string, isPartial?: boolean, partialAmount?: number) => Promise<void>;
   onDeleteBill?: (id: string, applyToFuture?: boolean) => void;
 }
 
