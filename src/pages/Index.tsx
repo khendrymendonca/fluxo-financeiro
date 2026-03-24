@@ -371,6 +371,7 @@ export default function Index() {
                 editingTransaction.id,
                 data,
                 data.cardClosingDay,
+                data.cardDueDay,
                 editingTransaction.cardId
               );
             } else {

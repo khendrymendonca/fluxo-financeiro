@@ -9,7 +9,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
-// âœ… FIX: contexto sem valor padrão â€” força uso dentro do Provider
+// ✅ FIX: apenas onAuthStateChange
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -18,7 +18,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // âœ… FIX: apenas onAuthStateChange â€” ele já dispara INITIAL_SESSION
+    // ✅ FIX: apenas onAuthStateChange
     // eliminando a race condition com getSession
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // âœ… FIX: limpa o estado local imediatamente antes do listener processar
+  // ✅ FIX: limpa o estado local
   const signOut = useCallback(async () => {
     setSession(null);
     setUser(null);
@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// âœ… FIX: lança erro se usado fora do Provider â€” falha rápida e explícita
+// ✅ FIX: lança erro
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

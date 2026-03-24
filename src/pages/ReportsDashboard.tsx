@@ -14,20 +14,20 @@ export default function ReportsDashboard() {
     getCategoryExpenses,
     accounts,
     viewDate,
-    // âœ… FIX: usa getPeriodStartBalance para o saldo inicial real do período
+    // ✅ FIX: usa getPeriodStartBalance
     getPeriodStartBalance,
   } = useFinanceStore();
 
-  // âœ… FIX: dateRange removido â€” era estado morto sem efeito
+  // ✅ FIX: dateRange removido
   // Quando a funcionalidade for implementada, adicionar de volta
 
   const balance = totalIncome - totalExpenses;
   const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
 
-  // âœ… FIX: saldo inicial do período em vez do saldo atual
+  // ✅ FIX: saldo inicial
   const initialBalance = getPeriodStartBalance();
 
-  // âœ… FIX: nÃºmero real de dias do mês visualizado
+  // ✅ FIX: número real de dias
   const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
   const avgDailyExpense = totalExpenses / daysInMonth;
 
