@@ -370,7 +370,8 @@ export default function Index() {
               updateTransaction(
                 editingTransaction.id,
                 data,
-                data.cardClosingDay
+                data.cardClosingDay,
+                editingTransaction.cardId
               );
             } else {
               addTransaction(data);

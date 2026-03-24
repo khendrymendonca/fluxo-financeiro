@@ -180,13 +180,16 @@ export function useUpdateTransaction() {
     mutationFn: async ({
       id,
       updates,
-      cardClosingDay,
+      currentCardId,      // ← cartão atual da transação (mesmo que não mudou)
+      cardClosingDay,     // ← closing_day do cartão atual
     }: {
       id: string;
       updates: Partial<Transaction>;
+      currentCardId?: string | null;
       cardClosingDay?: number;
     }) => {
       const dbUpdates: any = {};
+
       if (updates.description !== undefined) dbUpdates.description = updates.description;
       if (updates.amount !== undefined) dbUpdates.amount = updates.amount;
       if (updates.date !== undefined) dbUpdates.date = updates.date;
@@ -198,12 +201,16 @@ export function useUpdateTransaction() {
       if (updates.paymentDate !== undefined) dbUpdates.payment_date = updates.paymentDate;
       if (updates.isRecurring !== undefined) dbUpdates.is_recurring = updates.isRecurring;
 
-      // Recalcula invoice_month_year se mudou data ou cartão
-      const dateToUse = updates.date;
-      if (dateToUse && updates.cardId && cardClosingDay != null) {
-        dbUpdates.invoice_month_year = calcInvoiceMonthYear(dateToUse, cardClosingDay);
+      // Usa o cardId novo (se mudou) ou o atual (se não mudou)
+      const effectiveCardId = updates.cardId !== undefined ? updates.cardId : currentCardId;
+      const effectiveDate = updates.date || (updates as any).originalDate; // Fallback se precisar de data
+
+      // SEMPRE recalcula invoice_month_year se há cartão e data
+      // No edit, o formulário sempre manda a data (updates.date)
+      if (effectiveCardId && updates.date && cardClosingDay != null) {
+        dbUpdates.invoice_month_year = calcInvoiceMonthYear(updates.date, cardClosingDay);
       } else if (updates.accountId) {
-        // Se mudou para conta (não cartão), limpa o invoice
+        // Mudou para conta bancária — limpa invoice
         dbUpdates.invoice_month_year = null;
       }
 
@@ -218,6 +225,11 @@ export function useUpdateTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      toast({ title: 'Alterações salvas!' });
+    },
+    onError: (err) => {
+      console.error('Erro ao atualizar:', err);
+      toast({ title: 'Erro ao salvar alterações', variant: 'destructive' });
     },
   });
 }

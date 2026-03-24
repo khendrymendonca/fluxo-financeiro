@@ -206,7 +206,8 @@ function useFinanceProvider() {
 
     // Mutations exposed as direct functions for UI compatibility
     addTransaction: addTransactionMutation.mutateAsync,
-    updateTransaction: (id: string, updates: Partial<Transaction>) => updateTransactionMutation.mutateAsync({ id, updates } as any),
+    updateTransaction: (id: string, updates: Partial<Transaction>, cardClosingDay?: number, currentCardId?: string | null) =>
+      updateTransactionMutation.mutateAsync({ id, updates, cardClosingDay, currentCardId } as any),
     deleteTransaction: (id: string, applyToFuture?: boolean) => deleteTransactionMutation.mutateAsync(id as any, { applyToFuture } as any),
     togglePaid: togglePaidMutation.mutateAsync,
 
