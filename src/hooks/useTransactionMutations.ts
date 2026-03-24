@@ -25,7 +25,7 @@ export function useAddTransaction() {
         const groupId = crypto.randomUUID();
         for (let i = 0; i < transaction.installmentTotal; i++) {
           const date = format(addMonths(baseDate, i), 'yyyy-MM-dd');
-          const isPaid = transaction.cardId ? true : new Date(date) <= new Date();
+          const isPaid = transaction.cardId ? true : parseLocalDate(date) <= parseLocalDate(format(new Date(), 'yyyy-MM-dd'));
 
           // Calcula fatura de cada parcela
           const invoiceMonthYear =
@@ -54,7 +54,7 @@ export function useAddTransaction() {
       } else {
         const isPaid = transaction.cardId
           ? true
-          : new Date(transaction.date) <= new Date();
+          : parseLocalDate(transaction.date) <= parseLocalDate(format(new Date(), 'yyyy-MM-dd'));
 
         // Calcula fatura da transação simples
         const invoiceMonthYear =
@@ -109,14 +109,14 @@ export function useDeleteTransaction() {
       } else {
         // Para 'future' ou 'all', primeiro buscamos a transação para pegar o installment_group_id e a data
         const { data: tx } = await supabase.from('transactions').select('*').eq('id', id).single();
-        
+
         if (tx?.installment_group_id) {
           let query = supabase.from('transactions').delete().eq('installment_group_id', tx.installment_group_id);
-          
+
           if (applyScope === 'future') {
             query = query.gte('date', tx.date);
           }
-          
+
           const { error } = await query;
           if (error) throw error;
         } else {
@@ -226,9 +226,11 @@ export function useUpdateTransaction() {
       const effectiveCardId = updates.cardId !== undefined ? updates.cardId : currentCardId;
       const effectiveDate = updates.date || (updates as any).originalDate; // Fallback se precisar de data
 
-      // SEMPRE recalcula invoice_month_year se há cartão e data
-      // No edit, o formulário sempre manda a data (updates.date)
-      if (effectiveCardId && updates.date && cardClosingDay != null) {
+      // BUG 1 / MELHORIA 2: Respeita invoice_month_year se vier do formulário, 
+      // ou recalcula se houver mudança de data/cartão.
+      if (updates.invoiceMonthYear !== undefined) {
+        dbUpdates.invoice_month_year = updates.invoiceMonthYear;
+      } else if (effectiveCardId && updates.date && cardClosingDay != null) {
         dbUpdates.invoice_month_year = calcInvoiceMonthYear(updates.date, cardClosingDay);
       } else if (updates.accountId) {
         // Mudou para conta bancária — limpa invoice
