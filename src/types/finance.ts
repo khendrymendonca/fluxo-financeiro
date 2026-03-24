@@ -199,7 +199,7 @@ export const EXPENSE_CATEGORIES_LEGACY = {
   housing: { label: 'Moradia', icon: 'Home' },
   food: { label: 'Alimentação', icon: 'UtensilsCrossed' },
   transport: { label: 'Transporte', icon: 'Car' },
-  health: { label: 'SaÃºde', icon: 'Heart' },
+  health: { label: 'Saúde', icon: 'Heart' },
   education: { label: 'Educação', icon: 'GraduationCap' },
   leisure: { label: 'Lazer', icon: 'PartyPopper' },
   shopping: { label: 'Compras', icon: 'ShoppingBag' },

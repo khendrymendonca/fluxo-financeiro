@@ -160,7 +160,7 @@ export default function Index() {
             {/* Dashboard Cards Gerais */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard
-                title="PatrimÃ´nio Total"
+                title="Patrimônio Total"
                 value={totalNetWorth}
                 icon={<Wallet className="w-5 h-5" />}
                 variant={totalNetWorth >= 0 ? 'positive' : 'negative'}
@@ -177,7 +177,7 @@ export default function Index() {
                 icon={<TrendingDown className="w-4 h-4 text-danger" />}
                 variant="negative"
               />
-              {/* âœ… FIX: usa periodBalance no lugar de balance */}
+              {/* ✅ FIX: usa periodBalance no lugar de balance */}
               <StatCard
                 title="Saldo Projetado"
                 value={projectedBalance}

@@ -5,7 +5,7 @@ import { toast } from '@/components/ui/use-toast';
 import { useCategories, useCategoryGroups } from './useFinanceQueries';
 import { Transaction } from '@/types/finance';
 
-// --- 1. BUSCAR REGRA DE ORÃ‡AMENTO ---
+// --- 1. BUSCAR REGRA DE ORÇAMENTO ---
 export function useBudgetRule() {
   return useQuery({
     queryKey: ['budgetRule'],
@@ -68,7 +68,7 @@ export function useSeedCoach() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
-      toast({ title: 'Coach Ativado! Categorias prontas. ðŸš€' });
+      toast({ title: 'Coach Ativado! Categorias prontas. 🚀' });
     },
     onError: () => {
       toast({ title: 'Erro ao ativar Coach', variant: 'destructive' });
@@ -76,7 +76,7 @@ export function useSeedCoach() {
   });
 }
 
-// --- 3. MOTOR ANALÃTICO DO ORÃ‡AMENTO (O "Cérebro") ---
+// --- 3. MOTOR ANALÃTICO DO ORÇAMENTO (O "Cérebro") ---
 export function useBudgetMetrics(currentMonthTransactions: Transaction[]) {
   const { data: budgetRule } = useBudgetRule();
   const { data: categories = [] } = useCategories();
