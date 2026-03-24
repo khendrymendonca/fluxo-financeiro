@@ -1,4 +1,3 @@
-import { formatCurrency } from '@/utils/formatters';
 import { useState, useEffect, useMemo } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useBudgetRule } from '@/hooks/useBudgetCoach';
@@ -37,8 +36,8 @@ interface SmartInsightsProps {
 }
 
 export function SmartInsights({ onNavigate }: SmartInsightsProps) {
-    const { transactions, categories, totalIncome, totalExpenses } = useFinanceStore();
-    const { budgetRule } = useBudgetRule();
+    const { currentMonthTransactions: transactions, categories, totalIncome, totalExpenses } = useFinanceStore();
+    const { data: budgetRule } = useBudgetRule();
     const [dismissedInsights, setDismissedInsights] = useState<string[]>([]);
 
     useEffect(() => {
