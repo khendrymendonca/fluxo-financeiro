@@ -384,7 +384,7 @@ export default function Index() {
             setEditingTransaction(undefined);
           }}
           onDelete={(id, scope) => {
-            deleteTransaction(id, scope === 'future');
+            deleteTransaction(id, scope);
             setShowTransactionForm(false);
             setEditingTransaction(undefined);
           }}

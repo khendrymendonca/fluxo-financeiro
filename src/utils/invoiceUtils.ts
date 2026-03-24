@@ -5,15 +5,23 @@ import { addMonths, format } from 'date-fns';
  * Se o dia da transação é DEPOIS do fechamento, vai para o mês seguinte.
  */
 export function calcInvoiceMonthYear(
-  transactionDate: string,
-  closingDay: number
-): string {
-  const date = new Date(transactionDate + 'T12:00:00'); // evita bug de fuso horário
-  const day = date.getDate();
+  transactionDate: string | undefined | null,
+  closingDay: number | undefined | null
+): string | null {
+  if (!transactionDate || closingDay == null) return null;
+  
+  try {
+    const date = new Date(transactionDate + 'T12:00:00'); // evita bug de fuso horário
+    if (isNaN(date.getTime())) return null;
 
-  if (day > closingDay) {
-    return format(addMonths(date, 1), 'yyyy-MM');
-  } else {
-    return format(date, 'yyyy-MM');
+    const day = date.getDate();
+
+    if (day > closingDay) {
+      return format(addMonths(date, 1), 'yyyy-MM');
+    } else {
+      return format(date, 'yyyy-MM');
+    }
+  } catch (e) {
+    return null;
   }
 }

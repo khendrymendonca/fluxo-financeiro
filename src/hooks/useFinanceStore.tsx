@@ -238,7 +238,10 @@ function useFinanceProvider() {
     createDebtWithInstallments: async (debtData: any, firstPayment: string) => { },
 
     getAccountViewBalance: (id: string) => accounts.find(a => a.id === id)?.balance || 0,
-    getCardExpenses: (id: string) => currentMonthTransactions.filter(t => t.cardId === id && t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0),
+    getCardExpenses: (id: string) => {
+      const viewDateStr = format(viewDate, 'yyyy-MM');
+      return transactions.filter(t => t.cardId === id && t.type === 'expense' && t.invoiceMonthYear === viewDateStr).reduce((acc, t) => acc + Number(t.amount), 0);
+    },
     getCategoryExpenses: () => {
       const categoryMap = new Map<string, number>();
       currentMonthTransactions.filter(t => t.type === 'expense').forEach(t => {
@@ -248,6 +251,10 @@ function useFinanceProvider() {
       });
       return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     },
-    getCardUsedLimit: (id: string) => currentMonthTransactions.filter(t => t.cardId === id && t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0)
+    getCardUsedLimit: (id: string) => {
+      // Limite usado = faturas abertas + parcelamentos futuros
+      // Para simplificar, trazemos todas as despesas não pagas do cartão
+      return transactions.filter(t => t.cardId === id && t.type === 'expense' && !t.isPaid).reduce((acc, t) => acc + Number(t.amount), 0);
+    }
   };
 }

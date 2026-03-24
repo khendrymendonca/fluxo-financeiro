@@ -5,6 +5,7 @@ import { addMonths, format } from 'date-fns';
 import { Transaction } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 import { calcInvoiceMonthYear } from '@/utils/invoiceUtils';
+import { parseLocalDate } from '@/utils/dateUtils';
 
 // --- 1. ADICIONAR TRANSAÇÃO ---
 export function useAddTransaction() {
@@ -18,7 +19,7 @@ export function useAddTransaction() {
       if (!user) throw new Error('Utilizador não autenticado');
 
       const txsToInsert: any[] = [];
-      const baseDate = new Date(transaction.date);
+      const baseDate = parseLocalDate(transaction.date);
 
       if (transaction.installmentTotal && transaction.installmentTotal > 1) {
         const groupId = crypto.randomUUID();
@@ -101,23 +102,43 @@ export function useDeleteTransaction() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('transactions').delete().eq('id', id);
-      if (error) throw error;
+    mutationFn: async ({ id, applyScope = 'this' }: { id: string, applyScope?: 'this' | 'future' | 'all' }) => {
+      if (applyScope === 'this') {
+        const { error } = await supabase.from('transactions').delete().eq('id', id);
+        if (error) throw error;
+      } else {
+        // Para 'future' ou 'all', primeiro buscamos a transação para pegar o installment_group_id e a data
+        const { data: tx } = await supabase.from('transactions').select('*').eq('id', id).single();
+        
+        if (tx?.installment_group_id) {
+          let query = supabase.from('transactions').delete().eq('installment_group_id', tx.installment_group_id);
+          
+          if (applyScope === 'future') {
+            query = query.gte('date', tx.date);
+          }
+          
+          const { error } = await query;
+          if (error) throw error;
+        } else {
+          // Se não tiver grupo, deleta apenas a si mesmo
+          const { error } = await supabase.from('transactions').delete().eq('id', id);
+          if (error) throw error;
+        }
+      }
       return id;
     },
-    onMutate: async (deletedId) => {
+    onMutate: async ({ id }) => {
       await queryClient.cancelQueries({ queryKey: ['transactions'] });
       const previousTransactions = queryClient.getQueryData(['transactions']);
 
       queryClient.setQueryData(['transactions'], (oldData: any) => {
         if (!oldData) return [];
-        return oldData.filter((tx: any) => tx.id !== deletedId);
+        return oldData.filter((tx: any) => tx.id !== id);
       });
 
       return { previousTransactions };
     },
-    onError: (err, deletedId, context) => {
+    onError: (err, variables, context) => {
       if (context?.previousTransactions) {
         queryClient.setQueryData(['transactions'], context.previousTransactions);
       }
