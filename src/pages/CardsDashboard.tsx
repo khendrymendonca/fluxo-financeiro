@@ -145,19 +145,6 @@ export default function CardsDashboard() {
                       usedLimit={cardStats.used}
                       availableLimit={cardStats.available}
                     />
-                    {selectedCardId === card.id && (
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        className="absolute top-4 right-4 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowEditCard(true);
-                        }}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    )}
                   </div>
                 );
               })}
@@ -168,6 +155,25 @@ export default function CardsDashboard() {
           <div className="lg:col-span-8 space-y-6">
             {selectedCard ? (
               <div className="space-y-6">
+                
+                {/* Selected Card Header with Edit Button */}
+                <div className="flex items-center justify-between p-1">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-10 rounded-full" style={{ backgroundColor: selectedCard.color }} />
+                    <div>
+                      <h2 className="text-2xl font-black tracking-tight">{selectedCard.name}</h2>
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{selectedCard.bank}</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setShowEditCard(true)}
+                    className="rounded-xl gap-2 border-primary/20 hover:bg-primary/5 hover:text-primary transition-all font-bold"
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Editar Cartão
+                  </Button>
+                </div>
 
                 {/* Limit Progress */}
                 <div className="card-elevated p-6 space-y-4">
