@@ -29,12 +29,16 @@ export function useTransactions(viewDate: Date) {
     queryFn: async () => {
       const start = format(startOfMonth(viewDate), 'yyyy-MM-dd');
       const end = format(endOfMonth(viewDate), 'yyyy-MM-dd');
+      const viewDateStr = format(viewDate, 'yyyy-MM');
 
-      // Trazemos transações NORMAIS deste mês OU transações RECORRENTES que começaram antes/durante este mês
+      // Trazemos:
+      // 1. Transações NORMAIS deste mês
+      // 2. Transações RECORRENTES que começaram antes/durante este mês
+      // 3. Transações que pertencem à FATURA deste mês (mesmo que a data seja do mês anterior)
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
-        .or(`and(is_recurring.eq.false,date.gte.${start},date.lte.${end}),and(is_recurring.eq.true,date.lte.${end})`);
+        .or(`and(is_recurring.eq.false,date.gte.${start},date.lte.${end}),and(is_recurring.eq.true,date.lte.${end}),invoice_month_year.eq.${viewDateStr}`);
 
       if (error) throw error;
 
