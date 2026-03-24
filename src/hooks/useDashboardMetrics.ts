@@ -1,19 +1,17 @@
 import { useMemo } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { Transaction, Category } from '@/types/finance';
+import { useCategories } from './useFinanceQueries';
+import { parseLocalDate } from '@/utils/dateUtils';
+import { Transaction } from '@/types/finance';
 
-export function useDashboardMetrics(viewDate: Date) {
-  const queryClient = useQueryClient();
-
-  const transactions: Transaction[] = queryClient.getQueryData(['transactions']) || [];
-  const categories: Category[] = queryClient.getQueryData(['categories']) || [];
+export function useDashboardMetrics(viewDate: Date, transactions: Transaction[]) {
+  const { data: categories = [] } = useCategories();
 
   return useMemo(() => {
     const viewMonth = viewDate.getMonth();
     const viewYear = viewDate.getFullYear();
 
     const currentMonthTransactions = transactions.filter(t => {
-      const d = new Date(t.date);
+      const d = parseLocalDate(t.date);
       return d.getMonth() === viewMonth && d.getFullYear() === viewYear;
     });
 

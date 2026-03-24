@@ -89,7 +89,7 @@ export default function Index() {
     viewDate
   } = useFinanceStore();
 
-  const { cashflow } = useDashboardMetrics(viewDate);
+  const { cashflow } = useDashboardMetrics(viewDate, currentMonthTransactions);
   const { data: accountsData = [] } = useAccounts();
 
   const { mutateAsync: payBill } = usePayBill();
