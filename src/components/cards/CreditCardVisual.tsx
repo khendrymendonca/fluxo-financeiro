@@ -1,6 +1,7 @@
-import { CreditCard as CardType } from '@/types/finance';
+﻿import { CreditCard as CardType } from '@/types/finance';
 import { cn } from '@/lib/utils';
 import { Wifi, CreditCard as CreditCardIcon } from 'lucide-react';
+import { formatCurrency } from '@/utils/formatters';
 
 interface CreditCardVisualProps {
     card: CardType;
@@ -59,7 +60,7 @@ export function CreditCardVisual({ card, usedLimit, availableLimit, onClick, cla
                         <div className="text-right">
                             <p className="text-xs opacity-75 mb-1">Limite Disponível</p>
                             <p className="font-bold text-lg">
-                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(availableLimit)}
+                                {formatCurrency(availableLimit)}
                             </p>
                         </div>
                     </div>
@@ -71,6 +72,10 @@ export function CreditCardVisual({ card, usedLimit, availableLimit, onClick, cla
                             style={{ width: `${percentageUsed}%` }}
                         />
                     </div>
+                    <div className="flex justify-between items-center text-[10px] opacity-75 font-medium -mt-2">
+                        <span>Limite Utilizado</span>
+                        <span>{Math.min(percentageUsed, 100).toFixed(1)}%</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -81,3 +86,5 @@ export function CreditCardVisual({ card, usedLimit, availableLimit, onClick, cla
 function adjustColor(color: string, amount: number) {
     return '#' + color.replace(/^#/, '').replace(/../g, color => ('0' + Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)).substr(-2));
 }
+
+

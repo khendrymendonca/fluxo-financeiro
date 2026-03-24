@@ -1,10 +1,10 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+﻿import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { addMonths, format } from 'date-fns';
 import { Transaction } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
-import { calcInvoiceMonthYear } from '@/utils/invoiceUtils';
+import { calcInvoiceMonthYear } from '@/utils/creditCardUtils';
 import { parseLocalDate } from '@/utils/dateUtils';
 
 // --- 1. ADICIONAR TRANSAÇÃO ---
@@ -14,7 +14,7 @@ export function useAddTransaction() {
 
   return useMutation({
     mutationFn: async (
-      transaction: Omit<Transaction, 'id'> & { cardClosingDay?: number }
+      transaction: Omit<Transaction, 'id'> & { cardClosingDay?: number, cardDueDay?: number }
     ) => {
       if (!user) throw new Error('Utilizador não autenticado');
 
@@ -27,10 +27,10 @@ export function useAddTransaction() {
           const date = format(addMonths(baseDate, i), 'yyyy-MM-dd');
           const isPaid = transaction.cardId ? true : parseLocalDate(date) <= parseLocalDate(format(new Date(), 'yyyy-MM-dd'));
 
-          // Calcula fatura de cada parcela
+          // Calcula fatura de cada parcela usando creditCardUtils (Date-based)
           const invoiceMonthYear =
-            transaction.cardId && transaction.cardClosingDay != null
-              ? calcInvoiceMonthYear(date, transaction.cardClosingDay)
+            transaction.cardId && transaction.cardClosingDay != null && transaction.cardDueDay != null
+              ? calcInvoiceMonthYear(parseLocalDate(date), { closingDay: transaction.cardClosingDay, dueDay: transaction.cardDueDay })
               : null;
 
           txsToInsert.push({
@@ -58,8 +58,8 @@ export function useAddTransaction() {
 
         // Calcula fatura da transação simples
         const invoiceMonthYear =
-          transaction.cardId && transaction.cardClosingDay != null
-            ? calcInvoiceMonthYear(transaction.date, transaction.cardClosingDay)
+          transaction.cardId && transaction.cardClosingDay != null && transaction.cardDueDay != null
+            ? calcInvoiceMonthYear(parseLocalDate(transaction.date), { closingDay: transaction.cardClosingDay, dueDay: transaction.cardDueDay })
             : null;
 
         txsToInsert.push({
@@ -107,20 +107,15 @@ export function useDeleteTransaction() {
         const { error } = await supabase.from('transactions').delete().eq('id', id);
         if (error) throw error;
       } else {
-        // Para 'future' ou 'all', primeiro buscamos a transação para pegar o installment_group_id e a data
         const { data: tx } = await supabase.from('transactions').select('*').eq('id', id).single();
-
         if (tx?.installment_group_id) {
           let query = supabase.from('transactions').delete().eq('installment_group_id', tx.installment_group_id);
-
           if (applyScope === 'future') {
             query = query.gte('date', tx.date);
           }
-
           const { error } = await query;
           if (error) throw error;
         } else {
-          // Se não tiver grupo, deleta apenas a si mesmo
           const { error } = await supabase.from('transactions').delete().eq('id', id);
           if (error) throw error;
         }
@@ -130,12 +125,10 @@ export function useDeleteTransaction() {
     onMutate: async ({ id }) => {
       await queryClient.cancelQueries({ queryKey: ['transactions'] });
       const previousTransactions = queryClient.getQueryData(['transactions']);
-
       queryClient.setQueryData(['transactions'], (oldData: any) => {
         if (!oldData) return [];
         return oldData.filter((tx: any) => tx.id !== id);
       });
-
       return { previousTransactions };
     },
     onError: (err, variables, context) => {
@@ -158,33 +151,23 @@ export function useToggleTransactionPaid() {
   return useMutation({
     mutationFn: async ({ id, isPaid, date }: { id: string, isPaid: boolean, date?: string }) => {
       const paymentDate = isPaid ? (date || format(new Date(), 'yyyy-MM-dd')) : null;
-
       const { error } = await supabase
         .from('transactions')
         .update({ is_paid: isPaid, payment_date: paymentDate })
         .eq('id', id);
-
       if (error) throw error;
       return id;
     },
     onMutate: async ({ id, isPaid }) => {
       await queryClient.cancelQueries({ queryKey: ['transactions'] });
       const previousTransactions = queryClient.getQueryData(['transactions']);
-
       queryClient.setQueryData(['transactions'], (oldData: any) => {
         if (!oldData) return [];
         return oldData.map((tx: any) =>
-          tx.id === id ? { ...tx, isPaid: isPaid } : tx
+          tx.id === id ? { ...tx, is_paid: isPaid } : tx
         );
       });
-
       return { previousTransactions };
-    },
-    onError: (err, variables, context) => {
-      if (context?.previousTransactions) {
-        queryClient.setQueryData(['transactions'], context.previousTransactions);
-      }
-      toast({ title: 'Falha ao atualizar status', variant: 'destructive' });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -201,16 +184,17 @@ export function useUpdateTransaction() {
     mutationFn: async ({
       id,
       updates,
-      currentCardId,      // ← cartão atual da transação (mesmo que não mudou)
-      cardClosingDay,     // ← closing_day do cartão atual
+      currentCardId,
+      cardClosingDay,
+      cardDueDay
     }: {
       id: string;
       updates: Partial<Transaction>;
       currentCardId?: string | null;
       cardClosingDay?: number;
+      cardDueDay?: number;
     }) => {
       const dbUpdates: any = {};
-
       if (updates.description !== undefined) dbUpdates.description = updates.description;
       if (updates.amount !== undefined) dbUpdates.amount = updates.amount;
       if (updates.date !== undefined) dbUpdates.date = updates.date;
@@ -222,18 +206,13 @@ export function useUpdateTransaction() {
       if (updates.paymentDate !== undefined) dbUpdates.payment_date = updates.paymentDate;
       if (updates.isRecurring !== undefined) dbUpdates.is_recurring = updates.isRecurring;
 
-      // Usa o cardId novo (se mudou) ou o atual (se não mudou)
       const effectiveCardId = updates.cardId !== undefined ? updates.cardId : currentCardId;
-      const effectiveDate = updates.date || (updates as any).originalDate; // Fallback se precisar de data
 
-      // BUG 1 / MELHORIA 2: Respeita invoice_month_year se vier do formulário, 
-      // ou recalcula se houver mudança de data/cartão.
       if (updates.invoiceMonthYear !== undefined) {
         dbUpdates.invoice_month_year = updates.invoiceMonthYear;
-      } else if (effectiveCardId && updates.date && cardClosingDay != null) {
-        dbUpdates.invoice_month_year = calcInvoiceMonthYear(updates.date, cardClosingDay);
+      } else if (effectiveCardId && updates.date && cardClosingDay != null && cardDueDay != null) {
+        dbUpdates.invoice_month_year = calcInvoiceMonthYear(parseLocalDate(updates.date), { closingDay: cardClosingDay, dueDay: cardDueDay });
       } else if (updates.accountId) {
-        // Mudou para conta bancária — limpa invoice
         dbUpdates.invoice_month_year = null;
       }
 
@@ -250,9 +229,6 @@ export function useUpdateTransaction() {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       toast({ title: 'Alterações salvas!' });
     },
-    onError: (err) => {
-      console.error('Erro ao atualizar:', err);
-      toast({ title: 'Erro ao salvar alterações', variant: 'destructive' });
-    },
   });
 }
+

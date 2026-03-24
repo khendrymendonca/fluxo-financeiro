@@ -1,4 +1,4 @@
-import { Shield, TrendingUp, AlertCircle, Edit2, ArrowRightLeft, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+﻿import { Shield, TrendingUp, AlertCircle, Edit2, ArrowRightLeft, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -162,7 +162,7 @@ export function EmergencyReserve({ data, onMonthsChange, accounts = [], onTransf
                 ) : (
                     <div className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success/30">
                         <div className="w-2 h-2 rounded-full bg-success animate-ping" />
-                        <p className="text-xs font-bold uppercase tracking-tight text-success">Regra dos {data.months} meses atingida! 🎉</p>
+                        <p className="text-xs font-bold uppercase tracking-tight text-success">Regra dos {data.months} meses atingida! ðŸŽ‰</p>
                     </div>
                 )}
 
@@ -288,3 +288,5 @@ export function EmergencyReserve({ data, onMonthsChange, accounts = [], onTransf
         </div>
     );
 }
+
+

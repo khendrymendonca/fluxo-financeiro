@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+﻿import { cn } from '@/lib/utils';
 import { Label } from './label';
 
 export const APP_COLORS = [
@@ -82,3 +82,5 @@ export function ColorSelector({ selectedColor, onSelect, label, className }: Col
         </div>
     );
 }
+
+

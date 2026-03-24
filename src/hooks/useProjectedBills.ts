@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+﻿import { useMemo } from 'react';
 import { isBefore, isSameMonth } from 'date-fns';
 import { Bill } from '@/types/finance';
 
@@ -41,3 +41,5 @@ export function useProjectedBills(bills: Bill[], viewDate: Date) {
     
   }, [bills, viewDate]);
 }
+
+

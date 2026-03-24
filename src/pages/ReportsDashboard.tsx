@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { ExpenseChart } from '@/components/dashboard/ExpenseChart';
 import { BalanceEvolutionChart } from '@/components/dashboard/BalanceEvolutionChart';
@@ -14,20 +14,20 @@ export default function ReportsDashboard() {
     getCategoryExpenses,
     accounts,
     viewDate,
-    // ✅ FIX: usa getPeriodStartBalance para o saldo inicial real do período
+    // âœ… FIX: usa getPeriodStartBalance para o saldo inicial real do período
     getPeriodStartBalance,
   } = useFinanceStore();
 
-  // ✅ FIX: dateRange removido — era estado morto sem efeito
+  // âœ… FIX: dateRange removido â€” era estado morto sem efeito
   // Quando a funcionalidade for implementada, adicionar de volta
 
   const balance = totalIncome - totalExpenses;
   const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
 
-  // ✅ FIX: saldo inicial do período em vez do saldo atual
+  // âœ… FIX: saldo inicial do período em vez do saldo atual
   const initialBalance = getPeriodStartBalance();
 
-  // ✅ FIX: número real de dias do mês visualizado
+  // âœ… FIX: nÃºmero real de dias do mês visualizado
   const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
   const avgDailyExpense = totalExpenses / daysInMonth;
 
@@ -110,3 +110,5 @@ export default function ReportsDashboard() {
     </div>
   );
 }
+
+

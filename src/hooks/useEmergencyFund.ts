@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+﻿import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAccounts, useCategories, useCategoryGroups } from './useFinanceQueries';
 import { Transaction } from '@/types/finance';
 
@@ -24,14 +24,14 @@ export function useEmergencyFund(currentMonthTransactions: Transaction[]) {
   // useMemo garante que a matemática só rode se os dados relevantes mudarem
   const emergencyData = useMemo(() => {
     // 1. Identifica quais categorias são "Necessidades Essenciais"
-    const needsGroup = categoryGroups.find(g => g.name === 'needs');
+    const needsGroup = categoryGroups.find(g => g.name === 'essencial');
     const needsCategoryIds = categories
       .filter(c => c.groupId === needsGroup?.id)
       .map(c => c.id);
     
     // 2. Soma todos os gastos essenciais do mês atual
     const fixedExpenses = currentMonthTransactions
-      .filter(t => t.type === 'expense' && t.categoryId && needsCategoryIds.includes(t.categoryId))
+      .filter(t => t.type === 'despesa' && t.categoryId && needsCategoryIds.includes(t.categoryId))
       .reduce((acc, curr) => acc + Number(curr.amount), 0);
       
     // 3. Define a meta financeira (Gastos Essenciais x Meses Desejados)
@@ -39,7 +39,7 @@ export function useEmergencyFund(currentMonthTransactions: Transaction[]) {
     
     // 4. Soma o que você já tem guardado
     const reserveAccounts = accounts.filter(acc => 
-      ['savings', 'caixinha', 'investment'].includes(acc.accountType)
+      ['metas', 'caixinha', 'investment'].includes(acc.accountType)
     );
     const currentAmount = reserveAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
     
@@ -62,3 +62,5 @@ export function useEmergencyFund(currentMonthTransactions: Transaction[]) {
     setEmergencyMonths
   };
 }
+
+

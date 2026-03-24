@@ -1,5 +1,5 @@
-
-import { useFinanceStore } from '@/hooks/useFinanceStore';
+﻿import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { formatCurrency } from '@/utils/formatters';
 import {
     LineChart,
     Line,
@@ -18,15 +18,9 @@ import { Button } from '@/components/ui/button';
 
 import { parseLocalDate } from '@/utils/dateUtils';
 
-export function AccountEvolution() {
+export function ExpenseEvolution() {
     const { transactions, categories, viewDate } = useFinanceStore();
 
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-        }).format(value);
-    };
 
     // Prepare data for the last 6 months
     const data = Array.from({ length: 6 }).map((_, i) => {
@@ -35,11 +29,12 @@ export function AccountEvolution() {
 
         const monthExpenses = transactions
             .filter(t => {
-                if (t.type !== 'expense') return false;
+                if (t.type !== 'despesa') return false;
+                if (t.isInvoicePayment) return false; // â† exclui pagamentos de fatura para não dobrar
                 const d = parseLocalDate(t.date);
                 return d >= startOfMonth(monthDate) && d <= endOfMonth(monthDate);
             })
-            .reduce((sum, t) => sum + t.amount, 0);
+            .reduce((sum, t) => sum + Number(t.amount), 0);
 
         return {
             name: monthLabel,
@@ -49,8 +44,12 @@ export function AccountEvolution() {
     });
 
     // Simple target (for demo, could be dynamic later)
-    const averageExpense = data.reduce((sum, d) => sum + d.valor, 0) / data.length;
-    const target = averageExpense * 0.9; // Goal is 10% less than average
+    // Média de gastos (ignora o mês atual incompleto para não enviesar)
+    const completedMonths = data.slice(0, 5);
+    const averageExpense = completedMonths.length > 0
+        ? completedMonths.reduce((sum, d) => sum + d.valor, 0) / completedMonths.length
+        : 0;
+    const target = averageExpense * 0.9;
 
     const latestMonth = data[data.length - 1];
     const previousMonth = data[data.length - 2];
@@ -66,8 +65,8 @@ export function AccountEvolution() {
                             <TrendingUp className="w-5 h-5" />
                         </div>
                         <div>
-                            <h3 className="font-bold">Evolução de Gastos</h3>
-                            <p className="text-xs text-muted-foreground">Comparativo dos últimos 6 meses</p>
+                            <h3 className="font-bold">Evolução de Despesas</h3>
+                            <p className="text-xs text-muted-foreground">Comparativo dos Ãºltimos 6 meses</p>
                         </div>
                     </div>
                 </div>
@@ -185,7 +184,7 @@ export function AccountEvolution() {
                         </div>
                     </div>
 
-                    {latestMonth.valor > target && (
+                    {target > 0 && latestMonth.valor > target && (
                         <div className="flex items-start gap-2 p-3 rounded-xl bg-danger/5 border border-danger/10 text-danger mt-2">
                             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
                             <p className="text-[10px] font-medium leading-tight">
@@ -198,3 +197,5 @@ export function AccountEvolution() {
         </div>
     );
 }
+
+

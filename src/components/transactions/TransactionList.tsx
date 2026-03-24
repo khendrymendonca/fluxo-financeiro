@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-// formatCurrency local from '@/utils/formatters';
+import { formatCurrency } from '@/utils/formatters';
 import { ArrowUpRight, ArrowDownRight, Trash2, Pencil, FastForward, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
@@ -25,7 +25,7 @@ interface TransactionListProps {
 import { parseLocalDate, todayLocalString, toLocalDateString } from '@/utils/dateUtils';
 
 export function TransactionList({ transactions, bills, onEdit, onPayBill, onDeleteBill }: TransactionListProps) {
-  const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
+  const [filter, setFilter] = useState<'all' | 'receita' | 'despesa'>('all');
   const [sourceFilter, setSourceFilter] = useState<'all' | 'account' | 'card'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'punctual' | 'installment' | 'fixed'>('all');
   const [specificSourceId, setSpecificSourceId] = useState<string>('all');
@@ -48,8 +48,6 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
   const { mutateAsync: togglePaidMutation } = useToggleTransactionPaid();
   const { mutateAsync: deleteTransactionMutation } = useDeleteTransaction();
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
   const formatDate = (dateString: string) =>
     parseLocalDate(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -70,7 +68,7 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
         id: b.id,
         description: b.name,
         amount: b.amount,
-        type: b.type === 'payable' ? 'expense' as const : 'income' as const,
+        type: b.type === 'pagar' ? 'despesa' as const : 'receita' as const,
         date: b.dueDate,
         categoryId: b.categoryId,
         isBill: true,
@@ -150,7 +148,7 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
 
   const handleSubmitPayment = (targetId: string, isCard: boolean) => {
     if (!payingItem) return;
-    if (!isCard && payingItem.type === 'expense') {
+    if (!isCard && payingItem.type === 'despesa') {
       const acc = accounts.find(a => a.id === targetId);
       if (acc?.hasOverdraft && acc.balance < payingItem.amount) {
         const deficit = payingItem.amount - acc.balance;
@@ -261,11 +259,11 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
         <div className="flex flex-wrap gap-4 items-center">
           {/* Receita/Despesa */}
           <div className="flex gap-1 p-1 bg-muted rounded-xl">
-            {(['all', 'income', 'expense'] as const).map(f => (
+            {(['all', 'receita', 'despesa'] as const).map(f => (
               <button key={f} onClick={() => setFilter(f)}
                 className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
                   filter === f ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                {f === 'all' ? 'Todos' : f === 'income' ? 'Receitas' : 'Despesas'}
+                {f === 'all' ? 'Todos' : f === 'receita' ? 'Receitas' : 'Despesas'}
               </button>
             ))}
           </div>
@@ -339,7 +337,7 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
               <p className="text-sm font-medium text-muted-foreground px-2">{formatDate(date)}</p>
               <div className="card-elevated divide-y divide-border">
                 {groupedItems[date].map(item => {
-                  const isIncome = item.type === 'income';
+                  const isIncome = item.type === 'receita';
                   const isPending = item.isPending;
                   const hasInstallmentGroup = item.installmentGroupId && !item.isBill;
                   const isGroupExpanded = expandedGroup === item.installmentGroupId;
@@ -534,10 +532,10 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
               onClick={e => e.stopPropagation()}>
               <div className="px-5 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
                 <h2 className="text-lg font-black tracking-tight">
-                  {payingItem.type === 'income' ? 'Receber com qual conta?' : 'Pagar com qual conta?'}
+                  {payingItem.type === 'receita' ? 'Receber com qual conta?' : 'Pagar com qual conta?'}
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  <span className={cn("font-bold", payingItem.type === 'income' ? "text-success" : "text-danger")}>
+                  <span className={cn("font-bold", payingItem.type === 'receita' ? "text-success" : "text-danger")}>
                     {formatCurrency(payingItem.amount)}
                   </span>{' — '}{payingItem.description}
                 </p>
@@ -571,7 +569,7 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
                   ) : (
                     accounts.map(acc => {
                       const availableTotal = acc.balance + (acc.hasOverdraft ? (acc.overdraftLimit || 0) : 0);
-                      const wouldGoNegative = payingItem.type === 'expense' && acc.balance < payingItem.amount;
+                      const wouldGoNegative = payingItem.type === 'despesa' && acc.balance < payingItem.amount;
                       const hasEnoughWithOverdraft = acc.hasOverdraft && availableTotal >= payingItem.amount;
                       const insufficientFunds = wouldGoNegative && !hasEnoughWithOverdraft;
                       return (
@@ -680,3 +678,5 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
     </div>
   );
 }
+
+

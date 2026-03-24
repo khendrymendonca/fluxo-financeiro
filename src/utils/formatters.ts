@@ -1,4 +1,4 @@
-export const formatCurrency = (value: number | string | null | undefined): string => {
+﻿export const formatCurrency = (value: number | string | null | undefined): string => {
     if (value === null || value === undefined) return 'R$ 0,00';
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
     if (isNaN(numValue)) return 'R$ 0,00';
@@ -9,3 +9,16 @@ export const normalizeDateForInput = (dateStr: string | null | undefined): strin
     if (!dateStr) return '';
     return dateStr.split('T')[0];
 };
+export const formatCurrencyCompact = (value: number | string | null | undefined): string => {
+    if (value === null || value === undefined) return 'R$ 0';
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(numValue)) return 'R$ 0';
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        notation: 'compact',
+        maximumFractionDigits: 1
+    }).format(numValue);
+};
+
+

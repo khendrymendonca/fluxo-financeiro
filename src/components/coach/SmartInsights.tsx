@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { useBudgetRule } from '@/hooks/useBudgetCoach';
+import { formatCurrency } from '@/utils/formatters';
 import {
     Sparkles,
     TrendingUp,
@@ -14,12 +14,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 import { parseLocalDate } from '@/utils/dateUtils';
-
-const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
 interface Insight {
     id: string;
@@ -36,8 +32,7 @@ interface SmartInsightsProps {
 }
 
 export function SmartInsights({ onNavigate }: SmartInsightsProps) {
-    const { currentMonthTransactions: transactions, categories, totalIncome, totalExpenses } = useFinanceStore();
-    const { data: budgetRule } = useBudgetRule();
+    const { currentMonthTransactions: transactions, categories, totalIncome, totalExpenses, budgetRule } = useFinanceStore();
     const [dismissedInsights, setDismissedInsights] = useState<string[]>([]);
 
     useEffect(() => {
@@ -72,14 +67,13 @@ export function SmartInsights({ onNavigate }: SmartInsightsProps) {
         }
 
         // 2. Category Growth (Tip)
-        // Find category with highest growth vs last month
         const categoryTotalsCurrent = transactions
             .filter(t => {
                 const d = parseLocalDate(t.date);
                 return d >= currentMonthStart && d <= endOfMonth(now);
             })
             .reduce((acc, t) => {
-                if (t.categoryId) acc[t.categoryId] = (acc[t.categoryId] || 0) + t.amount;
+                if (t.categoryId) acc[t.categoryId] = (acc[t.categoryId] || 0) + Number(t.amount);
                 return acc;
             }, {} as Record<string, number>);
 
@@ -89,14 +83,15 @@ export function SmartInsights({ onNavigate }: SmartInsightsProps) {
                 return d >= lastMonthStart && d <= lastMonthEnd;
             })
             .reduce((acc, t) => {
-                if (t.categoryId) acc[t.categoryId] = (acc[t.categoryId] || 0) + t.amount;
+                if (t.categoryId) acc[t.categoryId] = (acc[t.categoryId] || 0) + Number(t.amount);
                 return acc;
             }, {} as Record<string, number>);
 
         Object.keys(categoryTotalsCurrent).forEach(catId => {
             const current = categoryTotalsCurrent[catId];
             const last = categoryTotalsLast[catId] || 0;
-            const catName = categories.find(c => c.id === catId)?.name || 'Categoria';
+            const category = categories.find(c => c.id === catId);
+            const catName = category?.name || 'Categoria';
 
             if (last > 0 && current > last * 1.3) { // 30% increase
                 list.push({
@@ -125,8 +120,6 @@ export function SmartInsights({ onNavigate }: SmartInsightsProps) {
 
         // 4. Budget Rule Alignment (Tip)
         if (budgetRule && totalExpenses > 0) {
-            // Very simple check for wants vs needs
-            // (This could be much more complex if we map all categories to groups here)
             list.push({
                 id: 'rule-tip',
                 type: 'tip',
@@ -137,7 +130,7 @@ export function SmartInsights({ onNavigate }: SmartInsightsProps) {
         }
 
         // 5. Uncategorized (Warning)
-        const uncategorizedCount = transactions.filter(t => !t.categoryId && t.type === 'expense').length;
+        const uncategorizedCount = transactions.filter(t => !t.categoryId && t.type === 'despesa').length;
         if (uncategorizedCount > 5) {
             list.push({
                 id: 'uncategorized',
@@ -148,7 +141,6 @@ export function SmartInsights({ onNavigate }: SmartInsightsProps) {
             });
         }
 
-        // Cap at 3 insights for UI simplicity
         return list.slice(0, 3);
     }, [transactions, categories, totalIncome, totalExpenses, budgetRule, onNavigate]);
 
@@ -177,7 +169,6 @@ export function SmartInsights({ onNavigate }: SmartInsightsProps) {
                                         "border-primary bg-primary/5 hover:border-primary/60"
                         )}
                     >
-                        {/* Dismiss button */}
                         <button
                             onClick={() => dismissInsight(insight.id)}
                             className="absolute top-2 right-2 p-1.5 rounded-full bg-background/50 text-muted-foreground hover:text-foreground hover:bg-background transition-colors opacity-0 group-hover:opacity-100"
@@ -214,3 +205,5 @@ export function SmartInsights({ onNavigate }: SmartInsightsProps) {
         </div>
     );
 }
+
+

@@ -1,4 +1,4 @@
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+﻿import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface ExpenseChartProps {
   data: Record<string, number>;
@@ -117,3 +117,5 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
     </div>
   );
 }
+
+

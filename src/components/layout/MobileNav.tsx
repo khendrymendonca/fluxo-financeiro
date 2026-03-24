@@ -1,4 +1,4 @@
-import {
+﻿import {
   LayoutDashboard,
   ArrowUpDown,
   CreditCard,
@@ -7,7 +7,9 @@ import {
   TrendingDown,
   Receipt,
   Settings2,
-  Database
+  Database,
+  Wallet,
+  LineChart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -18,8 +20,13 @@ interface MobileNavProps {
 
 const navItems = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Home' },
-  { id: 'bills', icon: Receipt, label: 'Contas' },
   { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos' },
+  { id: 'bills', icon: Receipt, label: 'Fixas' },
+  { id: 'cards', icon: CreditCard, label: 'Cartões' },
+  { id: 'accounts', icon: Wallet, label: 'Bancos' },
+  { id: 'goals', icon: Target, label: 'Metas' },
+  { id: 'debts', icon: TrendingDown, label: 'Dívidas' },
+  { id: 'reports', icon: LineChart, label: 'Gráficos' },
   { id: 'categories', icon: Settings2, label: 'Categorias' },
   { id: 'export', icon: Database, label: 'Dados' },
   { id: 'simulator', icon: Calculator, label: 'Simulador' },
@@ -28,7 +35,7 @@ const navItems = [
 export function MobileNav({ currentView, onNavigate }: MobileNavProps) {
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40">
-      <div className="flex justify-around items-center py-2 px-4">
+      <div className="flex justify-start items-center py-2 px-2 overflow-x-auto no-scrollbar scroll-smooth">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentView === item.id;
@@ -58,3 +65,5 @@ export function MobileNav({ currentView, onNavigate }: MobileNavProps) {
     </nav>
   );
 }
+
+

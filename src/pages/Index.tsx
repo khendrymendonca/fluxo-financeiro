@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Plus, Wallet, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
@@ -36,7 +36,7 @@ import { BillsManager } from '@/components/coach/BillsManager';
 import { CategoriesManager } from '@/components/coach/CategoriesManager';
 import { SmartInsights } from '@/components/coach/SmartInsights';
 import { ExportManager } from '@/components/dashboard/ExportManager';
-import { AccountEvolution } from '@/components/dashboard/AccountEvolution';
+import { ExpenseEvolution } from '@/components/dashboard/AccountEvolution';
 import { cn } from '@/lib/utils';
 
 type ViewType = 'dashboard' | 'transactions' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'bills' | 'categories' | 'export';
@@ -101,13 +101,13 @@ export default function Index() {
   const { mutate: seedCoachAction } = useSeedCoach();
   const emergencyData = useEmergencyFund(currentMonthTransactions);
 
-  // ✅ FIX: renomeado para periodBalance para não confundir com viewBalance
+  // âœ… FIX: renomeado para periodBalance para não confundir com viewBalance
   const periodBalance = cashflow.totalIncome - cashflow.totalExpenses;
   const categoryExpenses = getCategoryExpenses();
 
   const showCoachOnboarding = !loading && categories.length === 0;
 
-  // ✅ FIX: removido bloco silencioso de bills — TransactionList já trata bills diretamente
+  // âœ… FIX: removido bloco silencioso de bills â€” TransactionList já trata bills diretamente
   const handleEditTransaction = (item: Transaction) => {
     setEditingTransaction(item);
     setShowTransactionForm(true);
@@ -160,7 +160,7 @@ export default function Index() {
             {/* Dashboard Cards Gerais */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard
-                title="Patrimônio Total"
+                title="PatrimÃ´nio Total"
                 value={totalNetWorth}
                 icon={<Wallet className="w-5 h-5" />}
                 variant={totalNetWorth >= 0 ? 'positive' : 'negative'}
@@ -177,7 +177,7 @@ export default function Index() {
                 icon={<TrendingDown className="w-4 h-4 text-danger" />}
                 variant="negative"
               />
-              {/* ✅ FIX: usa periodBalance no lugar de balance */}
+              {/* âœ… FIX: usa periodBalance no lugar de balance */}
               <StatCard
                 title="Saldo Projetado"
                 value={projectedBalance}
@@ -217,7 +217,7 @@ export default function Index() {
             </div>
 
             <div className="grid grid-cols-1 gap-4">
-              <AccountEvolution />
+              <ExpenseEvolution />
               <RecentTransactions
                 transactions={currentMonthTransactions}
                 accounts={accounts}
@@ -252,7 +252,7 @@ export default function Index() {
               onPayBill={async (bill, accountId, paymentDate, isPartial, partialAmount, cardId) => {
                 await payBill({ bill, accountId, paymentDate, isPartial, partialAmount, cardId })
               }}
-              onDeleteBill={(id) => deleteBill(id)}
+              onDeleteBill={(id, applyToFuture) => deleteBill({ id, deleteFuture: applyToFuture })}
             />
           </div>
         );
@@ -411,3 +411,5 @@ export default function Index() {
     </div>
   );
 }
+
+

@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+﻿import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { Bill } from '@/types/finance';
@@ -67,7 +67,7 @@ export function useDeleteBill() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, deleteFuture }: { id: string, deleteFuture?: boolean }) => {
       const { error } = await supabase.from('bills').delete().eq('id', id);
       if (error) throw error;
       return id;
@@ -90,14 +90,14 @@ export function usePayBill() {
 
       const cleanPaymentDate = (paymentDate || new Date().toISOString()).split('T')[0];
       const payAmount = isPartial && partialAmount ? partialAmount : (bill.amount ?? 0);
-      
+
       const isCardBill = !!bill.cardId && bill.categoryId === 'card-payment';
 
       const { error: txError } = await supabase.from('transactions').insert({
         user_id: user.id,
         description: isPartial ? `Abatimento: ${bill.name}` : `Pgto: ${bill.name}`,
         amount: payAmount,
-        type: 'expense',
+        type: 'despesa',
         date: cleanPaymentDate,
         account_id: accountId || null,
         card_id: isCardBill ? null : (cardId || bill.cardId || null),
@@ -131,3 +131,5 @@ export function usePayBill() {
     }
   });
 }
+
+

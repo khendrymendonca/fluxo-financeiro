@@ -1,9 +1,9 @@
--- Enable UUID extension
+﻿-- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
 -- ACCOUNTS TABLE
 create table accounts (
-  id uuid default uuid_generate_v4() primary key,
+  id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users not null,
   name text not null,
   bank text not null,
@@ -29,7 +29,7 @@ create policy "Users can delete their own accounts" on accounts
 
 -- CREDIT CARDS TABLE
 create table credit_cards (
-  id uuid default uuid_generate_v4() primary key,
+  id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users not null,
   name text not null,
   bank text not null,
@@ -58,11 +58,11 @@ create policy "Users can delete their own cards" on credit_cards
 
 -- TRANSACTIONS TABLE
 create table transactions (
-  id uuid default uuid_generate_v4() primary key,
+  id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users not null,
   description text not null,
   amount numeric not null,
-  type text not null check (type in ('income', 'expense')),
+  type text not null check (type in ('receita', 'despesa')),
   category text not null,
   date timestamp with time zone not null,
   account_id uuid references accounts(id) on delete set null,
@@ -93,7 +93,7 @@ create policy "Users can delete their own transactions" on transactions
 
 -- SAVINGS GOALS TABLE
 create table savings_goals (
-  id uuid default uuid_generate_v4() primary key,
+  id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users not null,
   name text not null,
   target_amount numeric not null,
@@ -121,7 +121,7 @@ create policy "Users can delete their own goals" on savings_goals
 
 -- DEBTS TABLE
 create table debts (
-  id uuid default uuid_generate_v4() primary key,
+  id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users not null,
   name text not null,
   total_amount numeric not null,
@@ -146,3 +146,5 @@ create policy "Users can update their own debts" on debts
 
 create policy "Users can delete their own debts" on debts
   for delete using (auth.uid() = user_id);
+
+

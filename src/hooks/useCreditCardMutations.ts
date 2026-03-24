@@ -1,10 +1,10 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+﻿import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { CreditCard } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 
-// --- 1. ADICIONAR CARTÃO DE CRÉDITO ---
+// --- 1. ADICIONAR CARTÃO DE CRÃ‰DITO ---
 export function useAddCreditCard() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -39,7 +39,7 @@ export function useAddCreditCard() {
   });
 }
 
-// --- 2. ATUALIZAR CARTÃO DE CRÉDITO ---
+// --- 2. ATUALIZAR CARTÃO DE CRÃ‰DITO ---
 export function useUpdateCreditCard() {
   const queryClient = useQueryClient();
 
@@ -63,7 +63,7 @@ export function useUpdateCreditCard() {
   });
 }
 
-// --- 3. DELETAR CARTÃO DE CRÉDITO ---
+// --- 3. DELETAR CARTÃO DE CRÃ‰DITO ---
 export function useDeleteCreditCard() {
   const queryClient = useQueryClient();
 
@@ -80,3 +80,5 @@ export function useDeleteCreditCard() {
     }
   });
 }
+
+

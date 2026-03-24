@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { format } from 'date-fns';
 import { TrendingDown, Plus, Trash2, X, AlertTriangle, Calculator, ArrowUpDown } from 'lucide-react';
 import { DebtPayoffPlanner } from './DebtPayoffPlanner';
@@ -120,7 +120,7 @@ export function DebtsManager({
             <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">Nenhuma dívida cadastrada</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Que bom! Continue assim 🎉
+              Que bom! Continue assim ðŸŽ‰
             </p>
           </div>
         ) : (
@@ -141,8 +141,8 @@ export function DebtsManager({
                   <div>
                     <h3 className="font-semibold text-lg">{debt.name}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {debt.interestRateMonthly > 0 && `${debt.interestRateMonthly}% a.m. • `}
-                      {debt.dueDay && `Vence dia ${debt.dueDay} • `}
+                      {debt.interestRateMonthly > 0 && `${debt.interestRateMonthly}% a.m. â€¢ `}
+                      {debt.dueDay && `Vence dia ${debt.dueDay} â€¢ `}
                       ~{monthsRemaining} meses restantes
                     </p>
                   </div>
@@ -274,3 +274,5 @@ export function DebtsManager({
     </div>
   );
 }
+
+

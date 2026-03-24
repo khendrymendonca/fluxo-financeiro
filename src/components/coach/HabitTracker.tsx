@@ -1,4 +1,4 @@
-import { useFinanceStore } from '@/hooks/useFinanceStore';
+﻿import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { Trophy, Flame, CheckCircle2, Circle, Target, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -30,7 +30,7 @@ export function HabitTracker() {
             if (error) throw error;
 
             await fetchInitialData();
-            toast({ title: 'Hábito concluído! Continue assim! 🚀' });
+            toast({ title: 'Hábito concluído! Continue assim! ðŸš€' });
         } catch (err) {
             console.error(err);
             toast({ title: 'Erro ao registrar hábito', variant: 'destructive' });
@@ -164,3 +164,5 @@ export function HabitTracker() {
         </div >
     );
 }
+
+

@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import { Calculator, TrendingUp, Minus, Plus } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/utils/formatters';
 
 interface WhatIfSimulatorProps {
   totalIncome: number;
@@ -16,13 +16,6 @@ export function WhatIfSimulator({ totalIncome, totalExpenses, categoryExpenses }
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [adjustmentType, setAdjustmentType] = useState<'remove' | 'reduce'>('remove');
   const [reductionPercentage, setReductionPercentage] = useState(50);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
 
   const currentBalance = totalIncome - totalExpenses;
 
@@ -43,9 +36,8 @@ export function WhatIfSimulator({ totalIncome, totalExpenses, categoryExpenses }
       savings,
       newExpenses,
       newBalance,
-      improvement: newBalance - currentBalance,
     };
-  }, [selectedCategory, adjustmentType, reductionPercentage, categoryExpenses, totalIncome, totalExpenses, currentBalance]);
+  }, [selectedCategory, adjustmentType, reductionPercentage, categoryExpenses, totalIncome, totalExpenses]);
 
   const availableCategories = Object.entries(categoryExpenses)
     .filter(([_, amount]) => amount > 0)
@@ -146,9 +138,9 @@ export function WhatIfSimulator({ totalIncome, totalExpenses, categoryExpenses }
               <Label>Porcentagem de redução: {reductionPercentage}%</Label>
               <input
                 type="range"
-                min="10"
-                max="90"
-                step="10"
+                min="5"
+                max="100"
+                step="5"
                 value={reductionPercentage}
                 onChange={(e) => setReductionPercentage(parseInt(e.target.value))}
                 className="w-full h-2 rounded-full appearance-none bg-muted cursor-pointer"
@@ -201,3 +193,5 @@ export function WhatIfSimulator({ totalIncome, totalExpenses, categoryExpenses }
     </div>
   );
 }
+
+

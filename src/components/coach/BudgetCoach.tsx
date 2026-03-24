@@ -1,6 +1,7 @@
-import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { TrendingUp, AlertCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
+﻿import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { AlertCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatCurrencyCompact } from '@/utils/formatters';
 
 export function BudgetCoach() {
     const {
@@ -26,33 +27,26 @@ export function BudgetCoach() {
             .map(c => c.id);
 
         return currentMonthTransactions
-            .filter(t => t.type === 'expense' && (t.categoryId && groupCategoryIds.includes(t.categoryId)))
+            .filter(t => t.type === 'despesa' && !t.isInvoicePayment && (t.categoryId && groupCategoryIds.includes(t.categoryId)))
             .reduce((sum, t) => sum + t.amount, 0);
     };
 
     const groups = [
-        { name: 'Essenciais', key: 'needs', percent: rule.needsPercent, spent: calculateGroupSpending('needs'), color: 'bg-primary' },
-        { name: 'Estilo de Vida', key: 'wants', percent: rule.wantsPercent, spent: calculateGroupSpending('wants'), color: 'bg-amber-500' },
-        { name: 'Metas/Dívidas', key: 'savings', percent: rule.savingsPercent, spent: calculateGroupSpending('savings'), color: 'bg-success' },
+        { name: 'Essenciais', key: 'essencial', percent: rule.needsPercent, spent: calculateGroupSpending('Essenciais'), color: 'bg-primary' },
+        { name: 'Estilo de Vida', key: 'lazer', percent: rule.wantsPercent, spent: calculateGroupSpending('Estilo de Vida'), color: 'bg-amber-500' },
+        { name: 'Metas/Dívidas', key: 'metas', percent: rule.savingsPercent, spent: calculateGroupSpending('Metas/Dívidas'), color: 'bg-success' },
     ];
 
-    const formatCurrency = (val: number) => {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
-    };
-
-    const formatCompact = (val: number) => {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(val);
-    };
 
     return (
         <div className="card-elevated p-4 animate-fade-in h-full flex flex-col">
             <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                     <div className="w-1.5 h-4 bg-primary rounded-full" />
-                    Saúde Financeira
+                    SaÃºde Financeira
                 </h3>
                 <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-bold">
-                    Base: {formatCompact(totalIncome)}
+                    Base: {formatCurrencyCompact(totalIncome)}
                 </span>
             </div>
 
@@ -84,10 +78,10 @@ export function BudgetCoach() {
                                         "text-xs font-black",
                                         isOverLimit ? "text-danger" : isNearLimit ? "text-amber-500" : "text-foreground"
                                     )}>
-                                        {formatCompact(group.spent)}
+                                        {formatCurrencyCompact(group.spent)}
                                     </span>
                                     <span className="text-[9px] text-muted-foreground">
-                                        / {formatCompact(limit)}
+                                        / {formatCurrencyCompact(limit)}
                                     </span>
                                 </div>
                             </div>
@@ -109,9 +103,11 @@ export function BudgetCoach() {
             {/* Compact tip */}
             <div className="pt-2 mt-2 border-t border-border/50">
                 <p className="text-[10px] text-muted-foreground text-center">
-                    Priorize <strong className="text-foreground">Metas/Dívidas</strong> para sua saúde financeira
+                    Priorize <strong className="text-foreground">Metas/Dívidas</strong> para sua saÃºde financeira
                 </p>
             </div>
         </div>
     );
 }
+
+

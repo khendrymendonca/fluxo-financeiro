@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+﻿import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
 import { Transaction, Account, CreditCard, Bill, Debt, SavingsGoal, Category, Subcategory, CategoryGroup } from '@/types/finance';
@@ -34,7 +34,7 @@ export function useTransactions(viewDate: Date) {
       // Trazemos:
       // 1. Transações NORMAIS deste mês
       // 2. Transações RECORRENTES que começaram antes/durante este mês
-      // 3. Transações que pertencem à FATURA deste mês (mesmo que a data seja do mês anterior)
+      // 3. Transações que pertencem Ã  FATURA deste mês (mesmo que a data seja do mês anterior)
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
@@ -193,3 +193,5 @@ export function useCategoryGroups() {
     staleTime: 1000 * 60 * 60 * 24, // 24 horas
   });
 }
+
+

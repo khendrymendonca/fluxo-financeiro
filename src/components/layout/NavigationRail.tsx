@@ -1,4 +1,4 @@
-import {
+﻿import {
   LayoutDashboard,
   ArrowUpDown,
   CreditCard,
@@ -10,15 +10,14 @@ import {
   Receipt,
   Settings2,
   Database,
-  Menu,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal
+  Palette,
+  Sun
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTheme } from '@/hooks/useTheme';
-import { Palette, Sun } from 'lucide-react';
 
 const navItems = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Painel' },
@@ -69,7 +68,7 @@ export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }
           onClick={toggleSidebar}
           className="p-2 rounded-xl hover:bg-muted text-muted-foreground transition-colors"
         >
-          {isExpanded ? <ChevronLeft className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          {isExpanded ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
         </button>
       </div>
 
@@ -116,7 +115,11 @@ export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }
       {/* Footer Actions */}
       <div className="mt-auto pt-6 border-t border-border/50 flex flex-col gap-2">
         <button
-          onClick={() => setTheme(theme === 'original' ? 'green-black' : 'original')}
+          onClick={() => {
+            const themes: ('original' | 'green-black')[] = ['original', 'green-black'];
+            const nextIndex = (themes.indexOf(theme as any) + 1) % themes.length;
+            setTheme(themes[nextIndex]);
+          }}
           className={cn(
             "flex items-center rounded-2xl transition-all duration-200 group relative",
             isExpanded ? "px-4 py-3 gap-3 w-full" : "w-14 h-14 justify-center mx-auto",
@@ -141,4 +144,5 @@ export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }
     </nav>
   );
 }
+
 

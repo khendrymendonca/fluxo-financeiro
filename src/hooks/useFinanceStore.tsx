@@ -1,5 +1,5 @@
-import { useState, useMemo, createContext, useContext, useCallback } from 'react';
-import { FilterMode, Transaction, Bill, Account, SavingsGoal, Debt } from '@/types/finance';
+﻿import { useState, useMemo, createContext, useContext, useCallback } from 'react';
+import { FilterMode, Transaction, Bill, Account, SavingsGoal, Debt, CreditCard } from '@/types/finance';
 import { addMonths, subMonths, format } from 'date-fns';
 import {
   useAccounts,
@@ -48,12 +48,12 @@ import {
   useUpdateDebt,
   useDeleteDebt
 } from './useDebtMutations';
+import { useBudgetRule } from './useBudgetCoach';
+import { parseLocalDate } from '@/utils/dateUtils';
 
 export type FinanceContextData = ReturnType<typeof useFinanceProvider>;
 
 const FinanceContext = createContext<FinanceContextData | undefined>(undefined);
-
-import { parseLocalDate } from '@/utils/dateUtils';
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const data = useFinanceProvider();
@@ -107,6 +107,7 @@ function useFinanceProvider() {
 
   const addCardMutation = useAddCreditCard();
   const updateCardMutation = useUpdateCreditCard();
+  const updateCardMutation_REAL = useUpdateCreditCard();
   const deleteCardMutation = useDeleteCreditCard();
 
   const addGoalMutation = useAddGoal();
@@ -117,6 +118,7 @@ function useFinanceProvider() {
   const addDebtMutation = useAddDebt();
   const updateDebtMutation = useUpdateDebt();
   const deleteDebtMutation = useDeleteDebt();
+  const { data: budgetRule } = useBudgetRule();
 
   // --- Navigation ---
   const nextMonth = useCallback(() => setViewDate(prev => addMonths(prev, 1)), []);
@@ -133,7 +135,6 @@ function useFinanceProvider() {
   }, [transactions, viewDate]);
 
   const currentMonthBills = useMemo(() => {
-    // 1. Filtramos o que é REAL no banco para este mês
     const realBills = rawBills.filter(b => {
       if (b.isVirtual) return false;
       const bDate = parseLocalDate(b.dueDate);
@@ -141,9 +142,7 @@ function useFinanceProvider() {
       return bDate.getMonth() === viewDate.getMonth() && bDate.getFullYear() === viewDate.getFullYear();
     });
 
-    // 2. Filtramos as VIRTUAIS (projeções)
     const filteredVirtual = projectedBills.filter(v => {
-      // Só mostramos a virtual se NÃO existir uma real com o mesmo nome e valor
       if (!v.isVirtual) return false;
       return !realBills.some(r =>
         r.originalBillId === v.originalBillId ||
@@ -157,15 +156,15 @@ function useFinanceProvider() {
   }, [rawBills, projectedBills, viewDate, viewMode]);
 
   const totalBalance = useMemo(() => accounts.reduce((sum, acc) => sum + Number(acc.balance), 0), [accounts]);
-  const totalIncome = useMemo(() => currentMonthTransactions.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
-  const totalExpenses = useMemo(() => currentMonthTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
+  const totalIncome = useMemo(() => currentMonthTransactions.filter(t => t.type === 'receita').reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
+  const totalExpenses = useMemo(() => currentMonthTransactions.filter(t => t.type === 'despesa').reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
 
   const totalPendingOutflows = useMemo(() => {
     return currentMonthTransactions
-      .filter(t => !t.isPaid && t.type === 'expense')
+      .filter(t => !t.isPaid && t.type === 'despesa')
       .reduce((sum, t) => sum + Number(t.amount), 0) +
       currentMonthBills
-        .filter(b => b.status === 'pending' && b.type === 'payable')
+        .filter(b => b.status === 'pending' && b.type === 'pagar')
         .reduce((sum, b) => sum + Number(b.amount), 0);
   }, [currentMonthTransactions, currentMonthBills]);
 
@@ -173,6 +172,21 @@ function useFinanceProvider() {
     localStorage.setItem('emergencyMonths', String(m));
     setEmergencyMonthsLocal(m);
   }, []);
+
+  const getPeriodStartBalance = useCallback(() => {
+    const currentTotal = accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+
+    const adjustments = rawTransactions
+      .filter(t => {
+        const tDate = parseLocalDate(t.date);
+        return t.isPaid && tDate >= viewDate && tDate <= today;
+      })
+      .reduce((acc, t) => t.type === 'receita' ? acc - Number(t.amount) : acc + Number(t.amount), 0);
+
+    return currentTotal + adjustments;
+  }, [accounts, rawTransactions, viewDate]);
 
   return {
     transactions,
@@ -183,6 +197,7 @@ function useFinanceProvider() {
     categories,
     subcategories,
     categoryGroups,
+    budgetRule,
     bills: projectedBills,
     habits: [],
     habitLogs: [],
@@ -203,11 +218,11 @@ function useFinanceProvider() {
     nextDay,
     prevDay,
     setEmergencyMonths,
+    getPeriodStartBalance,
 
-    // Mutations exposed as direct functions for UI compatibility
     addTransaction: addTransactionMutation.mutateAsync,
-    updateTransaction: (id: string, updates: Partial<Transaction>, cardClosingDay?: number, currentCardId?: string | null) =>
-      updateTransactionMutation.mutateAsync({ id, updates, cardClosingDay, currentCardId } as any),
+    updateTransaction: (id: string, updates: Partial<Transaction>, cardClosingDay?: number, cardDueDay?: number, currentCardId?: string | null) =>
+      updateTransactionMutation.mutateAsync({ id, updates, cardClosingDay, cardDueDay, currentCardId } as any),
     deleteTransaction: (id: string, scope: 'this' | 'future' | 'all' = 'this') =>
       deleteTransactionMutation.mutateAsync({ id, applyScope: scope }),
     togglePaid: togglePaidMutation.mutateAsync,
@@ -219,7 +234,7 @@ function useFinanceProvider() {
       transferMutation.mutateAsync({ fromAccountId: from, [toType === 'account' ? 'toAccountId' : 'toCardId']: to, amount: Number(amount), description: desc, date } as any),
 
     addCreditCard: addCardMutation.mutateAsync,
-    updateCreditCard: updateCardMutation.mutateAsync,
+    updateCreditCard: (id: string, updates: Partial<CreditCard>) => updateCardMutation_REAL.mutateAsync({ id, updates }),
     deleteCreditCard: deleteCardMutation.mutateAsync,
 
     addSavingsGoal: addGoalMutation.mutateAsync,
@@ -231,21 +246,44 @@ function useFinanceProvider() {
     updateDebt: (id: string, updates: Partial<Debt>) => updateDebtMutation.mutateAsync({ id, updates }),
     deleteDebt: deleteDebtMutation.mutateAsync,
 
-    // Placeholders or helpers needed by UI
     fetchInitialData: async () => { },
     getTransactionTargetDate: (t: Transaction) => new Date(t.date),
     getEmergencyFundData: () => ({ monthlyFixed: 0, targetAmount: 0, currentAmount: 0, progress: 0, months: emergencyMonths, reserveAccounts: [] }),
     seedCoach: async () => { },
-    createDebtWithInstallments: async (debtData: any, firstPayment: string) => { },
+    createDebtWithInstallments: async (debt: Omit<Debt, 'id' | 'userId'>, firstPaymentDate: string) => {
+      const [newDebt] = await addDebtMutation.mutateAsync(debt);
+      if (!newDebt) return;
+      const numInstallments = Math.ceil(debt.totalAmount / debt.monthlyPayment);
+      const baseDate = parseLocalDate(firstPaymentDate);
+      for (let i = 0; i < numInstallments; i++) {
+        const currentDate = addMonths(baseDate, i);
+        const installmentAmount = i === numInstallments - 1
+          ? debt.totalAmount - (debt.monthlyPayment * (numInstallments - 1))
+          : debt.monthlyPayment;
+        if (installmentAmount <= 0) continue;
+        await addTransactionMutation.mutateAsync({
+          type: 'despesa',
+          transactionType: 'installment',
+          description: `${debt.name} (${i + 1}/${numInstallments})`,
+          amount: installmentAmount,
+          date: format(currentDate, 'yyyy-MM-dd'),
+          debtId: newDebt.id,
+          installmentNumber: i + 1,
+          installmentTotal: numInstallments,
+          isPaid: false,
+          userId: newDebt.user_id
+        } as any);
+      }
+    },
 
     getAccountViewBalance: (id: string) => accounts.find(a => a.id === id)?.balance || 0,
     getCardExpenses: (id: string) => {
       const viewDateStr = format(viewDate, 'yyyy-MM');
-      return transactions.filter(t => t.cardId === id && t.type === 'expense' && t.invoiceMonthYear === viewDateStr).reduce((acc, t) => acc + Number(t.amount), 0);
+      return transactions.filter(t => t.cardId === id && t.type === 'despesa' && t.invoiceMonthYear === viewDateStr).reduce((acc, t) => acc + Number(t.amount), 0);
     },
     getCategoryExpenses: () => {
       const categoryMap = new Map<string, number>();
-      currentMonthTransactions.filter(t => t.type === 'expense').forEach(t => {
+      currentMonthTransactions.filter(t => t.type === 'despesa').forEach(t => {
         const cat = categories.find(c => c.id === t.categoryId);
         const name = cat?.name || 'Sem Categoria';
         categoryMap.set(name, (categoryMap.get(name) || 0) + Number(t.amount));
@@ -253,9 +291,9 @@ function useFinanceProvider() {
       return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     },
     getCardUsedLimit: (id: string) => {
-      // Limite usado = faturas abertas + parcelamentos futuros
-      // Para simplificar, trazemos todas as despesas não pagas do cartão
-      return transactions.filter(t => t.cardId === id && t.type === 'expense' && !t.isPaid).reduce((acc, t) => acc + Number(t.amount), 0);
+      return transactions.filter(t => t.cardId === id && t.type === 'despesa' && !t.isPaid).reduce((acc, t) => acc + Number(t.amount), 0);
     }
   };
 }
+
+

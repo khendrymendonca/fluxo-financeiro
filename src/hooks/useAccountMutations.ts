@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+﻿import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { Account } from '@/types/finance';
@@ -87,7 +87,7 @@ export function useTransferBetweenAccounts() {
           user_id: user.id,
           description: `[Saída] ${description}`,
           amount: amount,
-          type: 'expense',
+          type: 'despesa',
           account_id: from,
           date: date,
           is_paid: true,
@@ -97,7 +97,7 @@ export function useTransferBetweenAccounts() {
           user_id: user.id,
           description: `[Entrada] ${description}`,
           amount: amount,
-          type: 'income',
+          type: 'receita',
           account_id: type === 'account' ? to : null,
           card_id: type === 'card' ? to : null,
           date: date,
@@ -118,3 +118,5 @@ export function useTransferBetweenAccounts() {
     }
   });
 }
+
+

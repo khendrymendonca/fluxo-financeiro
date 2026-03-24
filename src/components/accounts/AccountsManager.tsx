@@ -43,7 +43,7 @@ export function AccountsManager({
   const [accountName, setAccountName] = useState('');
   const [accountBank, setAccountBank] = useState('');
   const [accountBalance, setAccountBalance] = useState('');
-  const [accountType, setAccountType] = useState<AccountType>('checking');
+  const [accountType, setAccountType] = useState<AccountType>('corrente');
   const [accountColor, setAccountColor] = useState(APP_COLORS[0]);  
   const [hasOverdraft, setHasOverdraft] = useState(false);
   const [overdraftLimit, setOverdraftLimit] = useState('');
@@ -72,14 +72,14 @@ export function AccountsManager({
   };
 
   const totalNetWorth = accounts
-    .filter(acc => ['checking', 'benefit_vr', 'benefit_va', 'benefit_flex'].includes(acc.accountType))
+    .filter(acc => ['corrente', 'benefit_vr', 'benefit_va', 'benefit_flex'].includes(acc.accountType))
     .reduce((sum, acc) => sum + Number(acc.balance), 0);
 
   const resetForm = () => {
     setAccountName('');
     setAccountBank('');
     setAccountBalance('');
-    setAccountType('checking');
+    setAccountType('corrente');
     setAccountColor(APP_COLORS[0]);
     setHasOverdraft(false);
     setOverdraftLimit('');
@@ -122,7 +122,7 @@ export function AccountsManager({
       accountType: accountType,
       hasOverdraft: hasOverdraft,
       overdraftLimit: hasOverdraft ? parseFloat(overdraftLimit || '0') : 0,
-      monthlyYieldRate: ['savings', 'caixinha', 'investment'].includes(accountType) ? parseFloat(monthlyYieldRate || '0') : 0,
+      monthlyYieldRate: ['metas', 'caixinha', 'investment'].includes(accountType) ? parseFloat(monthlyYieldRate || '0') : 0,
     };
 
     if (editingAccount) {
@@ -181,7 +181,7 @@ export function AccountsManager({
     return labels[type] || 'Outro';
   };
 
-  const showYieldRateInput = ['savings', 'caixinha', 'investment'].includes(accountType);
+  const showYieldRateInput = ['metas', 'caixinha', 'investment'].includes(accountType);
 
   return (
     <div className="space-y-6">
@@ -361,12 +361,12 @@ export function AccountsManager({
                       value={accountType}
                       onChange={(e) => {
                         setAccountType(e.target.value as AccountType);
-                        if (!['savings', 'caixinha', 'investment'].includes(e.target.value)) setMonthlyYieldRate('');
+                        if (!['metas', 'caixinha', 'investment'].includes(e.target.value)) setMonthlyYieldRate('');
                       }}
                       className="w-full h-10 rounded-xl border-2 border-input bg-background px-3 py-2 text-sm font-bold focus:border-primary/50 outline-none"
                     >
-                      <option value="checking">Corrente</option>    
-                      <option value="savings">Poupança</option>    
+                      <option value="corrente">Corrente</option>    
+                      <option value="metas">Poupança</option>    
                       <option value="caixinha">Caixinha</option>    
                       <option value="investment">Investimento</option>
                       <option value="benefit_va">VA (Ali.)</option> 
@@ -486,3 +486,5 @@ export function AccountsManager({
     </div>
   );
 }
+
+

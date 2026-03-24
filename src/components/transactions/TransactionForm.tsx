@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { X, Calendar, CreditCard, RotateCw, Coins, Check, ChevronsUpDown, Trash2, ArrowRightLeft, TrendingUp, TrendingDown, Wallet, ArrowUpCircle, ArrowDownCircle, Info } from 'lucide-react';
+﻿import { useState, useEffect, useMemo } from 'react';
+import { X, Calendar, CreditCard, RotateCw, Coins, Check, ChevronsUpDown, Trash2, ArrowRightLeft, TrendingUp, TrendingDown, Wallet, ArrowUpCircle, ArrowDownCircle, Info, Percent } from 'lucide-react';
 import { format, addMonths } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,20 +14,21 @@ import {
 import { cn } from '@/lib/utils';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { OverdraftWarningDialog } from '@/components/ui/OverdraftWarningDialog';
+import { formatCurrency } from '@/utils/formatters';
+import { toast } from '@/components/ui/use-toast';
+import { parseLocalDate } from '@/utils/dateUtils';
 
 interface TransactionFormProps {
   accounts: Account[];
   creditCards: CreditCardType[];
   initialData?: Transaction;
-  onSubmit: (transaction: Omit<Transaction, 'id'> & { cardClosingDay?: number }, customInstallments?: { date: string, amount: number }[], applyScope?: 'this' | 'future' | 'all') => void;
+  onSubmit: (transaction: Omit<Transaction, 'id'> & { cardClosingDay?: number, cardDueDay?: number }, customInstallments?: { date: string, amount: number }[], applyScope?: 'this' | 'future' | 'all') => void;
   onDelete?: (id: string, applyScope: 'this' | 'future' | 'all') => void;
   onClose: () => void;
 }
 
 type TabType = 'pontual' | 'parcelamento' | 'fixo' | 'divida' | 'transfer' | 'renda_fixa';
 type Step = 'SELECT_TYPE' | 'SELECT_SUBTYPE' | 'DETAILS';
-
-import { parseLocalDate } from '@/utils/dateUtils';
 
 const isDateTodayOrPast = (dateStr: string): boolean => {
   const d = parseLocalDate(dateStr);
@@ -40,14 +41,14 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   // Wizard State
   const [step, setStep] = useState<Step>(initialData ? 'DETAILS' : 'SELECT_TYPE');
   const [activeTab, setActiveTab] = useState<TabType>('pontual');
-  const [type, setType] = useState<'income' | 'expense'>(initialData?.type || 'expense');
+  const [type, setType] = useState<'receita' | 'despesa'>(initialData?.type || 'despesa');
 
   // Form Fields
   const [description, setDescription] = useState(initialData?.description || '');
   const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
   const [categoryId, setCategoryId] = useState<string>(initialData?.categoryId || '');
   const [subcategoryId, setSubcategoryId] = useState<string>(initialData?.subcategoryId || '');
-  const [date, setDate] = useState(initialData?.date || format(new Date(), 'yyyy-MM-dd'));
+  const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
   const [accountId, setAccountId] = useState<string>(initialData?.accountId || '');
   const [cardId, setCardId] = useState<string>(initialData?.cardId || '');
   const [paymentMethod, setPaymentMethod] = useState<'account' | 'card'>(initialData?.cardId ? 'card' : 'account');
@@ -64,7 +65,8 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   // Debt Specific
   const [debtTotal, setDebtTotal] = useState('');
   const [debtInstallments, setDebtInstallments] = useState('');
-  const [debtFirstPaymentDate, setDebtFirstPaymentDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [debtInterest, setDebtInterest] = useState('0');
+  const [debtFirstPaymentDate, setDebtFirstPaymentDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Transfer Specific
   const [transferFrom, setTransferFrom] = useState('');
@@ -98,7 +100,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   useEffect(() => {
     if (initialData) {
       if (initialData.transactionType === 'recurring' || initialData.isRecurring) {
-        if (initialData.type === 'income' && (initialData as any).isAutomatic) {
+        if (initialData.type === 'receita' && (initialData as any).isAutomatic) {
           setActiveTab('renda_fixa');
         } else {
           setActiveTab('fixo');
@@ -124,8 +126,8 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         totalAmount: parseFloat(debtTotal),
         remainingAmount: parseFloat(debtTotal),
         monthlyPayment: parseFloat(debtTotal) / parseInt(debtInstallments),
-        interestRateMonthly: 0,
-        startDate: format(new Date(), 'yyyy-MM-dd'),
+        interestRateMonthly: parseFloat(debtInterest) || 0,
+        startDate: new Date().toISOString().split('T')[0],
       }, debtFirstPaymentDate);
       onClose();
       return;
@@ -133,6 +135,10 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
     if (activeTab === 'transfer') {
       if (!transferFrom || !transferTo || !amount) return;
+      if (transferFrom === transferTo && transferToType === 'account') {
+        toast({ title: 'Origem e destino não podem ser iguais', variant: 'destructive' });
+        return;
+      }
       transferBetweenAccounts(transferFrom, transferTo, parseFloat(amount), transferDescription, date, transferToType);
       onClose();
       return;
@@ -143,16 +149,15 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
     let finalCategoryId = categoryId;
     if (activeTab === 'renda_fixa' && !categoryId) {
-      // Tentar encontrar uma categoria de "Salário" ou "Rendas" ou usar a primeira de receita
       const salaryCat = categories.find(c => c.name.toLowerCase().includes('salário') || c.name.toLowerCase().includes('renda'));
-      const firstIncomeCat = categories.find(c => c.type === 'income');
+      const firstIncomeCat = categories.find(c => c.type === 'receita');
       finalCategoryId = salaryCat?.id || firstIncomeCat?.id || '';
     }
 
     const parsedAmount = parseFloat(amount);
     const isPayingNow = initialData ? isPaidLocally : isDateTodayOrPast(date);
 
-    if (type === 'expense' && paymentMethod === 'account' && accountId && isPayingNow) {
+    if (type === 'despesa' && paymentMethod === 'account' && accountId && isPayingNow) {
       const acc = accounts.find(a => a.id === accountId);
       if (acc && acc.hasOverdraft) {
         let impact = parsedAmount;
@@ -210,6 +215,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       accountId: paymentMethod === 'account' ? accountId : undefined,
       cardId: paymentMethod === 'card' ? cardId : undefined,
       cardClosingDay: selectedCard?.closingDay,
+      cardDueDay: selectedCard?.dueDay,
       installmentTotal: activeTab === 'parcelamento' ? parseInt(installmentsCount) : undefined,
       isRecurring: activeTab === 'fixo' || activeTab === 'renda_fixa',
       recurrence: (activeTab === 'fixo' || activeTab === 'renda_fixa') ? recurrence : undefined,
@@ -242,12 +248,10 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     setCustomInstallmentDates(newInst);
   };
 
-  // --- Step Renders ---
-
   const renderStep1 = () => (
     <div className="grid grid-cols-2 gap-4 p-6 animate-in fade-in zoom-in duration-300">
       <button
-        onClick={() => { setType('income'); setStep('SELECT_SUBTYPE'); }}
+        onClick={() => { setType('receita'); setStep('SELECT_SUBTYPE'); }}
         className="flex flex-col items-center justify-center p-8 rounded-3xl border-2 border-transparent bg-success/10 hover:bg-success/20 hover:border-success/30 transition-all group"
       >
         <div className="p-4 rounded-2xl bg-success text-success-foreground mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-success/20">
@@ -258,7 +262,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       </button>
 
       <button
-        onClick={() => { setType('expense'); setStep('SELECT_SUBTYPE'); }}
+        onClick={() => { setType('despesa'); setStep('SELECT_SUBTYPE'); }}
         className="flex flex-col items-center justify-center p-8 rounded-3xl border-2 border-transparent bg-danger/10 hover:bg-danger/20 hover:border-danger/30 transition-all group"
       >
         <div className="p-4 rounded-2xl bg-danger text-danger-foreground mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-danger/20">
@@ -271,14 +275,14 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   );
 
   const renderStep2 = () => {
-    const options = type === 'income'
+    const options = type === 'receita'
       ? [
-        { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Recebi hoje ou em data única.' },
+        { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Recebi hoje ou em data Ãºnica.' },
         { id: 'renda_fixa', label: 'Renda Fixa', icon: RotateCw, desc: 'Salário ou renda mensal automática.' },
         { id: 'transfer', label: 'Transferência', icon: ArrowRightLeft, desc: 'Mover dinheiro entre contas.' },
       ]
       : [
-        { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Compra à vista no débito ou dinheiro.' },
+        { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Compra Ã  vista no débito ou dinheiro.' },
         { id: 'parcelamento', label: 'Parcelado', icon: CreditCard, desc: 'Compra no cartão de crédito.' },
         { id: 'fixo', label: 'Fixo', icon: RotateCw, desc: 'Contas que repetem todo mês.' },
         { id: 'divida', label: 'Dívida', icon: Calendar, desc: 'Empréstimos ou acordos judiciais.' },
@@ -288,9 +292,9 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     return (
       <div className="p-6 space-y-4 animate-in fade-in slide-in-from-right duration-300">
         <div className="flex items-center gap-2 mb-2">
-          <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_TYPE')} className="rounded-xl text-xs font-bold uppercase tracking-tighter">← Voltar</Button>
-          <span className={cn("text-[10px] font-black uppercase px-2 py-0.5 rounded-md", type === 'income' ? "bg-success/10 text-success" : "bg-danger/10 text-danger")}>
-            {type === 'income' ? 'Receita' : 'Despesa'} selecionada
+          <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_TYPE')} className="rounded-xl text-xs font-bold uppercase tracking-tighter">â† Voltar</Button>
+          <span className={cn("text-[10px] font-black uppercase px-2 py-0.5 rounded-md", type === 'receita' ? "bg-success/10 text-success" : "bg-danger/10 text-danger")}>
+            {type === 'receita' ? 'Receita' : 'Despesa'} selecionada
           </span>
         </div>
         <div className="grid grid-cols-1 gap-3">
@@ -351,11 +355,11 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               {!initialData && (
                 <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/50 mb-2">
                   <div className="flex items-center gap-2">
-                    <div className={cn("p-2 rounded-xl", type === 'income' ? "bg-success text-success-foreground" : "bg-danger text-danger-foreground")}>
+                    <div className={cn("p-2 rounded-xl", type === 'receita' ? "bg-success text-success-foreground" : "bg-danger text-danger-foreground")}>
                       {activeTab === 'renda_fixa' ? <RotateCw className="w-4 h-4" /> : <Coins className="w-4 h-4" />}
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest opacity-50">{type === 'income' ? 'Receita' : 'Despesa'}</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-50">{type === 'receita' ? 'Receita' : 'Despesa'}</p>
                       <p className="text-sm font-black">{activeTab === 'renda_fixa' ? 'Renda Fixa' : activeTab === 'transfer' ? 'Transferência' : 'Lançamento Pontual'}</p>
                     </div>
                   </div>
@@ -376,12 +380,15 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                       <Input type="number" value={debtTotal} onChange={e => setDebtTotal(e.target.value)} placeholder="0.00" className="h-12 rounded-2xl border-2" required />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Nº Parcelas</Label>
-                      <Input type="number" value={debtInstallments} onChange={e => setDebtInstallments(e.target.value)} placeholder="12" className="h-12 rounded-2xl border-2" required />
+                      <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Taxa Juros (% a.m.)</Label>
+                      <div className="relative">
+                        <Input type="number" step="0.1" value={debtInterest} onChange={e => setDebtInterest(e.target.value)} placeholder="0.0" className="h-12 rounded-2xl border-2 pr-10" required />
+                        <Percent className="w-4 h-4 absolute right-4 top-4 text-muted-foreground" />
+                      </div>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Data 1º Pagamento</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Data 1Âº Pagamento</Label>
                     <Input type="date" value={debtFirstPaymentDate?.split('T')[0] || ''} onChange={e => setDebtFirstPaymentDate(e.target.value)} className="h-12 rounded-2xl border-2" required />
                   </div>
                 </div>
@@ -401,7 +408,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                             <div className="w-1.5 h-full absolute left-0 top-0" style={{ backgroundColor: a.color }} />
                             <span className="text-[10px] font-bold truncate block w-full ml-1">{a.bank} - {a.name}</span>
                             <span className={cn("text-xs font-black mt-1 ml-1", balance < 0 ? "text-danger" : "text-foreground")}>
-                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(balance)}
+                              {formatCurrency(balance)}
                             </span>
                           </button>
                         );
@@ -434,7 +441,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                               transferTo === a.id ? "border-primary bg-primary/5 shadow-md" : "border-transparent bg-muted/30 hover:bg-muted/50")}>
                             <div className="w-1.5 h-full absolute left-0 top-0" style={{ backgroundColor: a.color }} />
                             <span className="text-[10px] font-bold truncate block w-full ml-1">{a.bank} - {a.name}</span>
-                            <span className="text-xs font-black mt-1 ml-1">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getAccountViewBalance(a.id))}</span>
+                            <span className="text-xs font-black mt-1 ml-1">{formatCurrency(getAccountViewBalance(a.id))}</span>
                           </button>
                         ))
                       ) : (
@@ -444,7 +451,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                               transferTo === c.id ? "border-primary bg-primary/5 shadow-md" : "border-transparent bg-muted/30 hover:bg-muted/50")}>
                             <div className="w-1.5 h-full absolute left-0 top-0 bg-primary" />
                             <span className="text-[10px] font-bold truncate block w-full ml-1">{c.bank} - {c.name}</span>
-                            <span className="text-[10px] text-muted-foreground ml-1">Fatura: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getCardExpenses(c.id))}</span>
+                            <span className="text-[10px] text-muted-foreground ml-1">Fatura: {formatCurrency(getCardExpenses(c.id))}</span>
                           </button>
                         ))
                       )}
@@ -486,42 +493,75 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                   </div>
 
                   {activeTab !== 'renda_fixa' && (
-                    <div className="space-y-2 flex flex-col">
-                      <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Categoria</Label>
-                      <Popover open={openCategory} onOpenChange={setOpenCategory}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" role="combobox" aria-expanded={openCategory}
-                            className={cn("w-full justify-between rounded-2xl h-12 border-2", !categoryId && "text-muted-foreground",
-                              type === 'income' && categoryId ? "border-success/30 text-success bg-success/5" :
-                                type === 'expense' && categoryId ? "border-danger/30 text-danger bg-danger/5" : "")}>
-                            {categoryId ? filteredCategories.find(c => c.id === categoryId)?.name : "Selecione uma categoria..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-2xl" align="start">
-                          <Command>
-                            <CommandInput placeholder="Buscar categoria..." />
-                            <CommandList>
-                              <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
-                              <CommandGroup>
-                                {filteredCategories.map(cat => (
-                                  <CommandItem key={cat.id} value={cat.name} onSelect={() => { setCategoryId(cat.id); setSubcategoryId(''); setOpenCategory(false); }}>
-                                    <Check className={cn("mr-2 h-4 w-4", categoryId === cat.id ? "opacity-100" : "opacity-0")} />
-                                    {cat.name}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Categoria */}
+                      <div className="space-y-2 flex flex-col">
+                        <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Categoria</Label>
+                        <Popover open={openCategory} onOpenChange={setOpenCategory}>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" role="combobox" aria-expanded={openCategory}
+                              className={cn("w-full justify-between rounded-2xl h-12 border-2", !categoryId && "text-muted-foreground",
+                                type === 'receita' && categoryId ? "border-success/30 text-success bg-success/5" :
+                                  type === 'despesa' && categoryId ? "border-danger/30 text-danger bg-danger/5" : "")}>
+                              {categoryId ? filteredCategories.find(c => c.id === categoryId)?.name : "Selecione..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-2xl" align="start">
+                            <Command>
+                              <CommandInput placeholder="Buscar categoria..." />
+                              <CommandList>
+                                <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
+                                <CommandGroup>
+                                  {filteredCategories.map(cat => (
+                                    <CommandItem key={cat.id} value={cat.name} onSelect={() => { setCategoryId(cat.id); setSubcategoryId(''); setOpenCategory(false); }}>
+                                      <Check className={cn("mr-2 h-4 w-4", categoryId === cat.id ? "opacity-100" : "opacity-0")} />
+                                      {cat.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      {/* Subcategoria */}
+                      <div className="space-y-2 flex flex-col">
+                        <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Subcategoria</Label>
+                        <Popover open={openSubcategory} onOpenChange={setOpenSubcategory}>
+                          <PopoverTrigger asChild disabled={!categoryId}>
+                            <Button variant="outline" role="combobox" aria-expanded={openSubcategory}
+                              className={cn("w-full justify-between rounded-2xl h-12 border-2", !subcategoryId && "text-muted-foreground")}>
+                              {subcategoryId ? currentCategorySubcategories.find(s => s.id === subcategoryId)?.name : "Opcional..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-2xl" align="start">
+                            <Command>
+                              <CommandInput placeholder="Buscar subcategoria..." />
+                              <CommandList>
+                                <CommandEmpty>Nenhuma subcategoria encontrada.</CommandEmpty>
+                                <CommandGroup>
+                                  {currentCategorySubcategories.map(sub => (
+                                    <CommandItem key={sub.id} value={sub.name} onSelect={() => { setSubcategoryId(sub.id); setOpenSubcategory(false); }}>
+                                      <Check className={cn("mr-2 h-4 w-4", subcategoryId === sub.id ? "opacity-100" : "opacity-0")} />
+                                      {sub.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
                   )}
 
                   {/* Account / Card Selection */}
                   <div className="space-y-3">
                     <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
-                      {type === 'income' ? 'Em qual conta vai cair?' : 'Forma de Pagamento'}
+                      {type === 'receita' ? 'Em qual conta vai cair?' : 'Forma de Pagamento'}
                     </Label>
                     <div className="flex gap-2">
                       <button type="button" onClick={() => setPaymentMethod('account')}
@@ -578,7 +618,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     <div className="space-y-4 border-t border-border pt-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase text-muted-foreground">Nº Parcelas</Label>
+                          <Label className="text-[10px] font-black uppercase text-muted-foreground">NÂº Parcelas</Label>
                           <Input type="number" value={installmentsCount} onChange={e => { setInstallmentsCount(e.target.value); setCustomInstallmentDates([]); }} min="2" className="h-10 rounded-xl" />
                         </div>
                         <div className="flex flex-col gap-2 justify-center">
@@ -597,8 +637,8 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 </>
               )}
 
-              {/* ✅ NOVO: Alcance da Atualização / Exclusão */}
-              {initialData?.installmentGroupId && (
+              {/* Alcance da Atualização / Exclusão */}
+              {(initialData?.installmentGroupId || initialData?.isRecurring) && (
                 <div className="flex flex-col gap-2 p-4 bg-primary/5 rounded-2xl border border-primary/20 animate-in fade-in zoom-in duration-300">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="p-1.5 rounded-lg bg-primary text-primary-foreground">
@@ -626,7 +666,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               {/* Action Buttons */}
               <div className="flex flex-col gap-3 pt-2">
                 <Button type="submit" className={cn("w-full rounded-2xl py-7 text-lg font-black shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]",
-                  type === 'income' ? "bg-success hover:bg-success/90 shadow-success/20" : "bg-danger hover:bg-danger/90 shadow-danger/20")}>
+                  type === 'receita' ? "bg-success hover:bg-success/90 shadow-success/20" : "bg-danger hover:bg-danger/90 shadow-danger/20")}>
                   {initialData ? 'Salvar Alterações' :
                     activeTab === 'renda_fixa' ? 'Confirmar Renda Fixa' :
                       activeTab === 'transfer' ? 'Confirmar Transferência' : 'Concluir Lançamento'}
@@ -656,3 +696,5 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     </div>
   );
 }
+
+

@@ -1,7 +1,8 @@
-import { Transaction, Account, CreditCard as CreditCardType } from '@/types/finance';
+﻿import { Transaction, Account, CreditCard as CreditCardType } from '@/types/finance';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { cn } from '@/lib/utils';
 import { ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { formatCurrency } from '@/utils/formatters';
 
 import { parseLocalDate } from '@/utils/dateUtils';
 
@@ -12,12 +13,6 @@ interface RecentTransactionsProps {
 }
 
 export function RecentTransactions({ transactions, accounts, creditCards }: RecentTransactionsProps) {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
 
   const formatDate = (dateString: string) => {
     return parseLocalDate(dateString).toLocaleDateString('pt-BR', {
@@ -51,7 +46,7 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
   if (paidTransactions.length === 0) {
     return (
       <div className="card-elevated p-6 animate-fade-in">
-        <h3 className="text-lg font-semibold mb-4 text-primary">Últimas Transações</h3>
+        <h3 className="text-lg font-semibold mb-4 text-primary">Êltimas Transações</h3>
         <p className="text-muted-foreground text-center py-8">
           Nenhuma transação efetuada
         </p>
@@ -61,11 +56,11 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
 
   return (
     <div className="card-elevated p-6 animate-fade-in">
-      <h3 className="text-lg font-semibold mb-4 text-primary">Últimas Transações</h3>
+      <h3 className="text-lg font-semibold mb-4 text-primary">Êltimas Transações</h3>
       <div className="space-y-3">
         {paidTransactions.map((transaction, index) => {
           const category = getCategory(transaction);
-          const isIncome = transaction.type === 'income';
+          const isIncome = transaction.type === 'receita';
           const sourceLabel = getSourceLabel(transaction);
 
           return (
@@ -94,7 +89,7 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">
-                    {category?.label} • {formatDate(transaction.date)}
+                    {category?.label} â€¢ {formatDate(transaction.date)}
                   </p>
                 </div>
               </div>
@@ -111,3 +106,5 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
     </div>
   );
 }
+
+

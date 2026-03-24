@@ -1,4 +1,4 @@
-import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts';
+﻿import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts';
 import { startOfMonth, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { parseLocalDate } from '@/utils/dateUtils';
@@ -7,7 +7,7 @@ interface BalanceEvolutionChartProps {
   transactions: Array<{
     date: string;
     amount: number;
-    type: 'income' | 'expense';
+    type: 'receita' | 'despesa';
   }>;
   initialBalance: number;
   viewDate: Date;
@@ -35,7 +35,7 @@ export function BalanceEvolutionChart({ transactions, initialBalance, viewDate }
       day: '2-digit',
       month: 'short'
     });
-    runningBalance += t.type === 'income' ? t.amount : -t.amount;
+    runningBalance += t.type === 'receita' ? t.amount : -t.amount;
     dailyBalances[date] = runningBalance;
   });
 
@@ -133,3 +133,5 @@ export function BalanceEvolutionChart({ transactions, initialBalance, viewDate }
     </div>
   );
 }
+
+

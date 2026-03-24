@@ -1,4 +1,4 @@
-import { parseISO } from 'date-fns';
+﻿import { parseISO } from 'date-fns';
 
 export const parseLocalDate = (dateStr: string) => {
     if (!dateStr) return new Date();
@@ -18,3 +18,5 @@ export const todayLocalString = (): string => {
 export const toLocalDateString = (year: number, month: number, day: number): string => {
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 };
+
+

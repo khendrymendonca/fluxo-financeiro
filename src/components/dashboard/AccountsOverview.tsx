@@ -1,4 +1,4 @@
-import { CreditCard as CreditCardIcon, Building2 } from 'lucide-react';
+﻿import { CreditCard as CreditCardIcon, Building2 } from 'lucide-react';
 import { Account, CreditCard } from '@/types/finance';
 
 interface AccountsOverviewProps {
@@ -102,3 +102,5 @@ export function AccountsOverview({ accounts, creditCards }: AccountsOverviewProp
     </div>
   );
 }
+
+

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+﻿import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 
@@ -9,7 +9,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
-// ✅ FIX: contexto sem valor padrão — força uso dentro do Provider
+// âœ… FIX: contexto sem valor padrão â€” força uso dentro do Provider
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -18,7 +18,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // ✅ FIX: apenas onAuthStateChange — ele já dispara INITIAL_SESSION
+    // âœ… FIX: apenas onAuthStateChange â€” ele já dispara INITIAL_SESSION
     // eliminando a race condition com getSession
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -29,21 +29,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ✅ FIX: limpa o estado local imediatamente antes do listener processar
-  const signOut = async () => {
+  // âœ… FIX: limpa o estado local imediatamente antes do listener processar
+  const signOut = useCallback(async () => {
     setSession(null);
     setUser(null);
     await supabase.auth.signOut();
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    session,
+    user,
+    loading,
+    signOut
+  }), [session, user, loading, signOut]);
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signOut }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-// ✅ FIX: lança erro se usado fora do Provider — falha rápida e explícita
+// âœ… FIX: lança erro se usado fora do Provider â€” falha rápida e explícita
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -51,3 +58,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+

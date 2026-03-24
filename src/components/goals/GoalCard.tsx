@@ -1,9 +1,13 @@
-import { useState } from 'react';
-import { Target, Plane, Shield, PiggyBank, Plus, X, Trash2, Wallet } from 'lucide-react';
+﻿import { useState } from 'react';
+import { Target, Plane, Shield, PiggyBank, Plus, X, Trash2, Wallet, Minus } from 'lucide-react';
 import { SavingsGoal, Account } from '@/types/finance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/utils/formatters';
+import { parseLocalDate } from '@/utils/dateUtils';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface GoalCardProps {
   goal: SavingsGoal;
@@ -25,16 +29,13 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit }: Goal
   const [fundAmount, setFundAmount] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id || '');
 
-  const progress = (goal.currentAmount / goal.targetAmount) * 100;
-  const remaining = goal.targetAmount - goal.currentAmount;
-  const Icon = iconMap[goal.icon || 'Target'] || Target;
+  const progress = goal.targetAmount > 0
+    ? Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)
+    : 0;
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const remaining = Math.max(goal.targetAmount - goal.currentAmount, 0);
+  const isCompleted = goal.currentAmount >= goal.targetAmount;
+  const Icon = iconMap[goal.icon || 'Target'] || Target;
 
   const handleAddFunds = () => {
     const amount = parseFloat(fundAmount);
@@ -48,11 +49,11 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit }: Goal
 
   const handleRemoveFunds = () => {
     const amount = parseFloat(fundAmount);
-    if (isNaN(amount) || amount <= 0) return;
+    if (isNaN(amount) || amount <= 0 || !selectedAccountId) return;
 
-    onUpdate(goal.id, {
-      currentAmount: Math.max(goal.currentAmount - amount, 0)
-    });
+    // Remove fundos da meta e DEVOLVE para a conta bancária (onDeposit com sinal negativo)
+    onDeposit(goal.id, -amount, selectedAccountId);
+
     setFundAmount('');
     setShowAddFunds(false);
   };
@@ -70,8 +71,8 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit }: Goal
           <div>
             <h3 className="font-semibold text-lg">{goal.name}</h3>
             {goal.deadline && (
-              <p className="text-sm text-muted-foreground">
-                Meta: {new Date(goal.deadline).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+              <p className="text-sm text-muted-foreground capitalize">
+                Meta: {format(parseLocalDate(goal.deadline), "MMMM 'de' yyyy", { locale: ptBR })}
               </p>
             )}
           </div>
@@ -98,14 +99,20 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit }: Goal
           <div
             className="h-full rounded-full transition-all duration-700 ease-out"
             style={{
-              width: `${Math.min(progress, 100)}%`,
+              width: `${progress}%`,
               background: `linear-gradient(90deg, ${goal.color} 0%, ${goal.color}aa 100%)`,
             }}
           />
         </div>
-        <p className="text-sm text-muted-foreground">
-          Faltam {formatCurrency(remaining)} para atingir a meta
-        </p>
+        {!isCompleted ? (
+          <p className="text-sm text-muted-foreground">
+            Faltam {formatCurrency(remaining)} para atingir a meta
+          </p>
+        ) : (
+          <p className="text-sm text-success font-bold flex items-center gap-1">
+            Meta atingida! Parabéns! ðŸŽ‰
+          </p>
+        )}
       </div>
 
       {/* Add/Remove Funds */}
@@ -138,10 +145,21 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit }: Goal
             <Button
               onClick={handleAddFunds}
               size="icon"
+              title="Adicionar Fundos"
               className="rounded-xl h-11 w-12 bg-success hover:bg-success/90 shrink-0"
               disabled={!selectedAccountId || !fundAmount}
             >
               <Plus className="w-4 h-4" />
+            </Button>
+            <Button
+              onClick={handleRemoveFunds}
+              size="icon"
+              variant="outline"
+              title="Retirar Fundos"
+              className="rounded-xl h-11 w-12 border-danger text-danger hover:bg-danger/5 shrink-0"
+              disabled={!selectedAccountId || !fundAmount}
+            >
+              <Minus className="w-4 h-4" />
             </Button>
             <Button
               onClick={() => setShowAddFunds(false)}
@@ -167,3 +185,5 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit }: Goal
     </div>
   );
 }
+
+

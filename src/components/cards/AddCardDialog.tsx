@@ -1,10 +1,11 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CreditCard } from '@/types/finance';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
 
 interface AddCardDialogProps {
     isOpen: boolean;
@@ -105,7 +106,7 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
                                 required
                             />
                             <p className="text-[10px] text-primary font-bold animate-pulse">
-                                ✨ Melhor dia para compra: {(parseInt(closingDay) % 31) + 1}
+                                âœ¨ Melhor dia para compra: {parseInt(closingDay) === 31 ? 1 : parseInt(closingDay) + 1}
                             </p>
                         </div>
                         <div className="space-y-2">
@@ -119,6 +120,17 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
                                 required
                             />
                         </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border">
+                        <div className="space-y-0.5">
+                            <Label>Fechamento Fixo?</Label>
+                            <p className="text-[10px] text-muted-foreground">O fechamento ocorre sempre no mesmo dia do mês.</p>
+                        </div>
+                        <Switch
+                            checked={isClosingDateFixed}
+                            onCheckedChange={setIsClosingDateFixed}
+                        />
                     </div>
 
                     <ColorSelector
@@ -135,3 +147,5 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
         </div>
     );
 }
+
+

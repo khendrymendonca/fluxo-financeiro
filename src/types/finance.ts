@@ -1,8 +1,8 @@
-export type TransactionType = 'income' | 'expense';
+﻿export type TransactionType = 'receita' | 'despesa';
 export type TransactionStatus = 'punctual' | 'installment' | 'recurring' | 'adjustment';
-export type AccountType = 'checking' | 'savings' | 'caixinha' | 'investment' | 'benefit_vr' | 'benefit_va' | 'benefit_flex';
+export type AccountType = 'corrente' | 'poupanca' | 'caixinha' | 'investment' | 'benefit_vr' | 'benefit_va' | 'benefit_flex';
 export type BillStatus = 'pending' | 'paid' | 'late' | 'cancelled';
-export type CategoryGroupName = 'needs' | 'wants' | 'savings';
+export type CategoryGroupName = 'Essenciais' | 'Estilo de Vida' | 'Metas/Dívidas' | 'essencial' | 'lazer' | 'metas';
 
 export interface CategoryGroup {
   id: string;
@@ -51,7 +51,7 @@ export interface Transaction {
   recurrence?: string;
   debtId?: string;
   isInvoicePayment?: boolean;
-  // ✅ ADICIONADO: rastreabilidade de origem para bills convertidas
+  // âœ… ADICIONADO: rastreabilidade de origem para bills convertidas
   isVirtual?: boolean;
   isAutomatic?: boolean;
   originalBillId?: string;
@@ -104,7 +104,7 @@ export interface Debt {
   dueDay?: number;
   strategyPriority?: number;
   minimumPayment?: number;
-  // ✅ ADICIONADO: de qual conta sai o pagamento da dívida
+  // âœ… ADICIONADO: de qual conta sai o pagamento da dívida
   accountId?: string;
 }
 
@@ -117,7 +117,7 @@ export interface SavingsGoal {
   deadline?: string;
   color: string;
   icon?: string;
-  // ✅ ADICIONADO: vínculo com conta/caixinha real
+  // âœ… ADICIONADO: vínculo com conta/caixinha real
   accountId?: string;
 }
 
@@ -128,7 +128,7 @@ export interface Bill {
   categoryId?: string;
   subcategoryId?: string;
   amount: number;
-  type: 'payable' | 'receivable';
+  type: 'pagar' | 'receber';
   accountId?: string;
   cardId?: string;
   dueDate: string;
@@ -199,7 +199,7 @@ export const EXPENSE_CATEGORIES_LEGACY = {
   housing: { label: 'Moradia', icon: 'Home' },
   food: { label: 'Alimentação', icon: 'UtensilsCrossed' },
   transport: { label: 'Transporte', icon: 'Car' },
-  health: { label: 'Saúde', icon: 'Heart' },
+  health: { label: 'SaÃºde', icon: 'Heart' },
   education: { label: 'Educação', icon: 'GraduationCap' },
   leisure: { label: 'Lazer', icon: 'PartyPopper' },
   shopping: { label: 'Compras', icon: 'ShoppingBag' },
@@ -207,3 +207,5 @@ export const EXPENSE_CATEGORIES_LEGACY = {
   subscriptions: { label: 'Assinaturas', icon: 'Repeat' },
   other: { label: 'Outros', icon: 'MoreHorizontal' },
 };
+
+

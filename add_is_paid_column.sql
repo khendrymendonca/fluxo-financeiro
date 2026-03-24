@@ -1,10 +1,12 @@
--- Adicionar coluna is_paid na tabela transactions
+﻿-- Adicionar coluna is_paid na tabela transactions
 ALTER TABLE transactions 
 ADD COLUMN is_paid BOOLEAN DEFAULT false;
 
--- Atualizar transações existentes para true (considerando que transações passadas já foram pagas)
+-- Atualizar transaÃ§Ãµes existentes para true (considerando que transaÃ§Ãµes passadas jÃ¡ foram pagas)
 UPDATE transactions 
 SET is_paid = true 
 WHERE date <= CURRENT_DATE;
 
--- Transações futuras ficam como false por padrão (já definido no DEFAULT)
+-- TransaÃ§Ãµes futuras ficam como false por padrÃ£o (jÃ¡ definido no DEFAULT)
+
+

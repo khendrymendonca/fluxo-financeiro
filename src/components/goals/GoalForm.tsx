@@ -1,10 +1,12 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { X, Target, Plane, Shield, PiggyBank, Home, Car, GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SavingsGoal } from '@/types/finance';
 import { cn } from '@/lib/utils';
+import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
+import { format } from 'date-fns';
 
 interface GoalFormProps {
   onSubmit: (goal: Omit<SavingsGoal, 'id' | 'userId'>) => void;
@@ -21,8 +23,6 @@ const icons = [
   { name: 'GraduationCap', icon: GraduationCap },
 ];
 
-import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
-
 export function GoalForm({ onSubmit, onClose }: GoalFormProps) {
   const [name, setName] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
@@ -34,12 +34,20 @@ export function GoalForm({ onSubmit, onClose }: GoalFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name || !targetAmount) return;
+    const parsedTarget = parseFloat(targetAmount);
+    const parsedCurrent = parseFloat(currentAmount) || 0;
+
+    if (!name || isNaN(parsedTarget) || parsedTarget <= 0) return;
+
+    // Garantir que o valor atual não supere o alvo na criação (opcional, mas evita bugs visuais)
+    if (parsedCurrent > parsedTarget) {
+      // Opcional: mostrar erro ou clamp. Vamos apenas garantir que não quebre.
+    }
 
     onSubmit({
       name,
-      targetAmount: parseFloat(targetAmount),
-      currentAmount: parseFloat(currentAmount) || 0,
+      targetAmount: parsedTarget,
+      currentAmount: parsedCurrent,
       deadline: deadline || undefined,
       icon: selectedIcon,
       color: selectedColor,
@@ -112,6 +120,7 @@ export function GoalForm({ onSubmit, onClose }: GoalFormProps) {
             <Input
               id="deadline"
               type="date"
+              min={format(new Date(), 'yyyy-MM-dd')}
               value={deadline?.split('T')[0] || ''}
               onChange={(e) => setDeadline(e.target.value)}
               className="rounded-xl"
@@ -120,7 +129,7 @@ export function GoalForm({ onSubmit, onClose }: GoalFormProps) {
 
           {/* Icon Selection */}
           <div className="space-y-2">
-            <Label>Ícone</Label>
+            <Label>Ãcone</Label>
             <div className="flex gap-2 flex-wrap">
               {icons.map(({ name, icon: Icon }) => (
                 <button
@@ -159,3 +168,5 @@ export function GoalForm({ onSubmit, onClose }: GoalFormProps) {
     </div>
   );
 }
+
+

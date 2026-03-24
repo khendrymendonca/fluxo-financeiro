@@ -1,10 +1,10 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+﻿import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { Debt } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 
-// --- 1. ADICIONAR DÍVIDA ---
+// --- 1. ADICIONAR DÃVIDA ---
 export function useAddDebt() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -36,7 +36,7 @@ export function useAddDebt() {
   });
 }
 
-// --- 2. ATUALIZAR DÍVIDA ---
+// --- 2. ATUALIZAR DÃVIDA ---
 export function useUpdateDebt() {
   const queryClient = useQueryClient();
 
@@ -62,7 +62,7 @@ export function useUpdateDebt() {
   });
 }
 
-// --- 3. DELETAR DÍVIDA ---
+// --- 3. DELETAR DÃVIDA ---
 export function useDeleteDebt() {
   const queryClient = useQueryClient();
 
@@ -78,3 +78,5 @@ export function useDeleteDebt() {
     }
   });
 }
+
+

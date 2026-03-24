@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { CreditCardVisual } from '@/components/cards/CreditCardVisual';
 import { AddCardDialog } from '@/components/cards/AddCardDialog';
@@ -19,7 +19,7 @@ export default function CardsDashboard() {
     categories,
     updateCreditCard,
     addCreditCard,
-    getCardUsedLimit,       // ✅ usa o store — lógica centralizada e correta
+    getCardUsedLimit,       // âœ… usa o store â€” lógica centralizada e correta
   } = useFinanceStore();
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -30,14 +30,14 @@ export default function CardsDashboard() {
 
   const selectedCard = creditCards.find(c => c.id === selectedCardId);
 
-  // ✅ CORRIGIDO: usa getCardUsedLimit e getCardAvailableLimit do store
+  // âœ… CORRIGIDO: usa getCardUsedLimit e getCardAvailableLimit do store
   // que já filtram isVirtual, isInvoicePayment, paidInvoices e cardId corretamente
   const getCardStats = (cardId: string) => {
     const card = creditCards.find(c => c.id === cardId);
     const limit = Number(card?.limit || 0);
     const used = getCardUsedLimit(cardId);
     const available = limit - used;
-    const percentUsed = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
+    const percentUsed = limit > 0 ? (used / limit) * 100 : 0;
     const isOverLimit = used > limit;
     return { used, available, limit, percentUsed, isOverLimit };
   };
@@ -55,7 +55,7 @@ export default function CardsDashboard() {
     const allInvoiceTransactions = transactions
       .filter(t => {
         if (t.cardId !== cardId || t.isInvoicePayment) return false;
-        if (t.isVirtual) return false; // ✅ nunca mostrar projeções na fatura
+        if (t.isVirtual) return false; // âœ… nunca mostrar projeções na fatura
         if (t.invoiceMonthYear) {
           return t.invoiceMonthYear === viewDateStr;
         }
@@ -85,7 +85,7 @@ export default function CardsDashboard() {
 
   const currentInvoiceTransactions = selectedCardId ? getInvoiceTransactions(selectedCardId) : [];
   const currentInvoiceTotal = currentInvoiceTransactions.reduce(
-    (sum, t) => sum + (t.type === 'income' ? -t.amount : t.amount),
+    (sum, t) => sum + (t.type === 'receita' ? -t.amount : t.amount),
     0
   );
   const stats = selectedCardId
@@ -155,7 +155,7 @@ export default function CardsDashboard() {
           <div className="lg:col-span-8 space-y-6">
             {selectedCard ? (
               <div className="space-y-6">
-                
+
                 {/* Selected Card Header with Edit Button */}
                 <div className="flex items-center justify-between p-1">
                   <div className="flex items-center gap-3">
@@ -165,9 +165,9 @@ export default function CardsDashboard() {
                       <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{selectedCard.bank}</p>
                     </div>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setShowEditCard(true)}
                     className="rounded-xl gap-2 border-primary/20 hover:bg-primary/5 hover:text-primary transition-all font-bold"
                   >
@@ -198,7 +198,7 @@ export default function CardsDashboard() {
                         Limite Total: {formatCurrency(stats.limit)}
                       </p>
                       {stats.isOverLimit && (
-                        <p className="text-[10px] text-danger font-bold mt-1">⚠️ Limite excedido!</p>
+                        <p className="text-[10px] text-danger font-bold mt-1">âš ï¸ Limite excedido!</p>
                       )}
                     </div>
                   </div>
@@ -209,7 +209,7 @@ export default function CardsDashboard() {
                         stats.percentUsed >= 100 ? "bg-danger" :
                           stats.percentUsed > 80 ? "bg-amber-500" : "bg-primary"
                       )}
-                      style={{ width: `${stats.percentUsed}%` }}
+                      style={{ width: `${Math.min(stats.percentUsed, 100)}%` }}
                     />
                   </div>
                   <p className="text-[10px] text-right text-muted-foreground font-bold">
@@ -296,7 +296,7 @@ export default function CardsDashboard() {
                               : "bg-primary/10 text-primary"
                           )}
                         >
-                          Status: {invoiceStatus === 'paga' ? '✅ Paga' : '🔓 Aberta'}
+                          Status: {invoiceStatus === 'paga' ? 'âœ… Paga' : 'ðŸ”“ Aberta'}
                         </span>
                       </div>
                     </div>
@@ -332,8 +332,8 @@ export default function CardsDashboard() {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className={cn("font-black text-base", t.type === 'income' ? "text-success" : "text-foreground")}>
-                                {t.type === 'income' ? '-' : ''}{formatCurrency(t.amount)}
+                              <p className={cn("font-black text-base", t.type === 'receita' ? "text-success" : "text-foreground")}>
+                                {t.type === 'receita' ? '-' : ''}{formatCurrency(t.amount)}
                               </p>
                               {t.installmentTotal && (
                                 <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tighter">
@@ -374,10 +374,12 @@ export default function CardsDashboard() {
             card={selectedCard}
             isOpen={showEditCard}
             onClose={() => setShowEditCard(false)}
-            onSave={(updated) => updateCreditCard(updated)}
+            onSave={(updated) => updateCreditCard(updated.id, updated)}
           />
         </Portal>
       )}
     </div>
   );
 }
+
+

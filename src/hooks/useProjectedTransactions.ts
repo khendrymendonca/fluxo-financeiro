@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+﻿import { useMemo } from 'react';
 import { isBefore, isSameMonth, getDaysInMonth, format } from 'date-fns';
 import { Transaction } from '@/types/finance';
 import { parseLocalDate } from '@/utils/dateUtils';
@@ -61,3 +61,5 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
     
   }, [transactions, viewDate]);
 }
+
+

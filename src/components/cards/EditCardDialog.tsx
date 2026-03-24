@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +38,7 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
         e.preventDefault();
         const newDue = parseInt(dueDay);
         const newClosing = parseInt(closingDay);
-        // ✅ FIX: let → const (variável nunca é reatribuída)
+        // âœ… FIX: let â†’ const (variável nunca é reatribuída)
         const updatedHistory = card.history ? [...card.history] : [];
 
         if (newDue !== card.dueDay || newClosing !== card.closingDay) {
@@ -46,7 +46,7 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
                 updatedHistory.push({
                     dueDay: card.dueDay,
                     closingDay: card.closingDay,
-                    effectiveDate: '2020-01-01'
+                    effectiveDate: '2000-01-01'
                 });
             }
             updatedHistory.push({
@@ -108,7 +108,7 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
                                 <Label>Dia Fechamento</Label>
                                 <Input type="number" min="1" max="31" value={closingDay} onChange={e => setClosingDay(e.target.value)} />
                                 <p className="text-[10px] text-primary font-bold">
-                                    ✨ Melhor dia para compra: {(parseInt(closingDay) % 31) + 1}
+                                    âœ¨ Melhor dia para compra: {(parseInt(closingDay) % 31) + 1}
                                 </p>
                             </div>
                             <div className="space-y-2">
@@ -120,7 +120,13 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
                             <div className="pt-2 border-t border-dashed border-border animate-in slide-in-from-top-2">
                                 <Label className="text-primary font-semibold">A partir de quando?</Label>
                                 <p className="text-xs text-muted-foreground mb-2">As faturas anteriores a esta data manterão os dias antigos.</p>
-                                <Input type="date" value={effectiveDate?.split('T')[0] || ''} onChange={e => setEffectiveDate(e.target.value)} className="bg-background" />
+                                <Input
+                                    type="date"
+                                    min={format(new Date(), 'yyyy-MM-dd')}
+                                    value={effectiveDate?.split('T')[0] || ''}
+                                    onChange={e => setEffectiveDate(e.target.value)}
+                                    className="bg-background"
+                                />
                             </div>
                         )}
                     </div>
@@ -132,3 +138,5 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
         </div>
     );
 }
+
+

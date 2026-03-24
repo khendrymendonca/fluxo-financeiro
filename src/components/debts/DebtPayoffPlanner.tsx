@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import { Debt } from '@/types/finance';
 import { Calculator, Zap, Snowflake, TrendingDown, Clock, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/utils/formatters';
 
 interface DebtPayoffPlannerProps {
     debts: Debt[];
@@ -26,9 +27,46 @@ export function DebtPayoffPlanner({ debts }: DebtPayoffPlannerProps) {
             ? debts.reduce((sum, d) => sum + (d.interestRateMonthly || 0), 0) / debts.length
             : 0;
 
-        // Estimativa simples de meses para quitação (sem considerar juros compostos complexos no front)
-        const totalMonthly = debts.reduce((sum, d) => sum + d.monthlyPayment, 0);
-        const monthsToFreedom = totalMonthly > 0 ? Math.ceil(totalRemaining / totalMonthly) : 0;
+        // Simulação de cascata considerando juros compostos e estratégia (Avalanche/Snowball)
+        const monthsToFreedom = (() => {
+            let balances = sortedDebts.map(d => ({
+                balance: d.remainingAmount,
+                monthlyPayment: d.monthlyPayment || 0,
+                interestRate: d.interestRateMonthly || 0
+            }));
+
+            let months = 0;
+            const MAX_MONTHS = 600; // Cap de segurança (50 anos)
+
+            while (balances.some(d => d.balance > 0) && months < MAX_MONTHS) {
+                let extra = 0;
+                // First, apply payments to the current priority debt
+                // Then, distribute any extra payment to the next priority debt
+                for (let i = 0; i < balances.length; i++) {
+                    let d = balances[i];
+                    if (d.balance <= 0) {
+                        extra += d.monthlyPayment; // This debt is paid off, its payment becomes extra
+                        continue;
+                    }
+
+                    const interest = d.balance * (d.interestRate / 100);
+                    let paymentToApply = d.monthlyPayment + extra;
+
+                    if (paymentToApply >= d.balance + interest) {
+                        // Debt can be paid off this month
+                        extra = paymentToApply - (d.balance + interest); // Remaining payment becomes extra
+                        d.balance = 0;
+                    } else {
+                        // Debt cannot be paid off, apply payment and consume extra
+                        d.balance = d.balance + interest - paymentToApply;
+                        extra = 0; // Extra was consumed
+                    }
+                    balances[i] = { ...d }; // Update the balance in the array
+                }
+                months++;
+            }
+            return months;
+        })();
 
         return {
             totalRemaining,
@@ -37,9 +75,6 @@ export function DebtPayoffPlanner({ debts }: DebtPayoffPlannerProps) {
         };
     }, [debts]);
 
-    const formatCurrency = (val: number) => {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
-    };
 
     if (debts.length === 0) return null;
 
@@ -79,6 +114,7 @@ export function DebtPayoffPlanner({ debts }: DebtPayoffPlannerProps) {
                         <span className="text-xs font-medium">Total a Pagar</span>
                     </div>
                     <p className="text-xl font-bold text-danger">{formatCurrency(stats.totalRemaining)}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1 font-medium">Juros médios: {stats.avgInterest.toFixed(1)}% a.m.</p>
                 </div>
                 <div className="bg-card p-4 rounded-2xl border border-border shadow-sm">
                     <div className="flex items-center gap-2 text-muted-foreground mb-1">
@@ -137,3 +173,5 @@ export function DebtPayoffPlanner({ debts }: DebtPayoffPlannerProps) {
         </div>
     );
 }
+
+

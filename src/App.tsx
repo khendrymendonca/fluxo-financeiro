@@ -1,11 +1,11 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-// ✅ FIX: todos os imports no topo
+// âœ… FIX: todos os imports no topo
 import { ThemeProvider } from "./hooks/useTheme";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { FinanceProvider } from "./hooks/useFinanceStore";
@@ -49,7 +49,7 @@ const AppRoutes = () => {
   );
 };
 
-// ✅ FIX: BrowserRouter movido para fora — envolve tudo
+// âœ… FIX: BrowserRouter movido para fora â€” envolve tudo
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
@@ -68,3 +68,5 @@ const App = () => (
 );
 
 export default App;
+
+

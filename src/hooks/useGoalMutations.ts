@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+﻿import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { SavingsGoal } from '@/types/finance';
@@ -84,11 +84,14 @@ export function useDepositToGoal() {
       // 1. Busca o valor atual da meta
       const { data: goal, error: fetchError } = await supabase
         .from('savings_goals')
-        .select('current_amount')
+        .select('current_amount, name')
         .eq('id', id)
         .single();
-        
+
       if (fetchError) throw fetchError;
+
+      const finalGoalName = goalName || goal.name;
+      const isWithdrawal = amount < 0;
 
       // 2. Atualiza o valor da meta
       const { error: updateError } = await supabase
@@ -98,13 +101,13 @@ export function useDepositToGoal() {
 
       if (updateError) throw updateError;
 
-      // 3. Cria a transação de saída
+      // 3. Cria a transação (Débito se for depósito, Crédito se for retirada)
       const today = format(new Date(), 'yyyy-MM-dd');
       const { error: txError } = await supabase.from('transactions').insert({
         user_id: user.id,
-        description: `Depósito: Meta ${goalName}`,
-        amount: amount,
-        type: 'expense',
+        description: isWithdrawal ? `Retirada: Meta ${finalGoalName}` : `Depósito: Meta ${finalGoalName}`,
+        amount: Math.abs(amount), // Valor absoluto
+        transaction_type: isWithdrawal ? 'receita' : 'despesa', // Ajusta o tipo
         date: today,
         account_id: accountId,
         is_paid: true,
@@ -122,3 +125,5 @@ export function useDepositToGoal() {
     }
   });
 }
+
+

@@ -36,7 +36,7 @@ export function BillsManager() {
     const { mutateAsync: payBillMutation } = usePayBill();
     const { mutate: deleteBillMutation } = useDeleteBill();
 
-    const [filter, setFilter] = useState<'all' | 'payable' | 'receivable'>('all');
+    const [filter, setFilter] = useState<'all' | 'pagar' | 'receber'>('all');
     const [isPaying, setIsPaying] = useState<any>(null);
     // ✅ FIX: usa todayLocalString() para evitar bug de fuso
     const [paymentDate, setPaymentDate] = useState<string>(todayLocalString());
@@ -59,7 +59,7 @@ export function BillsManager() {
     const handleConfirmDeleteBill = () => {
         if (deletingBill) {
             const targetId = deletingBill.originalBillId || deletingBill.id;
-            deleteBillMutation(targetId);
+            deleteBillMutation({ id: targetId, deleteFuture: deleteFutureBills });
         }
         setDeletingBill(null);
         setDeleteFutureBills(false);
@@ -83,7 +83,7 @@ export function BillsManager() {
 
     // ✅ FIX: totalPendingPayable exclui card-payment com valor zero — consistente com filteredBills
     const totalPendingPayable = currentMonthBills
-        .filter(b => b.type === 'payable' && b.status === 'pending' && !(b.categoryId === 'card-payment' && b.amount <= 0))
+        .filter(b => b.type === 'pagar' && b.status === 'pending' && !(b.categoryId === 'card-payment' && b.amount <= 0))
         .reduce((acc, b) => acc + b.amount, 0);
 
     return (
@@ -132,8 +132,8 @@ export function BillsManager() {
                 <div className="flex items-center gap-2 p-1 bg-muted rounded-2xl w-full overflow-x-auto no-scrollbar md:w-fit">
                     {([
                         { id: 'all', label: 'Todas', icon: Filter },
-                        { id: 'payable', label: 'A Pagar', icon: ArrowDownCircle },
-                        { id: 'receivable', label: 'A Receber', icon: ArrowUpCircle },
+                        { id: 'pagar', label: 'A Pagar', icon: ArrowDownCircle },
+                        { id: 'receber', label: 'A Receber', icon: ArrowUpCircle },
                     ] as const).map(btn => (
                         <button key={btn.id} onClick={() => setFilter(btn.id)}
                             className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all",
@@ -168,9 +168,9 @@ export function BillsManager() {
                                     <div className="flex items-center gap-4">
                                         <div className={cn("p-3 rounded-2xl",
                                             bill.categoryId === 'card-payment' ? "bg-primary/10 text-primary" :
-                                                (bill.type === 'payable' ? "bg-danger/10 text-danger" : "bg-success/10 text-success"))}>
+                                                (bill.type === 'pagar' ? "bg-danger/10 text-danger" : "bg-success/10 text-success"))}>
                                             {bill.categoryId === 'card-payment' ? <CardIcon className="w-5 h-5" /> :
-                                                (bill.type === 'payable' ? <ArrowDownCircle className="w-5 h-5" /> : <ArrowUpCircle className="w-5 h-5" />)}
+                                                (bill.type === 'pagar' ? <ArrowDownCircle className="w-5 h-5" /> : <ArrowUpCircle className="w-5 h-5" />)}
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
@@ -224,7 +224,7 @@ export function BillsManager() {
 
                                     <div className="flex items-center justify-between md:justify-end gap-6">
                                         <div className="text-right">
-                                            <p className={cn("text-lg font-black", bill.type === 'payable' ? "text-danger" : "text-success")}>
+                                            <p className={cn("text-lg font-black", bill.type === 'pagar' ? "text-danger" : "text-success")}>
                                                 {formatCurrency(bill.amount)}
                                             </p>
                                             <div className="flex items-center gap-1 justify-end">
@@ -275,19 +275,17 @@ export function BillsManager() {
                                         <div className="space-y-2">
                                             {transactions
                                                 .filter(t => {
-                                                    const targetDate = getTransactionTargetDate(t);
                                                     return t.cardId === bill.cardId &&
                                                         !t.isInvoicePayment &&
-                                                        targetDate.getMonth() === viewDate.getMonth() &&
-                                                        targetDate.getFullYear() === viewDate.getFullYear();
+                                                        t.invoiceMonthYear === format(viewDate, 'yyyy-MM');
                                                 })
                                                 .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime())
                                                 .map(t => (
                                                     <div key={t.id} className="flex items-center justify-between p-2 rounded-xl bg-background/50 border border-border/30 hover:border-primary/30 transition-colors">
                                                         <div className="flex items-center gap-3">
                                                             <div className={cn("p-1.5 rounded-lg",
-                                                                t.type === 'income' ? "bg-success/5 text-success" : "bg-danger/5 text-danger")}>
-                                                                {t.type === 'income' ? <ArrowUpCircle className="w-3 h-3" /> : <ArrowDownCircle className="w-3 h-3" />}
+                                                                t.type === 'receita' ? "bg-success/5 text-success" : "bg-danger/5 text-danger")}>
+                                                                {t.type === 'receita' ? <ArrowUpCircle className="w-3 h-3" /> : <ArrowDownCircle className="w-3 h-3" />}
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs font-bold leading-none">{t.description}</p>
@@ -298,8 +296,8 @@ export function BillsManager() {
                                                             </div>
                                                         </div>
                                                         <span className={cn("text-xs font-black",
-                                                            t.type === 'income' ? "text-success" : "text-danger")}>
-                                                            {t.type === 'income' ? '-' : ''}{formatCurrency(t.amount)}
+                                                            t.type === 'receita' ? "text-success" : "text-danger")}>
+                                                            {t.type === 'receita' ? '-' : ''}{formatCurrency(t.amount)}
                                                         </span>
                                                     </div>
                                                 ))}
@@ -310,6 +308,8 @@ export function BillsManager() {
                                                     b.cardId === bill.cardId &&
                                                     b.status === 'pending' &&
                                                     b.categoryId !== 'card-payment' &&
+                                                    // Se for conta parcelada/fixa no cartão, idealmente deveria ter invoiceMonthYear,
+                                                    // mas como Bill não tem, usamos a data de vencimento como proxy por enquanto.
                                                     parseLocalDate(b.dueDate).getMonth() === viewDate.getMonth() &&
                                                     parseLocalDate(b.dueDate).getFullYear() === viewDate.getFullYear()
                                                 )
@@ -331,10 +331,8 @@ export function BillsManager() {
                                                 ))}
 
                                             {transactions.filter(t => {
-                                                const targetDate = getTransactionTargetDate(t);
                                                 return t.cardId === bill.cardId && !t.isInvoicePayment &&
-                                                    targetDate.getMonth() === viewDate.getMonth() &&
-                                                    targetDate.getFullYear() === viewDate.getFullYear();
+                                                    t.invoiceMonthYear === format(viewDate, 'yyyy-MM');
                                             }).length === 0 &&
                                                 bills.filter(b =>
                                                     b.cardId === bill.cardId && b.status === 'pending' &&
@@ -364,10 +362,10 @@ export function BillsManager() {
                             onClick={e => e.stopPropagation()}>
                             <div className="px-5 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
                                 <h2 className="text-lg font-black tracking-tight">
-                                    {isPaying.type === 'receivable' ? 'Receber com qual conta?' : 'Pagar com qual conta?'}
+                                    {isPaying.type === 'receber' ? 'Receber com qual conta?' : 'Pagar com qual conta?'}
                                 </h2>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                    <span className={cn("font-bold", isPaying.type === 'receivable' ? "text-success" : "text-danger")}>
+                                    <span className={cn("font-bold", isPaying.type === 'receber' ? "text-success" : "text-danger")}>
                                         {formatCurrency(isPaying.amount)}
                                     </span>{' — '}{isPaying.name}
                                 </p>
@@ -424,7 +422,7 @@ export function BillsManager() {
                                     ) : (
                                         accounts.map(acc => {
                                             const availableTotal = acc.balance + (acc.hasOverdraft ? (acc.overdraftLimit || 0) : 0);
-                                            const wouldGoNegative = isPaying.type === 'payable' && acc.balance < isPaying.amount;
+                                            const wouldGoNegative = isPaying.type === 'pagar' && acc.balance < isPaying.amount;
                                             const hasEnoughWithOverdraft = acc.hasOverdraft && availableTotal >= isPaying.amount;
                                             const insufficientFunds = wouldGoNegative && !hasEnoughWithOverdraft;
                                             return (
@@ -460,7 +458,7 @@ export function BillsManager() {
                                 )}
                                 {paymentMethod === 'credit_card' && (
                                     creditCards.length === 0 ? (
-                                        <p className="text-center text-muted-foreground py-8 text-sm">Nenhum cartÃ£o cadastrado.</p>
+                                        <p className="text-center text-muted-foreground py-8 text-sm">Nenhum cartão cadastrado.</p>
                                     ) : (
                                         creditCards.map(card => (
                                             <button key={card.id} onClick={() => handleMarkAsPaid(card.id, true)}
@@ -488,7 +486,7 @@ export function BillsManager() {
                 </Portal>
             )}
 
-            {/* Modal de ExclusÃ£o */}
+            {/* Modal de Exclusão */}
             {deletingBill && (
                 <Portal>
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
@@ -511,7 +509,7 @@ export function BillsManager() {
                                         <div>
                                             <span className="text-sm font-bold block">Aplicar a futuras?</span>
                                             <span className="text-xs text-muted-foreground">
-                                                TambÃ©m exclui os lanÃ§amentos desta conta nos prÃ³ximos meses
+                                                Também exclui os lançamentos desta conta nos próximos meses
                                             </span>
                                         </div>
                                     </label>
@@ -528,4 +526,6 @@ export function BillsManager() {
         </div>
     );
 }
+
+
 

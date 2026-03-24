@@ -38,7 +38,7 @@ export function CategoriesManager() {
 
     // New Category State
     const [newCatName, setNewCatName] = useState('');
-    const [newCatType, setNewCatType] = useState<'expense' | 'income'>('expense');
+    const [newCatType, setNewCatType] = useState<'despesa' | 'receita'>('despesa');
     const [newCatGroup, setNewCatGroup] = useState<string>('');
     const [newCatColor, setNewCatColor] = useState(APP_COLORS[0]);
 
@@ -59,8 +59,8 @@ export function CategoriesManager() {
 
         // Auto-assign group if income (or default)
         let groupId = newCatGroup;
-        if (newCatType === 'income') {
-            groupId = categoryGroups.find(g => g.name === 'needs')?.id || ''; // Income is typically mapped to root available group     
+        if (newCatType === 'receita') {
+            groupId = categoryGroups.find(g => g.name === 'Essenciais')?.id || ''; // Income is typically mapped to root available group     
         } else if (!groupId) {
             toast({ title: 'Selecione um grupo para a despesa', variant: 'destructive' });
             return;
@@ -71,7 +71,8 @@ export function CategoriesManager() {
             type: newCatType,
             groupId: groupId,
             icon: 'Tag',
-            color: newCatColor
+            color: newCatColor,
+            isActive: true
         });
         setNewCatName('');
     };
@@ -80,7 +81,8 @@ export function CategoriesManager() {
         if (!newSubName || !activeCategoryId) return;
         addSubcategory({
             categoryId: activeCategoryId,
-            name: newSubName
+            name: newSubName,
+            isActive: true
         });
         setNewSubName('');
         setActiveCategoryId(null);
@@ -156,8 +158,8 @@ export function CategoriesManager() {
                         <div className="space-y-2">
                             <Label>Tipo</Label>
                             <select className="w-full h-12 rounded-xl border-2 border-input bg-background px-4 text-sm font-bold" value={newCatType} onChange={e => setNewCatType(e.target.value as any)}>
-                                <option value="expense">Despesa</option>
-                                <option value="income">Receita</option>
+                                <option value="despesa">Despesa</option>
+                                <option value="receita">Receita</option>
                             </select>
                         </div>
                         <div className="space-y-2">
@@ -165,14 +167,14 @@ export function CategoriesManager() {
                             <Input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Ex: Farmácia" className="h-12 rounded-xl border-2" />
                         </div>
 
-                        {newCatType === 'expense' && (
+                        {newCatType === 'despesa' && (
                             <div className="space-y-2">
                                 <Label>Grupo do Orçamento</Label>
                                 <select className="w-full h-12 rounded-xl border-2 border-input bg-background px-4 text-sm font-bold" value={newCatGroup} onChange={e => setNewCatGroup(e.target.value)}>
                                     <option value="">Selecione...</option>
                                     {categoryGroups.map(g => (
                                         <option key={g.id} value={g.id}>
-                                            {g.name === 'needs' ? 'Essencial (Necessidade)' : g.name === 'wants' ? 'Desejos (Estilo de Vida)' : 'Metas (Investimentos)'}
+                                            {g.name === 'Essenciais' ? 'Essencial (Necessidade)' : g.name === 'Estilo de Vida' ? 'Desejos (Estilo de Vida)' : 'Metas (Investimentos)'}
                                         </option>
                                     ))}
                                 </select>
@@ -208,10 +210,10 @@ export function CategoriesManager() {
                         </h4>
 
                         {categoryGroups.map(group => {
-                            const groupCats = categories.filter(c => c.type === 'expense' && c.groupId === group.id);
+                            const groupCats = categories.filter(c => c.type === 'despesa' && c.groupId === group.id);
                             if (groupCats.length === 0) return null;
 
-                            const groupNameDisplay = group.name === 'needs' ? 'Essenciais (Moradia, Contas)' : group.name === 'wants' ? 'Estilo de Vida (Desejos)' : 'Metas (Poupança)';
+                            const groupNameDisplay = group.name === 'Essenciais' ? 'Essenciais (Moradia, Contas)' : group.name === 'Estilo de Vida' ? 'Estilo de Vida (Desejos)' : 'Metas (Poupança)';
 
                             return (
                                 <div key={group.id} className="space-y-2">
@@ -259,7 +261,7 @@ export function CategoriesManager() {
                             <div className="w-2 h-2 rounded-full bg-success" /> Receitas
                         </h4>
                         <div className="space-y-2">
-                            {categories.filter(c => c.type === 'income').map(cat => (
+                            {categories.filter(c => c.type === 'receita').map(cat => (
                                 <div key={cat.id} className="flex items-center justify-between p-2 rounded-xl border hover:border-success/30 transition-colors group">
                                     <span className="font-medium text-sm">{cat.name}</span>
                                     <button onClick={() => deleteCategory(cat.id)} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 text-danger hover:bg-danger/10 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -273,3 +275,5 @@ export function CategoriesManager() {
         </div>
     );
 }
+
+
