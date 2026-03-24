@@ -291,7 +291,15 @@ function useFinanceProvider() {
       return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     },
     getCardUsedLimit: (id: string) => {
-      return transactions.filter(t => t.cardId === id && t.type === 'despesa' && !t.isPaid).reduce((acc, t) => acc + Number(t.amount), 0);
+      // Limite usado = despesas no cartão que NÃO são pagamentos da fatura
+      // Ignoramos a flag isPaid aqui para evitar o bug do limite zerado
+      return transactions
+        .filter(t =>
+          t.cardId === id &&
+          t.type === 'despesa' &&
+          !t.isInvoicePayment
+        )
+        .reduce((acc, t) => acc + Number(t.amount), 0);
     }
   };
 }
