@@ -62,7 +62,7 @@ create table transactions (
   user_id uuid references auth.users not null,
   description text not null,
   amount numeric not null,
-  type text not null check (type in ('receita', 'despesa')),
+  type text not null check (type in ('income', 'expense')),
   category text not null,
   date timestamp with time zone not null,
   account_id uuid references accounts(id) on delete set null,

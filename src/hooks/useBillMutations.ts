@@ -97,7 +97,7 @@ export function usePayBill() {
         user_id: user.id,
         description: isPartial ? `Abatimento: ${bill.name}` : `Pgto: ${bill.name}`,
         amount: payAmount,
-        type: 'despesa',
+        type: 'expense',
         date: cleanPaymentDate,
         account_id: accountId || null,
         card_id: isCardBill ? null : (cardId || bill.cardId || null),

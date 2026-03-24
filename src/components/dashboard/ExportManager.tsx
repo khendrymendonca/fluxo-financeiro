@@ -81,7 +81,7 @@ export function ExportManager() {
                         date: values[0] || new Date().toISOString().split('T')[0],
                         description: values[1] || 'Importado',
                         amount: parseFloat(values[2]) || 0,
-                        type: (values[3] as 'receita' | 'despesa') || 'despesa',
+                        type: (values[3] as 'income' | 'expense') || 'expense',
                         transactionType: 'punctual',
                         isPaid: true,
                         // Simplified: we don't map cat/acc IDs perfectly yet

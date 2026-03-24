@@ -27,7 +27,7 @@ export function BudgetCoach() {
             .map(c => c.id);
 
         return currentMonthTransactions
-            .filter(t => t.type === 'despesa' && !t.isInvoicePayment && (t.categoryId && groupCategoryIds.includes(t.categoryId)))
+            .filter(t => t.type === 'expense' && !t.isInvoicePayment && (t.categoryId && groupCategoryIds.includes(t.categoryId)))
             .reduce((sum, t) => sum + t.amount, 0);
     };
 

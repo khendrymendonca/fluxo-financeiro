@@ -19,7 +19,7 @@ BEGIN
         CASE
           -- Usando exatamente a mesma lÃ³gica que vocÃª tinha no frontend
           WHEN is_invoice_payment = TRUE THEN -amount
-          WHEN type = 'receita' THEN amount
+          WHEN type = 'income' THEN amount
           ELSE -amount
         END
       ), 0)
@@ -37,7 +37,7 @@ BEGIN
       SELECT COALESCE(SUM(
         CASE
           WHEN is_invoice_payment = TRUE THEN -amount
-          WHEN type = 'receita' THEN amount
+          WHEN type = 'income' THEN amount
           ELSE -amount
         END
       ), 0)

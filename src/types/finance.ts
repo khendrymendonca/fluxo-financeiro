@@ -1,4 +1,4 @@
-﻿export type TransactionType = 'receita' | 'despesa';
+﻿export type TransactionType = 'income' | 'expense';
 export type TransactionStatus = 'punctual' | 'installment' | 'recurring' | 'adjustment';
 export type AccountType = 'corrente' | 'poupanca' | 'caixinha' | 'investment' | 'benefit_vr' | 'benefit_va' | 'benefit_flex';
 export type BillStatus = 'pending' | 'paid' | 'late' | 'cancelled';

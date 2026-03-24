@@ -284,8 +284,8 @@ export function BillsManager() {
                                                     <div key={t.id} className="flex items-center justify-between p-2 rounded-xl bg-background/50 border border-border/30 hover:border-primary/30 transition-colors">
                                                         <div className="flex items-center gap-3">
                                                             <div className={cn("p-1.5 rounded-lg",
-                                                                t.type === 'receita' ? "bg-success/5 text-success" : "bg-danger/5 text-danger")}>
-                                                                {t.type === 'receita' ? <ArrowUpCircle className="w-3 h-3" /> : <ArrowDownCircle className="w-3 h-3" />}
+                                                                t.type === 'income' ? "bg-success/5 text-success" : "bg-danger/5 text-danger")}>
+                                                                {t.type === 'income' ? <ArrowUpCircle className="w-3 h-3" /> : <ArrowDownCircle className="w-3 h-3" />}
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs font-bold leading-none">{t.description}</p>
@@ -296,8 +296,8 @@ export function BillsManager() {
                                                             </div>
                                                         </div>
                                                         <span className={cn("text-xs font-black",
-                                                            t.type === 'receita' ? "text-success" : "text-danger")}>
-                                                            {t.type === 'receita' ? '-' : ''}{formatCurrency(t.amount)}
+                                                            t.type === 'income' ? "text-success" : "text-danger")}>
+                                                            {t.type === 'income' ? '-' : ''}{formatCurrency(t.amount)}
                                                         </span>
                                                     </div>
                                                 ))}

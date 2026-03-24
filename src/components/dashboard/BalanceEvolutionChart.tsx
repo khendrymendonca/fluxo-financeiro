@@ -7,7 +7,7 @@ interface BalanceEvolutionChartProps {
   transactions: Array<{
     date: string;
     amount: number;
-    type: 'receita' | 'despesa';
+    type: 'income' | 'expense';
   }>;
   initialBalance: number;
   viewDate: Date;
@@ -35,7 +35,7 @@ export function BalanceEvolutionChart({ transactions, initialBalance, viewDate }
       day: '2-digit',
       month: 'short'
     });
-    runningBalance += t.type === 'receita' ? t.amount : -t.amount;
+    runningBalance += t.type === 'income' ? t.amount : -t.amount;
     dailyBalances[date] = runningBalance;
   });
 

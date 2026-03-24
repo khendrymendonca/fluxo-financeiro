@@ -85,7 +85,7 @@ export default function CardsDashboard() {
 
   const currentInvoiceTransactions = selectedCardId ? getInvoiceTransactions(selectedCardId) : [];
   const currentInvoiceTotal = currentInvoiceTransactions.reduce(
-    (sum, t) => sum + (t.type === 'receita' ? -t.amount : t.amount),
+    (sum, t) => sum + (t.type === 'income' ? -t.amount : t.amount),
     0
   );
   const stats = selectedCardId
@@ -332,8 +332,8 @@ export default function CardsDashboard() {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className={cn("font-black text-base", t.type === 'receita' ? "text-success" : "text-foreground")}>
-                                {t.type === 'receita' ? '-' : ''}{formatCurrency(t.amount)}
+                              <p className={cn("font-black text-base", t.type === 'income' ? "text-success" : "text-foreground")}>
+                                {t.type === 'income' ? '-' : ''}{formatCurrency(t.amount)}
                               </p>
                               {t.installmentTotal && (
                                 <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tighter">

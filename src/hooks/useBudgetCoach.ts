@@ -50,16 +50,16 @@ export function useSeedCoach() {
       }
 
       const defaultCategories = [
-        { user_id: user.id, group_id: needsGroup.id, name: 'Moradia', type: 'despesa', icon: 'Home' },
-        { user_id: user.id, group_id: needsGroup.id, name: 'Alimentação', type: 'despesa', icon: 'Utensils' },
-        { user_id: user.id, group_id: needsGroup.id, name: 'Transporte', type: 'despesa', icon: 'Car' },
-        { user_id: user.id, group_id: needsGroup.id, name: 'SaÃºde', type: 'despesa', icon: 'Heart' },
-        { user_id: user.id, group_id: wantsGroup.id, name: 'Lazer', type: 'despesa', icon: 'PartyPopper' },
-        { user_id: user.id, group_id: wantsGroup.id, name: 'Delivery', type: 'despesa', icon: 'ShoppingBag' },
-        { user_id: user.id, group_id: wantsGroup.id, name: 'Assinaturas', type: 'despesa', icon: 'Repeat' },
-        { user_id: user.id, group_id: savingsGroup.id, name: 'Investimentos', type: 'despesa', icon: 'TrendingUp' },
-        { user_id: user.id, group_id: savingsGroup.id, name: 'Reserva', type: 'despesa', icon: 'PiggyBank' },
-        { user_id: user.id, group_id: needsGroup.id, name: 'Salário', type: 'receita', icon: 'Briefcase' },
+        { user_id: user.id, group_id: needsGroup.id, name: 'Moradia', type: 'expense', icon: 'Home' },
+        { user_id: user.id, group_id: needsGroup.id, name: 'Alimentação', type: 'expense', icon: 'Utensils' },
+        { user_id: user.id, group_id: needsGroup.id, name: 'Transporte', type: 'expense', icon: 'Car' },
+        { user_id: user.id, group_id: needsGroup.id, name: 'SaÃºde', type: 'expense', icon: 'Heart' },
+        { user_id: user.id, group_id: wantsGroup.id, name: 'Lazer', type: 'expense', icon: 'PartyPopper' },
+        { user_id: user.id, group_id: wantsGroup.id, name: 'Delivery', type: 'expense', icon: 'ShoppingBag' },
+        { user_id: user.id, group_id: wantsGroup.id, name: 'Assinaturas', type: 'expense', icon: 'Repeat' },
+        { user_id: user.id, group_id: savingsGroup.id, name: 'Investimentos', type: 'expense', icon: 'TrendingUp' },
+        { user_id: user.id, group_id: savingsGroup.id, name: 'Reserva', type: 'expense', icon: 'PiggyBank' },
+        { user_id: user.id, group_id: needsGroup.id, name: 'Salário', type: 'income', icon: 'Briefcase' },
       ];
 
       const { error } = await supabase.from('categories').insert(defaultCategories);
@@ -87,7 +87,7 @@ export function useBudgetMetrics(currentMonthTransactions: Transaction[]) {
 
     // 1. Calcula a renda total do mês (apenas transações já pagas/recebidas)
     const totalIncome = currentMonthTransactions
-      .filter(t => t.type === 'receita' && t.isPaid)
+      .filter(t => t.type === 'income' && t.isPaid)
       .reduce((sum, t) => sum + Number(t.amount), 0);
 
     // 2. Cria mapas de IDs para saber quem é quem
@@ -102,15 +102,15 @@ export function useBudgetMetrics(currentMonthTransactions: Transaction[]) {
 
     // 3. Calcula o gasto real em cada pilar
     const spentNeeds = currentMonthTransactions
-      .filter(t => t.type === 'despesa' && t.categoryId && needsIds.includes(t.categoryId))
+      .filter(t => t.type === 'expense' && t.categoryId && needsIds.includes(t.categoryId))
       .reduce((sum, t) => sum + Number(t.amount), 0);
 
     const spentWants = currentMonthTransactions
-      .filter(t => t.type === 'despesa' && t.categoryId && wantsIds.includes(t.categoryId))
+      .filter(t => t.type === 'expense' && t.categoryId && wantsIds.includes(t.categoryId))
       .reduce((sum, t) => sum + Number(t.amount), 0);
 
     const spentSavings = currentMonthTransactions
-      .filter(t => t.type === 'despesa' && t.categoryId && savingsIds.includes(t.categoryId))
+      .filter(t => t.type === 'expense' && t.categoryId && savingsIds.includes(t.categoryId))
       .reduce((sum, t) => sum + Number(t.amount), 0);
 
     // 4. Calcula o valor ALVO baseado na renda e nas porcentagens

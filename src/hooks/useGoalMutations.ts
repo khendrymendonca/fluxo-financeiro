@@ -107,7 +107,7 @@ export function useDepositToGoal() {
         user_id: user.id,
         description: isWithdrawal ? `Retirada: Meta ${finalGoalName}` : `Depósito: Meta ${finalGoalName}`,
         amount: Math.abs(amount), // Valor absoluto
-        transaction_type: isWithdrawal ? 'receita' : 'despesa', // Ajusta o tipo
+        transaction_type: isWithdrawal ? 'income' : 'expense', // Ajusta o tipo
         date: today,
         account_id: accountId,
         is_paid: true,

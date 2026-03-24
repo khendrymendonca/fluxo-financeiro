@@ -10,9 +10,9 @@ CREATE TABLE IF NOT EXISTS category_groups (
 
 -- Insere os 3 grupos padrão do 50-30-20
 INSERT INTO category_groups (name, description) VALUES 
-('essencial', 'Gastos essenciais para viver (Moradia, Alimentação Básica, Contas)'),
-('lazer', 'Gastos com estilo de vida e desejos (Lazer, Delivery, Assinaturas)'),
-('metas', 'Dívidas, Investimentos e Reserva de Emergência')
+('needs', 'Gastos essenciais para viver (Moradia, Alimentação Básica, Contas)'),
+('wants', 'Gastos com estilo de vida e desejos (Lazer, Delivery, Assinaturas)'),
+('savings', 'Dívidas, Investimentos e Reserva de Emergência')
 ON CONFLICT (name) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS categories (
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS categories (
   user_id UUID REFERENCES auth.users(id) NOT NULL,
   group_id UUID REFERENCES category_groups(id) NOT NULL,
   name TEXT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('receita', 'despesa')),
+  type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
   icon TEXT,
   color TEXT,
   is_active BOOLEAN DEFAULT true,
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS habit_logs (
 );
 
 -- 4. Modificações em tabelas existentes
-ALTER TABLE accounts ADD COLUMN IF NOT EXISTS account_type TEXT DEFAULT 'corrente' CHECK (account_type IN ('corrente', 'poupanca', 'benefit_vr', 'benefit_va', 'benefit_flex'));
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS account_type TEXT DEFAULT 'checking' CHECK (account_type IN ('checking', 'savings', 'benefit_vr', 'benefit_va', 'benefit_flex'));
 
 ALTER TABLE debts ADD COLUMN IF NOT EXISTS interest_rate_monthly DECIMAL(5,2) DEFAULT 0;
 ALTER TABLE debts ADD COLUMN IF NOT EXISTS minimum_payment DECIMAL(12,2);
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS bills (
   category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
   subcategory_id UUID REFERENCES subcategories(id) ON DELETE SET NULL,
   amount DECIMAL(12,2) NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('pagar', 'receber')),
+  type TEXT NOT NULL CHECK (type IN ('payable', 'receivable')),
   account_id UUID REFERENCES accounts(id) ON DELETE SET NULL,
   due_date DATE NOT NULL,
   payment_date DATE,

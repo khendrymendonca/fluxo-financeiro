@@ -130,7 +130,7 @@ export function SmartInsights({ onNavigate }: SmartInsightsProps) {
         }
 
         // 5. Uncategorized (Warning)
-        const uncategorizedCount = transactions.filter(t => !t.categoryId && t.type === 'despesa').length;
+        const uncategorizedCount = transactions.filter(t => !t.categoryId && t.type === 'expense').length;
         if (uncategorizedCount > 5) {
             list.push({
                 id: 'uncategorized',

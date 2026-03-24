@@ -60,7 +60,7 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
       <div className="space-y-3">
         {paidTransactions.map((transaction, index) => {
           const category = getCategory(transaction);
-          const isIncome = transaction.type === 'receita';
+          const isIncome = transaction.type === 'income';
           const sourceLabel = getSourceLabel(transaction);
 
           return (

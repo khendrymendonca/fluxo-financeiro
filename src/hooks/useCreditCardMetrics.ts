@@ -37,14 +37,14 @@ export function useCreditCardMetrics(cardId: string, viewDate: Date) {
       const competence = t.invoiceMonthYear || calcInvoiceMonthYear(txDate, card);
 
       if (competence === viewMonthYear) {
-        currentInvoiceAmount += (t.type === 'receita' ? -t.amount : t.amount);
+        currentInvoiceAmount += (t.type === 'income' ? -t.amount : t.amount);
       }
 
       const isInstallment = t.installmentTotal && t.installmentTotal > 1;
       if (t.isRecurring && isFuture && !isInstallment) return;
 
       if (!paidInvoices.has(competence)) {
-        usedLimit += (t.type === 'receita' ? -t.amount : t.amount);
+        usedLimit += (t.type === 'income' ? -t.amount : t.amount);
       }
     });
 

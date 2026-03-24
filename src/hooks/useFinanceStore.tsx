@@ -156,15 +156,15 @@ function useFinanceProvider() {
   }, [rawBills, projectedBills, viewDate, viewMode]);
 
   const totalBalance = useMemo(() => accounts.reduce((sum, acc) => sum + Number(acc.balance), 0), [accounts]);
-  const totalIncome = useMemo(() => currentMonthTransactions.filter(t => t.type === 'receita').reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
-  const totalExpenses = useMemo(() => currentMonthTransactions.filter(t => t.type === 'despesa').reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
+  const totalIncome = useMemo(() => currentMonthTransactions.filter(t => t.type === 'income' && t.isPaid).reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
+  const totalExpenses = useMemo(() => currentMonthTransactions.filter(t => t.type === 'expense' && t.isPaid && !t.isInvoicePayment).reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
 
   const totalPendingOutflows = useMemo(() => {
     return currentMonthTransactions
-      .filter(t => !t.isPaid && t.type === 'despesa')
+      .filter(t => !t.isPaid && t.type === 'expense')
       .reduce((sum, t) => sum + Number(t.amount), 0) +
       currentMonthBills
-        .filter(b => b.status === 'pending' && b.type === 'pagar')
+        .filter(b => b.status === 'pending' && b.type === 'payable')
         .reduce((sum, b) => sum + Number(b.amount), 0);
   }, [currentMonthTransactions, currentMonthBills]);
 
@@ -183,7 +183,7 @@ function useFinanceProvider() {
         const tDate = parseLocalDate(t.date);
         return t.isPaid && tDate >= viewDate && tDate <= today;
       })
-      .reduce((acc, t) => t.type === 'receita' ? acc - Number(t.amount) : acc + Number(t.amount), 0);
+      .reduce((acc, t) => t.type === 'income' ? acc - Number(t.amount) : acc + Number(t.amount), 0);
 
     return currentTotal + adjustments;
   }, [accounts, rawTransactions, viewDate]);
@@ -262,7 +262,7 @@ function useFinanceProvider() {
           : debt.monthlyPayment;
         if (installmentAmount <= 0) continue;
         await addTransactionMutation.mutateAsync({
-          type: 'despesa',
+          type: 'expense',
           transactionType: 'installment',
           description: `${debt.name} (${i + 1}/${numInstallments})`,
           amount: installmentAmount,
@@ -279,11 +279,11 @@ function useFinanceProvider() {
     getAccountViewBalance: (id: string) => accounts.find(a => a.id === id)?.balance || 0,
     getCardExpenses: (id: string) => {
       const viewDateStr = format(viewDate, 'yyyy-MM');
-      return transactions.filter(t => t.cardId === id && t.type === 'despesa' && t.invoiceMonthYear === viewDateStr).reduce((acc, t) => acc + Number(t.amount), 0);
+      return transactions.filter(t => t.cardId === id && t.type === 'expense' && t.invoiceMonthYear === viewDateStr).reduce((acc, t) => acc + Number(t.amount), 0);
     },
     getCategoryExpenses: () => {
       const categoryMap = new Map<string, number>();
-      currentMonthTransactions.filter(t => t.type === 'despesa').forEach(t => {
+      currentMonthTransactions.filter(t => t.type === 'expense').forEach(t => {
         const cat = categories.find(c => c.id === t.categoryId);
         const name = cat?.name || 'Sem Categoria';
         categoryMap.set(name, (categoryMap.get(name) || 0) + Number(t.amount));
@@ -296,7 +296,7 @@ function useFinanceProvider() {
       return transactions
         .filter(t =>
           t.cardId === id &&
-          t.type === 'despesa' &&
+          t.type === 'expense' &&
           !t.isInvoicePayment
         )
         .reduce((acc, t) => acc + Number(t.amount), 0);

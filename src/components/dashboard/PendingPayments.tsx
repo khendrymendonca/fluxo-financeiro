@@ -16,7 +16,7 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
     const { mutate: togglePaid } = useToggleTransactionPaid();
 
     const pending = transactions
-        .filter(t => !t.isPaid && t.type === 'despesa')
+        .filter(t => !t.isPaid && t.type === 'expense')
         .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
 
     const formatCurrency = (value: number) => {

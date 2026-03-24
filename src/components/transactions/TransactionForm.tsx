@@ -41,7 +41,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   // Wizard State
   const [step, setStep] = useState<Step>(initialData ? 'DETAILS' : 'SELECT_TYPE');
   const [activeTab, setActiveTab] = useState<TabType>('pontual');
-  const [type, setType] = useState<'receita' | 'despesa'>(initialData?.type || 'despesa');
+  const [type, setType] = useState<'income' | 'expense'>(initialData?.type || 'expense');
 
   // Form Fields
   const [description, setDescription] = useState(initialData?.description || '');
@@ -100,7 +100,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   useEffect(() => {
     if (initialData) {
       if (initialData.transactionType === 'recurring' || initialData.isRecurring) {
-        if (initialData.type === 'receita' && (initialData as any).isAutomatic) {
+        if (initialData.type === 'income' && (initialData as any).isAutomatic) {
           setActiveTab('renda_fixa');
         } else {
           setActiveTab('fixo');
@@ -150,14 +150,14 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     let finalCategoryId = categoryId;
     if (activeTab === 'renda_fixa' && !categoryId) {
       const salaryCat = categories.find(c => c.name.toLowerCase().includes('salário') || c.name.toLowerCase().includes('renda'));
-      const firstIncomeCat = categories.find(c => c.type === 'receita');
+      const firstIncomeCat = categories.find(c => c.type === 'income');
       finalCategoryId = salaryCat?.id || firstIncomeCat?.id || '';
     }
 
     const parsedAmount = parseFloat(amount);
     const isPayingNow = initialData ? isPaidLocally : isDateTodayOrPast(date);
 
-    if (type === 'despesa' && paymentMethod === 'account' && accountId && isPayingNow) {
+    if (type === 'expense' && paymentMethod === 'account' && accountId && isPayingNow) {
       const acc = accounts.find(a => a.id === accountId);
       if (acc && acc.hasOverdraft) {
         let impact = parsedAmount;
@@ -251,7 +251,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const renderStep1 = () => (
     <div className="grid grid-cols-2 gap-4 p-6 animate-in fade-in zoom-in duration-300">
       <button
-        onClick={() => { setType('receita'); setStep('SELECT_SUBTYPE'); }}
+        onClick={() => { setType('income'); setStep('SELECT_SUBTYPE'); }}
         className="flex flex-col items-center justify-center p-8 rounded-3xl border-2 border-transparent bg-success/10 hover:bg-success/20 hover:border-success/30 transition-all group"
       >
         <div className="p-4 rounded-2xl bg-success text-success-foreground mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-success/20">
@@ -262,7 +262,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       </button>
 
       <button
-        onClick={() => { setType('despesa'); setStep('SELECT_SUBTYPE'); }}
+        onClick={() => { setType('expense'); setStep('SELECT_SUBTYPE'); }}
         className="flex flex-col items-center justify-center p-8 rounded-3xl border-2 border-transparent bg-danger/10 hover:bg-danger/20 hover:border-danger/30 transition-all group"
       >
         <div className="p-4 rounded-2xl bg-danger text-danger-foreground mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-danger/20">
@@ -275,7 +275,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   );
 
   const renderStep2 = () => {
-    const options = type === 'receita'
+    const options = type === 'income'
       ? [
         { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Recebi hoje ou em data Ãºnica.' },
         { id: 'renda_fixa', label: 'Renda Fixa', icon: RotateCw, desc: 'Salário ou renda mensal automática.' },
@@ -293,8 +293,8 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       <div className="p-6 space-y-4 animate-in fade-in slide-in-from-right duration-300">
         <div className="flex items-center gap-2 mb-2">
           <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_TYPE')} className="rounded-xl text-xs font-bold uppercase tracking-tighter">â† Voltar</Button>
-          <span className={cn("text-[10px] font-black uppercase px-2 py-0.5 rounded-md", type === 'receita' ? "bg-success/10 text-success" : "bg-danger/10 text-danger")}>
-            {type === 'receita' ? 'Receita' : 'Despesa'} selecionada
+          <span className={cn("text-[10px] font-black uppercase px-2 py-0.5 rounded-md", type === 'income' ? "bg-success/10 text-success" : "bg-danger/10 text-danger")}>
+            {type === 'income' ? 'income' : 'expense'} selecionada
           </span>
         </div>
         <div className="grid grid-cols-1 gap-3">
@@ -355,11 +355,11 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               {!initialData && (
                 <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/50 mb-2">
                   <div className="flex items-center gap-2">
-                    <div className={cn("p-2 rounded-xl", type === 'receita' ? "bg-success text-success-foreground" : "bg-danger text-danger-foreground")}>
+                    <div className={cn("p-2 rounded-xl", type === 'income' ? "bg-success text-success-foreground" : "bg-danger text-danger-foreground")}>
                       {activeTab === 'renda_fixa' ? <RotateCw className="w-4 h-4" /> : <Coins className="w-4 h-4" />}
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest opacity-50">{type === 'receita' ? 'Receita' : 'Despesa'}</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-50">{type === 'income' ? 'income' : 'expense'}</p>
                       <p className="text-sm font-black">{activeTab === 'renda_fixa' ? 'Renda Fixa' : activeTab === 'transfer' ? 'Transferência' : 'Lançamento Pontual'}</p>
                     </div>
                   </div>
@@ -501,8 +501,8 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                           <PopoverTrigger asChild>
                             <Button variant="outline" role="combobox" aria-expanded={openCategory}
                               className={cn("w-full justify-between rounded-2xl h-12 border-2", !categoryId && "text-muted-foreground",
-                                type === 'receita' && categoryId ? "border-success/30 text-success bg-success/5" :
-                                  type === 'despesa' && categoryId ? "border-danger/30 text-danger bg-danger/5" : "")}>
+                                type === 'income' && categoryId ? "border-success/30 text-success bg-success/5" :
+                                  type === 'expense' && categoryId ? "border-danger/30 text-danger bg-danger/5" : "")}>
                               {categoryId ? filteredCategories.find(c => c.id === categoryId)?.name : "Selecione..."}
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
@@ -561,7 +561,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                   {/* Account / Card Selection */}
                   <div className="space-y-3">
                     <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
-                      {type === 'receita' ? 'Em qual conta vai cair?' : 'Forma de Pagamento'}
+                      {type === 'income' ? 'Em qual conta vai cair?' : 'Forma de Pagamento'}
                     </Label>
                     <div className="flex gap-2">
                       <button type="button" onClick={() => setPaymentMethod('account')}
@@ -666,7 +666,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               {/* Action Buttons */}
               <div className="flex flex-col gap-3 pt-2">
                 <Button type="submit" className={cn("w-full rounded-2xl py-7 text-lg font-black shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]",
-                  type === 'receita' ? "bg-success hover:bg-success/90 shadow-success/20" : "bg-danger hover:bg-danger/90 shadow-danger/20")}>
+                  type === 'income' ? "bg-success hover:bg-success/90 shadow-success/20" : "bg-danger hover:bg-danger/90 shadow-danger/20")}>
                   {initialData ? 'Salvar Alterações' :
                     activeTab === 'renda_fixa' ? 'Confirmar Renda Fixa' :
                       activeTab === 'transfer' ? 'Confirmar Transferência' : 'Concluir Lançamento'}

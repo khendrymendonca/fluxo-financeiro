@@ -31,7 +31,7 @@ export function useEmergencyFund(currentMonthTransactions: Transaction[]) {
     
     // 2. Soma todos os gastos essenciais do mês atual
     const fixedExpenses = currentMonthTransactions
-      .filter(t => t.type === 'despesa' && t.categoryId && needsCategoryIds.includes(t.categoryId))
+      .filter(t => t.type === 'expense' && t.categoryId && needsCategoryIds.includes(t.categoryId))
       .reduce((acc, curr) => acc + Number(curr.amount), 0);
       
     // 3. Define a meta financeira (Gastos Essenciais x Meses Desejados)
