@@ -1,4 +1,3 @@
-import { formatCurrency } from '@/utils/formatters';
 import { useState } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { CreditCardVisual } from '@/components/cards/CreditCardVisual';

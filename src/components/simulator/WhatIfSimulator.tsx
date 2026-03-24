@@ -1,4 +1,3 @@
-import { formatCurrency } from '@/utils/formatters';
 import { useState, useMemo } from 'react';
 import { Calculator, TrendingUp, Minus, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';

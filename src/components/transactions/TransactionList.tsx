@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { formatCurrency } from '@/utils/formatters';
+// formatCurrency local from '@/utils/formatters';
 import { ArrowUpRight, ArrowDownRight, Trash2, Pencil, FastForward, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import { useFinanceStore } from '@/hooks/useFinanceStore';

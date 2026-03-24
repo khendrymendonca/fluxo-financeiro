@@ -1,5 +1,4 @@
 
-import { formatCurrency } from '@/utils/formatters';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import {
     LineChart,

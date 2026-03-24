@@ -1,4 +1,3 @@
-import { formatCurrency } from '@/utils/formatters';
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { TrendingDown, Plus, Trash2, X, AlertTriangle, Calculator, ArrowUpDown } from 'lucide-react';
