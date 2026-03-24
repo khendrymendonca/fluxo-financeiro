@@ -10,6 +10,7 @@ import { format, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { EditCardDialog } from '@/components/cards/EditCardDialog';
 import { Portal } from '@/components/ui/Portal';
+import { getCardSettingsForDate } from '@/utils/creditCardUtils';
 
 export default function CardsDashboard() {
   const {
@@ -18,9 +19,7 @@ export default function CardsDashboard() {
     categories,
     updateCreditCard,
     addCreditCard,
-    getCardSettingsForDate,
     getCardUsedLimit,       // ✅ usa o store — lógica centralizada e correta
-    getCardAvailableLimit,  // ✅ usa o store — lógica centralizada e correta
   } = useFinanceStore();
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -37,7 +36,7 @@ export default function CardsDashboard() {
     const card = creditCards.find(c => c.id === cardId);
     const limit = Number(card?.limit || 0);
     const used = getCardUsedLimit(cardId);
-    const available = getCardAvailableLimit(cardId);
+    const available = limit - used;
     const percentUsed = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
     const isOverLimit = used > limit;
     return { used, available, limit, percentUsed, isOverLimit };
