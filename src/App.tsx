@@ -19,7 +19,7 @@ const queryClient = new QueryClient({
       staleTime: 1000 * 60 * 5, // 5 minutes
       gcTime: 1000 * 60 * 30, // 30 minutes
       retry: 1,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
     },
   },
 });
@@ -40,10 +40,12 @@ const AppRoutes = () => {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <FinanceProvider>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </FinanceProvider>
   );
 };
 
@@ -54,11 +56,9 @@ const App = () => (
       <ThemeProvider>
         <TooltipProvider>
           <AuthProvider>
-            <FinanceProvider>
-              <Toaster />
-              <Sonner />
-              <AppRoutes />
-            </FinanceProvider>
+            <Toaster />
+            <Sonner />
+            <AppRoutes />
           </AuthProvider>
         </TooltipProvider>
       </ThemeProvider>
