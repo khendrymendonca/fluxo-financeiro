@@ -369,11 +369,11 @@ export default function Index() {
             if (editingTransaction) {
               updateTransaction(
                 editingTransaction.id,
-                data
+                data,
+                data.cardClosingDay
               );
             } else {
-              // Custom handling se necessário, mas addTransaction aceita 1 obj
-              addTransaction(data as Omit<Transaction, 'id' | 'userId'>);
+              addTransaction(data);
             }
             setShowTransactionForm(false);
             setEditingTransaction(undefined);

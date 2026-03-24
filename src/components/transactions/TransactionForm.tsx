@@ -19,7 +19,7 @@ interface TransactionFormProps {
   accounts: Account[];
   creditCards: CreditCardType[];
   initialData?: Transaction;
-  onSubmit: (transaction: Omit<Transaction, 'id'>, customInstallments?: { date: string, amount: number }[], applyScope?: 'this' | 'future' | 'all') => void;
+  onSubmit: (transaction: Omit<Transaction, 'id'> & { cardClosingDay?: number }, customInstallments?: { date: string, amount: number }[], applyScope?: 'this' | 'future' | 'all') => void;
   onDelete?: (id: string, applyScope: 'this' | 'future' | 'all') => void;
   onClose: () => void;
 }
@@ -197,6 +197,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     }
 
     const isPaid = initialData ? isPaidLocally : isDateTodayOrPast(date);
+    const selectedCard = creditCards.find(c => c.id === (paymentMethod === 'card' ? cardId : ''));
 
     onSubmit({
       type,
@@ -208,6 +209,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       date,
       accountId: paymentMethod === 'account' ? accountId : undefined,
       cardId: paymentMethod === 'card' ? cardId : undefined,
+      cardClosingDay: selectedCard?.closingDay,
       installmentTotal: activeTab === 'parcelamento' ? parseInt(installmentsCount) : undefined,
       isRecurring: activeTab === 'fixo' || activeTab === 'renda_fixa',
       recurrence: (activeTab === 'fixo' || activeTab === 'renda_fixa') ? recurrence : undefined,
