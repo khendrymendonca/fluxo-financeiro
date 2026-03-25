@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, createContext, useContext, useCallback } from 'react';
+import { useState, useMemo, createContext, useContext, useCallback } from 'react';
 import { FilterMode, Transaction, Bill, Account, SavingsGoal, Debt, CreditCard } from '@/types/finance';
 import { addMonths, subMonths, format } from 'date-fns';
 import {
@@ -342,73 +342,3 @@ function useFinanceProvider() {
     }
   };
 }
-
-
-    addSavingsGoal: addGoalMutation.mutateAsync,
-    updateSavingsGoal: (id: string, updates: Partial<SavingsGoal>) => updateGoalMutation.mutateAsync({ id, updates }),
-    deleteSavingsGoal: deleteGoalMutation.mutateAsync,
-    depositToGoal: (goalId: string, amount: number, accountId: string) => depositGoalMutation.mutateAsync({ id: goalId, amount, accountId, goalName: '' }),
-
-    addDebt: addDebtMutation.mutateAsync,
-    updateDebt: (id: string, updates: Partial<Debt>) => updateDebtMutation.mutateAsync({ id, updates }),
-    deleteDebt: deleteDebtMutation.mutateAsync,
-
-    fetchInitialData: async () => { },
-    getTransactionTargetDate: (t: Transaction) => new Date(t.date),
-    getEmergencyFundData: () => ({ monthlyFixed: 0, targetAmount: 0, currentAmount: 0, progress: 0, months: emergencyMonths, reserveAccounts: [] }),
-    seedCoach: async () => { },
-    createDebtWithInstallments: async (debt: Omit<Debt, 'id' | 'userId'>, firstPaymentDate: string) => {
-      const [newDebt] = await addDebtMutation.mutateAsync(debt);
-      if (!newDebt) return;
-      const numInstallments = Math.ceil(debt.totalAmount / debt.monthlyPayment);
-      const baseDate = parseLocalDate(firstPaymentDate);
-      for (let i = 0; i < numInstallments; i++) {
-        const currentDate = addMonths(baseDate, i);
-        const installmentAmount = i === numInstallments - 1
-          ? debt.totalAmount - (debt.monthlyPayment * (numInstallments - 1))
-          : debt.monthlyPayment;
-        if (installmentAmount <= 0) continue;
-        await addTransactionMutation.mutateAsync({
-          type: 'expense',
-          transactionType: 'installment',
-          description: `${debt.name} (${i + 1}/${numInstallments})`,
-          amount: installmentAmount,
-          date: format(currentDate, 'yyyy-MM-dd'),
-          debtId: newDebt.id,
-          installmentNumber: i + 1,
-          installmentTotal: numInstallments,
-          isPaid: false,
-          userId: newDebt.user_id
-        } as any);
-      }
-    },
-
-    getAccountViewBalance: (id: string) => accounts.find(a => a.id === id)?.balance || 0,
-    getCardExpenses: (id: string) => {
-      const viewDateStr = format(viewDate, 'yyyy-MM');
-      return transactions.filter(t => t.cardId === id && t.type === 'expense' && t.invoiceMonthYear === viewDateStr).reduce((acc, t) => acc + Number(t.amount), 0);
-    },
-    getCategoryExpenses: () => {
-      const categoryMap = new Map<string, number>();
-      currentMonthTransactions.filter(t => t.type === 'expense').forEach(t => {
-        const cat = categories.find(c => c.id === t.categoryId);
-        const name = cat?.name || 'Sem Categoria';
-        categoryMap.set(name, (categoryMap.get(name) || 0) + Number(t.amount));
-      });
-      return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-    },
-    getCardUsedLimit: (id: string) => {
-      // Limite usado = despesas no cartão que NÃO são pagamentos da fatura
-      // Ignoramos a flag isPaid aqui para evitar o bug do limite zerado
-      return transactions
-        .filter(t =>
-          t.cardId === id &&
-          t.type === 'expense' &&
-          !t.isInvoicePayment
-        )
-        .reduce((acc, t) => acc + Number(t.amount), 0);
-    }
-  };
-}
-
-
