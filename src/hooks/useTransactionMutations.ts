@@ -1,4 +1,4 @@
-﻿import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { addMonths, format } from 'date-fns';
@@ -232,3 +232,72 @@ export function useUpdateTransaction() {
   });
 }
 
+// --- 5. DELETAR EM MASSA ---
+export function useBulkDeleteTransactions() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      items, 
+      installmentScope = 'this',
+      deleteFutureBills = false 
+    }: { 
+      items: { id: string, type: 'transaction' | 'bill', isVirtual?: boolean, billId?: string }[],
+      installmentScope?: 'this' | 'future' | 'all',
+      deleteFutureBills?: boolean
+    }) => {
+      const transactionIdsToDelete = new Set<string>();
+      const billIdsToDelete = new Set<string>();
+
+      // 1. Classificar o que deletar
+      for (const item of items) {
+        if (item.type === 'transaction') {
+          if (installmentScope === 'this') {
+            transactionIdsToDelete.add(item.id);
+          } else {
+            // Se for parcelado, precisamos do group_id
+            const { data: tx } = await supabase.from('transactions').select('installment_group_id, date').eq('id', item.id).single();
+            if (tx?.installment_group_id) {
+              let query = supabase.from('transactions').select('id').eq('installment_group_id', tx.installment_group_id);
+              if (installmentScope === 'future') {
+                query = query.gte('date', tx.date);
+              }
+              const { data: relatedTxs } = await query;
+              relatedTxs?.forEach(rtx => transactionIdsToDelete.add(rtx.id));
+            } else {
+              transactionIdsToDelete.add(item.id);
+            }
+          }
+        } else if (item.type === 'bill') {
+          // Se for uma conta real (não virtual) ou se pedirem para deletar a conta mestre
+          if (!item.isVirtual || deleteFutureBills) {
+            billIdsToDelete.add(item.billId || item.id);
+          }
+        }
+      }
+
+      // 2. Executar deleções
+      if (transactionIdsToDelete.size > 0) {
+        const { error } = await supabase.from('transactions').delete().in('id', Array.from(transactionIdsToDelete));
+        if (error) throw error;
+      }
+
+      if (billIdsToDelete.size > 0) {
+        const { error } = await supabase.from('bills').delete().in('id', Array.from(billIdsToDelete));
+        if (error) throw error;
+      }
+
+      return { txCount: transactionIdsToDelete.size, billCount: billIdsToDelete.size };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['bills'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      toast({ title: 'Lançamentos removidos com sucesso!' });
+    },
+    onError: (err) => {
+      console.error('Erro na remoção em massa:', err);
+      toast({ title: 'Erro ao remover lançamentos', variant: 'destructive' });
+    }
+  });
+}

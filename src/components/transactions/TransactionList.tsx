@@ -13,6 +13,8 @@ import {
 import { toast } from '@/components/ui/use-toast';
 import { Portal } from '@/components/ui/Portal';
 import { OverdraftWarningDialog } from '@/components/ui/OverdraftWarningDialog';
+import { BulkDeleteDialog } from './BulkDeleteDialog';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -43,8 +45,23 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
   const [overdraftAmountUsed, setOverdraftAmountUsed] = useState(0);
   const [overdraftAccountName, setOverdraftAccountName] = useState('');
   const [pendingPaymentData, setPendingPaymentData] = useState<{ id: string, isCard: boolean } | null>(null);
+  
+  // Bulk Delete State
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 
-  const { categories, accounts, creditCards, transactions: allTransactions, viewDate } = useFinanceStore();
+  const { 
+    categories, 
+    accounts, 
+    creditCards, 
+    transactions: allTransactions, 
+    viewDate,
+    isSelectionMode,
+    selectedIds,
+    toggleSelectionMode,
+    toggleSelectId,
+    clearSelection,
+    bulkDeleteTransactions
+  } = useFinanceStore();
   const { mutateAsync: togglePaidMutation } = useToggleTransactionPaid();
   const { mutateAsync: deleteTransactionMutation } = useDeleteTransaction();
 
@@ -254,49 +271,61 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
       </div>
 
       {/* Filtros */}
-      {/* Filtros Avançados */}
       <div className="card-elevated p-4 space-y-4">
-        <div className="flex flex-wrap gap-4 items-center">
-          {/* Receita/Despesa */}
-          <div className="flex gap-1 p-1 bg-muted rounded-xl">
-            {(['all', 'income', 'expense'] as const).map(f => (
-              <button key={f} onClick={() => setFilter(f)}
+        <div className="flex flex-wrap gap-4 items-center justify-between">
+          <div className="flex flex-wrap gap-4 items-center">
+            {/* Receita/Despesa */}
+            <div className="flex gap-1 p-1 bg-muted rounded-xl">
+              {(['all', 'income', 'expense'] as const).map(f => (
+                <button key={f} onClick={() => setFilter(f)}
+                  className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
+                    filter === f ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                  {f === 'all' ? 'Todos' : f === 'income' ? 'Receitas' : 'Despesas'}
+                </button>
+              ))}
+            </div>
+
+            {/* Origem */}
+            <div className="flex gap-1 p-1 bg-muted rounded-xl">
+              <button onClick={() => { setSourceFilter('all'); setSpecificSourceId('all'); }}
                 className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
-                  filter === f ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                {f === 'all' ? 'Todos' : f === 'income' ? 'Receitas' : 'Despesas'}
+                  sourceFilter === 'all' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                Todas Origens
               </button>
-            ))}
+              <button onClick={() => { setSourceFilter('account'); setSpecificSourceId('all'); }}
+                className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
+                  sourceFilter === 'account' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                Débito
+              </button>
+              <button onClick={() => { setSourceFilter('card'); setSpecificSourceId('all'); }}
+                className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
+                  sourceFilter === 'card' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                Cartão
+              </button>
+            </div>
+
+            {/* Tipo */}
+            <div className="flex gap-1 p-1 bg-muted rounded-xl">
+              {(['all', 'punctual', 'installment', 'fixed'] as const).map(f => (
+                <button key={f} onClick={() => setTypeFilter(f)}
+                  className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
+                    typeFilter === f ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                  {f === 'all' ? 'Qualquer Tipo' : f === 'punctual' ? 'Pontual' : f === 'installment' ? 'Parcelado' : 'Fixo'}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Origem */}
-          <div className="flex gap-1 p-1 bg-muted rounded-xl">
-            <button onClick={() => { setSourceFilter('all'); setSpecificSourceId('all'); }}
-              className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
-                sourceFilter === 'all' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              Todas Origens
-            </button>
-            <button onClick={() => { setSourceFilter('account'); setSpecificSourceId('all'); }}
-              className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
-                sourceFilter === 'account' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              Débito
-            </button>
-            <button onClick={() => { setSourceFilter('card'); setSpecificSourceId('all'); }}
-              className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
-                sourceFilter === 'card' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              Cartão
-            </button>
-          </div>
-
-          {/* Tipo */}
-          <div className="flex gap-1 p-1 bg-muted rounded-xl">
-            {(['all', 'punctual', 'installment', 'fixed'] as const).map(f => (
-              <button key={f} onClick={() => setTypeFilter(f)}
-                className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
-                  typeFilter === f ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                {f === 'all' ? 'Qualquer Tipo' : f === 'punctual' ? 'Pontual' : f === 'installment' ? 'Parcelado' : 'Fixo'}
-              </button>
-            ))}
-          </div>
+          {/* Botão de Remoção em Massa */}
+          <Button 
+            variant={isSelectionMode ? "default" : "outline"} 
+            onClick={toggleSelectionMode}
+            className={cn("h-9 px-4 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all", 
+              isSelectionMode ? "bg-primary text-white" : "border-danger/30 text-danger hover:bg-danger/10")}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            {isSelectionMode ? 'Sair da Seleção' : 'Remover lançamentos'}
+          </Button>
         </div>
 
         {/* Filtro Específico (Conta ou Cartão) */}
@@ -346,9 +375,18 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
                     : [];
 
                   return (
-                    <div key={item.id} className="overflow-hidden">
+                    <div key={item.id} className="overflow-hidden flex items-center">
+                      {isSelectionMode && (
+                        <div className="pl-4">
+                          <Checkbox 
+                            checked={selectedIds.has(item.id)}
+                            onCheckedChange={() => toggleSelectId(item.id)}
+                            className="w-5 h-5 border-2"
+                          />
+                        </div>
+                      )}
                       <div className={cn(
-                        "flex flex-col md:flex-row md:items-center justify-between p-4 hover:bg-muted/30 transition-colors group gap-4",
+                        "flex-1 flex flex-col md:flex-row md:items-center justify-between p-4 hover:bg-muted/30 transition-colors group gap-4",
                         isPending && "bg-primary/5 border-l-4 border-l-primary"
                       )}>
                         {/* Lado esquerdo */}
@@ -673,6 +711,75 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
           setShowOverdraftWarning(false);
           if (pendingPaymentData) executePayment(pendingPaymentData.id, pendingPaymentData.isCard);
           setPendingPaymentData(null);
+        }}
+      />
+
+      {/* Floating Bulk Action Bar */}
+      {isSelectionMode && selectedIds.size > 0 && (
+        <Portal>
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-300">
+            <div className="bg-foreground text-background px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-6 border border-background/10">
+              <div className="flex flex-col">
+                <span className="text-xs font-black uppercase opacity-70 tracking-tighter">Selecionados</span>
+                <span className="text-lg font-black leading-none">{selectedIds.size}</span>
+              </div>
+              
+              <div className="h-8 w-px bg-background/20" />
+
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={clearSelection}
+                  className="hover:bg-background/10 text-background font-bold text-xs"
+                >
+                  Limpar
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={() => setShowBulkDeleteDialog(true)}
+                  className="bg-danger hover:bg-danger/90 text-white font-black uppercase text-[10px] tracking-widest px-6 rounded-xl"
+                >
+                  Remover
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
+      {/* Bulk Delete Dialog */}
+      <BulkDeleteDialog
+        isOpen={showBulkDeleteDialog}
+        onClose={() => setShowBulkDeleteDialog(false)}
+        selectedCount={selectedIds.size}
+        hasInstallments={Array.from(selectedIds).some(id => {
+          const item = displayItems.find(i => i.id === id);
+          return item?.installmentTotal && item.installmentTotal > 1;
+        })}
+        hasRecurring={Array.from(selectedIds).some(id => {
+          const item = displayItems.find(i => i.id === id);
+          return item?.isRecurring;
+        })}
+        onConfirm={async (options) => {
+          const itemsToDelete = Array.from(selectedIds).map(id => {
+            const item = displayItems.find(i => i.id === id);
+            return {
+              id: id,
+              type: item?.isBill ? 'bill' : 'transaction' as 'bill' | 'transaction',
+              isVirtual: item?.isVirtual,
+              billId: item?.billId
+            };
+          });
+
+          await bulkDeleteTransactions({
+            items: itemsToDelete,
+            installmentScope: options.installmentScope,
+            deleteFutureBills: options.deleteFutureBills
+          });
+          
+          toggleSelectionMode(); // Sai do modo de seleção após deletar
         }}
       />
     </div>

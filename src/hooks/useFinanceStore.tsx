@@ -18,7 +18,8 @@ import {
   useAddTransaction,
   useDeleteTransaction,
   useUpdateTransaction,
-  useToggleTransactionPaid
+  useToggleTransactionPaid,
+  useBulkDeleteTransactions
 } from './useTransactionMutations';
 import {
   useAddAccount,
@@ -73,6 +74,10 @@ function useFinanceProvider() {
   const [viewDate, setViewDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<FilterMode>('month');
   const [emergencyMonths, setEmergencyMonthsLocal] = useState(Number(localStorage.getItem('emergencyMonths')) || 12);
+  
+  // Selection State
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // --- Data Queries (TanStack Query) ---
   const { data: accounts = [], isLoading: loadingAccounts } = useAccounts();
@@ -94,6 +99,7 @@ function useFinanceProvider() {
   const updateTransactionMutation = useUpdateTransaction();
   const deleteTransactionMutation = useDeleteTransaction();
   const togglePaidMutation = useToggleTransactionPaid();
+  const bulkDeleteMutation = useBulkDeleteTransactions();
 
   const addAccountMutation = useAddAccount();
   const updateAccountMutation = useUpdateAccount();
@@ -118,6 +124,31 @@ function useFinanceProvider() {
   const updateDebtMutation = useUpdateDebt();
   const deleteDebtMutation = useDeleteDebt();
   const { data: budgetRule } = useBudgetRule();
+
+  // --- Selection Methods ---
+  const toggleSelectionMode = useCallback(() => {
+    setIsSelectionMode(prev => {
+      if (prev) setSelectedIds(new Set());
+      return !prev;
+    });
+  }, []);
+
+  const toggleSelectId = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const selectAll = useCallback((ids: string[]) => {
+    setSelectedIds(new Set(ids));
+  }, []);
 
   // --- Navigation ---
   const nextMonth = useCallback(() => setViewDate(prev => addMonths(prev, 1)), []);
@@ -219,12 +250,21 @@ function useFinanceProvider() {
     setEmergencyMonths,
     getPeriodStartBalance,
 
+    // Selection
+    isSelectionMode,
+    selectedIds,
+    toggleSelectionMode,
+    toggleSelectId,
+    clearSelection,
+    selectAll,
+
     addTransaction: addTransactionMutation.mutateAsync,
     updateTransaction: (id: string, updates: Partial<Transaction>, cardClosingDay?: number, cardDueDay?: number, currentCardId?: string | null) =>
       updateTransactionMutation.mutateAsync({ id, updates, cardClosingDay, cardDueDay, currentCardId } as any),
     deleteTransaction: (id: string, scope: 'this' | 'future' | 'all' = 'this') =>
       deleteTransactionMutation.mutateAsync({ id, applyScope: scope }),
     togglePaid: togglePaidMutation.mutateAsync,
+    bulkDeleteTransactions: bulkDeleteMutation.mutateAsync,
 
     addAccount: addAccountMutation.mutateAsync,
     updateAccount: (id: string, updates: Partial<Account>) => updateAccountMutation.mutateAsync({ id, updates }),
@@ -235,6 +275,74 @@ function useFinanceProvider() {
     addCreditCard: addCardMutation.mutateAsync,
     updateCreditCard: (id: string, updates: Partial<CreditCard>) => updateCardMutation.mutateAsync({ id, updates }),
     deleteCreditCard: deleteCardMutation.mutateAsync,
+
+    addSavingsGoal: addGoalMutation.mutateAsync,
+    updateSavingsGoal: (id: string, updates: Partial<SavingsGoal>) => updateGoalMutation.mutateAsync({ id, updates }),
+    deleteSavingsGoal: deleteGoalMutation.mutateAsync,
+    depositToGoal: (goalId: string, amount: number, accountId: string) => depositGoalMutation.mutateAsync({ id: goalId, amount, accountId, goalName: '' }),
+
+    addDebt: addDebtMutation.mutateAsync,
+    updateDebt: (id: string, updates: Partial<Debt>) => updateDebtMutation.mutateAsync({ id, updates }),
+    deleteDebt: deleteDebtMutation.mutateAsync,
+
+    fetchInitialData: async () => { },
+    getTransactionTargetDate: (t: Transaction) => new Date(t.date),
+    getEmergencyFundData: () => ({ monthlyFixed: 0, targetAmount: 0, currentAmount: 0, progress: 0, months: emergencyMonths, reserveAccounts: [] }),
+    seedCoach: async () => { },
+    createDebtWithInstallments: async (debt: Omit<Debt, 'id' | 'userId'>, firstPaymentDate: string) => {
+      const [newDebt] = await addDebtMutation.mutateAsync(debt);
+      if (!newDebt) return;
+      const numInstallments = Math.ceil(debt.totalAmount / debt.monthlyPayment);
+      const baseDate = parseLocalDate(firstPaymentDate);
+      for (let i = 0; i < numInstallments; i++) {
+        const currentDate = addMonths(baseDate, i);
+        const installmentAmount = i === numInstallments - 1
+          ? debt.totalAmount - (debt.monthlyPayment * (numInstallments - 1))
+          : debt.monthlyPayment;
+        if (installmentAmount <= 0) continue;
+        await addTransactionMutation.mutateAsync({
+          type: 'expense',
+          transactionType: 'installment',
+          description: `${debt.name} (${i + 1}/${numInstallments})`,
+          amount: installmentAmount,
+          date: format(currentDate, 'yyyy-MM-dd'),
+          debtId: newDebt.id,
+          installmentNumber: i + 1,
+          installmentTotal: numInstallments,
+          isPaid: false,
+          userId: newDebt.user_id
+        } as any);
+      }
+    },
+
+    getAccountViewBalance: (id: string) => accounts.find(a => a.id === id)?.balance || 0,
+    getCardExpenses: (id: string) => {
+      const viewDateStr = format(viewDate, 'yyyy-MM');
+      return transactions.filter(t => t.cardId === id && t.type === 'expense' && t.invoiceMonthYear === viewDateStr).reduce((acc, t) => acc + Number(t.amount), 0);
+    },
+    getCategoryExpenses: () => {
+      const categoryMap = new Map<string, number>();
+      currentMonthTransactions.filter(t => t.type === 'expense').forEach(t => {
+        const cat = categories.find(c => c.id === t.categoryId);
+        const name = cat?.name || 'Sem Categoria';
+        categoryMap.set(name, (categoryMap.get(name) || 0) + Number(t.amount));
+      });
+      return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    },
+    getCardUsedLimit: (id: string) => {
+      // Limite usado = despesas no cartão que NÃO são pagamentos da fatura
+      // Ignoramos a flag isPaid aqui para evitar o bug do limite zerado
+      return transactions
+        .filter(t =>
+          t.cardId === id &&
+          t.type === 'expense' &&
+          !t.isInvoicePayment
+        )
+        .reduce((acc, t) => acc + Number(t.amount), 0);
+    }
+  };
+}
+
 
     addSavingsGoal: addGoalMutation.mutateAsync,
     updateSavingsGoal: (id: string, updates: Partial<SavingsGoal>) => updateGoalMutation.mutateAsync({ id, updates }),
