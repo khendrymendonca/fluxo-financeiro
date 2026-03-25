@@ -1,6 +1,7 @@
 ﻿import { useMemo } from 'react';
 import { isBefore, isSameMonth } from 'date-fns';
 import { Bill } from '@/types/finance';
+import { parseLocalDate } from '@/utils/dateUtils';
 
 export function useProjectedBills(bills: Bill[], viewDate: Date) {
   return useMemo(() => {
@@ -11,7 +12,7 @@ export function useProjectedBills(bills: Bill[], viewDate: Date) {
     const targetYear = viewDate.getFullYear();
 
     bills.forEach(bill => {
-      const billDate = new Date(bill.dueDate);
+      const billDate = parseLocalDate(bill.dueDate);
 
       if (bill.isFixed) {
         // Se é fixa E começou ANTES ou DURANTE o mês/ano que estamos a ver
@@ -37,7 +38,7 @@ export function useProjectedBills(bills: Bill[], viewDate: Date) {
       }
     });
 
-    return projected.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+    return projected.sort((a, b) => parseLocalDate(a.dueDate).getTime() - parseLocalDate(b.dueDate).getTime());
     
   }, [bills, viewDate]);
 }

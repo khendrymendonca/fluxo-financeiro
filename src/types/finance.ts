@@ -55,6 +55,7 @@ export interface Transaction {
   isVirtual?: boolean;
   isAutomatic?: boolean;
   originalBillId?: string;
+  originalId?: string; // âœ… ADICIONADO: para deduplicação de recorrentes
 }
 
 export interface Account {
@@ -128,7 +129,7 @@ export interface Bill {
   categoryId?: string;
   subcategoryId?: string;
   amount: number;
-  type: 'pagar' | 'receber';
+  type: 'payable' | 'receivable';
   accountId?: string;
   cardId?: string;
   dueDate: string;

@@ -45,7 +45,13 @@ export function useUpdateBill() {
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string, updates: Partial<Bill> }) => {
-      const dbUpdates: any = { ...updates };
+      const dbUpdates: any = {};
+      
+      if (updates.name !== undefined) dbUpdates.name = updates.name;
+      if (updates.amount !== undefined) dbUpdates.amount = updates.amount;
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.isFixed !== undefined) dbUpdates.is_fixed = updates.isFixed;
+      if (updates.type !== undefined) dbUpdates.type = updates.type;
       if (updates.paymentDate !== undefined) dbUpdates.payment_date = updates.paymentDate;
       if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
       if (updates.accountId !== undefined) dbUpdates.account_id = updates.accountId;
@@ -68,6 +74,13 @@ export function useDeleteBill() {
 
   return useMutation({
     mutationFn: async ({ id, deleteFuture }: { id: string, deleteFuture?: boolean }) => {
+      // Se deleteFuture for true e a conta for fixa, o comportamento esperado
+      // é remover a conta original (que gera as projeções).
+      // Se for false, talvez queiramos apenas "esconder" ou deletar uma instância específica
+      // mas no schema atual, as instâncias futuras são virtuais.
+      // O bug relatado diz que as projeções continuam aparecendo. 
+      // Então se deleteFuture é true, garantimos a remoção total.
+      
       const { error } = await supabase.from('bills').delete().eq('id', id);
       if (error) throw error;
       return id;

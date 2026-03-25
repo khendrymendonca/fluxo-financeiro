@@ -107,7 +107,6 @@ function useFinanceProvider() {
 
   const addCardMutation = useAddCreditCard();
   const updateCardMutation = useUpdateCreditCard();
-  const updateCardMutation_REAL = useUpdateCreditCard();
   const deleteCardMutation = useDeleteCreditCard();
 
   const addGoalMutation = useAddGoal();
@@ -231,10 +230,10 @@ function useFinanceProvider() {
     updateAccount: (id: string, updates: Partial<Account>) => updateAccountMutation.mutateAsync({ id, updates }),
     deleteAccount: deleteAccountMutation.mutateAsync,
     transferBetweenAccounts: (from: string, to: string, amount: number, desc: string, date: string, toType: 'account' | 'card' = 'account') =>
-      transferMutation.mutateAsync({ fromAccountId: from, [toType === 'account' ? 'toAccountId' : 'toCardId']: to, amount: Number(amount), description: desc, date } as any),
+      transferMutation.mutateAsync({ from, to, amount: Number(amount), description: desc, date, type: toType } as any),
 
     addCreditCard: addCardMutation.mutateAsync,
-    updateCreditCard: (id: string, updates: Partial<CreditCard>) => updateCardMutation_REAL.mutateAsync({ id, updates }),
+    updateCreditCard: (id: string, updates: Partial<CreditCard>) => updateCardMutation.mutateAsync({ id, updates }),
     deleteCreditCard: deleteCardMutation.mutateAsync,
 
     addSavingsGoal: addGoalMutation.mutateAsync,
