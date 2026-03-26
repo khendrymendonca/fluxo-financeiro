@@ -257,31 +257,6 @@ function useFinanceProvider() {
     getTransactionTargetDate: (t: Transaction) => new Date(t.date),
     getEmergencyFundData: () => ({ monthlyFixed: 0, targetAmount: 0, currentAmount: 0, progress: 0, months: emergencyMonths, reserveAccounts: [] }),
     seedCoach: async () => { },
-    createDebtWithInstallments: async (debt: Omit<Debt, 'id' | 'userId'>, firstPaymentDate: string) => {
-      const [newDebt] = await addDebtMutation.mutateAsync(debt);
-      if (!newDebt) return;
-      const numInstallments = Math.ceil(debt.totalAmount / debt.installmentAmount);
-      const baseDate = parseLocalDate(firstPaymentDate);
-      for (let i = 0; i < numInstallments; i++) {
-        const currentDate = addMonths(baseDate, i);
-        const installmentAmount = i === numInstallments - 1
-          ? debt.totalAmount - (debt.installmentAmount * (numInstallments - 1))
-          : debt.installmentAmount;
-        if (installmentAmount <= 0) continue;
-        await addTransactionMutation.mutateAsync({
-          type: 'expense',
-          transactionType: 'installment',
-          description: `${debt.name} (${i + 1}/${numInstallments})`,
-          amount: installmentAmount,
-          date: format(currentDate, 'yyyy-MM-dd'),
-          debtId: newDebt.id,
-          installmentNumber: i + 1,
-          installmentTotal: numInstallments,
-          isPaid: false,
-          user_id: newDebt.user_id
-        } as any);
-      }
-    },
 
     getAccountViewBalance: (id: string) => accounts.find(a => a.id === id)?.balance || 0,
     getCardExpenses: (id: string) => {

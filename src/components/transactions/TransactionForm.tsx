@@ -28,7 +28,7 @@ interface TransactionFormProps {
   onClose: () => void;
 }
 
-type TabType = 'pontual' | 'parcelamento' | 'fixo' | 'divida' | 'transfer' | 'renda_fixa';
+type TabType = 'pontual' | 'parcelamento' | 'fixo' | 'transfer' | 'renda_fixa';
 type Step = 'SELECT_TYPE' | 'SELECT_SUBTYPE' | 'DETAILS';
 
 const isDateTodayOrPast = (dateStr: string): boolean => {
@@ -90,7 +90,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [overdraftAccountName, setOverdraftAccountName] = useState('');
   const [pendingAmount, setPendingAmount] = useState<number | null>(null);
 
-  const { debts, createDebtWithInstallments, categories, subcategories, transferBetweenAccounts, getAccountViewBalance, getCardExpenses } = useFinanceStore();
+  const { debts, categories, subcategories, transferBetweenAccounts, getAccountViewBalance, getCardExpenses } = useFinanceStore();
 
   const [openCategory, setOpenCategory] = useState(false);
   const [openSubcategory, setOpenSubcategory] = useState(false);
@@ -110,7 +110,9 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         setActiveTab('parcelamento');
         setInstallmentsCount(initialData.installmentTotal?.toString() || '2');
       } else if (initialData.debtId) {
-        setActiveTab('divida');
+        // Agora dívidas são gerenciadas apenas no DebtsManager, 
+        // mas marcamos como pontual se vier algo com debtId para não quebrar.
+        setActiveTab('pontual');
       } else {
         setActiveTab('pontual');
       }
@@ -120,19 +122,6 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (activeTab === 'divida') {
-      if (!description || !debtTotal || !debtInstallments) return;
-      createDebtWithInstallments({
-        name: description,
-        totalAmount: parseFloat(debtTotal),
-        remainingAmount: parseFloat(debtTotal),
-        installmentAmount: parseFloat(debtTotal) / parseInt(debtInstallments),
-        interestRateMonthly: parseFloat(debtInterest) || 0,
-        startDate: new Date().toISOString().split('T')[0],
-      }, debtFirstPaymentDate);
-      onClose();
-      return;
-    }
 
     if (activeTab === 'transfer') {
       if (!transferFrom || !transferTo || !amount) return;
@@ -320,7 +309,6 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Compra à vista no débito ou dinheiro.' },
         { id: 'parcelamento', label: 'Parcelado', icon: CreditCard, desc: 'Compra no cartão de crédito.' },
         { id: 'fixo', label: 'Fixo', icon: RotateCw, desc: 'Contas que repetem todo mês.' },
-        { id: 'divida', label: 'Dívida', icon: Calendar, desc: 'Empréstimos ou acordos judiciais.' },
         { id: 'transfer', label: 'Transferência', icon: ArrowRightLeft, desc: 'Mover entre contas ou pagar cartão.' },
       ];
 
@@ -399,7 +387,6 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                         {activeTab === 'pontual' && 'Lançamento Pontual'}
                         {activeTab === 'parcelamento' && 'Lançamento Parcelado'}
                         {activeTab === 'fixo' && 'Lançamento Fixo'}
-                        {activeTab === 'divida' && 'Pagamento de Dívida'}
                         {activeTab === 'transfer' && 'Transferência'}
                         {activeTab === 'renda_fixa' && 'Rendimento'}
                       </p>
@@ -410,32 +397,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               )}
 
               {/* Form Content based on activeTab */}
-              {activeTab === 'divida' ? (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Descrição da Dívida</Label>
-                    <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Ex: Acordo Banco X" className="h-12 rounded-2xl border-2" required />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Valor Total (R$)</Label>
-                      <Input type="number" value={debtTotal} onChange={e => setDebtTotal(e.target.value)} placeholder="0.00" className="h-12 rounded-2xl border-2" required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Taxa Juros (% a.m.)</Label>
-                      <div className="relative">
-                        <Input type="number" step="0.1" value={debtInterest} onChange={e => setDebtInterest(e.target.value)} placeholder="0.0" className="h-12 rounded-2xl border-2 pr-10" required />
-                        <Percent className="w-4 h-4 absolute right-4 top-4 text-muted-foreground" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Data 1º Pagamento</Label>
-                    <Input type="date" value={debtFirstPaymentDate?.split('T')[0] || ''} onChange={e => setDebtFirstPaymentDate(e.target.value)} className="h-12 rounded-2xl border-2" required />
-                  </div>
-                </div>
-
-              ) : activeTab === 'transfer' ? (
+              {activeTab === 'transfer' ? (
                 <div className="space-y-6">
                   {/* Conta Origem */}
                   <div className="space-y-3">

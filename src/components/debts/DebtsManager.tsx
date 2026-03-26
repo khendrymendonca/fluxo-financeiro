@@ -91,10 +91,6 @@ export function DebtsManager({
     setShowForm(false);
   };
 
-  const handlePayment = (debt: Debt) => {
-    const newRemaining = Math.max(0, debt.remainingAmount - debt.installmentAmount);
-    onUpdateDebt(debt.id, { remainingAmount: newRemaining });
-  };
 
   const totalDebt = debts.reduce((sum, d) => sum + d.remainingAmount, 0);
   const totalMonthly = debts.reduce((sum, d) => sum + d.installmentAmount, 0);

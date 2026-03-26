@@ -65,7 +65,6 @@ export function AccountsManager({
     if (!account) return 0;
 
     // Filter transactions for this account up to the view date
-    const accountTxs = currentMonthTransactions.filter(t => t.accountId === accountId && t.isPaid);
     const balance = Number(account.balance);
 
     // In our new architecture, account.balance is already the real-time balance from DB triggers.

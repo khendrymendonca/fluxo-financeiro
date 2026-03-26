@@ -1,16 +1,14 @@
 ﻿import { useMemo } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { calcInvoiceMonthYear } from '@/utils/creditCardUtils';
 import { CreditCard, Transaction } from '@/types/finance';
 
-export function useCreditCardMetrics(cardId: string, viewDate: Date) {
-  const queryClient = useQueryClient();
-
-  // Vamos buscar os dados diretamente do cache do React Query!
-  const transactions: Transaction[] = queryClient.getQueryData(['transactions']) || [];
-  const cards: CreditCard[] = queryClient.getQueryData(['credit-cards']) || [];
-
+export function useCreditCardMetrics(
+  cardId: string,
+  viewDate: Date,
+  transactions: Transaction[],
+  cards: CreditCard[]
+) {
   return useMemo(() => {
     const card = cards.find(c => c.id === cardId);
     if (!card) return { usedLimit: 0, availableLimit: 0, currentInvoice: 0 };
@@ -33,7 +31,7 @@ export function useCreditCardMetrics(cardId: string, viewDate: Date) {
 
       const txDate = new Date(t.date);
       const isFuture = txDate > new Date();
-      
+
       const competence = t.invoiceMonthYear || calcInvoiceMonthYear(txDate, card);
 
       if (competence === viewMonthYear) {
