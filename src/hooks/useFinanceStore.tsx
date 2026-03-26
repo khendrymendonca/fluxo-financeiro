@@ -138,14 +138,23 @@ function useFinanceProvider() {
   const prevMonth = useCallback(() => setViewDate(prev => subMonths(prev, 1)), []);
   const nextDay = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setDate(d.getDate() + 1); return d; }), []);
   const prevDay = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setDate(d.getDate() - 1); return d; }), []);
+  const nextYear = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setFullYear(d.getFullYear() + 1); return d; }), []);
+  const prevYear = useCallback(() => setViewDate(prev => { const d = new Date(prev); d.setFullYear(d.getFullYear() - 1); return d; }), []);
 
   // --- Computed ---
   const currentMonthTransactions = useMemo(() => {
+    if (viewMode === 'all') return transactions;
     return transactions.filter(t => {
       const tDate = new Date(t.date);
+      if (viewMode === 'day') {
+        return tDate.getDate() === viewDate.getDate() && tDate.getMonth() === viewDate.getMonth() && tDate.getFullYear() === viewDate.getFullYear();
+      }
+      if (viewMode === 'year') {
+        return tDate.getFullYear() === viewDate.getFullYear();
+      }
       return tDate.getMonth() === viewDate.getMonth() && tDate.getFullYear() === viewDate.getFullYear();
     });
-  }, [transactions, viewDate]);
+  }, [transactions, viewDate, viewMode]);
 
   const totalBalance = useMemo(() => accounts.reduce((sum, acc) => sum + Number(acc.balance), 0), [accounts]);
   const totalIncome = useMemo(() => currentMonthTransactions.filter(t => t.type === 'income' && t.isPaid).reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
@@ -201,6 +210,8 @@ function useFinanceProvider() {
     prevMonth,
     nextDay,
     prevDay,
+    nextYear,
+    prevYear,
     setEmergencyMonths,
     getPeriodStartBalance,
 
@@ -274,6 +285,9 @@ function useFinanceProvider() {
 
     getAccountViewBalance: (id: string) => accounts.find(a => a.id === id)?.balance || 0,
     getCardExpenses: (id: string) => {
+      if (viewMode === 'all') {
+        return transactions.filter(t => t.cardId === id && t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0);
+      }
       const viewDateStr = format(viewDate, 'yyyy-MM');
       return transactions.filter(t => t.cardId === id && t.type === 'expense' && t.invoiceMonthYear === viewDateStr).reduce((acc, t) => acc + Number(t.amount), 0);
     },

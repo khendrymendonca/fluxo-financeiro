@@ -51,11 +51,11 @@ export interface Transaction {
   recurrence?: string;
   debtId?: string;
   isInvoicePayment?: boolean;
-  // âœ… ADICIONADO: rastreabilidade de origem para bills convertidas
+  // ✅ ADICIONADO: rastreabilidade de origem para bills convertidas
   isVirtual?: boolean;
   isAutomatic?: boolean;
   originalBillId?: string;
-  originalId?: string; // âœ… ADICIONADO: para deduplicação de recorrentes
+  originalId?: string; // ✅ ADICIONADO: para deduplicação de recorrentes
   deleted_at?: string; // ✅ ADICIONADO: Soft Delete
 }
 
@@ -106,7 +106,7 @@ export interface Debt {
   dueDay?: number;
   strategyPriority?: number;
   minimumPayment?: number;
-  // âœ… ADICIONADO: de qual conta sai o pagamento da dívida
+  // ✅ ADICIONADO: de qual conta sai o pagamento da dívida
   accountId?: string;
 }
 
@@ -119,7 +119,7 @@ export interface SavingsGoal {
   deadline?: string;
   color: string;
   icon?: string;
-  // âœ… ADICIONADO: vínculo com conta/caixinha real
+  // ✅ ADICIONADO: vínculo com conta/caixinha real
   accountId?: string;
 }
 
@@ -135,7 +135,7 @@ export interface FinanceState {
   emergencyMonths: number;
 }
 
-export type FilterMode = 'day' | 'month' | 'year';
+export type FilterMode = 'day' | 'month' | 'year' | 'all';
 
 /** @deprecated Use categories from database instead */
 export const INCOME_CATEGORIES_LEGACY = {

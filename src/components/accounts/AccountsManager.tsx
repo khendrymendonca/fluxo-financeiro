@@ -10,13 +10,15 @@ import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
 import { Portal } from '@/components/ui/Portal';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useTransferBetweenAccounts } from '@/hooks/useAccountMutations';
+import { useAddTransaction } from '@/hooks/useTransactionMutations';
 import { toast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
+import { todayLocalString } from '@/utils/dateUtils';
 
 interface AccountsManagerProps {
   accounts: Account[];
-  onAddAccount: (account: Omit<Account, 'id' | 'userId'>) => void;  
-  onUpdateAccount: (id: string, updates: Partial<Account>) => void; 
+  onAddAccount: (account: Omit<Account, 'id' | 'userId'>) => void;
+  onUpdateAccount: (id: string, updates: Partial<Account>) => void;
   onDeleteAccount: (id: string) => void;
 }
 
@@ -28,8 +30,9 @@ export function AccountsManager({
 }: AccountsManagerProps) {
   const { viewDate, currentMonthTransactions } = useFinanceStore();
   const { mutateAsync: transferBetweenAccounts } = useTransferBetweenAccounts();
-  
-  const [showAccountForm, setShowAccountForm] = useState(false);    
+  const { mutateAsync: addTransaction } = useAddTransaction();
+
+  const [showAccountForm, setShowAccountForm] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
   // Transfer modal state
@@ -44,10 +47,10 @@ export function AccountsManager({
   const [accountBank, setAccountBank] = useState('');
   const [accountBalance, setAccountBalance] = useState('');
   const [accountType, setAccountType] = useState<AccountType>('corrente');
-  const [accountColor, setAccountColor] = useState(APP_COLORS[0]);  
+  const [accountColor, setAccountColor] = useState(APP_COLORS[0]);
   const [hasOverdraft, setHasOverdraft] = useState(false);
   const [overdraftLimit, setOverdraftLimit] = useState('');
-  const [monthlyYieldRate, setMonthlyYieldRate] = useState('');     
+  const [monthlyYieldRate, setMonthlyYieldRate] = useState('');
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -64,7 +67,7 @@ export function AccountsManager({
     // Filter transactions for this account up to the view date
     const accountTxs = currentMonthTransactions.filter(t => t.accountId === accountId && t.isPaid);
     const balance = Number(account.balance);
-    
+
     // In our new architecture, account.balance is already the real-time balance from DB triggers.
     // The "view balance" in the old context was a filtered sum. 
     // For now, we'll return the real balance as it's the most reliable.
@@ -100,7 +103,7 @@ export function AccountsManager({
     setAccountType(account.accountType);
     setAccountColor(account.color);
     setHasOverdraft(account.hasOverdraft || false);
-    setOverdraftLimit(account.overdraftLimit?.toString() || '');    
+    setOverdraftLimit(account.overdraftLimit?.toString() || '');
     setMonthlyYieldRate(account.monthlyYieldRate?.toString() || '');
     setShowAccountForm(true);
   };
@@ -110,33 +113,69 @@ export function AccountsManager({
     resetForm();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accountName || !accountBank || !accountBalance) return;    
+    if (!accountName || !accountBank || !accountBalance) return;
 
-    const accountData = {
-      name: accountName,
-      bank: accountBank,
-      balance: parseFloat(accountBalance),
-      color: accountColor,
-      accountType: accountType,
-      hasOverdraft: hasOverdraft,
-      overdraftLimit: hasOverdraft ? parseFloat(overdraftLimit || '0') : 0,
-      monthlyYieldRate: ['metas', 'caixinha', 'investment'].includes(accountType) ? parseFloat(monthlyYieldRate || '0') : 0,
-    };
+    const newBalance = parseFloat(accountBalance);
 
     if (editingAccount) {
-      onUpdateAccount(editingAccount.id, accountData);
+      // ✅ Lógica de Ajuste Automático de Saldo
+      const oldBalance = editingAccount.balance;
+      const difference = newBalance - oldBalance;
+
+      if (Math.abs(difference) > 0.01) {
+        try {
+          await addTransaction({
+            description: 'Ajuste de Saldo',
+            amount: Math.abs(difference),
+            type: difference > 0 ? 'income' : 'expense',
+            transactionType: 'adjustment',
+            isPaid: true,
+            categoryId: null,
+            accountId: editingAccount.id,
+            date: todayLocalString(),
+            paymentDate: todayLocalString()
+          });
+        } catch (error) {
+          console.error("Erro ao criar transação de ajuste:", error);
+          return;
+        }
+      }
+
+      // Remove balance do payload pois a trigger do banco cuidará disso após a transação
+      const { balance, ...updateData } = {
+        name: accountName,
+        bank: accountBank,
+        balance: newBalance,
+        color: accountColor,
+        accountType: accountType,
+        hasOverdraft: hasOverdraft,
+        overdraftLimit: hasOverdraft ? parseFloat(overdraftLimit || '0') : 0,
+        monthlyYieldRate: ['metas', 'caixinha', 'investment'].includes(accountType) ? parseFloat(monthlyYieldRate || '0') : 0,
+      };
+
+      onUpdateAccount(editingAccount.id, updateData);
     } else {
+      const accountData = {
+        name: accountName,
+        bank: accountBank,
+        balance: newBalance,
+        color: accountColor,
+        accountType: accountType,
+        hasOverdraft: hasOverdraft,
+        overdraftLimit: hasOverdraft ? parseFloat(overdraftLimit || '0') : 0,
+        monthlyYieldRate: ['metas', 'caixinha', 'investment'].includes(accountType) ? parseFloat(monthlyYieldRate || '0') : 0,
+      };
       onAddAccount(accountData);
     }
 
     closeForm();
   };
 
-  const handleTransferSubmit = async (e: React.FormEvent) => {      
+  const handleTransferSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!transferFrom || !transferTo || !transferAmount) return;    
+    if (!transferFrom || !transferTo || !transferAmount) return;
     if (transferFrom === transferTo) {
       toast({ title: 'As contas de origem e destino devem ser diferentes', variant: 'destructive' });
       return;
@@ -149,10 +188,10 @@ export function AccountsManager({
     }
 
     try {
-      await transferBetweenAccounts({ 
-        from: transferFrom, 
-        to: transferTo, 
-        amount, 
+      await transferBetweenAccounts({
+        from: transferFrom,
+        to: transferTo,
+        amount,
         description: transferDescription,
         date: format(new Date(), 'yyyy-MM-dd')
       });
@@ -187,12 +226,12 @@ export function AccountsManager({
     <div className="space-y-6">
       {/* Summary Card */}
       <div className="card-elevated p-8 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20 animate-fade-in relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-5">      
+        <div className="absolute top-0 right-0 p-8 opacity-5">
           <Wallet className="w-32 h-32" />
         </div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <p className="text-sm font-bold text-primary/70 uppercase tracking-widest mb-1">Patrimônio (Soma das Carteiras)</p>        
+            <p className="text-sm font-bold text-primary/70 uppercase tracking-widest mb-1">Patrimônio (Soma das Carteiras)</p>
             <h2 className="text-4xl font-black tracking-tight">{formatCurrency(totalNetWorth)}</h2>
             <p className="text-[10px] text-muted-foreground mt-1 font-medium">
               Apenas Contas Corrente e Benefícios. Poupança e Investimentos não inclusos.
@@ -206,7 +245,7 @@ export function AccountsManager({
                 variant="outline"
                 className="rounded-2xl h-14 px-8 gap-2 border-primary/30 text-primary shadow-xl shadow-primary/5 font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95"
               >
-                <ArrowRightLeft className="w-5 h-5" /> Transferir   
+                <ArrowRightLeft className="w-5 h-5" /> Transferir
               </Button>
             )}
             <Button
@@ -227,7 +266,7 @@ export function AccountsManager({
           const availableTotal = viewAccountBalance + (account.hasOverdraft ? (account.overdraftLimit || 0) : 0);
           const isNegative = viewAccountBalance < 0;
           const overdraftUsed = isNegative ? Math.abs(viewAccountBalance) : 0;
-          const hasYield = (account.monthlyYieldRate || 0) > 0;     
+          const hasYield = (account.monthlyYieldRate || 0) > 0;
           const estimatedMonthlyYield = hasYield ? (viewAccountBalance > 0 ? viewAccountBalance * ((account.monthlyYieldRate || 0) / 100) : 0) : 0;
 
           return (
@@ -270,7 +309,7 @@ export function AccountsManager({
                 </div>
               </div>
 
-              <div className="mt-auto relative z-10 space-y-2">     
+              <div className="mt-auto relative z-10 space-y-2">
                 <div>
                   <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Saldo em Periodo</p>
                   <p className={cn("text-2xl font-black", getAccountViewBalance(account.id) < 0 && "text-danger")}>
@@ -288,14 +327,14 @@ export function AccountsManager({
                   <div className="pt-2 border-t border-border/50 space-y-1">
                     <div className="flex justify-between items-center">
                       <p className="text-[9px] font-bold text-muted-foreground uppercase">Limite Total da Conta</p>
-                      <span className="font-semibold text-sm">      
+                      <span className="font-semibold text-sm">
                         {formatCurrency(account.overdraftLimit || 0)}
                       </span>
                     </div>
                     {isNegative && (
                       <div className="space-y-1">
                         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                          <div className="h-full rounded-full bg-amber-500 transition-all duration-500" style={{ width: `${Math.min(100, (overdraftUsed / (account.overdraftLimit || 1)) * 100)}%` }} />    
+                          <div className="h-full rounded-full bg-amber-500 transition-all duration-500" style={{ width: `${Math.min(100, (overdraftUsed / (account.overdraftLimit || 1)) * 100)}%` }} />
                         </div>
                         <div className="flex justify-between items-center text-[9px] font-bold">
                           <p className="text-amber-600">{formatCurrency(overdraftUsed)} usado</p>
@@ -330,7 +369,7 @@ export function AccountsManager({
       {showAccountForm && (
         <Portal>
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={closeForm}>
-            <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 border border-border max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>      
+            <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 border border-border max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
                 <div>
                   <h2 className="text-lg font-black tracking-tight">{isEditing ? 'Editar Conta' : 'Nova Conta'}</h2>
@@ -341,11 +380,11 @@ export function AccountsManager({
               <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5 col-span-2 md:col-span-1">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nome da Conta</Label>     
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nome da Conta</Label>
                     <Input value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="Ex: Conta Corrente" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4" required />
                   </div>
                   <div className="space-y-1.5 col-span-2 md:col-span-1">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Instituição</Label>     
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Instituição</Label>
                     <Input value={accountBank} onChange={(e) => setAccountBank(e.target.value)} placeholder="Ex: Banco Itaú" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4" required />
                   </div>
                 </div>
@@ -356,7 +395,7 @@ export function AccountsManager({
                     <Input type="number" step="0.01" value={accountBalance} onChange={(e) => setAccountBalance(e.target.value)} placeholder="0.00" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4 font-bold" required />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tipo de Conta</Label>     
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tipo de Conta</Label>
                     <select
                       value={accountType}
                       onChange={(e) => {
@@ -365,12 +404,12 @@ export function AccountsManager({
                       }}
                       className="w-full h-10 rounded-xl border-2 border-input bg-background px-3 py-2 text-sm font-bold focus:border-primary/50 outline-none"
                     >
-                      <option value="corrente">Corrente</option>    
-                      <option value="metas">Poupança</option>    
-                      <option value="caixinha">Caixinha</option>    
+                      <option value="corrente">Corrente</option>
+                      <option value="metas">Poupança</option>
+                      <option value="caixinha">Caixinha</option>
                       <option value="investment">Investimento</option>
-                      <option value="benefit_va">VA (Ali.)</option> 
-                      <option value="benefit_vr">VR (Ref.)</option> 
+                      <option value="benefit_va">VA (Ali.)</option>
+                      <option value="benefit_vr">VR (Ref.)</option>
                       <option value="benefit_flex">Flexível</option>
                     </select>
                   </div>
@@ -390,7 +429,7 @@ export function AccountsManager({
                 <div className="space-y-3 p-4 rounded-xl bg-muted/30 border border-border/50">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Limite da Conta</Label> 
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Limite da Conta</Label>
                       <p className="text-[10px] text-muted-foreground mt-0.5">Permite saldo negativo (tipo cheque especial)</p>
                     </div>
                     <button type="button" onClick={() => setHasOverdraft(!hasOverdraft)} className={cn("relative w-12 h-7 rounded-full transition-colors duration-200 focus:outline-none", hasOverdraft ? "bg-primary" : "bg-muted-foreground/30")}>
@@ -400,14 +439,14 @@ export function AccountsManager({
 
                   {hasOverdraft && (
                     <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-200">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-amber-600">Valor do Limite (R$)</Label>   
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-amber-600">Valor do Limite (R$)</Label>
                       <Input type="number" step="0.01" min="0" value={overdraftLimit} onChange={(e) => setOverdraftLimit(e.target.value)} placeholder="Ex: 1000.00" className="h-10 rounded-xl border-2 border-amber-500/30 focus:border-amber-500/50 transition-colors px-4 font-bold" />
-                      <p className="text-[9px] text-muted-foreground">Seu saldo poderá ir até <strong className="text-amber-600">-{formatCurrency(parseFloat(overdraftLimit || '0'))}</strong></p>        
+                      <p className="text-[9px] text-muted-foreground">Seu saldo poderá ir até <strong className="text-amber-600">-{formatCurrency(parseFloat(overdraftLimit || '0'))}</strong></p>
                     </div>
                   )}
                 </div>
 
-                <ColorSelector label="Escolha uma Cor de Identificação" selectedColor={accountColor} onSelect={setAccountColor} />    
+                <ColorSelector label="Escolha uma Cor de Identificação" selectedColor={accountColor} onSelect={setAccountColor} />
 
                 <Button type="submit" className="w-full h-12 rounded-xl text-sm font-black uppercase tracking-wider shadow-lg shadow-primary/20 transition-all hover:translate-y-[-1px] active:translate-y-[0px]">
                   {isEditing ? 'Salvar Alterações' : 'Confirmar Cadastro'}
@@ -422,7 +461,7 @@ export function AccountsManager({
       {showTransferModal && (
         <Portal>
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowTransferModal(false)}>
-            <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 border border-border max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>      
+            <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 border border-border max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
                 <div>
                   <h2 className="text-lg font-black tracking-tight">Transferir Saldo</h2>
@@ -455,7 +494,7 @@ export function AccountsManager({
                   <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Conta de Destino (Creditar)</Label>
                   <select
                     value={transferTo}
-                    onChange={(e) => setTransferTo(e.target.value)} 
+                    onChange={(e) => setTransferTo(e.target.value)}
                     className="w-full h-10 rounded-xl border-2 border-input bg-background px-3 py-2 text-sm font-bold focus:border-primary/50 outline-none"
                     required
                   >
@@ -466,7 +505,7 @@ export function AccountsManager({
 
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Valor (R$)</Label>
-                  <Input type="number" step="0.01" min="0.01" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} placeholder="0.00" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4 font-bold text-lg" required />   
+                  <Input type="number" step="0.01" min="0.01" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} placeholder="0.00" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4 font-bold text-lg" required />
                 </div>
 
                 <div className="space-y-1.5">
