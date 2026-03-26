@@ -57,8 +57,8 @@ export function ExpenseEvolution() {
     const percentChange = previousMonth.valor > 0 ? ((latestMonth.valor - previousMonth.valor) / previousMonth.valor) * 100 : 0;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 card-elevated p-6 space-y-4">
+        <div className="flex flex-col h-full lg:grid lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 card-elevated p-6 space-y-4 h-full flex flex-col">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-xl bg-primary/10 text-primary">
@@ -71,7 +71,7 @@ export function ExpenseEvolution() {
                     </div>
                 </div>
 
-                <div className="h-[280px] w-full mt-4">
+                <div className="flex-1 min-h-[200px] w-full mt-4">
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={data}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />

@@ -18,7 +18,7 @@ export function GoalProgress({ goals }: GoalProgressProps) {
 
   if (goals.length === 0) {
     return (
-      <div className="card-elevated p-6 animate-fade-in">
+      <div className="card-elevated p-6 animate-fade-in h-full">
         <h3 className="text-lg font-semibold mb-4">Metas de Economia</h3>
         <p className="text-muted-foreground text-center py-8">
           Nenhuma meta definida ainda

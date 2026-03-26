@@ -45,7 +45,7 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
 
   if (paidTransactions.length === 0) {
     return (
-      <div className="card-elevated p-6 animate-fade-in">
+      <div className="card-elevated p-6 animate-fade-in h-full">
         <h3 className="text-lg font-semibold mb-4 text-primary">Últimas Transações</h3>
         <p className="text-muted-foreground text-center py-8">
           Nenhuma transação efetuada

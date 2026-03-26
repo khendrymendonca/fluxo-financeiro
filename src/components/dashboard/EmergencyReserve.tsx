@@ -66,7 +66,7 @@ export function EmergencyReserve({ data, onMonthsChange, accounts = [], onTransf
     const remaining = Math.max(0, data.targetAmount - data.currentAmount);
 
     return (
-        <div className="card-elevated p-6 space-y-6 relative overflow-hidden group">
+        <div className="card-elevated p-6 space-y-6 relative overflow-hidden group h-full">
             {/* Background Glow */}
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all duration-500" />
 

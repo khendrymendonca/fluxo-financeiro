@@ -18,7 +18,7 @@ export function AccountsOverview({ accounts, creditCards }: AccountsOverviewProp
   };
 
   return (
-    <div className="card-elevated p-6 animate-fade-in">
+    <div className="card-elevated p-6 animate-fade-in h-full">
       <h3 className="text-lg font-semibold mb-4">Contas e Cartões</h3>
 
       {/* Bank Accounts */}

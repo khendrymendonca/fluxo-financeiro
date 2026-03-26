@@ -10,13 +10,13 @@ interface StatCardProps {
   className?: string;
 }
 
-export function StatCard({ 
-  title, 
-  value, 
-  subtitle, 
-  icon, 
+export function StatCard({
+  title,
+  value,
+  subtitle,
+  icon,
   variant = 'default',
-  className 
+  className
 }: StatCardProps) {
   const formatValue = (val: string | number) => {
     if (typeof val === 'number') {
@@ -30,7 +30,7 @@ export function StatCard({
 
   return (
     <div className={cn(
-      "card-elevated p-4 sm:p-5 animate-fade-in overflow-hidden",
+      "card-elevated p-4 sm:p-5 animate-fade-in overflow-hidden h-full",
       variant === 'positive' && 'border-l-4 border-l-success',
       variant === 'negative' && 'border-l-4 border-l-danger',
       variant === 'neutral' && 'border-l-4 border-l-info',

@@ -44,7 +44,7 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
     if (pending.length === 0) return null;
 
     return (
-        <div className="card-elevated p-6 space-y-4">
+        <div className="card-elevated p-6 space-y-4 h-full">
             <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-primary" />
