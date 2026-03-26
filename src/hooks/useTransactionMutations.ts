@@ -35,13 +35,14 @@ export function useAddTransaction() {
         invoice_month_year: tx.invoiceMonthYear !== undefined ? tx.invoiceMonthYear : tx.invoice_month_year,
         is_automatic: tx.isAutomatic !== undefined ? tx.isAutomatic : tx.is_automatic,
         debt_id: tx.debtId !== undefined ? tx.debtId : tx.debt_id,
+        transaction_type: tx.transactionType !== undefined ? tx.transactionType : tx.transaction_type,
       }));
 
       // Remover campos que não existem no banco (Campos CamelCase que foram mapeados acima)
       const cleanTxs = txsWithUser.map(({
         categoryId, subcategoryId, accountId, cardId, isPaid, paymentDate,
         isRecurring, installmentGroupId, installmentNumber, installmentTotal,
-        invoiceMonthYear, isAutomatic, debtId, cardClosingDay, cardDueDay, ...rest
+        invoiceMonthYear, isAutomatic, debtId, transactionType, cardClosingDay, cardDueDay, ...rest
       }) => rest);
 
       const { data: insertedData, error } = await supabase
@@ -183,6 +184,7 @@ export function useUpdateTransaction() {
       if (updates.isPaid !== undefined) dbUpdates.is_paid = updates.isPaid;
       if (updates.paymentDate !== undefined) dbUpdates.payment_date = updates.paymentDate;
       if (updates.isRecurring !== undefined) dbUpdates.is_recurring = updates.isRecurring;
+      if (updates.transactionType !== undefined) dbUpdates.transaction_type = updates.transactionType;
 
       const effectiveCardId = updates.cardId !== undefined ? updates.cardId : currentCardId;
 

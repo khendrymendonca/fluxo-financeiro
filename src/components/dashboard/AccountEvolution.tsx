@@ -30,7 +30,7 @@ export function ExpenseEvolution() {
         const monthExpenses = transactions
             .filter(t => {
                 if (t.type !== 'expense') return false;
-                if (t.isInvoicePayment) return false; // â† exclui pagamentos de fatura para não dobrar
+                if (t.isInvoicePayment) return false; // ← exclui pagamentos de fatura para não dobrar
                 const d = parseLocalDate(t.date);
                 return d >= startOfMonth(monthDate) && d <= endOfMonth(monthDate);
             })
@@ -66,7 +66,7 @@ export function ExpenseEvolution() {
                         </div>
                         <div>
                             <h3 className="font-bold">Evolução de Despesas</h3>
-                            <p className="text-xs text-muted-foreground">Comparativo dos Ãºltimos 6 meses</p>
+                            <p className="text-xs text-muted-foreground">Comparativo dos últimos 6 meses</p>
                         </div>
                     </div>
                 </div>
