@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { usePayBill, useDeleteBill } from '@/hooks/useBillMutations';
+import { useToggleTransactionPaid, useDeleteTransaction } from '@/hooks/useTransactionMutations';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,67 +16,77 @@ import { ptBR } from 'date-fns/locale';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
 import { BulkDeleteDialog } from '../transactions/BulkDeleteDialog';
 
-import { parseLocalDate, todayLocalString, toLocalDateString } from '@/utils/dateUtils';
+import { parseLocalDate, todayLocalString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/formatters';
+import { Transaction } from '@/types/finance';
 
 export function BillsManager() {
     const {
-        bills,
         categories,
         accounts,
         creditCards,
         debts,
-        // ✅ FIX: addBill e updateBill removidos da desestruturação — não são usados no componente
-        getCardExpenses,
         viewDate,
-        currentMonthBills,
-        transactions,
-        getTransactionTargetDate
+        currentMonthTransactions
     } = useFinanceStore();
 
-    const { mutateAsync: payBillMutation } = usePayBill();
-    const { mutate: deleteBillMutation } = useDeleteBill();
+    const { mutateAsync: togglePaidMutation } = useToggleTransactionPaid();
+    const { mutateAsync: deleteTransactionMutation } = useDeleteTransaction();
 
-    const [filter, setFilter] = useState<'all' | 'payable' | 'receivable'>('all');
-    const [isPaying, setIsPaying] = useState<any>(null);
-    // ✅ FIX: usa todayLocalString() para evitar bug de fuso
+    const [filter, setFilter] = useState<'all' | 'expense' | 'income'>('all');
+    const [isPaying, setIsPaying] = useState<Transaction | null>(null);
     const [paymentDate, setPaymentDate] = useState<string>(todayLocalString());
     const [paymentAmount, setPaymentAmount] = useState<string>('');
     const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
-    const [expandedBillId, setExpandedBillId] = useState<string | null>(null);
+    const [expandedTransactionId, setExpandedTransactionId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const [deletingBill, setDeletingBill] = useState<any>(null);
+    const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
 
     const handleMarkAsPaid = async (targetId: string, isCard: boolean) => {
         if (!isPaying) return;
         const amountValue = paymentAmount ? parseFloat(paymentAmount) : isPaying.amount;
-        const isPartial = Math.abs(amountValue - isPaying.amount) > 0.01;
-        await payBillMutation({ bill: isPaying, accountId: isCard ? undefined : targetId, paymentDate, isPartial, partialAmount: amountValue, cardId: isCard ? targetId : undefined });
-        setIsPaying(null);
+
+        try {
+            await togglePaidMutation({
+                id: isPaying.id,
+                isPaid: true,
+                date: paymentDate,
+                accountId: isCard ? undefined : targetId,
+                cardId: isCard ? targetId : undefined,
+                amount: amountValue
+            });
+            setIsPaying(null);
+            toast({ title: "Pagamento registrado com sucesso!" });
+        } catch (error) {
+            toast({ title: "Erro ao registrar pagamento.", variant: "destructive" });
+        }
     };
 
+    // Filtra apenas transações recorrentes do mês atual
+    const recurringTransactions = currentMonthTransactions.filter(t => {
+        const isRecurring = t.isRecurring || t.transactionType === 'recurring';
+        if (!isRecurring) return false;
 
-    // ✅ FIX: sort usa parseLocalDate — sem bug de fuso
-    const filteredBills = currentMonthBills.filter(b => {
         // Busca por Texto
         if (searchQuery.trim() !== '') {
             const query = searchQuery.toLowerCase();
-            const matchesName = b.name.toLowerCase().includes(query);
-            const matchesCategory = categories.find(c => c.id === b.categoryId)?.name.toLowerCase().includes(query);
-            if (!matchesName && !matchesCategory) return false;
+            const matchesDescription = t.description.toLowerCase().includes(query);
+            const matchesCategory = categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(query);
+            if (!matchesDescription && !matchesCategory) return false;
         }
 
-        if (b.cardId && !b.isVirtual && b.categoryId !== 'card-payment') return false;
-        if (b.categoryId === 'card-payment' && b.amount <= 0) return false;
-        if (filter === 'all') return true;
-        return b.type === filter;
-    }).sort((a, b) => parseLocalDate(a.dueDate).getTime() - parseLocalDate(b.dueDate).getTime());
+        // Filtro de Cartão: ignora compras pontuais no cartão (já estão na fatura)
+        // Mas permite pagamentos de fatura ou itens fixos que aparecem como "conta"
+        if (t.cardId && !t.isInvoicePayment && t.transactionType !== 'recurring') return false;
 
-    // ✅ FIX: totalPendingPayable exclui card-payment com valor zero — consistente com filteredBills
-    const totalPendingPayable = currentMonthBills
-        .filter(b => b.type === 'payable' && b.status === 'pending' && !(b.categoryId === 'card-payment' && b.amount <= 0))
-        .reduce((acc, b) => acc + b.amount, 0);
+        if (filter === 'all') return true;
+        return t.type === filter;
+    }).sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
+
+    const totalPendingPayable = recurringTransactions
+        .filter(t => t.type === 'expense' && !t.isPaid)
+        .reduce((acc, t) => acc + t.amount, 0);
 
     return (
         <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
@@ -89,7 +99,7 @@ export function BillsManager() {
                     </div>
                     <div>
                         <h2 className="text-2xl font-bold">Gestão de Contas</h2>
-                        <p className="text-muted-foreground">A pagar e a receber de forma organizada.</p>
+                        <p className="text-muted-foreground">Acompanhe suas despesas fixas e recorrentes.</p>
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -124,8 +134,8 @@ export function BillsManager() {
                 <div className="flex items-center gap-2 p-1 bg-muted rounded-2xl w-full overflow-x-auto no-scrollbar md:w-fit">
                     {([
                         { id: 'all', label: 'Todas', icon: Filter },
-                        { id: 'payable', label: 'A Pagar', icon: ArrowDownCircle },
-                        { id: 'receivable', label: 'A Receber', icon: ArrowUpCircle },
+                        { id: 'expense', label: 'A Pagar', icon: ArrowDownCircle },
+                        { id: 'income', label: 'A Receber', icon: ArrowUpCircle },
                     ] as const).map(btn => (
                         <button key={btn.id} onClick={() => setFilter(btn.id)}
                             className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all",
@@ -139,88 +149,79 @@ export function BillsManager() {
 
             {/* Lista de Contas */}
             <div className="grid gap-3">
-                {filteredBills.length === 0 ? (
+                {recurringTransactions.length === 0 ? (
                     <div className="card-elevated p-12 text-center text-muted-foreground">
                         <Receipt className="w-12 h-12 mx-auto mb-4 opacity-10" />
-                        <p>Nenhuma conta encontrada com este filtro.</p>
+                        <p>Nenhuma conta recorrente encontrada neste período.</p>
                     </div>
                 ) : (
-                    filteredBills.map(bill => {
-                        // ✅ FIX: isLate usa parseLocalDate — sem bug de fuso
-                        const isLate = parseLocalDate(bill.dueDate) < new Date() && bill.status === 'pending';
-                        const category = categories.find(c => c.id === bill.categoryId);
+                    recurringTransactions.map(transaction => {
+                        const isLate = parseLocalDate(transaction.date) < new Date() && !transaction.isPaid;
+                        const category = categories.find(c => c.id === transaction.categoryId);
 
                         return (
-                            <div key={bill.id} className="flex flex-col gap-1">
+                            <div key={transaction.id} className="flex flex-col gap-1">
                                 <div className={cn(
                                     "card-elevated p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:translate-x-1 border-l-4",
-                                    bill.status === 'paid' ? "border-success opacity-80" :
+                                    transaction.isPaid ? "border-success opacity-80" :
                                         isLate ? "border-danger bg-danger/5" : "border-info"
                                 )}>
                                     <div className="flex items-center gap-4">
                                         <div className={cn("p-3 rounded-2xl",
-                                            bill.categoryId === 'card-payment' ? "bg-primary/10 text-primary" :
-                                                (bill.type === 'pagar' ? "bg-danger/10 text-danger" : "bg-success/10 text-success"))}>
-                                            {bill.categoryId === 'card-payment' ? <CardIcon className="w-5 h-5" /> :
-                                                (bill.type === 'pagar' ? <ArrowDownCircle className="w-5 h-5" /> : <ArrowUpCircle className="w-5 h-5" />)}
+                                            transaction.isInvoicePayment ? "bg-primary/10 text-primary" :
+                                                (transaction.type === 'expense' ? "bg-danger/10 text-danger" : "bg-success/10 text-success"))}>
+                                            {transaction.isInvoicePayment ? <CardIcon className="w-5 h-5" /> :
+                                                (transaction.type === 'expense' ? <ArrowDownCircle className="w-5 h-5" /> : <ArrowUpCircle className="w-5 h-5" />)}
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <h4 className="font-bold">{bill.name}</h4>
-                                                {bill.categoryId === 'card-payment' && (
-                                                    <button
-                                                        onClick={e => { e.stopPropagation(); setExpandedBillId(expandedBillId === bill.id ? null : bill.id); }}
-                                                        className="px-2 py-0.5 bg-primary/10 hover:bg-primary/20 rounded-md text-[10px] font-black uppercase text-primary transition-all flex items-center gap-1">
-                                                        {expandedBillId === bill.id ? 'Ocultar Detalhes' : 'Ver Detalhes'}
-                                                        <Plus className={cn("w-3 h-3 transition-transform", expandedBillId === bill.id && "rotate-45")} />
-                                                    </button>
-                                                )}
+                                                <h4 className="font-bold">{transaction.description}</h4>
                                             </div>
                                             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                                                 <Calendar className="w-3 h-3" />
-                                                {bill.status === 'paid' && (bill.paymentDate || bill.dueDate) ? (
+                                                {transaction.isPaid && (transaction.paymentDate || transaction.date) ? (
                                                     <span className="text-success font-bold">
-                                                        Pago em {format(parseLocalDate(bill.paymentDate || bill.dueDate), "dd 'de' MMMM", { locale: ptBR })}
+                                                        Pago em {format(parseLocalDate(transaction.paymentDate || transaction.date), "dd 'de' MMMM", { locale: ptBR })}
                                                     </span>
                                                 ) : (
-                                                    <>{format(parseLocalDate(bill.dueDate), "dd 'de' MMMM", { locale: ptBR })}</>
+                                                    <>{format(parseLocalDate(transaction.date), "dd 'de' MMMM", { locale: ptBR })}</>
                                                 )}
                                                 {category && (
                                                     <><span className="w-1 h-1 rounded-full bg-muted-foreground/30" /><span>{category.name}</span></>
                                                 )}
-                                                {bill.accountId && (
+                                                {transaction.accountId && (
                                                     <><span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
                                                         <span className="flex items-center gap-1 font-bold">
                                                             <ShieldAlert className="w-3 h-3" />
-                                                            {accounts.find(a => a.id === bill.accountId)?.name}
+                                                            {accounts.find(a => a.id === transaction.accountId)?.name}
                                                         </span></>
                                                 )}
-                                                {bill.cardId && (
+                                                {transaction.cardId && (
                                                     <><span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
                                                         <span className="flex items-center gap-1 font-bold">
                                                             <CardIcon className="w-3 h-3" />
-                                                            {creditCards.find(c => c.id === bill.cardId)?.name}
+                                                            {creditCards.find(c => c.id === transaction.cardId)?.name}
                                                         </span></>
                                                 )}
-                                                {bill.debtId && (
+                                                {transaction.debtId && (
                                                     <><span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
                                                         <span className="flex items-center gap-1 font-bold">
                                                             <ShieldAlert className="w-3 h-3 text-warning" />
-                                                            {debts.find(d => d.id === bill.debtId)?.name}
+                                                            {debts.find(d => d.id === transaction.debtId)?.name}
                                                         </span></>
                                                 )}
-                                                {bill.isFixed && <span className="ml-1 px-1.5 py-0.5 bg-primary/10 text-primary rounded-md text-[10px] font-bold">RECORRENTE</span>}
+                                                <span className="ml-1 px-1.5 py-0.5 bg-primary/10 text-primary rounded-md text-[10px] font-bold uppercase">Recorrente</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="flex items-center justify-between md:justify-end gap-6">
                                         <div className="text-right">
-                                            <p className={cn("text-lg font-black", bill.type === 'payable' ? "text-danger" : "text-success")}>
-                                                {formatCurrency(bill.amount)}
+                                            <p className={cn("text-lg font-black", transaction.type === 'expense' ? "text-danger" : "text-success")}>
+                                                {formatCurrency(transaction.amount)}
                                             </p>
                                             <div className="flex items-center gap-1 justify-end">
-                                                {bill.status === 'paid' ? (
+                                                {transaction.isPaid ? (
                                                     <span className="flex items-center gap-1 text-[10px] font-bold text-success uppercase">
                                                         <CheckCircle2 className="w-3 h-3" /> Pago
                                                     </span>
@@ -235,110 +236,25 @@ export function BillsManager() {
                                                 )}
                                             </div>
                                         </div>
-                                        {bill.status === 'pending' && (
+                                        {!transaction.isPaid && (
                                             <Button size="sm" variant="ghost"
                                                 onClick={() => {
-                                                    setIsPaying(bill);
-                                                    setPaymentDate(bill.dueDate?.split('T')[0] || todayLocalString());
-                                                    setPaymentAmount(bill.amount.toFixed(2));
-                                                    setPaymentMethod(bill.cardId ? 'credit_card' : 'account');
+                                                    setIsPaying(transaction);
+                                                    setPaymentDate(transaction.date?.split('T')[0] || todayLocalString());
+                                                    setPaymentAmount(transaction.amount.toFixed(2));
+                                                    setPaymentMethod(transaction.cardId ? 'credit_card' : 'account');
                                                 }}
                                                 className="h-11 px-4 rounded-2xl bg-success/5 text-success hover:bg-success/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider">
                                                 <CheckCircle2 className="w-5 h-5" /> Baixar Conta
                                             </Button>
                                         )}
-                                        {bill.status === 'pending' && (
-                                            <Button size="sm" variant="ghost"
-                                                onClick={() => setDeletingBill(bill)}
-                                                className="h-11 px-3 rounded-2xl hover:bg-danger/10 text-danger">
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                        )}
+                                        <Button size="sm" variant="ghost"
+                                            onClick={() => setItemToDelete(transaction)}
+                                            className="h-11 px-3 rounded-2xl hover:bg-danger/10 text-danger">
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
                                     </div>
                                 </div>
-
-                                {/* Detalhamento da fatura de cartão */}
-                                {expandedBillId === bill.id && bill.categoryId === 'card-payment' && (
-                                    <div className="mt-2 ml-14 p-4 rounded-2xl bg-muted/20 border border-border/50 animate-in slide-in-from-top-2 duration-300">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <div className="w-1 h-3 bg-primary rounded-full" />
-                                            <h5 className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Compras no Período</h5>
-                                        </div>
-                                        <div className="space-y-2">
-                                            {transactions
-                                                .filter(t => {
-                                                    return t.cardId === bill.cardId &&
-                                                        !t.isInvoicePayment &&
-                                                        t.invoiceMonthYear === format(viewDate, 'yyyy-MM');
-                                                })
-                                                .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime())
-                                                .map(t => (
-                                                    <div key={t.id} className="flex items-center justify-between p-2 rounded-xl bg-background/50 border border-border/30 hover:border-primary/30 transition-colors">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={cn("p-1.5 rounded-lg",
-                                                                t.type === 'income' ? "bg-success/5 text-success" : "bg-danger/5 text-danger")}>
-                                                                {t.type === 'income' ? <ArrowUpCircle className="w-3 h-3" /> : <ArrowDownCircle className="w-3 h-3" />}
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs font-bold leading-none">{t.description}</p>
-                                                                <p className="text-[9px] text-muted-foreground mt-0.5">
-                                                                    {format(parseLocalDate(t.date), "dd/MM")} • {categories.find(c => c.id === t.categoryId)?.name || 'Outros'}
-                                                                    {t.installmentNumber && ` • Parcela ${t.installmentNumber}${t.installmentTotal ? `/${t.installmentTotal}` : ''}`}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        <span className={cn("text-xs font-black",
-                                                            t.type === 'income' ? "text-success" : "text-danger")}>
-                                                            {t.type === 'income' ? '-' : ''}{formatCurrency(t.amount)}
-                                                        </span>
-                                                    </div>
-                                                ))}
-
-                                            {/* ✅ FIX: filtro de bills no detalhamento usa parseLocalDate */}
-                                            {bills
-                                                .filter(b =>
-                                                    b.cardId === bill.cardId &&
-                                                    b.status === 'pending' &&
-                                                    b.categoryId !== 'card-payment' &&
-                                                    // Se for conta parcelada/fixa no cartão, idealmente deveria ter invoiceMonthYear,
-                                                    // mas como Bill não tem, usamos a data de vencimento como proxy por enquanto.
-                                                    parseLocalDate(b.dueDate).getMonth() === viewDate.getMonth() &&
-                                                    parseLocalDate(b.dueDate).getFullYear() === viewDate.getFullYear()
-                                                )
-                                                .map(b => (
-                                                    <div key={b.id} className="flex items-center justify-between p-2 rounded-xl bg-background/50 border border-border/30 hover:border-primary/30 transition-colors">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="p-1.5 rounded-lg bg-warning/5 text-warning">
-                                                                <Receipt className="w-3 h-3" />
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs font-bold leading-none">{b.name} (Conta)</p>
-                                                                <p className="text-[9px] text-muted-foreground mt-0.5">
-                                                                    Vence em {format(parseLocalDate(b.dueDate), "dd/MM")}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        <span className="text-xs font-black text-danger">{formatCurrency(b.amount)}</span>
-                                                    </div>
-                                                ))}
-
-                                            {transactions.filter(t => {
-                                                return t.cardId === bill.cardId && !t.isInvoicePayment &&
-                                                    t.invoiceMonthYear === format(viewDate, 'yyyy-MM');
-                                            }).length === 0 &&
-                                                bills.filter(b =>
-                                                    b.cardId === bill.cardId && b.status === 'pending' &&
-                                                    b.categoryId !== 'card-payment' &&
-                                                    parseLocalDate(b.dueDate).getMonth() === viewDate.getMonth() &&
-                                                    parseLocalDate(b.dueDate).getFullYear() === viewDate.getFullYear()
-                                                ).length === 0 && (
-                                                    <p className="text-[10px] text-muted-foreground text-center py-2 italic">
-                                                        Nenhuma compra listada para esta fatura.
-                                                    </p>
-                                                )}
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         );
                     })
@@ -354,12 +270,12 @@ export function BillsManager() {
                             onClick={e => e.stopPropagation()}>
                             <div className="px-5 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
                                 <h2 className="text-lg font-black tracking-tight">
-                                    {isPaying.type === 'receivable' ? 'Receber com qual conta?' : 'Pagar com qual conta?'}
+                                    {isPaying.type === 'income' ? 'Receber com qual conta?' : 'Pagar com qual conta?'}
                                 </h2>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                    <span className={cn("font-bold", isPaying.type === 'receivable' ? "text-success" : "text-danger")}>
+                                    <span className={cn("font-bold", isPaying.type === 'income' ? "text-success" : "text-danger")}>
                                         {formatCurrency(isPaying.amount)}
-                                    </span>{' — '}{isPaying.name}
+                                    </span>{' — '}{isPaying.description}
                                 </p>
                             </div>
 
@@ -373,8 +289,7 @@ export function BillsManager() {
                                     </label>
                                 </div>
 
-                                {/* ✅ FIX: usa categoryId === 'card-payment' em vez de id.startsWith('card-') */}
-                                {isPaying.categoryId !== 'card-payment' && !isPaying.cardId && (
+                                {!isPaying.cardId && (
                                     <div className="flex rounded-xl bg-muted/40 p-1">
                                         <button onClick={() => setPaymentMethod('account')}
                                             className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
@@ -397,24 +312,17 @@ export function BillsManager() {
                                             onChange={e => setPaymentAmount(e.target.value)}
                                             className="pl-10 h-11 rounded-xl font-bold bg-muted/20" placeholder="0.00" />
                                     </div>
-                                    {/* ✅ FIX: usa categoryId === 'card-payment' */}
-                                    {isPaying.categoryId === 'card-payment' && (
-                                        <p className="text-[10px] text-primary font-bold leading-tight">
-                                            Este pagamento será registrado como um abatimento na fatura deste mês.
-                                        </p>
-                                    )}
                                 </div>
                             </div>
 
                             <div className="p-3 pt-0 space-y-2">
-                                {/* Pagamento de Fatura (Mostra Contas de Origem) */}
                                 {paymentMethod === 'account' && (
                                     accounts.length === 0 ? (
                                         <p className="text-center text-muted-foreground py-8 text-sm">Nenhuma conta cadastrada.</p>
                                     ) : (
                                         accounts.map(acc => {
                                             const availableTotal = acc.balance + (acc.hasOverdraft ? (acc.overdraftLimit || 0) : 0);
-                                            const wouldGoNegative = isPaying.type === 'pagar' && acc.balance < isPaying.amount;
+                                            const wouldGoNegative = isPaying.type === 'expense' && acc.balance < isPaying.amount;
                                             const hasEnoughWithOverdraft = acc.hasOverdraft && availableTotal >= isPaying.amount;
                                             const insufficientFunds = wouldGoNegative && !hasEnoughWithOverdraft;
                                             return (
@@ -480,17 +388,16 @@ export function BillsManager() {
 
             {/* Modal de Exclusão Individual */}
             <BulkDeleteDialog
-                isOpen={!!deletingBill}
-                onClose={() => setDeletingBill(null)}
+                isOpen={!!itemToDelete}
+                onClose={() => setItemToDelete(null)}
                 selectedCount={1}
-                hasInstallments={false} // Bills no BillsManager são recorrentes, não parceladas por grupo de transação
-                hasRecurring={deletingBill?.isFixed === true}
-                onConfirm={(options) => {
-                    if (deletingBill) {
-                        const targetId = deletingBill.originalBillId || deletingBill.id;
-                        deleteBillMutation({ id: targetId, deleteFuture: options.deleteFutureBills });
+                hasInstallments={!!itemToDelete?.installmentGroupId}
+                hasRecurring={itemToDelete?.isRecurring === true || itemToDelete?.transactionType === 'recurring'}
+                onConfirm={async (options) => {
+                    if (itemToDelete) {
+                        await deleteTransactionMutation(itemToDelete, options.installmentScope || 'this');
                     }
-                    setDeletingBill(null);
+                    setItemToDelete(null);
                 }}
             />
         </div>

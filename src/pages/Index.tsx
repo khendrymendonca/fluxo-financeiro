@@ -28,11 +28,10 @@ import { Transaction, SavingsGoal } from '@/types/finance';
 import { PendingPayments } from '@/components/dashboard/PendingPayments';
 import { EmergencyReserve } from '@/components/dashboard/EmergencyReserve';
 import { CategoriesManager } from '@/components/coach/CategoriesManager';
+import { BillsManager } from '@/components/coach/BillsManager';
 import { ExportManager } from '@/components/dashboard/ExportManager';
-import { ExpenseEvolution } from '@/components/dashboard/AccountEvolution';
-import { cn } from '@/lib/utils';
 
-type ViewType = 'dashboard' | 'transactions' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export';
+type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export';
 
 export default function Index() {
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
@@ -213,6 +212,9 @@ export default function Index() {
             />
           </div>
         );
+
+      case 'bills':
+        return <BillsManager />;
 
       case 'cards':
         return <CardsDashboard />;
