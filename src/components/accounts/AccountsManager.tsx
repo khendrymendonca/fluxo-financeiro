@@ -28,7 +28,7 @@ export function AccountsManager({
   onUpdateAccount,
   onDeleteAccount,
 }: AccountsManagerProps) {
-  const { viewDate, currentMonthTransactions } = useFinanceStore();
+  const { viewDate, currentMonthTransactions, categories } = useFinanceStore();
   const { mutateAsync: transferBetweenAccounts } = useTransferBetweenAccounts();
   const { mutateAsync: addTransaction } = useAddTransaction();
 
@@ -117,50 +117,51 @@ export function AccountsManager({
     e.preventDefault();
     if (!accountName || !accountBank || !accountBalance) return;
 
-    const newBalance = parseFloat(accountBalance);
+    const parsedNewBalance = parseFloat(accountBalance);
 
     if (editingAccount) {
-      // ✅ Lógica de Ajuste Automático de Saldo
-      const oldBalance = editingAccount.balance;
-      const difference = newBalance - oldBalance;
+      const currentRealBalance = Number(editingAccount.balance);
 
-      if (Math.abs(difference) > 0.01) {
+      if (parsedNewBalance !== currentRealBalance) {
+        const diferenca = parsedNewBalance - currentRealBalance;
+
         try {
           await addTransaction({
             description: 'Ajuste de Saldo',
-            amount: Math.abs(difference),
-            type: difference > 0 ? 'income' : 'expense',
+            amount: Math.abs(diferenca),
+            type: diferenca > 0 ? 'income' : 'expense',
             transactionType: 'adjustment',
             isPaid: true,
-            categoryId: null,
-            accountId: editingAccount.id,
-            date: todayLocalString(),
-            paymentDate: todayLocalString()
+            date: new Date().toISOString().split('T')[0], // Data obrigatória
+            accountId: editingAccount.id, // Vínculo com a conta obrigatório
+            categoryId: categories.length > 0 ? categories[0].id : undefined // Fallback de categoria para evitar erro de null
           });
         } catch (error) {
-          console.error("Erro ao criar transação de ajuste:", error);
-          return;
+          console.error('Erro ao criar ajuste:', error);
+          toast({ title: 'Erro ao ajustar saldo', variant: 'destructive' });
+          return; // Interrompe se falhar
         }
       }
 
-      // Remove balance do payload pois a trigger do banco cuidará disso após a transação
-      const { balance, ...updateData } = {
+      // Remover o balance do payload de atualização da conta, 
+      // pois a Trigger do banco fará o cálculo usando a transação recém-criada
+      const accountDataToUpdate = {
         name: accountName,
         bank: accountBank,
-        balance: newBalance,
         color: accountColor,
         accountType: accountType,
         hasOverdraft: hasOverdraft,
         overdraftLimit: hasOverdraft ? parseFloat(overdraftLimit || '0') : 0,
         monthlyYieldRate: ['metas', 'caixinha', 'investment'].includes(accountType) ? parseFloat(monthlyYieldRate || '0') : 0,
+        // 'balance' foi intencionalmente omitido aqui
       };
 
-      onUpdateAccount(editingAccount.id, updateData);
+      onUpdateAccount(editingAccount.id, accountDataToUpdate);
     } else {
       const accountData = {
         name: accountName,
         bank: accountBank,
-        balance: newBalance,
+        balance: parsedNewBalance,
         color: accountColor,
         accountType: accountType,
         hasOverdraft: hasOverdraft,
