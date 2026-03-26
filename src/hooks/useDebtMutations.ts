@@ -39,7 +39,7 @@ export function useAddDebt() {
   });
 }
 
-// --- 2. ATUALIZAR DÃVIDA ---
+// --- 2. ATUALIZAR DÃ VIDA ---
 export function useUpdateDebt() {
   const queryClient = useQueryClient();
 
@@ -57,12 +57,24 @@ export function useUpdateDebt() {
       if (updates.status !== undefined) payload.status = updates.status;
       if (updates.totalInstallments !== undefined) payload.total_installments = updates.totalInstallments;
 
+      // 1. Atualizar a dívida
       const { error } = await supabase.from('debts').update(payload).eq('id', id);
       if (error) throw error;
+
+      // 2. Se mudamos o valor da parcela, atualizar transações futuras não pagas
+      if (updates.monthlyPayment !== undefined) {
+        await supabase
+          .from('transactions')
+          .update({ amount: updates.monthlyPayment })
+          .eq('debt_id', id)
+          .eq('is_paid', false);
+      }
+
       return id;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
     }
   });
 }

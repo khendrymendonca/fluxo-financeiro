@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react';
 import { format } from 'date-fns';
-import { TrendingDown, Plus, Trash2, X, AlertTriangle } from 'lucide-react';
+import { TrendingDown, Plus, Trash2, X, AlertTriangle, Edit2 } from 'lucide-react';
 import { useRenegotiateDebt } from '@/hooks/useDebtMutations';
 import { Debt } from '@/types/finance';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ export function DebtsManager({
   const [monthlyPayment, setMonthlyPayment] = useState('');
   const [totalInstallments, setTotalInstallments] = useState('');
   const [dueDay, setDueDay] = useState('');
+  const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
 
   const { mutateAsync: renegotiateDebt } = useRenegotiateDebt();
 
@@ -42,25 +43,48 @@ export function DebtsManager({
     e.preventDefault();
     if (!name || !totalAmount || !remainingAmount || !monthlyPayment) return;
 
-    onAddDebt({
+    const debtData = {
       name,
       totalAmount: parseFloat(totalAmount),
       remainingAmount: parseFloat(remainingAmount),
       monthlyPayment: parseFloat(monthlyPayment),
-      interestRateMonthly: 0,
+      interestRateMonthly: editingDebt?.interestRateMonthly || 0,
       totalInstallments: parseInt(totalInstallments) || 1,
       dueDay: parseInt(dueDay) || undefined,
-      startDate: new Date().toISOString(),
-      status: 'active'
-    });
+      status: editingDebt?.status || 'active'
+    };
 
+    if (editingDebt) {
+      onUpdateDebt(editingDebt.id, debtData);
+    } else {
+      onAddDebt({
+        ...debtData,
+        startDate: new Date().toISOString(),
+      });
+    }
+
+    handleCloseForm();
+  };
+
+  const handleEdit = (debt: Debt) => {
+    setEditingDebt(debt);
+    setName(debt.name);
+    setTotalAmount(debt.totalAmount.toString());
+    setRemainingAmount(debt.remainingAmount.toString());
+    setMonthlyPayment(debt.monthlyPayment.toString());
+    setTotalInstallments(debt.totalInstallments?.toString() || '1');
+    setDueDay(debt.dueDay?.toString() || '');
+    setShowForm(true);
+  };
+
+  const handleCloseForm = () => {
     setName('');
-    setTotalAmount('');
     setTotalAmount('');
     setRemainingAmount('');
     setMonthlyPayment('');
     setTotalInstallments('');
     setDueDay('');
+    setEditingDebt(null);
     setShowForm(false);
   };
 
@@ -108,7 +132,10 @@ export function DebtsManager({
 
       {/* Add Button */}
       <Button
-        onClick={() => setShowForm(true)}
+        onClick={() => {
+          setEditingDebt(null);
+          setShowForm(true);
+        }}
         className="w-full rounded-xl py-6"
         variant="outline"
       >
@@ -147,9 +174,14 @@ export function DebtsManager({
                             ~{monthsRemaining} parcelas estimadas
                           </p>
                         </div>
-                        <button onClick={() => onDeleteDebt(debt.id)} className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-danger/10 text-danger transition-all">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                          <button onClick={() => handleEdit(debt)} className="p-2 rounded-lg hover:bg-info/10 text-info" title="Editar">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => onDeleteDebt(debt.id)} className="p-2 rounded-lg hover:bg-danger/10 text-danger" title="Excluir">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="flex justify-between items-center py-2 border-y border-border/50">
@@ -196,9 +228,14 @@ export function DebtsManager({
                             </p>
                           </div>
                         </div>
-                        <button onClick={() => onDeleteDebt(debt.id)} className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-danger/10 text-danger transition-all">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                          <button onClick={() => handleEdit(debt)} className="p-2 rounded-lg hover:bg-info/10 text-info" title="Editar">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => onDeleteDebt(debt.id)} className="p-2 rounded-lg hover:bg-danger/10 text-danger" title="Excluir">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -230,9 +267,11 @@ export function DebtsManager({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/20 backdrop-blur-sm">
           <div className="bg-card rounded-3xl shadow-xl w-full max-w-md animate-scale-in">
             <div className="flex items-center justify-between p-6 border-b border-border">
-              <h2 className="text-lg font-semibold">Nova Dívida</h2>
+              <h2 className="text-lg font-semibold">
+                {editingDebt ? 'Editar Dívida' : 'Nova Dívida'}
+              </h2>
               <button
-                onClick={() => setShowForm(false)}
+                onClick={handleCloseForm}
                 className="p-2 rounded-xl hover:bg-muted transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -312,8 +351,11 @@ export function DebtsManager({
                   required
                 />
               </div>
-              <Button type="submit" className="w-full rounded-xl bg-danger hover:bg-danger/90">
-                Adicionar Dívida
+              <Button type="submit" className={cn(
+                "w-full rounded-xl",
+                editingDebt?.status === 'renegotiated' ? "bg-success hover:bg-success/90" : "bg-danger hover:bg-danger/90"
+              )}>
+                {editingDebt?.status === 'renegotiated' ? 'Atualizar Acordo' : editingDebt ? 'Atualizar Dívida' : 'Adicionar Dívida'}
               </Button>
             </form>
           </div>
