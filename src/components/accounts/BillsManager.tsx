@@ -222,7 +222,14 @@ export function BillsManager() {
                                                             {debts.find(d => d.id === transaction.debtId)?.name}
                                                         </span></>
                                                 )}
-                                                <span className="ml-1 px-1.5 py-0.5 bg-primary/10 text-primary rounded-md text-[10px] font-bold uppercase">Recorrente</span>
+                                                <span className={cn(
+                                                    "ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase",
+                                                    (transaction.debtId || transaction.transactionType === 'installment')
+                                                        ? "bg-info/10 text-info"
+                                                        : "bg-primary/10 text-primary"
+                                                )}>
+                                                    {(transaction.debtId || transaction.transactionType === 'installment') ? 'Parcelamento' : 'Recorrente'}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>

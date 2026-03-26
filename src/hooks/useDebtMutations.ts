@@ -62,13 +62,43 @@ export function useUpdateDebt() {
       const { error } = await supabase.from('debts').update(payload).eq('id', id);
       if (error) throw error;
 
-      // 2. Se mudamos o valor da parcela, atualizar transações futuras não pagas
-      if (updates.installmentAmount !== undefined) {
-        await supabase
+      // 2. Se mudamos o valor da parcela ou o dia de vencimento, atualizar transações futuras não pagas
+      if (updates.installmentAmount !== undefined || updates.dueDay !== undefined) {
+        // Buscar transações pendentes
+        const { data: pendingTxs, error: fetchError } = await supabase
           .from('transactions')
-          .update({ amount: updates.installmentAmount })
+          .select('id, date, amount')
           .eq('debt_id', id)
           .eq('is_paid', false);
+
+        if (fetchError) throw fetchError;
+
+        if (pendingTxs && pendingTxs.length > 0) {
+          const updatesPromises = pendingTxs.map(tx => {
+            const txUpdates: any = {};
+            if (updates.installmentAmount !== undefined) {
+              txUpdates.amount = updates.installmentAmount;
+            }
+
+            if (updates.dueDay !== undefined) {
+              // Ajustar a data mantendo mês e ano
+              const originalDate = parseLocalDate(tx.date);
+              const year = originalDate.getFullYear();
+              const month = originalDate.getMonth();
+              // Usar date-fns para garantir que o dia seja válido para o mês (ex: 31 de Abril -> 30 de Abril)
+              const newDate = new Date(year, month, updates.dueDay);
+              // Se o dia resultou em mudança de mês (ex: dia 31 em mês de 30), retroceder para o último dia do mês correto
+              if (newDate.getMonth() !== month) {
+                newDate.setDate(0);
+              }
+              txUpdates.date = format(newDate, 'yyyy-MM-dd');
+            }
+
+            return supabase.from('transactions').update(txUpdates).eq('id', tx.id);
+          });
+
+          await Promise.all(updatesPromises);
+        }
       }
 
       return id;
