@@ -32,7 +32,12 @@ import { EmergencyReserve } from '@/components/dashboard/EmergencyReserve';
 import { CategoriesManager } from '@/components/settings/CategoriesManager';
 import { BillsManager } from '@/components/accounts/BillsManager';
 import { ExportManager } from '@/components/dashboard/ExportManager';
-import { Responsive, WidthProvider, Layout } from 'react-grid-layout';
+import RGL, { Layout } from 'react-grid-layout';
+// @ts-ignore
+const WidthProvider = RGL.WidthProvider;
+// @ts-ignore
+const Responsive = RGL.Responsive;
+
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import { Settings2, Save, RotateCcw, X } from 'lucide-react';
@@ -45,7 +50,7 @@ const DEFAULT_WIDGETS = [
   'ACCOUNTS_OVERVIEW', 'EXPENSE_EVOLUTION', 'RECENT_TRANSACTIONS'
 ];
 
-const INITIAL_LAYOUTS: { [key: string]: Layout[] } = {
+const INITIAL_LAYOUTS: any = {
   lg: [
     { i: 'STAT_NETWORTH', x: 0, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
     { i: 'STAT_INCOME', x: 3, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
@@ -353,7 +358,6 @@ export default function Index() {
               onPayBill={async (transaction: Transaction) => {
                 await updateTransaction(transaction.id, { isPaid: true }, undefined, undefined, transaction.cardId);
               }}
-              onDeleteBill={() => { }}
             />
           </div>
         );
@@ -486,7 +490,9 @@ export default function Index() {
             setEditingTransaction(undefined);
           }}
           onDelete={(id, scope) => {
-            deleteTransaction(id, scope);
+            if (editingTransaction) {
+              deleteTransaction(editingTransaction, scope);
+            }
             setShowTransactionForm(false);
             setEditingTransaction(undefined);
           }}
