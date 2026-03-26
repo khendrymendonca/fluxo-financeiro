@@ -126,7 +126,9 @@ export function useDebts() {
       return (data || []).map((d: any) => ({
         ...d,
         userId: d.user_id,
-        installmentAmount: d.installment_amount,
+        totalAmount: Number(d.total_amount) || 0,
+        remainingAmount: Number(d.remaining_amount) || 0,
+        installmentAmount: Number(d.installment_amount) || 0,
         interestRateMonthly: d.interest_rate_monthly,
         minimumPayment: d.minimum_payment,
         dueDay: d.due_day,

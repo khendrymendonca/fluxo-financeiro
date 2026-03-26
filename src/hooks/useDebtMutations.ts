@@ -103,13 +103,16 @@ export function useRenegotiateDebt() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ debt }: { debt: Debt }) => {
+    mutationFn: async ({ debt, firstInstallmentDate }: { debt: Debt, firstInstallmentDate?: string }) => {
       if (!user) throw new Error('Utilizador não autenticado');
 
-      // 1. Atualizar status da dívida
+      // 1. Atualizar status da dívida e data se fornecida
+      const debtUpdates: any = { status: 'renegotiated' };
+      if (firstInstallmentDate) debtUpdates.startDate = firstInstallmentDate;
+
       const { error: debtError } = await supabase
         .from('debts')
-        .update({ status: 'renegotiated' })
+        .update(debtUpdates)
         .eq('id', debt.id);
 
       if (debtError) throw debtError;
@@ -118,7 +121,7 @@ export function useRenegotiateDebt() {
       const count = debt.totalInstallments || 1;
       const amount = debt.installmentAmount;
       const groupId = crypto.randomUUID();
-      const baseDate = parseLocalDate(debt.startDate);
+      const baseDate = parseLocalDate(firstInstallmentDate || debt.startDate);
       const installments: any[] = [];
 
       for (let i = 0; i < count; i++) {

@@ -29,6 +29,7 @@ export function DebtsManager({
   const [totalInstallments, setTotalInstallments] = useState('');
   const [dueDay, setDueDay] = useState('');
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
+  const [firstInstallmentDate, setFirstInstallmentDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   const { mutateAsync: renegotiateDebt } = useRenegotiateDebt();
 
@@ -59,7 +60,7 @@ export function DebtsManager({
     } else {
       onAddDebt({
         ...debtData,
-        startDate: new Date().toISOString(),
+        startDate: firstInstallmentDate,
       });
     }
 
@@ -74,6 +75,7 @@ export function DebtsManager({
     setInstallmentAmount(debt.installmentAmount.toString());
     setTotalInstallments(debt.totalInstallments?.toString() || '1');
     setDueDay(debt.dueDay?.toString() || '');
+    setFirstInstallmentDate(debt.startDate ? format(new Date(debt.startDate), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
     setShowForm(true);
   };
 
@@ -84,6 +86,7 @@ export function DebtsManager({
     setInstallmentAmount('');
     setTotalInstallments('');
     setDueDay('');
+    setFirstInstallmentDate(format(new Date(), 'yyyy-MM-dd'));
     setEditingDebt(null);
     setShowForm(false);
   };
@@ -160,8 +163,10 @@ export function DebtsManager({
               <div className="space-y-4">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground ml-1">Para Negociar</h3>
                 {toNegotiate.map((debt) => {
-                  const monthsRemaining = debt.installmentAmount > 0
-                    ? Math.ceil(debt.remainingAmount / debt.installmentAmount)
+                  const instAmount = Number(debt.installmentAmount) || 0;
+                  const remAmount = Number(debt.remainingAmount) || 0;
+                  const monthsRemaining = instAmount > 0
+                    ? Math.ceil(remAmount / instAmount)
                     : 0;
 
                   return (
@@ -196,7 +201,7 @@ export function DebtsManager({
                       </div>
 
                       <Button
-                        onClick={() => renegotiateDebt({ debt })}
+                        onClick={() => renegotiateDebt({ debt, firstInstallmentDate: format(new Date(), 'yyyy-MM-dd') })}
                         className="w-full rounded-xl bg-warning hover:bg-warning/90 text-warning-foreground font-black uppercase text-[10px] tracking-widest h-11"
                       >
                         Gerar Parcelas do Acordo
@@ -212,8 +217,10 @@ export function DebtsManager({
               <div className="space-y-4">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground ml-1">Em Pagamento (Acordos)</h3>
                 {inPayment.map((debt) => {
-                  const progress = debt.totalAmount > 0
-                    ? ((debt.totalAmount - debt.remainingAmount) / debt.totalAmount) * 100
+                  const totalAmt = Number(debt.totalAmount) || 0;
+                  const remAmt = Number(debt.remainingAmount) || 0;
+                  const progress = totalAmt > 0
+                    ? ((totalAmt - remAmt) / totalAmt) * 100
                     : 0;
 
                   return (
@@ -240,8 +247,8 @@ export function DebtsManager({
 
                       <div className="space-y-2">
                         <div className="flex justify-between text-[10px] font-black uppercase">
-                          <span className="text-muted-foreground">Pago: {formatCurrency(debt.totalAmount - debt.remainingAmount)}</span>
-                          <span className="text-danger">Restante: {formatCurrency(debt.remainingAmount)}</span>
+                          <span className="text-muted-foreground">Pago: {formatCurrency(Math.max(0, (Number(debt.totalAmount) || 0) - (Number(debt.remainingAmount) || 0)))}</span>
+                          <span className="text-danger">Restante: {formatCurrency(Number(debt.remainingAmount) || 0)}</span>
                         </div>
                         <div className="h-2 rounded-full bg-muted overflow-hidden">
                           <div className="h-full rounded-full bg-success transition-all duration-500" style={{ width: `${progress}%` }} />
@@ -337,6 +344,16 @@ export function DebtsManager({
                     required
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Data da 1ª Parcela</Label>
+                <Input
+                  type="date"
+                  value={firstInstallmentDate}
+                  onChange={e => setFirstInstallmentDate(e.target.value)}
+                  className="rounded-xl"
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label>Dia de Vencimento</Label>
