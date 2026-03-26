@@ -18,42 +18,46 @@ BEGIN
 END $$;
 
 -- 2. MIGRAÇÃO DE DADOS (Bills -> Transactions)
--- Transfere todas as contas fixas para a tabela única de transações
--- NOTA: Injetamos NULL para 'category' e 'deleted_at' conforme as novas regras
-INSERT INTO transactions (
-  description,
-  amount,
-  date,
-  category_id,
-  subcategory_id,
-  user_id,
-  account_id,
-  card_id,
-  type,
-  is_paid,
-  payment_date,
-  is_recurring,
-  transaction_type,
-  deleted_at,
-  created_at
-)
-SELECT 
-  name as description,
-  amount,
-  COALESCE(due_date, NOW()) as date,
-  category_id,
-  subcategory_id,
-  user_id,
-  account_id,
-  card_id,
-  CASE WHEN type = 'receivable' THEN 'income' ELSE 'expense' END as type,
-  CASE WHEN status = 'paid' THEN true ELSE false END as is_paid,
-  payment_date,
-  true as is_recurring,
-  'recurring' as transaction_type,
-  NULL as deleted_at,
-  created_at
-FROM bills;
+-- Transfere todas as contas fixas para a tabela única de transações se elas existirem
+DO $$ 
+BEGIN 
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'bills') THEN
+        INSERT INTO transactions (
+          description,
+          amount,
+          date,
+          category_id,
+          subcategory_id,
+          user_id,
+          account_id,
+          card_id,
+          type,
+          is_paid,
+          payment_date,
+          is_recurring,
+          transaction_type,
+          deleted_at,
+          created_at
+        )
+        SELECT 
+          name as description,
+          amount,
+          COALESCE(due_date, NOW()) as date,
+          category_id,
+          subcategory_id,
+          user_id,
+          account_id,
+          card_id,
+          CASE WHEN type = 'receivable' THEN 'income' ELSE 'expense' END as type,
+          CASE WHEN status = 'paid' THEN true ELSE false END as is_paid,
+          payment_date,
+          true as is_recurring,
+          'recurring' as transaction_type,
+          NULL as deleted_at,
+          created_at
+        FROM bills;
+    END IF;
+END $$;
 
 -- 3. MOTOR DE RECORRÊNCIA (Lazy Generation)
 -- Cria a função de trigger que gera a próxima transação ao pagar a atual
