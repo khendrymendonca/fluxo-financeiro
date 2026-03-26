@@ -14,76 +14,43 @@ export function useAddTransaction() {
 
   return useMutation({
     mutationFn: async (
-      transaction: Omit<Transaction, 'id'> & { cardClosingDay?: number, cardDueDay?: number }
+      data: any | any[]
     ) => {
       if (!user) throw new Error('Utilizador não autenticado');
 
-      const txsToInsert: any[] = [];
-      const baseDate = parseLocalDate(transaction.date);
+      const txs = Array.isArray(data) ? data : [data];
+      const txsWithUser = txs.map(tx => ({
+        ...tx,
+        user_id: user.id,
+        // Garante mapeamento de nomes de campos para o Supabase (Snake Case)
+        category_id: tx.categoryId !== undefined ? tx.categoryId : tx.category_id,
+        account_id: tx.accountId !== undefined ? tx.accountId : tx.account_id,
+        card_id: tx.cardId !== undefined ? tx.cardId : tx.card_id,
+        is_paid: tx.isPaid !== undefined ? tx.isPaid : tx.is_paid,
+        payment_date: tx.paymentDate !== undefined ? tx.paymentDate : tx.payment_date,
+        is_recurring: tx.isRecurring !== undefined ? tx.isRecurring : tx.is_recurring,
+        installment_group_id: tx.installmentGroupId !== undefined ? tx.installmentGroupId : tx.installment_group_id,
+        installment_number: tx.installmentNumber !== undefined ? tx.installmentNumber : tx.installment_number,
+        installment_total: tx.installmentTotal !== undefined ? tx.installmentTotal : tx.installment_total,
+        invoice_month_year: tx.invoiceMonthYear !== undefined ? tx.invoiceMonthYear : tx.invoice_month_year,
+        is_automatic: tx.isAutomatic !== undefined ? tx.isAutomatic : tx.is_automatic,
+        debt_id: tx.debtId !== undefined ? tx.debtId : tx.debt_id,
+      }));
 
-      if (transaction.installmentTotal && transaction.installmentTotal > 1) {
-        const groupId = crypto.randomUUID();
-        for (let i = 0; i < transaction.installmentTotal; i++) {
-          const date = format(addMonths(baseDate, i), 'yyyy-MM-dd');
-          const isPaid = transaction.cardId ? true : parseLocalDate(date) <= parseLocalDate(format(new Date(), 'yyyy-MM-dd'));
+      // Remover campos que não existem no banco (Campos CamelCase que foram mapeados acima)
+      const cleanTxs = txsWithUser.map(({
+        categoryId, subcategoryId, accountId, cardId, isPaid, paymentDate,
+        isRecurring, installmentGroupId, installmentNumber, installmentTotal,
+        invoiceMonthYear, isAutomatic, debtId, cardClosingDay, cardDueDay, ...rest
+      }) => rest);
 
-          // Calcula fatura de cada parcela usando creditCardUtils (Date-based)
-          const invoiceMonthYear =
-            transaction.cardId && transaction.cardClosingDay != null && transaction.cardDueDay != null
-              ? calcInvoiceMonthYear(parseLocalDate(date), { closingDay: transaction.cardClosingDay, dueDay: transaction.cardDueDay })
-              : null;
-
-          txsToInsert.push({
-            user_id: user.id,
-            description: `${transaction.description} (${i + 1}/${transaction.installmentTotal})`,
-            amount: transaction.amount / transaction.installmentTotal,
-            type: transaction.type,
-            date: date,
-            category_id: transaction.categoryId || null,
-            account_id: transaction.accountId || null,
-            card_id: transaction.cardId || null,
-            is_paid: isPaid,
-            payment_date: isPaid ? date : null,
-            installment_group_id: groupId,
-            installment_number: i + 1,
-            installment_total: transaction.installmentTotal,
-            is_recurring: false,
-            invoice_month_year: invoiceMonthYear,
-          });
-        }
-      } else {
-        const isPaid = transaction.cardId
-          ? true
-          : parseLocalDate(transaction.date) <= parseLocalDate(format(new Date(), 'yyyy-MM-dd'));
-
-        // Calcula fatura da transação simples
-        const invoiceMonthYear =
-          transaction.cardId && transaction.cardClosingDay != null && transaction.cardDueDay != null
-            ? calcInvoiceMonthYear(parseLocalDate(transaction.date), { closingDay: transaction.cardClosingDay, dueDay: transaction.cardDueDay })
-            : null;
-
-        txsToInsert.push({
-          user_id: user.id,
-          description: transaction.description,
-          amount: transaction.amount,
-          type: transaction.type,
-          date: transaction.date,
-          category_id: transaction.categoryId || null,
-          account_id: transaction.accountId || null,
-          card_id: transaction.cardId || null,
-          is_paid: isPaid,
-          payment_date: isPaid ? transaction.date : null,
-          is_recurring: transaction.isRecurring || false,
-          invoice_month_year: invoiceMonthYear,
-        });
-      }
-
-      const { data, error } = await supabase
+      const { data: insertedData, error } = await supabase
         .from('transactions')
-        .insert(txsToInsert)
+        .insert(cleanTxs)
         .select();
+
       if (error) throw error;
-      return data;
+      return insertedData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -97,32 +64,43 @@ export function useAddTransaction() {
   });
 }
 
-// --- 2. DELETAR TRANSAÇÃO (OTIMISTA) ---
+// --- 2. DELETAR TRANSAÇÃO (SCOPED - SOFT DELETE) ---
 export function useDeleteTransaction() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, applyScope = 'this' }: { id: string, applyScope?: 'this' | 'future' | 'all' }) => {
-      if (applyScope === 'this') {
-        const { error } = await supabase.from('transactions').delete().eq('id', id);
+    mutationFn: async ({ transaction, applyScope = 'this' }: { transaction: Transaction, applyScope?: 'this' | 'future' | 'all' }) => {
+      const { id, installmentGroupId, date } = transaction;
+      const now = new Date().toISOString();
+
+      // 1. Exclusão Simples: "Apenas esta parcela" ou Transação única
+      if (applyScope === 'this' || !installmentGroupId) {
+        const { error } = await supabase
+          .from('transactions')
+          .update({ deleted_at: now })
+          .eq('id', id);
         if (error) throw error;
-      } else {
-        const { data: tx } = await supabase.from('transactions').select('*').eq('id', id).single();
-        if (tx?.installment_group_id) {
-          let query = supabase.from('transactions').delete().eq('installment_group_id', tx.installment_group_id);
-          if (applyScope === 'future') {
-            query = query.gte('date', tx.date);
-          }
-          const { error } = await query;
-          if (error) throw error;
-        } else {
-          const { error } = await supabase.from('transactions').delete().eq('id', id);
-          if (error) throw error;
-        }
       }
+      else if (applyScope === 'future') {
+        const { error } = await supabase
+          .from('transactions')
+          .update({ deleted_at: now })
+          .eq('installment_group_id', installmentGroupId)
+          .gte('date', date);
+        if (error) throw error;
+      }
+      else if (applyScope === 'all') {
+        const { error } = await supabase
+          .from('transactions')
+          .update({ deleted_at: now })
+          .eq('installment_group_id', installmentGroupId);
+        if (error) throw error;
+      }
+
       return id;
     },
-    onMutate: async ({ id }) => {
+    onMutate: async ({ transaction }) => {
+      const id = transaction.id;
       await queryClient.cancelQueries({ queryKey: ['transactions'] });
       const previousTransactions = queryClient.getQueryData(['transactions']);
       queryClient.setQueryData(['transactions'], (oldData: any) => {
@@ -135,7 +113,7 @@ export function useDeleteTransaction() {
       if (context?.previousTransactions) {
         queryClient.setQueryData(['transactions'], context.previousTransactions);
       }
-      toast({ title: 'Erro ao remover transação', variant: 'destructive' });
+      toast({ title: 'Erro ao remover lançamento', variant: 'destructive' });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -164,7 +142,7 @@ export function useToggleTransactionPaid() {
       queryClient.setQueryData(['transactions'], (oldData: any) => {
         if (!oldData) return [];
         return oldData.map((tx: any) =>
-          tx.id === id ? { ...tx, is_paid: isPaid } : tx
+          tx.id === id ? { ...tx, isPaid, is_paid: isPaid } : tx
         );
       });
       return { previousTransactions };
@@ -232,62 +210,74 @@ export function useUpdateTransaction() {
   });
 }
 
-// --- 5. DELETAR EM MASSA ---
+// --- 5. DELETAR EM MASSA (SOFT DELETE) ---
 export function useBulkDeleteTransactions() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      items, 
+    mutationFn: async ({
+      items,
       installmentScope = 'this',
-      deleteFutureBills = false 
-    }: { 
-      items: { id: string, type: 'transaction' | 'bill', isVirtual?: boolean, billId?: string }[],
+      deleteFutureBills = false
+    }: {
+      items: {
+        id: string,
+        type: 'transaction' | 'bill',
+        isVirtual?: boolean,
+        billId?: string,
+        installmentGroupId?: string,
+        isRecurring?: boolean
+      }[],
       installmentScope?: 'this' | 'future' | 'all',
       deleteFutureBills?: boolean
     }) => {
-      const transactionIdsToDelete = new Set<string>();
-      const billIdsToDelete = new Set<string>();
+      const transactionIdsToUpdate = new Set<string>();
+      const billIdsToUpdate = new Set<string>();
+      const now = new Date().toISOString();
 
-      // 1. Classificar o que deletar
+      // 1. Classificar o que "deletar" (marcar como deletado)
       for (const item of items) {
         if (item.type === 'transaction') {
-          if (installmentScope === 'this') {
-            transactionIdsToDelete.add(item.id);
+          if (installmentScope === 'this' || !item.installmentGroupId) {
+            transactionIdsToUpdate.add(item.id);
           } else {
-            // Se for parcelado, precisamos do group_id
-            const { data: tx } = await supabase.from('transactions').select('installment_group_id, date').eq('id', item.id).single();
-            if (tx?.installment_group_id) {
-              let query = supabase.from('transactions').select('id').eq('installment_group_id', tx.installment_group_id);
-              if (installmentScope === 'future') {
+            let query = supabase.from('transactions').select('id').eq('installment_group_id', item.installmentGroupId);
+
+            if (installmentScope === 'future') {
+              const { data: tx } = await supabase.from('transactions').select('date').eq('id', item.id).single();
+              if (tx?.date) {
                 query = query.gte('date', tx.date);
               }
-              const { data: relatedTxs } = await query;
-              relatedTxs?.forEach(rtx => transactionIdsToDelete.add(rtx.id));
-            } else {
-              transactionIdsToDelete.add(item.id);
             }
+
+            const { data: relatedTxs } = await query;
+            relatedTxs?.forEach(rtx => transactionIdsToUpdate.add(rtx.id));
           }
         } else if (item.type === 'bill') {
-          // Se for uma conta real (não virtual) ou se pedirem para deletar a conta mestre
           if (!item.isVirtual || deleteFutureBills) {
-            billIdsToDelete.add(item.billId || item.id);
+            billIdsToUpdate.add(item.billId || item.id);
           }
         }
       }
 
-      // 2. Executar deleções
-      if (transactionIdsToDelete.size > 0) {
-        const { error } = await supabase.from('transactions').delete().in('id', Array.from(transactionIdsToDelete));
+      // 2. Executar Soft Deletes em lote
+      if (transactionIdsToUpdate.size > 0) {
+        const { error } = await supabase
+          .from('transactions')
+          .update({ deleted_at: now })
+          .in('id', Array.from(transactionIdsToUpdate));
         if (error) throw error;
       }
 
-      if (billIdsToDelete.size > 0) {
-        const { error } = await supabase.from('bills').delete().in('id', Array.from(billIdsToDelete));
+      if (billIdsToUpdate.size > 0) {
+        const { error } = await supabase
+          .from('bills')
+          .update({ deleted_at: now })
+          .in('id', Array.from(billIdsToUpdate));
         if (error) throw error;
       }
 
-      return { txCount: transactionIdsToDelete.size, billCount: billIdsToDelete.size };
+      return { txCount: transactionIdsToUpdate.size, billCount: billIdsToUpdate.size };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });

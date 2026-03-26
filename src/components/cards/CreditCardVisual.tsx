@@ -12,6 +12,10 @@ interface CreditCardVisualProps {
 }
 
 export function CreditCardVisual({ card, usedLimit, availableLimit, onClick, className }: CreditCardVisualProps) {
+    const cardColor = card.color || '#3b82f6';
+    const cardBank = (card.bank || 'Banco').toUpperCase();
+    const cardName = card.name || 'Cartão';
+
     const percentageUsed = card.limit > 0 ? Math.min((usedLimit / card.limit) * 100, 100) : 0;
 
     return (
@@ -22,7 +26,7 @@ export function CreditCardVisual({ card, usedLimit, availableLimit, onClick, cla
                 className
             )}
             style={{
-                background: `linear-gradient(135deg, ${card.color} 0%, ${adjustColor(card.color, -40)} 100%)`,
+                background: `linear-gradient(135deg, ${cardColor} 0%, ${adjustColor(cardColor, -40)} 100%)`,
             }}
         >
             {/* Background patterns */}
@@ -42,7 +46,7 @@ export function CreditCardVisual({ card, usedLimit, availableLimit, onClick, cla
                         <Wifi className="w-4 h-4 rotate-90" />
                     </div>
                     <div className="text-lg font-bold tracking-widest italic opacity-80">
-                        {card.bank.toUpperCase()}
+                        {cardBank}
                     </div>
                 </div>
 
@@ -53,7 +57,7 @@ export function CreditCardVisual({ card, usedLimit, availableLimit, onClick, cla
                         <div>
                             <p className="text-xs opacity-75 mb-1">Cartão</p>
                             <p className="font-bold tracking-wider uppercase truncate max-w-[200px]">
-                                {card.name}
+                                {cardName}
                             </p>
                         </div>
 
@@ -83,8 +87,13 @@ export function CreditCardVisual({ card, usedLimit, availableLimit, onClick, cla
 }
 
 // Helper to darken color
-function adjustColor(color: string, amount: number) {
-    return '#' + color.replace(/^#/, '').replace(/../g, color => ('0' + Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)).substr(-2));
+function adjustColor(color: string = '#3b82f6', amount: number) {
+    try {
+        const hex = color.startsWith('#') ? color : '#3b82f6';
+        return '#' + hex.replace(/^#/, '').replace(/../g, c => ('0' + Math.min(255, Math.max(0, parseInt(c, 16) + amount)).toString(16)).substr(-2));
+    } catch (e) {
+        return '#1e40af';
+    }
 }
 
 

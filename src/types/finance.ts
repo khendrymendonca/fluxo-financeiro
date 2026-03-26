@@ -56,6 +56,7 @@ export interface Transaction {
   isAutomatic?: boolean;
   originalBillId?: string;
   originalId?: string; // âœ… ADICIONADO: para deduplicação de recorrentes
+  deleted_at?: string; // ✅ ADICIONADO: Soft Delete
 }
 
 export interface Account {
@@ -122,52 +123,6 @@ export interface SavingsGoal {
   accountId?: string;
 }
 
-export interface Bill {
-  id: string;
-  userId: string;
-  name: string;
-  categoryId?: string;
-  subcategoryId?: string;
-  amount: number;
-  type: 'payable' | 'receivable';
-  accountId?: string;
-  cardId?: string;
-  dueDate: string;
-  paymentDate?: string;
-  status: BillStatus;
-  isFixed: boolean;
-  recurrenceRule?: string;
-  startDate?: string;
-  targetAmount?: number;
-  originalBillId?: string;
-  isVirtual?: boolean;
-  debtId?: string;
-}
-
-export interface BudgetRule {
-  id: string;
-  userId: string;
-  needsPercent: number;
-  wantsPercent: number;
-  savingsPercent: number;
-}
-
-export interface UserHabit {
-  id: string;
-  userId: string;
-  habitType: string;
-  description?: string;
-  frequency: 'daily' | 'weekly' | 'monthly';
-  isActive: boolean;
-}
-
-export interface HabitLog {
-  id: string;
-  habitId: string;
-  loggedDate: string;
-  status: 'completed' | 'missed' | 'skipped';
-}
-
 export interface FinanceState {
   transactions: Transaction[];
   accounts: Account[];
@@ -177,10 +132,6 @@ export interface FinanceState {
   categories: Category[];
   subcategories: Subcategory[];
   categoryGroups: CategoryGroup[];
-  bills: Bill[];
-  budgetRule?: BudgetRule;
-  habits: UserHabit[];
-  habitLogs: HabitLog[];
   emergencyMonths: number;
 }
 

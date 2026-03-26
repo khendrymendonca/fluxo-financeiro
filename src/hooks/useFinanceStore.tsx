@@ -1,10 +1,9 @@
 import { useState, useMemo, createContext, useContext, useCallback } from 'react';
-import { FilterMode, Transaction, Bill, Account, SavingsGoal, Debt, CreditCard } from '@/types/finance';
+import { FilterMode, Transaction, Account, SavingsGoal, Debt, CreditCard } from '@/types/finance';
 import { addMonths, subMonths, format } from 'date-fns';
 import {
   useAccounts,
   useTransactions,
-  useBills,
   useCreditCards,
   useCategories,
   useSubcategories,
@@ -13,7 +12,6 @@ import {
   useSavingsGoals
 } from './useFinanceQueries';
 import { useProjectedTransactions } from './useProjectedTransactions';
-import { useProjectedBills } from './useProjectedBills';
 import {
   useAddTransaction,
   useDeleteTransaction,
@@ -27,12 +25,6 @@ import {
   useDeleteAccount,
   useTransferBetweenAccounts
 } from './useAccountMutations';
-import {
-  useAddBill,
-  useUpdateBill,
-  useDeleteBill,
-  usePayBill
-} from './useBillMutations';
 import {
   useAddCreditCard,
   useUpdateCreditCard,
@@ -49,7 +41,6 @@ import {
   useUpdateDebt,
   useDeleteDebt
 } from './useDebtMutations';
-import { useBudgetRule } from './useBudgetCoach';
 import { parseLocalDate } from '@/utils/dateUtils';
 
 export type FinanceContextData = ReturnType<typeof useFinanceProvider>;
@@ -74,7 +65,7 @@ function useFinanceProvider() {
   const [viewDate, setViewDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<FilterMode>('month');
   const [emergencyMonths, setEmergencyMonthsLocal] = useState(Number(localStorage.getItem('emergencyMonths')) || 12);
-  
+
   // Selection State
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -82,7 +73,6 @@ function useFinanceProvider() {
   // --- Data Queries (TanStack Query) ---
   const { data: accounts = [], isLoading: loadingAccounts } = useAccounts();
   const { data: rawTransactions = [], isLoading: loadingTxs } = useTransactions(viewDate);
-  const { data: rawBills = [], isLoading: loadingBills } = useBills(viewDate);
   const { data: creditCards = [] } = useCreditCards();
   const { data: categories = [] } = useCategories();
   const { data: subcategories = [] } = useSubcategories();
@@ -92,7 +82,6 @@ function useFinanceProvider() {
 
   // --- Projections ---
   const transactions = useProjectedTransactions(rawTransactions, viewDate);
-  const projectedBills = useProjectedBills(rawBills, viewDate);
 
   // --- Mutations ---
   const addTransactionMutation = useAddTransaction();
@@ -106,11 +95,6 @@ function useFinanceProvider() {
   const deleteAccountMutation = useDeleteAccount();
   const transferMutation = useTransferBetweenAccounts();
 
-  const addBillMutation = useAddBill();
-  const updateBillMutation = useUpdateBill();
-  const deleteBillMutation = useDeleteBill();
-  const payBillMutation = usePayBill();
-
   const addCardMutation = useAddCreditCard();
   const updateCardMutation = useUpdateCreditCard();
   const deleteCardMutation = useDeleteCreditCard();
@@ -123,7 +107,6 @@ function useFinanceProvider() {
   const addDebtMutation = useAddDebt();
   const updateDebtMutation = useUpdateDebt();
   const deleteDebtMutation = useDeleteDebt();
-  const { data: budgetRule } = useBudgetRule();
 
   // --- Selection Methods ---
   const toggleSelectionMode = useCallback(() => {
@@ -164,27 +147,6 @@ function useFinanceProvider() {
     });
   }, [transactions, viewDate]);
 
-  const currentMonthBills = useMemo(() => {
-    const realBills = rawBills.filter(b => {
-      if (b.isVirtual) return false;
-      const bDate = parseLocalDate(b.dueDate);
-      if (viewMode === 'day') return bDate.getDate() === viewDate.getDate() && bDate.getMonth() === viewDate.getMonth() && bDate.getFullYear() === viewDate.getFullYear();
-      return bDate.getMonth() === viewDate.getMonth() && bDate.getFullYear() === viewDate.getFullYear();
-    });
-
-    const filteredVirtual = projectedBills.filter(v => {
-      if (!v.isVirtual) return false;
-      return !realBills.some(r =>
-        r.originalBillId === v.originalBillId ||
-        (r.name === v.name && Math.abs(Number(r.amount) - Number(v.amount)) < 0.01)
-      );
-    });
-
-    return [...realBills, ...filteredVirtual].sort(
-      (a, b) => parseLocalDate(a.dueDate).getTime() - parseLocalDate(b.dueDate).getTime()
-    );
-  }, [rawBills, projectedBills, viewDate, viewMode]);
-
   const totalBalance = useMemo(() => accounts.reduce((sum, acc) => sum + Number(acc.balance), 0), [accounts]);
   const totalIncome = useMemo(() => currentMonthTransactions.filter(t => t.type === 'income' && t.isPaid).reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
   const totalExpenses = useMemo(() => currentMonthTransactions.filter(t => t.type === 'expense' && t.isPaid && !t.isInvoicePayment).reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
@@ -192,11 +154,8 @@ function useFinanceProvider() {
   const totalPendingOutflows = useMemo(() => {
     return currentMonthTransactions
       .filter(t => !t.isPaid && t.type === 'expense')
-      .reduce((sum, t) => sum + Number(t.amount), 0) +
-      currentMonthBills
-        .filter(b => b.status === 'pending' && b.type === 'payable')
-        .reduce((sum, b) => sum + Number(b.amount), 0);
-  }, [currentMonthTransactions, currentMonthBills]);
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+  }, [currentMonthTransactions]);
 
   const setEmergencyMonths = useCallback((m: number) => {
     localStorage.setItem('emergencyMonths', String(m));
@@ -227,12 +186,8 @@ function useFinanceProvider() {
     categories,
     subcategories,
     categoryGroups,
-    budgetRule,
-    bills: projectedBills,
-    habits: [],
-    habitLogs: [],
     emergencyMonths,
-    loading: loadingAccounts || loadingTxs || loadingBills,
+    loading: loadingAccounts || loadingTxs,
     viewDate,
     viewMode,
     setViewDate,
@@ -242,7 +197,6 @@ function useFinanceProvider() {
     totalExpenses,
     totalPendingOutflows,
     currentMonthTransactions,
-    currentMonthBills,
     nextMonth,
     prevMonth,
     nextDay,
@@ -261,10 +215,13 @@ function useFinanceProvider() {
     addTransaction: addTransactionMutation.mutateAsync,
     updateTransaction: (id: string, updates: Partial<Transaction>, cardClosingDay?: number, cardDueDay?: number, currentCardId?: string | null) =>
       updateTransactionMutation.mutateAsync({ id, updates, cardClosingDay, cardDueDay, currentCardId } as any),
-    deleteTransaction: (id: string, scope: 'this' | 'future' | 'all' = 'this') =>
-      deleteTransactionMutation.mutateAsync({ id, applyScope: scope }),
+    deleteTransaction: (transaction: Transaction, scope: 'this' | 'future' | 'all' = 'this') =>
+      deleteTransactionMutation.mutateAsync({ transaction, applyScope: scope }),
     togglePaid: togglePaidMutation.mutateAsync,
     bulkDeleteTransactions: bulkDeleteMutation.mutateAsync,
+
+    isDeletingTransaction: deleteTransactionMutation.isPending,
+    isBulkDeleting: bulkDeleteMutation.isPending,
 
     addAccount: addAccountMutation.mutateAsync,
     updateAccount: (id: string, updates: Partial<Account>) => updateAccountMutation.mutateAsync({ id, updates }),
@@ -310,7 +267,7 @@ function useFinanceProvider() {
           installmentNumber: i + 1,
           installmentTotal: numInstallments,
           isPaid: false,
-          userId: newDebt.user_id
+          user_id: newDebt.user_id
         } as any);
       }
     },
@@ -330,13 +287,12 @@ function useFinanceProvider() {
       return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     },
     getCardUsedLimit: (id: string) => {
-      // Limite usado = despesas no cartão que NÃO são pagamentos da fatura
-      // Ignoramos a flag isPaid aqui para evitar o bug do limite zerado
       return transactions
         .filter(t =>
           t.cardId === id &&
           t.type === 'expense' &&
-          !t.isInvoicePayment
+          !t.isInvoicePayment &&
+          !t.deleted_at // Assumindo que temos Soft Delete agora
         )
         .reduce((acc, t) => acc + Number(t.amount), 0);
     }

@@ -17,6 +17,7 @@ import { OverdraftWarningDialog } from '@/components/ui/OverdraftWarningDialog';
 import { formatCurrency } from '@/utils/formatters';
 import { toast } from '@/components/ui/use-toast';
 import { parseLocalDate } from '@/utils/dateUtils';
+import { calcInvoiceMonthYear } from '@/utils/creditCardUtils';
 
 interface TransactionFormProps {
   accounts: Account[];
@@ -181,32 +182,67 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   };
 
   const executeSubmit = (parsedAmount: number, finalCategoryId?: string) => {
-    let finalCustomInstallments: { date: string, amount: number }[] | undefined = undefined;
-
-    if (activeTab === 'parcelamento' && (!areInstallmentsEqual || !fixedPaymentDay)) {
-      if (customInstallmentDates.length > 0) {
-        finalCustomInstallments = customInstallmentDates;
-      } else {
-        const count = parseInt(installmentsCount) || 2;
-        const val = parseFloat((parsedAmount / count).toFixed(2));
-        const baseDate = parseLocalDate(date);
-        finalCustomInstallments = Array.from({ length: count }, (_, i) => {
-          const instDate = addMonths(baseDate, i);
-          return { date: format(instDate, 'yyyy-MM-dd'), amount: val };
-        });
-        const diff = parseFloat((parsedAmount - finalCustomInstallments.reduce((s, i) => s + i.amount, 0)).toFixed(2));
-        if (finalCustomInstallments.length > 0 && Math.abs(diff) > 0.001) {
-          finalCustomInstallments[finalCustomInstallments.length - 1].amount = parseFloat((finalCustomInstallments[finalCustomInstallments.length - 1].amount + diff).toFixed(2));
-        }
-      }
-    }
-
     const isPaid = initialData ? isPaidLocally : isDateTodayOrPast(date);
     const selectedCard = creditCards.find(c => c.id === (paymentMethod === 'card' ? cardId : ''));
 
+    // --- LÓGICA DE PARCELAMENTO (BULK) ---
+    if (activeTab === 'parcelamento' && !initialData) {
+      const count = parseInt(installmentsCount) || 2;
+      const groupId = crypto.randomUUID();
+      const baseDate = parseLocalDate(date);
+      const installmentList: any[] = [];
+
+      for (let i = 0; i < count; i++) {
+        const currentInstDate = addMonths(baseDate, i);
+        const dateStr = format(currentInstDate, 'yyyy-MM-dd');
+
+        // Se for cartão, consideramos pago (já que o limite é consumido)
+        // Se não for cartão, marcamos como pago apenas se a data for hoje ou passada
+        const instIsPaid = paymentMethod === 'card' ? true : isDateTodayOrPast(dateStr);
+
+        const invoiceMonthYear = (paymentMethod === 'card' && selectedCard)
+          ? calcInvoiceMonthYear(currentInstDate, { closingDay: selectedCard.closingDay, dueDay: selectedCard.dueDay })
+          : undefined;
+
+        installmentList.push({
+          type,
+          transactionType: 'installment',
+          description: `${description} (${i + 1}/${count})`,
+          amount: parseFloat((parsedAmount / count).toFixed(2)),
+          categoryId: finalCategoryId || categoryId,
+          subcategoryId: subcategoryId || undefined,
+          date: dateStr,
+          accountId: paymentMethod === 'account' ? accountId : undefined,
+          cardId: paymentMethod === 'card' ? cardId : undefined,
+          installmentGroupId: groupId,
+          installmentNumber: i + 1,
+          installmentTotal: count,
+          isPaid: instIsPaid,
+          paymentDate: instIsPaid ? dateStr : undefined,
+          invoiceMonthYear
+        });
+      }
+
+      // Ajuste de dízima na última parcela
+      const totalGenerated = installmentList.reduce((sum, inst) => sum + inst.amount, 0);
+      const diff = parseFloat((parsedAmount - totalGenerated).toFixed(2));
+      if (Math.abs(diff) > 0.001) {
+        installmentList[count - 1].amount = parseFloat((installmentList[count - 1].amount + diff).toFixed(2));
+      }
+
+      onSubmit(installmentList as any, undefined, applyScope);
+      onClose();
+      return;
+    }
+
+    // --- LÓGICA PONTUAL OU RECORRENTE ---
+    const invoiceMonthYear = (paymentMethod === 'card' && selectedCard)
+      ? calcInvoiceMonthYear(parseLocalDate(date), { closingDay: selectedCard.closingDay, dueDay: selectedCard.dueDay })
+      : undefined;
+
     onSubmit({
       type,
-      transactionType: activeTab === 'parcelamento' ? 'installment' : (activeTab === 'fixo' || activeTab === 'renda_fixa') ? 'recurring' : 'punctual',
+      transactionType: (activeTab === 'fixo' || activeTab === 'renda_fixa') ? 'recurring' : 'punctual',
       description,
       amount: parsedAmount,
       categoryId: finalCategoryId || categoryId,
@@ -214,18 +250,17 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       date,
       accountId: paymentMethod === 'account' ? accountId : undefined,
       cardId: paymentMethod === 'card' ? cardId : undefined,
-      cardClosingDay: selectedCard?.closingDay,
-      cardDueDay: selectedCard?.dueDay,
-      installmentTotal: activeTab === 'parcelamento' ? parseInt(installmentsCount) : undefined,
+      installmentTotal: undefined, // Não é parcelado nesse bloco
       isRecurring: activeTab === 'fixo' || activeTab === 'renda_fixa',
       recurrence: (activeTab === 'fixo' || activeTab === 'renda_fixa') ? recurrence : undefined,
       isAutomatic: activeTab === 'renda_fixa' ? true : isAutomatic,
       debtId: selectedDebtId || undefined,
-      invoiceMonthYear: (paymentMethod === 'card' && initialData) ? invoiceReference : undefined,
+      invoiceMonthYear: initialData ? (paymentMethod === 'card' ? invoiceReference : undefined) : invoiceMonthYear,
       isPaid,
       paymentDate: isPaid ? date : undefined,
+      installmentGroupId: initialData?.installmentGroupId,
       userId: initialData?.userId || ''
-    }, finalCustomInstallments, applyScope);
+    } as any, undefined, applyScope);
 
     onClose();
   };

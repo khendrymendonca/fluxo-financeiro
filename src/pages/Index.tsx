@@ -4,15 +4,12 @@ import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useAccounts } from '@/hooks/useFinanceQueries';
 import { useEmergencyFund } from '@/hooks/useEmergencyFund';
-import { parseLocalDate, todayLocalString, toLocalDateString } from '@/utils/dateUtils';
+import { todayLocalString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/formatters';
-import { usePayBill, useDeleteBill } from '@/hooks/useBillMutations';
-import { useSeedCoach } from '@/hooks/useBudgetCoach';
 import { NavigationRail } from '@/components/layout/NavigationRail';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { ExpenseChart } from '@/components/dashboard/ExpenseChart';
-import { BalanceEvolutionChart } from '@/components/dashboard/BalanceEvolutionChart';
 import { GoalProgress } from '@/components/dashboard/GoalProgress';
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { AccountsOverview } from '@/components/dashboard/AccountsOverview';
@@ -30,16 +27,12 @@ import { Button } from '@/components/ui/button';
 import { Transaction, SavingsGoal } from '@/types/finance';
 import { PendingPayments } from '@/components/dashboard/PendingPayments';
 import { EmergencyReserve } from '@/components/dashboard/EmergencyReserve';
-import { BudgetCoach } from '@/components/coach/BudgetCoach';
-import { HabitTracker } from '@/components/coach/HabitTracker';
-import { BillsManager } from '@/components/coach/BillsManager';
 import { CategoriesManager } from '@/components/coach/CategoriesManager';
-import { SmartInsights } from '@/components/coach/SmartInsights';
 import { ExportManager } from '@/components/dashboard/ExportManager';
 import { ExpenseEvolution } from '@/components/dashboard/AccountEvolution';
 import { cn } from '@/lib/utils';
 
-type ViewType = 'dashboard' | 'transactions' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'bills' | 'categories' | 'export';
+type ViewType = 'dashboard' | 'transactions' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export';
 
 export default function Index() {
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
@@ -60,9 +53,7 @@ export default function Index() {
     debts,
     savingsGoals,
     currentMonthTransactions,
-    getCardExpenses,
     getCategoryExpenses,
-    getEmergencyFundData,
     setEmergencyMonths,
     addTransaction,
     updateTransaction,
@@ -81,9 +72,7 @@ export default function Index() {
     deleteSavingsGoal,
     depositToGoal,
     categories,
-    currentMonthBills,
     transferBetweenAccounts,
-    seedCoach,
     loading,
     totalPendingOutflows,
     viewDate
@@ -92,22 +81,12 @@ export default function Index() {
   const { cashflow } = useDashboardMetrics(viewDate, currentMonthTransactions);
   const { data: accountsData = [] } = useAccounts();
 
-  const { mutateAsync: payBill } = usePayBill();
-  const { mutateAsync: deleteBill } = useDeleteBill();
-
   const totalNetWorth = accountsData.reduce((sum, acc) => sum + Number(acc.balance), 0);
   const projectedBalance = totalNetWorth - totalPendingOutflows;
 
-  const { mutate: seedCoachAction } = useSeedCoach();
   const emergencyData = useEmergencyFund(currentMonthTransactions);
-
-  // âœ… FIX: renomeado para periodBalance para não confundir com viewBalance
-  const periodBalance = cashflow.totalIncome - cashflow.totalExpenses;
   const categoryExpenses = getCategoryExpenses();
 
-  const showCoachOnboarding = !loading && categories.length === 0;
-
-  // âœ… FIX: removido bloco silencioso de bills â€” TransactionList já trata bills diretamente
   const handleEditTransaction = (item: Transaction) => {
     setEditingTransaction(item);
     setShowTransactionForm(true);
@@ -139,25 +118,6 @@ export default function Index() {
               </div>
             </div>
 
-            {showCoachOnboarding && (
-              <div className="bg-primary/10 border border-primary/20 rounded-3xl p-8 mb-6 animate-scale-in text-center space-y-4">
-                <div className="bg-primary/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Plus className="w-8 h-8 text-primary" />
-                </div>
-                <h2 className="text-2xl font-bold">Bem-vindo ao Coach Financeiro!</h2>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  Para começar a usar a regra 50-30-20 e ter inteligência sobre seus gastos,
-                  precisamos configurar suas categorias iniciais.
-                </p>
-                <Button onClick={() => seedCoachAction()} className="rounded-xl px-8 py-6 text-lg h-auto shadow-xl shadow-primary/20">
-                  Ativar Coach Agora
-                </Button>
-              </div>
-            )}
-
-            <SmartInsights onNavigate={(view) => setCurrentView(view as ViewType)} />
-
-            {/* Dashboard Cards Gerais */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard
                 title="Patrimônio Total"
@@ -177,7 +137,6 @@ export default function Index() {
                 icon={<TrendingDown className="w-4 h-4 text-danger" />}
                 variant="negative"
               />
-              {/* ✅ FIX: usa periodBalance no lugar de balance */}
               <StatCard
                 title="Saldo Projetado"
                 value={projectedBalance}
@@ -188,7 +147,6 @@ export default function Index() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <BudgetCoach />
               <ExpenseChart
                 data={categoryExpenses.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)}
               />
@@ -247,12 +205,11 @@ export default function Index() {
             </div>
             <TransactionList
               transactions={currentMonthTransactions}
-              bills={currentMonthBills}
               onEdit={handleEditTransaction}
-              onPayBill={async (bill, accountId, paymentDate, isPartial, partialAmount, cardId) => {
-                await payBill({ bill, accountId, paymentDate, isPartial, partialAmount, cardId })
+              onPayBill={async (transaction: Transaction) => {
+                await updateTransaction(transaction.id, { isPaid: true }, undefined, undefined, transaction.cardId);
               }}
-              onDeleteBill={(id, applyToFuture) => deleteBill({ id, deleteFuture: applyToFuture })}
+              onDeleteBill={() => { }}
             />
           </div>
         );
@@ -321,9 +278,6 @@ export default function Index() {
           />
         );
 
-      case 'bills':
-        return <BillsManager />;
-
       case 'categories':
         return <CategoriesManager />;
 
@@ -365,7 +319,7 @@ export default function Index() {
           accounts={accounts}
           creditCards={creditCards}
           initialData={editingTransaction}
-          onSubmit={(data, custom, applyScope) => {
+          onSubmit={(data) => {
             if (editingTransaction) {
               updateTransaction(
                 editingTransaction.id,
@@ -412,5 +366,3 @@ export default function Index() {
     </div>
   );
 }
-
-

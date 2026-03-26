@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
+import { BulkDeleteDialog } from '../transactions/BulkDeleteDialog';
 
 import { parseLocalDate, todayLocalString, toLocalDateString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/formatters';
@@ -36,7 +37,7 @@ export function BillsManager() {
     const { mutateAsync: payBillMutation } = usePayBill();
     const { mutate: deleteBillMutation } = useDeleteBill();
 
-    const [filter, setFilter] = useState<'all' | 'pagar' | 'receber'>('all');
+    const [filter, setFilter] = useState<'all' | 'payable' | 'receivable'>('all');
     const [isPaying, setIsPaying] = useState<any>(null);
     // ✅ FIX: usa todayLocalString() para evitar bug de fuso
     const [paymentDate, setPaymentDate] = useState<string>(todayLocalString());
@@ -46,7 +47,6 @@ export function BillsManager() {
     const [searchQuery, setSearchQuery] = useState('');
 
     const [deletingBill, setDeletingBill] = useState<any>(null);
-    const [deleteFutureBills, setDeleteFutureBills] = useState(false);
 
     const handleMarkAsPaid = async (targetId: string, isCard: boolean) => {
         if (!isPaying) return;
@@ -56,14 +56,6 @@ export function BillsManager() {
         setIsPaying(null);
     };
 
-    const handleConfirmDeleteBill = () => {
-        if (deletingBill) {
-            const targetId = deletingBill.originalBillId || deletingBill.id;
-            deleteBillMutation({ id: targetId, deleteFuture: deleteFutureBills });
-        }
-        setDeletingBill(null);
-        setDeleteFutureBills(false);
-    };
 
     // ✅ FIX: sort usa parseLocalDate — sem bug de fuso
     const filteredBills = currentMonthBills.filter(b => {
@@ -83,7 +75,7 @@ export function BillsManager() {
 
     // ✅ FIX: totalPendingPayable exclui card-payment com valor zero — consistente com filteredBills
     const totalPendingPayable = currentMonthBills
-        .filter(b => b.type === 'pagar' && b.status === 'pending' && !(b.categoryId === 'card-payment' && b.amount <= 0))
+        .filter(b => b.type === 'payable' && b.status === 'pending' && !(b.categoryId === 'card-payment' && b.amount <= 0))
         .reduce((acc, b) => acc + b.amount, 0);
 
     return (
@@ -132,8 +124,8 @@ export function BillsManager() {
                 <div className="flex items-center gap-2 p-1 bg-muted rounded-2xl w-full overflow-x-auto no-scrollbar md:w-fit">
                     {([
                         { id: 'all', label: 'Todas', icon: Filter },
-                        { id: 'pagar', label: 'A Pagar', icon: ArrowDownCircle },
-                        { id: 'receber', label: 'A Receber', icon: ArrowUpCircle },
+                        { id: 'payable', label: 'A Pagar', icon: ArrowDownCircle },
+                        { id: 'receivable', label: 'A Receber', icon: ArrowUpCircle },
                     ] as const).map(btn => (
                         <button key={btn.id} onClick={() => setFilter(btn.id)}
                             className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all",
@@ -224,7 +216,7 @@ export function BillsManager() {
 
                                     <div className="flex items-center justify-between md:justify-end gap-6">
                                         <div className="text-right">
-                                            <p className={cn("text-lg font-black", bill.type === 'pagar' ? "text-danger" : "text-success")}>
+                                            <p className={cn("text-lg font-black", bill.type === 'payable' ? "text-danger" : "text-success")}>
                                                 {formatCurrency(bill.amount)}
                                             </p>
                                             <div className="flex items-center gap-1 justify-end">
@@ -362,10 +354,10 @@ export function BillsManager() {
                             onClick={e => e.stopPropagation()}>
                             <div className="px-5 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
                                 <h2 className="text-lg font-black tracking-tight">
-                                    {isPaying.type === 'receber' ? 'Receber com qual conta?' : 'Pagar com qual conta?'}
+                                    {isPaying.type === 'receivable' ? 'Receber com qual conta?' : 'Pagar com qual conta?'}
                                 </h2>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                    <span className={cn("font-bold", isPaying.type === 'receber' ? "text-success" : "text-danger")}>
+                                    <span className={cn("font-bold", isPaying.type === 'receivable' ? "text-success" : "text-danger")}>
                                         {formatCurrency(isPaying.amount)}
                                     </span>{' — '}{isPaying.name}
                                 </p>
@@ -486,43 +478,21 @@ export function BillsManager() {
                 </Portal>
             )}
 
-            {/* Modal de Exclusão */}
-            {deletingBill && (
-                <Portal>
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
-                        onClick={() => setDeletingBill(null)}>
-                        <div className="bg-card rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-border overflow-hidden"
-                            onClick={e => e.stopPropagation()}>
-                            <div className="p-6 text-center space-y-4">
-                                <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto mb-4">
-                                    <Trash2 className="w-6 h-6" />
-                                </div>
-                                <h2 className="text-xl font-black tracking-tight">Excluir Conta?</h2>
-                                <p className="text-sm text-muted-foreground">
-                                    Tem certeza que deseja remover <strong>{deletingBill.name}</strong>?
-                                </p>
-                                <div className="pt-4 text-left">
-                                    <label className="flex items-start gap-3 p-3 rounded-xl border border-border hover:bg-muted/50 transition-colors cursor-pointer">
-                                        <input type="checkbox" checked={deleteFutureBills}
-                                            onChange={e => setDeleteFutureBills(e.target.checked)}
-                                            className="mt-1 w-4 h-4 rounded text-primary focus:ring-primary" />
-                                        <div>
-                                            <span className="text-sm font-bold block">Aplicar a futuras?</span>
-                                            <span className="text-xs text-muted-foreground">
-                                                Também exclui os lançamentos desta conta nos próximos meses
-                                            </span>
-                                        </div>
-                                    </label>
-                                </div>
-                                <div className="flex gap-3 pt-4">
-                                    <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setDeletingBill(null)}>Cancelar</Button>
-                                    <Button variant="destructive" className="flex-1 rounded-xl" onClick={handleConfirmDeleteBill}>Excluir</Button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </Portal>
-            )}
+            {/* Modal de Exclusão Individual */}
+            <BulkDeleteDialog
+                isOpen={!!deletingBill}
+                onClose={() => setDeletingBill(null)}
+                selectedCount={1}
+                hasInstallments={false} // Bills no BillsManager são recorrentes, não parceladas por grupo de transação
+                hasRecurring={deletingBill?.isFixed === true}
+                onConfirm={(options) => {
+                    if (deletingBill) {
+                        const targetId = deletingBill.originalBillId || deletingBill.id;
+                        deleteBillMutation({ id: targetId, deleteFuture: options.deleteFutureBills });
+                    }
+                    setDeletingBill(null);
+                }}
+            />
         </div>
     );
 }

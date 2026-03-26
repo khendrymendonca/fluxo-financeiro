@@ -3,10 +3,9 @@ import { formatCurrency } from '@/utils/formatters';
 import { ArrowUpRight, ArrowDownRight, Trash2, Pencil, FastForward, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { useToggleTransactionPaid, useDeleteTransaction } from '@/hooks/useTransactionMutations';
+import { useToggleTransactionPaid } from '@/hooks/useTransactionMutations';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Bill } from '@/types/finance';
 import {
   CheckCircle2, Clock, Calendar, ShieldAlert, Receipt
 } from 'lucide-react';
@@ -16,55 +15,57 @@ import { OverdraftWarningDialog } from '@/components/ui/OverdraftWarningDialog';
 import { BulkDeleteDialog } from './BulkDeleteDialog';
 import { Checkbox } from '@/components/ui/checkbox';
 
-interface TransactionListProps {
+export interface TransactionListProps {
   transactions: Transaction[];
-  bills: Bill[];
   onEdit: (transaction: Transaction) => void;
-  onPayBill: (bill: Bill, accountId?: string, paymentDate?: string, isPartial?: boolean, partialAmount?: number, cardId?: string) => Promise<void>;
-  onDeleteBill?: (id: string, applyToFuture?: boolean) => void;
+  onPayBill: (transaction: Transaction) => Promise<void>;
 }
 
 import { parseLocalDate, todayLocalString, toLocalDateString } from '@/utils/dateUtils';
 
-export function TransactionList({ transactions, bills, onEdit, onPayBill, onDeleteBill }: TransactionListProps) {
+export function TransactionList({
+  transactions,
+  onEdit,
+  onPayBill
+}: TransactionListProps) {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [sourceFilter, setSourceFilter] = useState<'all' | 'account' | 'card'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'punctual' | 'installment' | 'fixed'>('all');
   const [specificSourceId, setSpecificSourceId] = useState<string>('all');
-  const [payingItem, setPayingItem] = useState<any>(null);
+  const [payingItem, setPayingItem] = useState<Transaction | null>(null);
   const [paymentDate, setPaymentDate] = useState<string>(todayLocalString());
   const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
-  const [expandedBillId, setExpandedBillId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [anticipatingIds, setAnticipatingIds] = useState<Set<string>>(new Set());
   const [anticipateAccount, setAnticipateAccount] = useState('');
-  const [deletingBill, setDeletingBill] = useState<any>(null);
-  const [deleteFutureBills, setDeleteFutureBills] = useState(false);
   const [showOverdraftWarning, setShowOverdraftWarning] = useState(false);
   const [overdraftAmountUsed, setOverdraftAmountUsed] = useState(0);
   const [overdraftAccountName, setOverdraftAccountName] = useState('');
   const [pendingPaymentData, setPendingPaymentData] = useState<{ id: string, isCard: boolean } | null>(null);
-  
+
+  // Single Item Delete State
+  const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
+
   // Bulk Delete State
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 
-  const { 
-    categories, 
-    accounts, 
-    creditCards, 
-    transactions: allTransactions, 
+  const {
+    categories,
+    accounts,
+    creditCards,
     viewDate,
     isSelectionMode,
     selectedIds,
     toggleSelectionMode,
     toggleSelectId,
     clearSelection,
-    bulkDeleteTransactions
+    deleteTransaction,
+    bulkDeleteTransactions,
+    isDeletingTransaction,
+    isBulkDeleting
   } = useFinanceStore();
   const { mutateAsync: togglePaidMutation } = useToggleTransactionPaid();
-  const { mutateAsync: deleteTransactionMutation } = useDeleteTransaction();
-
 
   const formatDate = (dateString: string) =>
     parseLocalDate(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -72,45 +73,21 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
   const formatShortDate = (dateString: string) =>
     parseLocalDate(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' });
 
-  const displayItems = [
-    ...transactions.map(t => {
-      // ✅ REGRA DE BOM SENSO: Compras no cartão (cardId presente e não é pagamento de fatura) 
-      // NUNCA são pendentes, elas já estão na fatura.
-      const isPending = (t.cardId && !t.isInvoicePayment) ? false : !t.isPaid;
-      return { ...t, isBill: false, isPending };
-    }),
-    ...bills
-      .filter(b => b.status === 'pending' && b.categoryId !== 'card-payment')
-      .map(b => ({
-        id: b.id,
-        description: b.name,
-        amount: b.amount,
-        type: b.type === 'pagar' ? 'expense' as const : 'income' as const,
-        date: b.dueDate,
-        categoryId: b.categoryId,
-        isBill: true,
-        isPending: true,
-        billId: b.id,
-        originalBillId: b.originalBillId,
-        isVirtual: b.isVirtual,
-        cardId: b.cardId,
-        accountId: b.accountId,
-        installmentTotal: 0,
-        isRecurring: b.isFixed,
-        icon: b.categoryId === 'debt-payment' ? ShieldAlert : undefined
-      }))
-  ];
+  const displayItems = transactions.map(t => {
+    // âœ… REGRA DE BOM SENSO: Compras no cartão (cardId presente e não é pagamento de fatura) 
+    // NUNCA são pendentes, elas já estão na fatura.
+    const isPending = (t.cardId && !t.isInvoicePayment) ? false : !t.isPaid;
+    return { ...t, isPending };
+  });
 
   const getGroupDate = (item: any): string => {
-    // Transações recorrentes sempre agrupam pela data física do mês,
-    // independente de quando foram pagas — evita que apareçam com data do mês original
     if (item.isRecurring) {
       return item.date?.split('T')[0] || todayLocalString();
     }
     if (!item.isPending && item.paymentDate) {
       return item.paymentDate.split('T')[0];
     }
-    if (item.isPending && item.categoryId === 'card-payment' && item.cardId) {
+    if (item.isPending && item.transactionType === 'recurring' && item.cardId) {
       const card = creditCards.find(c => c.id === item.cardId);
       if (card) {
         return toLocalDateString(viewDate.getFullYear(), viewDate.getMonth(), card.dueDay || 1);
@@ -144,11 +121,11 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
       // Filtro de Tipo (Pontual, Parcelado, Fixo)
       if (typeFilter !== 'all') {
         if (typeFilter === 'punctual') {
-          if (t.isBill || t.installmentTotal || t.isRecurring) return false;
+          if (t.installmentTotal || t.isRecurring || t.transactionType === 'recurring') return false;
         } else if (typeFilter === 'installment') {
           if (!t.installmentTotal || t.installmentTotal <= 1) return false;
         } else if (typeFilter === 'fixed') {
-          if (!t.isBill && !t.isRecurring) return false;
+          if (!t.isRecurring && t.transactionType !== 'recurring') return false;
         }
       }
 
@@ -183,29 +160,22 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
 
   const executePayment = async (targetId: string, isCard: boolean) => {
     if (!payingItem) return;
-    if (payingItem.isBill) {
-      const bill = bills.find(b => b.id === payingItem.billId);
-      if (bill) {
-        // ✅ FIX: passa cardId se for pagamento via cartão
-        await onPayBill(bill, isCard ? undefined : targetId, paymentDate, false, undefined, isCard ? targetId : undefined);
-      }
-    } else {
-      await togglePaidMutation({ id: (payingItem as Transaction).id, isPaid: true, date: paymentDate });
-    }
+
+    // Atualiza a transação para paga
+    const updates: Partial<Transaction> = {
+      isPaid: true,
+      paymentDate: paymentDate,
+      accountId: isCard ? undefined : targetId,
+      cardId: isCard ? targetId : payingItem.cardId
+    };
+
+    await onPayBill({ ...payingItem, ...updates });
     setPayingItem(null);
   };
 
-  const handleConfirmDeleteBill = () => {
-    if (deletingBill && onDeleteBill) {
-      const targetId = deletingBill.originalBillId || deletingBill.billId || deletingBill.id;
-      onDeleteBill(targetId, deleteFutureBills);
-    }
-    setDeletingBill(null);
-    setDeleteFutureBills(false);
-  };
 
   const getFutureInstallments = (groupId: string, currentInstallmentNumber: number) =>
-    allTransactions
+    transactions
       .filter(t => t.installmentGroupId === groupId && !t.isPaid && (t.installmentNumber || 0) > currentInstallmentNumber)
       .sort((a, b) => (a.installmentNumber || 0) - (b.installmentNumber || 0));
 
@@ -317,10 +287,10 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
           </div>
 
           {/* Botão de Remoção em Massa */}
-          <Button 
-            variant={isSelectionMode ? "default" : "outline"} 
+          <Button
+            variant={isSelectionMode ? "default" : "outline"}
             onClick={toggleSelectionMode}
-            className={cn("h-9 px-4 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all", 
+            className={cn("h-9 px-4 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all",
               isSelectionMode ? "bg-primary text-white" : "border-danger/30 text-danger hover:bg-danger/10")}
           >
             <Trash2 className="w-4 h-4 mr-2" />
@@ -378,7 +348,7 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
                     <div key={item.id} className="overflow-hidden flex items-center">
                       {isSelectionMode && (
                         <div className="pl-4">
-                          <Checkbox 
+                          <Checkbox
                             checked={selectedIds.has(item.id)}
                             onCheckedChange={() => toggleSelectId(item.id)}
                             className="w-5 h-5 border-2"
@@ -401,6 +371,7 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
                             <p className="font-bold">{item.description}</p>
                             <div className="flex items-center gap-2 flex-wrap">
                               {isPending && <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">Pendente</span>}
+                              {item.isVirtual && <span className="text-[10px] bg-amber-500/20 text-amber-600 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter shadow-sm border border-amber-500/20 animate-pulse">Projetado</span>}
                               {item.installmentNumber && item.installmentTotal && (
                                 <span className="text-[10px] bg-info/20 text-info px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">
                                   {item.installmentNumber}/{item.installmentTotal}
@@ -425,64 +396,61 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
                               <div className="flex items-center gap-2 w-full">
                                 <Button size="sm" variant="outline"
                                   onClick={() => { setPayingItem(item); setPaymentDate(item.date?.split('T')[0] || todayLocalString()); setPaymentMethod('account'); }}
-                                  disabled={item.isVirtual}
+                                  disabled={item.isVirtual || isDeletingTransaction || isBulkDeleting}
                                   className="flex-1 md:flex-none h-9 px-4 rounded-xl border-primary/30 text-primary hover:bg-primary/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider transition-all hover:scale-105 active:scale-95">
                                   <CheckCircle2 className="w-4 h-4" /> Baixar Agora
                                 </Button>
                                 {hasInstallmentGroup && futureInstallments.length > 0 && !item.isRecurring && (
                                   <Button size="sm" variant="outline"
                                     onClick={() => setExpandedGroup(isGroupExpanded ? null : item.installmentGroupId)}
+                                    disabled={isDeletingTransaction || isBulkDeleting}
                                     className="h-9 px-3 rounded-xl border-info/30 text-info hover:bg-info/10 flex items-center gap-1 font-black uppercase text-[10px] tracking-wider transition-all">
                                     <FastForward className="w-4 h-4" />
                                     {isGroupExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                   </Button>
                                 )}
-                                {!item.isBill && (
-                                  <Button variant="ghost" size="icon"
-                                    onClick={() => onEdit(item as Transaction)}
-                                    className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary shrink-0">
-                                    <Pencil className="w-4 h-4" />
-                                  </Button>
-                                )}
-                                {item.isBill && onDeleteBill && (
-                                  <Button variant="ghost" size="icon"
-                                    onClick={() => setDeletingBill(item)}
-                                    className="h-9 w-9 rounded-xl hover:bg-danger/10 hover:text-danger shrink-0">
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                )}
+                                <Button variant="ghost" size="icon"
+                                  onClick={() => onEdit(item as Transaction)}
+                                  disabled={item.isVirtual || isDeletingTransaction || isBulkDeleting}
+                                  className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary shrink-0">
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon"
+                                  onClick={() => setItemToDelete(item as Transaction)}
+                                  disabled={item.isVirtual || isDeletingTransaction || isBulkDeleting}
+                                  className="h-9 w-9 rounded-xl hover:bg-danger/10 hover:text-danger shrink-0">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
                               </div>
                             ) : (
                               <div className="flex opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all gap-1 justify-end w-full">
                                 {hasInstallmentGroup && futureInstallments.length > 0 && !item.isRecurring && (
                                   <Button size="sm" variant="outline"
                                     onClick={() => setExpandedGroup(isGroupExpanded ? null : item.installmentGroupId)}
+                                    disabled={isDeletingTransaction || isBulkDeleting}
                                     className="h-9 px-3 rounded-xl border-info/30 text-info hover:bg-info/10 flex items-center gap-1 font-black uppercase text-[10px] tracking-wider transition-all">
                                     <FastForward className="w-4 h-4" />
                                     {isGroupExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                   </Button>
                                 )}
-                                {!item.isBill && (
-                                  <Button variant="ghost" size="icon"
-                                    onClick={() => onEdit(item as Transaction)}
-                                    className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary">
-                                    <Pencil className="w-4 h-4" />
-                                  </Button>
-                                )}
-                                {!item.isBill && (
-                                  <Button variant="ghost" size="icon"
-                                    onClick={() => deleteTransactionMutation(item.id)}
-                                    className="h-9 w-9 rounded-lg hover:bg-danger/10 hover:text-danger">
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                )}
-                                {item.isBill && onDeleteBill && (
-                                  <Button variant="ghost" size="icon"
-                                    onClick={() => setDeletingBill(item)}
-                                    className="h-9 w-9 rounded-lg hover:bg-danger/10 hover:text-danger">
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                )}
+                                <Button variant="ghost" size="icon"
+                                  onClick={() => onEdit(item as Transaction)}
+                                  disabled={isDeletingTransaction || isBulkDeleting}
+                                  className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary">
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon"
+                                  onClick={() => {
+                                    if (hasInstallmentGroup || item.isRecurring || item.transactionType === 'recurring') {
+                                      setItemToDelete(item as Transaction);
+                                    } else {
+                                      deleteTransaction(item as Transaction, 'this');
+                                    }
+                                  }}
+                                  disabled={isDeletingTransaction || isBulkDeleting}
+                                  className="h-9 w-9 rounded-lg hover:bg-danger/10 hover:text-danger">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
                               </div>
                             )}
                           </div>
@@ -667,40 +635,21 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
         </Portal>
       )}
 
-      {/* Modal de Exclusão */}
-      {deletingBill && (
-        <Portal>
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
-            onClick={() => setDeletingBill(null)}>
-            <div className="bg-card rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-border overflow-hidden"
-              onClick={e => e.stopPropagation()}>
-              <div className="p-6 text-center space-y-4">
-                <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto mb-4">
-                  <Trash2 className="w-6 h-6" />
-                </div>
-                <h2 className="text-xl font-black tracking-tight">Excluir Conta?</h2>
-                <p className="text-sm text-muted-foreground">
-                  Tem certeza que deseja remover <strong>{deletingBill.description}</strong>?
-                </p>
-                <div className="pt-4 text-left">
-                  <label className="flex items-start gap-3 p-3 rounded-xl border border-border hover:bg-muted/50 transition-colors cursor-pointer">
-                    <input type="checkbox" checked={deleteFutureBills} onChange={e => setDeleteFutureBills(e.target.checked)}
-                      className="mt-1 w-4 h-4 rounded text-primary focus:ring-primary" />
-                    <div>
-                      <span className="text-sm font-bold block">Aplicar a futuras?</span>
-                      <span className="text-xs text-muted-foreground">Também exclui os lançamentos desta conta nos próximos meses</span>
-                    </div>
-                  </label>
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setDeletingBill(null)}>Cancelar</Button>
-                  <Button variant="destructive" className="flex-1 rounded-xl" onClick={handleConfirmDeleteBill}>Excluir</Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Portal>
-      )}
+      {/* Modal de Exclusão Individual (Single Item) */}
+      <BulkDeleteDialog
+        isOpen={!!itemToDelete}
+        onClose={() => setItemToDelete(null)}
+        isPending={isDeletingTransaction}
+        selectedCount={1}
+        hasInstallments={!!itemToDelete?.installmentGroupId || (itemToDelete?.installmentTotal && itemToDelete.installmentTotal > 1)}
+        hasRecurring={itemToDelete?.isRecurring === true || itemToDelete?.transactionType === 'recurring'}
+        onConfirm={async (options) => {
+          if (!itemToDelete) return;
+
+          await deleteTransaction(itemToDelete, options.installmentScope || (options.deleteFutureBills ? 'future' : 'this'));
+          setItemToDelete(null);
+        }}
+      />
 
       <OverdraftWarningDialog
         isOpen={showOverdraftWarning}
@@ -723,21 +672,21 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
                 <span className="text-xs font-black uppercase opacity-70 tracking-tighter">Selecionados</span>
                 <span className="text-lg font-black leading-none">{selectedIds.size}</span>
               </div>
-              
+
               <div className="h-8 w-px bg-background/20" />
 
               <div className="flex items-center gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={clearSelection}
                   className="hover:bg-background/10 text-background font-bold text-xs"
                 >
                   Limpar
                 </Button>
-                <Button 
-                  variant="destructive" 
-                  size="sm" 
+                <Button
+                  variant="destructive"
+                  size="sm"
                   onClick={() => setShowBulkDeleteDialog(true)}
                   className="bg-danger hover:bg-danger/90 text-white font-black uppercase text-[10px] tracking-widest px-6 rounded-xl"
                 >
@@ -753,32 +702,34 @@ export function TransactionList({ transactions, bills, onEdit, onPayBill, onDele
       <BulkDeleteDialog
         isOpen={showBulkDeleteDialog}
         onClose={() => setShowBulkDeleteDialog(false)}
+        isPending={isBulkDeleting}
         selectedCount={selectedIds.size}
         hasInstallments={Array.from(selectedIds).some(id => {
-          const item = displayItems.find(i => i.id === id);
-          return item?.installmentTotal && item.installmentTotal > 1;
+          const item = displayItems.find(i => i.id === id) as any;
+          return !!item?.installmentGroupId || (item?.installmentTotal && item.installmentTotal > 1);
         })}
         hasRecurring={Array.from(selectedIds).some(id => {
-          const item = displayItems.find(i => i.id === id);
-          return item?.isRecurring;
+          const item = displayItems.find(i => i.id === id) as any;
+          return item?.isRecurring === true || item?.transactionType === 'recurring';
         })}
         onConfirm={async (options) => {
           const itemsToDelete = Array.from(selectedIds).map(id => {
-            const item = displayItems.find(i => i.id === id);
+            const item = displayItems.find(i => i.id === id) as any;
             return {
               id: id,
-              type: item?.isBill ? 'bill' : 'transaction' as 'bill' | 'transaction',
+              type: 'transaction' as const,
               isVirtual: item?.isVirtual,
-              billId: item?.billId
+              installmentGroupId: item?.installmentGroupId,
+              isRecurring: item?.isRecurring || item?.transactionType === 'recurring'
             };
           });
 
           await bulkDeleteTransactions({
-            items: itemsToDelete,
+            items: itemsToDelete as any,
             installmentScope: options.installmentScope,
             deleteFutureBills: options.deleteFutureBills
           });
-          
+
           toggleSelectionMode(); // Sai do modo de seleção após deletar
         }}
       />

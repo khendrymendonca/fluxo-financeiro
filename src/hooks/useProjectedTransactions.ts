@@ -11,31 +11,34 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
     const targetMonth = viewDate.getMonth();
     const targetYear = viewDate.getFullYear();
 
-    // 1. Separamos o que é REAL (transações normais do banco)
+    // 1. Separamos o que é REAL (transações normais do banco) do mês alvo
     const realTransactions = transactions.filter(tx => {
+      if (tx.isVirtual) return false;
       const txDate = parseLocalDate(tx.date.slice(0, 10));
-      return isSameMonth(txDate, viewDate) && !tx.isVirtual;
+      return isSameMonth(txDate, viewDate);
     });
 
+    // 2. Processamos todas as transações para buscar recorrentes que precisam ser projetadas
     transactions.forEach(tx => {
-      // Usamos parseLocalDate para evitar bugs de fuso horário ISO
+      // Ignoramos transações deletadas (o hook de query já deve filtrar, mas por segurança)
+      const isRecurring = tx.isRecurring || tx.transactionType === 'recurring';
       const txDate = parseLocalDate(tx.date.slice(0, 10));
 
-      if (tx.isRecurring) {
-        // Se é recorrente E começou ANTES ou DURANTE o mês/ano que estamos a ver
+      if (isRecurring) {
+        // Se a transação original começou antes ou no mês alvo
         if (isBefore(txDate, viewDate) || isSameMonth(txDate, viewDate)) {
-          
-          // Bug 3: Clamp do dia para evitar que dia 29/30/31 pule para o mês seguinte
+
+          // Cálculo da data segura no mês alvo
           const originalDay = txDate.getDate();
           const daysInTarget = getDaysInMonth(new Date(targetYear, targetMonth));
           const safeDay = Math.min(originalDay, daysInTarget);
           const virtualDate = new Date(targetYear, targetMonth, safeDay);
 
-          // Bug 5: Deduplicação - Só projetamos se não houver uma REAL para este mês
-          // baseada na mesma recorrente (originalId ou mesma descrição/valor)
-          const hasRealEquivalent = realTransactions.some(real => 
-            real.originalId === tx.id || 
-            (real.description === tx.description && Math.abs(Number(real.amount) - Number(tx.amount)) < 0.01)
+          // Deduplicação: Não projetamos se já houver uma transação REAL neste mês 
+          // que seja filha desta recorrente
+          const hasRealEquivalent = realTransactions.some(real =>
+            real.originalId === tx.id ||
+            real.description === tx.description && Math.abs(Number(real.amount) - Number(tx.amount)) < 0.01
           );
 
           if (!hasRealEquivalent) {
@@ -45,20 +48,21 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
               originalId: tx.id,
               date: format(virtualDate, 'yyyy-MM-dd'),
               isVirtual: true,
+              isPaid: false, // Projeções futuras nunca estão pagas
             } as any);
           }
         }
-      } else {
-        // Se NÃO é recorrente, só mostramos se for do próprio mês
-        if (isSameMonth(txDate, viewDate)) {
+      }
+
+      // Sempre incluímos a própria transação se ela for do mês alvo e REAL
+      if (!tx.isVirtual && isSameMonth(txDate, viewDate)) {
+        if (!projected.some(p => p.id === tx.id)) {
           projected.push(tx);
         }
       }
     });
 
-    // Ordenamos tudo por data no final
     return projected.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
   }, [transactions, viewDate]);
 }
 

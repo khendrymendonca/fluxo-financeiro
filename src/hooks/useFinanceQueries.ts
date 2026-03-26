@@ -38,6 +38,7 @@ export function useTransactions(viewDate: Date) {
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
+        .is('deleted_at', null)
         .or(`and(is_recurring.eq.false,date.gte.${start},date.lte.${end}),and(is_recurring.eq.true,date.lte.${end}),invoice_month_year.eq.${viewDateStr}`);
 
       if (error) throw error;
@@ -64,35 +65,6 @@ export function useTransactions(viewDate: Date) {
   });
 }
 
-export function useBills(viewDate: Date) {
-  return useQuery({
-    queryKey: ['bills', viewDate.getFullYear(), viewDate.getMonth()],
-    queryFn: async () => {
-      const start = format(startOfMonth(viewDate), 'yyyy-MM-dd');
-      const end = format(endOfMonth(viewDate), 'yyyy-MM-dd');
-
-      // Mesma lógica para contas a pagar (is_fixed)
-      const { data, error } = await supabase
-        .from('bills')
-        .select('*')
-        .or(`and(is_fixed.eq.false,due_date.gte.${start},due_date.lte.${end}),and(is_fixed.eq.true,due_date.lte.${end})`);
-
-      if (error) throw error;
-
-      return (data || []).map((b: any) => ({
-        ...b,
-        userId: b.user_id,
-        categoryId: b.category_id,
-        subcategoryId: b.subcategory_id,
-        accountId: b.account_id,
-        cardId: b.card_id,
-        dueDate: b.due_date,
-        paymentDate: b.payment_date,
-        isFixed: b.is_fixed
-      })) as Bill[];
-    }
-  });
-}
 
 export function useCreditCards() {
   return useQuery({

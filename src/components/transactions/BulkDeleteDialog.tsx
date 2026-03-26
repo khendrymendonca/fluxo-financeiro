@@ -20,6 +20,7 @@ interface BulkDeleteDialogProps {
   selectedCount: number;
   hasInstallments: boolean;
   hasRecurring: boolean;
+  isPending?: boolean;
 }
 
 export function BulkDeleteDialog({
@@ -28,7 +29,8 @@ export function BulkDeleteDialog({
   onConfirm,
   selectedCount,
   hasInstallments,
-  hasRecurring
+  hasRecurring,
+  isPending = false
 }: BulkDeleteDialogProps) {
   const [installmentScope, setInstallmentScope] = useState<'this' | 'future' | 'all'>('this');
   const [deleteFutureBills, setDeleteFutureBills] = useState(false);
@@ -108,8 +110,10 @@ export function BulkDeleteDialog({
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button variant="destructive" onClick={handleConfirm}>Remover Tudo</Button>
+          <Button variant="outline" onClick={onClose} disabled={isPending}>Cancelar</Button>
+          <Button variant="destructive" onClick={handleConfirm} disabled={isPending}>
+            {isPending ? 'Removendo...' : 'Remover Tudo'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
