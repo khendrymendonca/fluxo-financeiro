@@ -66,10 +66,15 @@ export function BillsManager() {
         }
     };
 
-    // Filtra apenas transações recorrentes do mês atual
+    // Filtra transações recorrentes, contas fixas e faturas de cartão do mês atual
     const recurringTransactions = currentMonthTransactions.filter(t => {
-        const isRecurring = t.isRecurring || t.transactionType === 'recurring';
-        if (!isRecurring) return false;
+        // ✅ REGRA DE FILTRO (KEEP ONLY): Esta tela mostra apenas Fluxo de Caixa (Fixas, Recorrentes e Faturas Consolidadas)
+        const isCashFlow = t.isRecurring || t.transactionType === 'recurring' || t.categoryId === 'card-payment' || t.isVirtual;
+        if (!isCashFlow) return false;
+
+        // ✅ REGRA DE EXCLUSÃO: Esconder compras individuais feitas no cartão de crédito
+        // Mesmo que sejam recorrentes (ex: streaming), elas aparecem na fatura consolidada.
+        if (t.cardId && t.categoryId !== 'card-payment' && !t.isVirtual) return false;
 
         // Busca por Texto
         if (searchQuery.trim() !== '') {
@@ -78,10 +83,6 @@ export function BillsManager() {
             const matchesCategory = categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(query);
             if (!matchesDescription && !matchesCategory) return false;
         }
-
-        // Filtro de Cartão: ignora compras pontuais no cartão (já estão na fatura)
-        // Mas permite pagamentos de fatura ou itens fixos que aparecem como "conta"
-        if (t.cardId && !t.isInvoicePayment && t.transactionType !== 'recurring') return false;
 
         if (filter === 'all') return true;
         return t.type === filter;

@@ -74,7 +74,7 @@ export function TransactionList({
     parseLocalDate(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' });
 
   const displayItems = transactions.map(t => {
-    // âœ… REGRA DE BOM SENSO: Compras no cartão (cardId presente e não é pagamento de fatura) 
+    // ✅ REGRA DE BOM SENSO: Compras no cartão (cardId presente e não é pagamento de fatura) 
     // NUNCA são pendentes, elas já estão na fatura.
     const isPending = (t.cardId && !t.isInvoicePayment) ? false : !t.isPaid;
     return { ...t, isPending };
@@ -98,6 +98,10 @@ export function TransactionList({
 
   const filteredItems = displayItems
     .filter(t => {
+      // ✅ REGRA DE FILTRO: Oculte a fatura do cartão consolidada e projeções virtuais.
+      // Remove itens onde categoryId === 'card-payment', isInvoicePayment === true, ou isVirtual === true.
+      if (t.categoryId === 'card-payment' || t.isInvoicePayment || t.isVirtual) return false;
+
       // Filtro de Busca por Texto
       if (searchQuery.trim() !== '') {
         const query = searchQuery.toLowerCase();
