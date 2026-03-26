@@ -312,12 +312,12 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const renderStep2 = () => {
     const options = type === 'income'
       ? [
-        { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Recebi hoje ou em data Ãºnica.' },
+        { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Recebi hoje ou em data única.' },
         { id: 'renda_fixa', label: 'Renda Fixa', icon: RotateCw, desc: 'Salário ou renda mensal automática.' },
         { id: 'transfer', label: 'Transferência', icon: ArrowRightLeft, desc: 'Mover dinheiro entre contas.' },
       ]
       : [
-        { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Compra Ã  vista no débito ou dinheiro.' },
+        { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Compra à vista no débito ou dinheiro.' },
         { id: 'parcelamento', label: 'Parcelado', icon: CreditCard, desc: 'Compra no cartão de crédito.' },
         { id: 'fixo', label: 'Fixo', icon: RotateCw, desc: 'Contas que repetem todo mês.' },
         { id: 'divida', label: 'Dívida', icon: Calendar, desc: 'Empréstimos ou acordos judiciais.' },
@@ -327,7 +327,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     return (
       <div className="p-6 space-y-4 animate-in fade-in slide-in-from-right duration-300">
         <div className="flex items-center gap-2 mb-2">
-          <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_TYPE')} className="rounded-xl text-xs font-bold uppercase tracking-tighter">â† Voltar</Button>
+          <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_TYPE')} className="rounded-xl text-xs font-bold uppercase tracking-tighter">← Voltar</Button>
           <span className={cn("text-[10px] font-black uppercase px-2 py-0.5 rounded-md", type === 'income' ? "bg-success/10 text-success" : "bg-danger/10 text-danger")}>
             {type === 'income' ? 'income' : 'expense'} selecionada
           </span>
@@ -395,7 +395,14 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     </div>
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest opacity-50">{type === 'income' ? 'income' : 'expense'}</p>
-                      <p className="text-sm font-black">{activeTab === 'renda_fixa' ? 'Renda Fixa' : activeTab === 'transfer' ? 'Transferência' : 'Lançamento Pontual'}</p>
+                      <p className="text-sm font-black">
+                        {activeTab === 'pontual' && 'Lançamento Pontual'}
+                        {activeTab === 'parcelamento' && 'Lançamento Parcelado'}
+                        {activeTab === 'fixo' && 'Lançamento Fixo'}
+                        {activeTab === 'divida' && 'Pagamento de Dívida'}
+                        {activeTab === 'transfer' && 'Transferência'}
+                        {activeTab === 'renda_fixa' && 'Rendimento'}
+                      </p>
                     </div>
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_SUBTYPE')} className="text-[10px] font-bold uppercase">Alterar</Button>
@@ -423,7 +430,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Data 1Âº Pagamento</Label>
+                    <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Data 1º Pagamento</Label>
                     <Input type="date" value={debtFirstPaymentDate?.split('T')[0] || ''} onChange={e => setDebtFirstPaymentDate(e.target.value)} className="h-12 rounded-2xl border-2" required />
                   </div>
                 </div>
@@ -653,7 +660,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     <div className="space-y-4 border-t border-border pt-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase text-muted-foreground">NÂº Parcelas</Label>
+                          <Label className="text-[10px] font-black uppercase text-muted-foreground">Nº Parcelas</Label>
                           <Input type="number" value={installmentsCount} onChange={e => { setInstallmentsCount(e.target.value); setCustomInstallmentDates([]); }} min="2" className="h-10 rounded-xl" />
                         </div>
                         <div className="flex flex-col gap-2 justify-center">
