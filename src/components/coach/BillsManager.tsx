@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { useToggleTransactionPaid, useDeleteTransaction } from '@/hooks/useTransactionMutations';
+import { useUpdateTransaction, useDeleteTransaction } from '@/hooks/useTransactionMutations';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,10 +27,11 @@ export function BillsManager() {
         creditCards,
         debts,
         viewDate,
-        currentMonthTransactions
+        currentMonthTransactions,
+        transactions
     } = useFinanceStore();
 
-    const { mutateAsync: togglePaidMutation } = useToggleTransactionPaid();
+    const { mutateAsync: updateTransactionMutation } = useUpdateTransaction();
     const { mutateAsync: deleteTransactionMutation } = useDeleteTransaction();
 
     const [filter, setFilter] = useState<'all' | 'expense' | 'income'>('all');
@@ -48,13 +49,15 @@ export function BillsManager() {
         const amountValue = paymentAmount ? parseFloat(paymentAmount) : isPaying.amount;
 
         try {
-            await togglePaidMutation({
+            await updateTransactionMutation({
                 id: isPaying.id,
-                isPaid: true,
-                date: paymentDate,
-                accountId: isCard ? undefined : targetId,
-                cardId: isCard ? targetId : undefined,
-                amount: amountValue
+                updates: {
+                    isPaid: true,
+                    paymentDate: paymentDate,
+                    accountId: isCard ? undefined : targetId,
+                    cardId: isCard ? targetId : undefined,
+                    amount: amountValue
+                }
             });
             setIsPaying(null);
             toast({ title: "Pagamento registrado com sucesso!" });
@@ -176,6 +179,14 @@ export function BillsManager() {
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <h4 className="font-bold">{transaction.description}</h4>
+                                                {transaction.categoryId === 'card-payment' && (
+                                                    <button
+                                                        onClick={e => { e.stopPropagation(); setExpandedTransactionId(expandedTransactionId === transaction.id ? null : transaction.id); }}
+                                                        className="px-2 py-0.5 bg-primary/10 hover:bg-primary/20 rounded-md text-[10px] font-black uppercase text-primary transition-all flex items-center gap-1">
+                                                        {expandedTransactionId === transaction.id ? 'Ocultar Detalhes' : 'Ver Detalhes'}
+                                                        <Plus className={cn("w-3 h-3 transition-transform", expandedTransactionId === transaction.id && "rotate-45")} />
+                                                    </button>
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                                                 <Calendar className="w-3 h-3" />
@@ -255,6 +266,52 @@ export function BillsManager() {
                                         </Button>
                                     </div>
                                 </div>
+
+                                {/* Detalhes da Fatura (Expansão) */}
+                                {expandedTransactionId === transaction.id && transaction.categoryId === 'card-payment' && (
+                                    <div className="card-elevated bg-muted/20 border-t-0 rounded-t-none p-4 -mt-1 ml-4 mr-2 animate-in slide-in-from-top-2 duration-200">
+                                        <h5 className="text-[10px] font-black uppercase text-muted-foreground mb-3 flex items-center gap-2">
+                                            <Plus className="w-3 h-3" /> Itens desta Fatura (Recorrentes)
+                                        </h5>
+                                        <div className="space-y-2">
+                                            {transactions
+                                                .filter(t =>
+                                                    t.cardId === transaction.cardId &&
+                                                    !t.isPaid &&
+                                                    t.categoryId !== 'card-payment' &&
+                                                    (t.isRecurring || t.transactionType === 'recurring') &&
+                                                    parseLocalDate(t.date).getMonth() === viewDate.getMonth() &&
+                                                    parseLocalDate(t.date).getFullYear() === viewDate.getFullYear()
+                                                )
+                                                .map(b => (
+                                                    <div key={b.id} className="flex items-center justify-between p-2 rounded-lg bg-background/50 border border-border/50">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                                            <div>
+                                                                <p className="text-xs font-bold">{b.description}</p>
+                                                                <p className="text-[10px] text-muted-foreground">
+                                                                    {format(parseLocalDate(b.date), "dd/MM")}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-xs font-black text-danger">{formatCurrency(b.amount)}</p>
+                                                    </div>
+                                                ))
+                                            }
+
+                                            {transactions.filter(t =>
+                                                t.cardId === transaction.cardId &&
+                                                !t.isPaid &&
+                                                t.categoryId !== 'card-payment' &&
+                                                (t.isRecurring || t.transactionType === 'recurring') &&
+                                                parseLocalDate(t.date).getMonth() === viewDate.getMonth() &&
+                                                parseLocalDate(t.date).getFullYear() === viewDate.getFullYear()
+                                            ).length === 0 && (
+                                                    <p className="text-[10px] text-muted-foreground text-center py-2 italic">Nenhuma compra listada para esta fatura.</p>
+                                                )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         );
                     })
@@ -395,7 +452,7 @@ export function BillsManager() {
                 hasRecurring={itemToDelete?.isRecurring === true || itemToDelete?.transactionType === 'recurring'}
                 onConfirm={async (options) => {
                     if (itemToDelete) {
-                        await deleteTransactionMutation(itemToDelete, options.installmentScope || 'this');
+                        await deleteTransactionMutation({ transaction: itemToDelete, applyScope: options.installmentScope || 'this' });
                     }
                     setItemToDelete(null);
                 }}
