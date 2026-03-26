@@ -1,7 +1,7 @@
 ﻿import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
-import { Transaction, Account, CreditCard, Bill, Debt, SavingsGoal, Category, Subcategory, CategoryGroup } from '@/types/finance';
+import { Transaction, Account, CreditCard, Debt, SavingsGoal, Category, Subcategory, CategoryGroup } from '@/types/finance';
 import { toast } from '@/components/ui/use-toast';
 
 // --- Queries ---
@@ -126,12 +126,11 @@ export function useDebts() {
       return (data || []).map((d: any) => ({
         ...d,
         userId: d.user_id,
-        totalAmount: d.total_amount,
-        remainingAmount: d.remaining_amount,
-        monthlyPayment: d.monthly_payment,
+        installmentAmount: d.installment_amount,
         interestRateMonthly: d.interest_rate_monthly,
         minimumPayment: d.minimum_payment,
         dueDay: d.due_day,
+        totalInstallments: d.total_installments,
         strategyPriority: d.strategy_priority
       })) as Debt[];
     }

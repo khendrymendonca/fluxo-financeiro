@@ -99,7 +99,7 @@ export interface Debt {
   name: string;
   totalAmount: number;
   remainingAmount: number;
-  monthlyPayment: number;
+  installmentAmount: number;
   interestRateMonthly: number;
   startDate: string;
   endDate?: string;

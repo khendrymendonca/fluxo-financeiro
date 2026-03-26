@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { addMonths, format } from 'date-fns';
 import { parseLocalDate } from '@/utils/dateUtils';
 
-// --- 1. ADICIONAR DÃVIDA ---
+// --- 1. ADICIONAR DÃ VIDA ---
 export function useAddDebt() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -20,7 +20,7 @@ export function useAddDebt() {
         name: debt.name,
         total_amount: debt.totalAmount,
         remaining_amount: debt.remainingAmount,
-        monthly_payment: debt.monthlyPayment,
+        installment_amount: debt.installmentAmount,
         interest_rate_monthly: debt.interestRateMonthly,
         due_day: debt.dueDay,
         strategy_priority: debt.strategyPriority,
@@ -45,11 +45,12 @@ export function useUpdateDebt() {
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string, updates: Partial<Debt> }) => {
-      const payload: any = { ...updates };
+      const payload: any = {};
 
+      if (updates.name !== undefined) payload.name = updates.name;
       if (updates.totalAmount !== undefined) payload.total_amount = updates.totalAmount;
       if (updates.remainingAmount !== undefined) payload.remaining_amount = updates.remainingAmount;
-      if (updates.monthlyPayment !== undefined) payload.monthly_payment = updates.monthlyPayment;
+      if (updates.installmentAmount !== undefined) payload.installment_amount = updates.installmentAmount;
       if (updates.interestRateMonthly !== undefined) payload.interest_rate_monthly = updates.interestRateMonthly;
       if (updates.minimumPayment !== undefined) payload.minimum_payment = updates.minimumPayment;
       if (updates.dueDay !== undefined) payload.due_day = updates.dueDay;
@@ -62,10 +63,10 @@ export function useUpdateDebt() {
       if (error) throw error;
 
       // 2. Se mudamos o valor da parcela, atualizar transações futuras não pagas
-      if (updates.monthlyPayment !== undefined) {
+      if (updates.installmentAmount !== undefined) {
         await supabase
           .from('transactions')
-          .update({ amount: updates.monthlyPayment })
+          .update({ amount: updates.installmentAmount })
           .eq('debt_id', id)
           .eq('is_paid', false);
       }
@@ -115,7 +116,7 @@ export function useRenegotiateDebt() {
 
       // 2. Gerar parcelas na tabela transactions
       const count = debt.totalInstallments || 1;
-      const amount = debt.monthlyPayment;
+      const amount = debt.installmentAmount;
       const groupId = crypto.randomUUID();
       const baseDate = parseLocalDate(debt.startDate);
       const installments: any[] = [];

@@ -260,13 +260,13 @@ function useFinanceProvider() {
     createDebtWithInstallments: async (debt: Omit<Debt, 'id' | 'userId'>, firstPaymentDate: string) => {
       const [newDebt] = await addDebtMutation.mutateAsync(debt);
       if (!newDebt) return;
-      const numInstallments = Math.ceil(debt.totalAmount / debt.monthlyPayment);
+      const numInstallments = Math.ceil(debt.totalAmount / debt.installmentAmount);
       const baseDate = parseLocalDate(firstPaymentDate);
       for (let i = 0; i < numInstallments; i++) {
         const currentDate = addMonths(baseDate, i);
         const installmentAmount = i === numInstallments - 1
-          ? debt.totalAmount - (debt.monthlyPayment * (numInstallments - 1))
-          : debt.monthlyPayment;
+          ? debt.totalAmount - (debt.installmentAmount * (numInstallments - 1))
+          : debt.installmentAmount;
         if (installmentAmount <= 0) continue;
         await addTransactionMutation.mutateAsync({
           type: 'expense',

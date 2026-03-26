@@ -25,7 +25,7 @@ export function DebtsManager({
   const [name, setName] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
   const [remainingAmount, setRemainingAmount] = useState('');
-  const [monthlyPayment, setMonthlyPayment] = useState('');
+  const [installmentAmount, setInstallmentAmount] = useState('');
   const [totalInstallments, setTotalInstallments] = useState('');
   const [dueDay, setDueDay] = useState('');
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
@@ -41,13 +41,13 @@ export function DebtsManager({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !totalAmount || !remainingAmount || !monthlyPayment) return;
+    if (!name || !totalAmount || !remainingAmount || !installmentAmount) return;
 
     const debtData = {
       name,
       totalAmount: parseFloat(totalAmount),
       remainingAmount: parseFloat(remainingAmount),
-      monthlyPayment: parseFloat(monthlyPayment),
+      installmentAmount: parseFloat(installmentAmount),
       interestRateMonthly: editingDebt?.interestRateMonthly || 0,
       totalInstallments: parseInt(totalInstallments) || 1,
       dueDay: parseInt(dueDay) || undefined,
@@ -71,7 +71,7 @@ export function DebtsManager({
     setName(debt.name);
     setTotalAmount(debt.totalAmount.toString());
     setRemainingAmount(debt.remainingAmount.toString());
-    setMonthlyPayment(debt.monthlyPayment.toString());
+    setInstallmentAmount(debt.installmentAmount.toString());
     setTotalInstallments(debt.totalInstallments?.toString() || '1');
     setDueDay(debt.dueDay?.toString() || '');
     setShowForm(true);
@@ -81,7 +81,7 @@ export function DebtsManager({
     setName('');
     setTotalAmount('');
     setRemainingAmount('');
-    setMonthlyPayment('');
+    setInstallmentAmount('');
     setTotalInstallments('');
     setDueDay('');
     setEditingDebt(null);
@@ -89,12 +89,12 @@ export function DebtsManager({
   };
 
   const handlePayment = (debt: Debt) => {
-    const newRemaining = Math.max(0, debt.remainingAmount - debt.monthlyPayment);
+    const newRemaining = Math.max(0, debt.remainingAmount - debt.installmentAmount);
     onUpdateDebt(debt.id, { remainingAmount: newRemaining });
   };
 
   const totalDebt = debts.reduce((sum, d) => sum + d.remainingAmount, 0);
-  const totalMonthly = debts.reduce((sum, d) => sum + d.monthlyPayment, 0);
+  const totalMonthly = debts.reduce((sum, d) => sum + d.installmentAmount, 0);
 
   const toNegotiate = debts.filter(d => d.status !== 'renegotiated');
   const inPayment = debts.filter(d => d.status === 'renegotiated');
@@ -160,8 +160,8 @@ export function DebtsManager({
               <div className="space-y-4">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground ml-1">Para Negociar</h3>
                 {toNegotiate.map((debt) => {
-                  const monthsRemaining = debt.monthlyPayment > 0
-                    ? Math.ceil(debt.remainingAmount / debt.monthlyPayment)
+                  const monthsRemaining = debt.installmentAmount > 0
+                    ? Math.ceil(debt.remainingAmount / debt.installmentAmount)
                     : 0;
 
                   return (
@@ -191,7 +191,7 @@ export function DebtsManager({
                         </div>
                         <div className="text-right">
                           <p className="text-[10px] text-muted-foreground font-bold uppercase">Valor Sugerido Parcela</p>
-                          <p className="text-lg font-bold">{formatCurrency(debt.monthlyPayment || 0)}</p>
+                          <p className="text-lg font-bold">{formatCurrency(debt.installmentAmount || 0)}</p>
                         </div>
                       </div>
 
@@ -318,8 +318,8 @@ export function DebtsManager({
                   <Input
                     type="number"
                     step="0.01"
-                    value={monthlyPayment}
-                    onChange={(e) => setMonthlyPayment(e.target.value)}
+                    value={installmentAmount}
+                    onChange={(e) => setInstallmentAmount(e.target.value)}
                     placeholder="1200.00"
                     className="rounded-xl font-bold"
                     required

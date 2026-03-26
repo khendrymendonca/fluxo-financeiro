@@ -126,7 +126,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         name: description,
         totalAmount: parseFloat(debtTotal),
         remainingAmount: parseFloat(debtTotal),
-        monthlyPayment: parseFloat(debtTotal) / parseInt(debtInstallments),
+        installmentAmount: parseFloat(debtTotal) / parseInt(debtInstallments),
         interestRateMonthly: parseFloat(debtInterest) || 0,
         startDate: new Date().toISOString().split('T')[0],
       }, debtFirstPaymentDate);
