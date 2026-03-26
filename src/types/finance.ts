@@ -108,6 +108,9 @@ export interface Debt {
   minimumPayment?: number;
   // ✅ ADICIONADO: de qual conta sai o pagamento da dívida
   accountId?: string;
+  // ✅ ADICIONADO: controle de renegociação
+  status?: 'active' | 'renegotiated' | 'paid';
+  totalInstallments?: number;
 }
 
 export interface SavingsGoal {

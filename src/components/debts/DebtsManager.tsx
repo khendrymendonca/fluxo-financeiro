@@ -1,7 +1,7 @@
 ﻿import { useState } from 'react';
 import { format } from 'date-fns';
-import { TrendingDown, Plus, Trash2, X, AlertTriangle, Calculator, ArrowUpDown } from 'lucide-react';
-import { DebtPayoffPlanner } from './DebtPayoffPlanner';
+import { TrendingDown, Plus, Trash2, X, AlertTriangle } from 'lucide-react';
+import { useRenegotiateDebt } from '@/hooks/useDebtMutations';
 import { Debt } from '@/types/finance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,9 +26,10 @@ export function DebtsManager({
   const [totalAmount, setTotalAmount] = useState('');
   const [remainingAmount, setRemainingAmount] = useState('');
   const [monthlyPayment, setMonthlyPayment] = useState('');
-  const [interestRate, setInterestRate] = useState('');
-  const [minimumPayment, setMinimumPayment] = useState('');
+  const [totalInstallments, setTotalInstallments] = useState('');
   const [dueDay, setDueDay] = useState('');
+
+  const { mutateAsync: renegotiateDebt } = useRenegotiateDebt();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -46,18 +47,19 @@ export function DebtsManager({
       totalAmount: parseFloat(totalAmount),
       remainingAmount: parseFloat(remainingAmount),
       monthlyPayment: parseFloat(monthlyPayment),
-      interestRateMonthly: parseFloat(interestRate) || 0,
-      minimumPayment: parseFloat(minimumPayment) || undefined,
+      interestRateMonthly: 0,
+      totalInstallments: parseInt(totalInstallments) || 1,
       dueDay: parseInt(dueDay) || undefined,
       startDate: new Date().toISOString(),
+      status: 'active'
     });
 
     setName('');
     setTotalAmount('');
+    setTotalAmount('');
     setRemainingAmount('');
     setMonthlyPayment('');
-    setInterestRate('');
-    setMinimumPayment('');
+    setTotalInstallments('');
     setDueDay('');
     setShowForm(false);
   };
@@ -70,10 +72,11 @@ export function DebtsManager({
   const totalDebt = debts.reduce((sum, d) => sum + d.remainingAmount, 0);
   const totalMonthly = debts.reduce((sum, d) => sum + d.monthlyPayment, 0);
 
+  const toNegotiate = debts.filter(d => d.status !== 'renegotiated');
+  const inPayment = debts.filter(d => d.status === 'renegotiated');
+
   return (
     <div className="space-y-6">
-      <DebtPayoffPlanner debts={debts} />
-      {/* Summary */}
       <div className="card-elevated p-6 animate-fade-in">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-2.5 rounded-xl bg-danger-light">
@@ -114,79 +117,111 @@ export function DebtsManager({
       </Button>
 
       {/* Debts List */}
-      <div className="space-y-4">
+      <div className="space-y-8">
         {debts.length === 0 ? (
           <div className="card-elevated p-12 text-center">
             <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">Nenhuma dívida cadastrada</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Que bom! Continue assim ðŸŽ‰
+              Que bom! Continue assim 🎉
             </p>
           </div>
         ) : (
-          debts.map((debt) => {
-            const progress = debt.totalAmount > 0
-              ? ((debt.totalAmount - debt.remainingAmount) / debt.totalAmount) * 100
-              : 0;
-            const monthsRemaining = debt.monthlyPayment > 0
-              ? Math.ceil(debt.remainingAmount / debt.monthlyPayment)
-              : 0;
+          <>
+            {/* Para Negociar */}
+            {toNegotiate.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground ml-1">Para Negociar</h3>
+                {toNegotiate.map((debt) => {
+                  const monthsRemaining = debt.monthlyPayment > 0
+                    ? Math.ceil(debt.remainingAmount / debt.monthlyPayment)
+                    : 0;
 
-            return (
-              <div
-                key={debt.id}
-                className="card-elevated p-5 space-y-4 group animate-fade-in"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-lg">{debt.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {debt.interestRateMonthly > 0 && `${debt.interestRateMonthly}% a.m. â€¢ `}
-                      {debt.dueDay && `Vence dia ${debt.dueDay} â€¢ `}
-                      ~{monthsRemaining} meses restantes
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => onDeleteDebt(debt.id)}
-                    className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-danger-light text-danger transition-all"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                  return (
+                    <div key={debt.id} className="card-elevated p-5 space-y-4 group animate-fade-in border-l-4 border-warning">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="font-semibold text-lg">{debt.name}</h3>
+                          <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">
+                            {debt.dueDay && `Vence dia ${debt.dueDay} • `}
+                            ~{monthsRemaining} parcelas estimadas
+                          </p>
+                        </div>
+                        <button onClick={() => onDeleteDebt(debt.id)} className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-danger/10 text-danger transition-all">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
 
-                {/* Progress */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Pago: {formatCurrency(debt.totalAmount - debt.remainingAmount)}
-                    </span>
-                    <span className="font-medium text-danger">
-                      Falta: {formatCurrency(debt.remainingAmount)}
-                    </span>
-                  </div>
-                  <div className="h-3 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-success transition-all duration-500"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground text-right">
-                    {progress.toFixed(1)}% quitado
-                  </p>
-                </div>
+                      <div className="flex justify-between items-center py-2 border-y border-border/50">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground font-bold uppercase">Saldo Devedor</p>
+                          <p className="text-xl font-black text-danger">{formatCurrency(debt.remainingAmount)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-muted-foreground font-bold uppercase">Valor Sugerido Parcela</p>
+                          <p className="text-lg font-bold">{formatCurrency(debt.monthlyPayment || 0)}</p>
+                        </div>
+                      </div>
 
-                {/* Payment Button */}
-                <Button
-                  onClick={() => handlePayment(debt)}
-                  variant="outline"
-                  className="w-full rounded-xl border-success text-success hover:bg-success-light"
-                  disabled={debt.remainingAmount === 0}
-                >
-                  Registrar Pagamento de {formatCurrency(debt.monthlyPayment)}
-                </Button>
+                      <Button
+                        onClick={() => renegotiateDebt({ debt })}
+                        className="w-full rounded-xl bg-warning hover:bg-warning/90 text-warning-foreground font-black uppercase text-[10px] tracking-widest h-11"
+                      >
+                        Gerar Parcelas do Acordo
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })
+            )}
+
+            {/* Em Pagamento */}
+            {inPayment.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground ml-1">Em Pagamento (Acordos)</h3>
+                {inPayment.map((debt) => {
+                  const progress = debt.totalAmount > 0
+                    ? ((debt.totalAmount - debt.remainingAmount) / debt.totalAmount) * 100
+                    : 0;
+
+                  return (
+                    <div key={debt.id} className="card-elevated p-5 space-y-4 group animate-fade-in border-l-4 border-success opacity-90 hover:opacity-100 transition-opacity">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="font-semibold text-lg">{debt.name}</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="px-1.5 py-0.5 rounded bg-success/10 text-success text-[8px] font-black uppercase">Acordo Ativo</span>
+                            <p className="text-[10px] text-muted-foreground font-bold">
+                              {debt.totalInstallments} parcelas • Dia {debt.dueDay}
+                            </p>
+                          </div>
+                        </div>
+                        <button onClick={() => onDeleteDebt(debt.id)} className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-danger/10 text-danger transition-all">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-[10px] font-black uppercase">
+                          <span className="text-muted-foreground">Pago: {formatCurrency(debt.totalAmount - debt.remainingAmount)}</span>
+                          <span className="text-danger">Restante: {formatCurrency(debt.remainingAmount)}</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-muted overflow-hidden">
+                          <div className="h-full rounded-full bg-success transition-all duration-500" style={{ width: `${progress}%` }} />
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-success/5 border border-success/10 text-center">
+                        <p className="text-[10px] font-bold text-success select-none">
+                          As parcelas deste acordo estão na sua Gestão de Contas para pagamento.
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -238,31 +273,44 @@ export function DebtsManager({
                   required
                 />
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Parcela do Acordo (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={monthlyPayment}
+                    onChange={(e) => setMonthlyPayment(e.target.value)}
+                    placeholder="1200.00"
+                    className="rounded-xl font-bold"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nº de Parcelas</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={totalInstallments}
+                    onChange={(e) => setTotalInstallments(e.target.value)}
+                    placeholder="12"
+                    className="rounded-xl font-bold"
+                    required
+                  />
+                </div>
+              </div>
               <div className="space-y-2">
-                <Label>Parcela Mensal (R$)</Label>
+                <Label>Dia de Vencimento</Label>
                 <Input
                   type="number"
-                  step="0.01"
-                  value={monthlyPayment}
-                  onChange={(e) => setMonthlyPayment(e.target.value)}
-                  placeholder="1200.00"
+                  min="1"
+                  max="31"
+                  value={dueDay}
+                  onChange={e => setDueDay(e.target.value)}
+                  placeholder="10"
                   className="rounded-xl"
                   required
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Taxa Juros Mensal (%)</Label>
-                  <Input type="number" step="0.01" value={interestRate} onChange={e => setInterestRate(e.target.value)} placeholder="0.0" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Dia Vencimento</Label>
-                  <Input type="number" min="1" max="31" value={dueDay} onChange={e => setDueDay(e.target.value)} placeholder="10" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Pagamento Mínimo (R$)</Label>
-                <Input type="number" step="0.01" value={minimumPayment} onChange={e => setMinimumPayment(e.target.value)} placeholder="0.00" />
               </div>
               <Button type="submit" className="w-full rounded-xl bg-danger hover:bg-danger/90">
                 Adicionar Dívida

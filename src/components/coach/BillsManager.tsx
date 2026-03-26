@@ -69,7 +69,7 @@ export function BillsManager() {
     // Filtra transações recorrentes, contas fixas e faturas de cartão do mês atual
     const recurringTransactions = currentMonthTransactions.filter(t => {
         // ✅ REGRA DE FILTRO (KEEP ONLY): Esta tela mostra apenas Fluxo de Caixa (Fixas, Recorrentes e Faturas Consolidadas)
-        const isCashFlow = t.isRecurring || t.transactionType === 'recurring' || t.categoryId === 'card-payment' || t.isVirtual;
+        const isCashFlow = t.isRecurring || t.transactionType === 'recurring' || t.categoryId === 'card-payment' || t.isVirtual || t.debtId != null;
         if (!isCashFlow) return false;
 
         // ✅ REGRA DE EXCLUSÃO: Esconder compras individuais feitas no cartão de crédito
