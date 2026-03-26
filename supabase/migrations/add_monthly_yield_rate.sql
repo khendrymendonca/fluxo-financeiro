@@ -1,4 +1,4 @@
-﻿-- MigraÃ§Ã£o: Adicionar campo de rendimento mensal Ã s contas
+﻿-- Migração: Adicionar campo de rendimento mensal às contas
 -- Execute este SQL no Supabase SQL Editor
 
 ALTER TABLE accounts

@@ -1,18 +1,16 @@
 ﻿import { useState } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useCategories, useSubcategories, useCategoryGroups } from '@/hooks/useFinanceQueries';
-import { useBudgetRule } from '@/hooks/useBudgetCoach';
 import {
     useAddCategory,
     useDeleteCategory,
     useAddSubcategory,
-    useDeleteSubcategory,
-    useUpdateBudgetRule
+    useDeleteSubcategory
 } from '@/hooks/useCategoryMutations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, Edit2, Settings2, FolderTree, Target } from 'lucide-react';
+import { Plus, Trash2, Edit2, Settings2, FolderTree } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/use-toast';
 import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
@@ -22,20 +20,6 @@ export function CategoriesManager() {
     const { data: categories = [] } = useCategories();
     const { data: subcategories = [] } = useSubcategories();
     const { data: categoryGroups = [] } = useCategoryGroups();
-    const { data: budgetRule } = useBudgetRule();
-
-    // Mutations
-    const { mutate: addCategory } = useAddCategory();
-    const { mutate: deleteCategory } = useDeleteCategory();
-    const { mutate: addSubcategory } = useAddSubcategory();
-    const { mutate: deleteSubcategory } = useDeleteSubcategory();
-    const { mutate: updateBudgetRule } = useUpdateBudgetRule();
-
-    // Budget Rules UI State
-    const [needs, setNeeds] = useState(budgetRule?.needsPercent || 50);
-    const [wants, setWants] = useState(budgetRule?.wantsPercent || 30);
-    const [savings, setSavings] = useState(budgetRule?.savingsPercent || 20);
-
     // New Category State
     const [newCatName, setNewCatName] = useState('');
     const [newCatType, setNewCatType] = useState<'expense' | 'income'>('expense');
@@ -46,13 +30,6 @@ export function CategoriesManager() {
     const [newSubName, setNewSubName] = useState('');
     const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 
-    const handleSaveBudgetRule = () => {
-        if (needs + wants + savings !== 100) {
-            toast({ title: 'A soma deve ser 100%', variant: 'destructive' });
-            return;
-        }
-        updateBudgetRule({ needsPercent: needs, wantsPercent: wants, savingsPercent: savings });
-    };
 
     const handleAddCategory = () => {
         if (!newCatName) return;
@@ -102,49 +79,6 @@ export function CategoriesManager() {
                 </div>
             </div>
 
-            {/* Regra de Orçamento */}
-            <div className="card-elevated p-6 space-y-6 border border-primary/20 bg-gradient-to-br from-card to-primary/5">
-                <div className="flex items-center gap-2 mb-4">
-                    <Target className="w-5 h-5 text-primary" />
-                    <h3 className="text-lg font-bold">A Regra de Ouro (Orçamento Recomendado)</h3>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                        <Label>Essenciais (Moradia, Saúde)</Label>
-                        <div className="flex items-center gap-2">
-                            <Input type="number" value={needs} onChange={e => setNeeds(Number(e.target.value))} className="font-bold text-lg" />
-                            <span className="text-muted-foreground">%</span>
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Desejos (Lazer, Delivery)</Label>
-                        <div className="flex items-center gap-2">
-                            <Input type="number" value={wants} onChange={e => setWants(Number(e.target.value))} className="font-bold text-lg" />
-                            <span className="text-muted-foreground">%</span>
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Metas (Aportes, Reserva)</Label>
-                        <div className="flex items-center gap-2">
-                            <Input type="number" value={savings} onChange={e => setSavings(Number(e.target.value))} className="font-bold text-lg" />
-                            <span className="text-muted-foreground">%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-border">
-                    <p className={cn(
-                        "text-sm font-bold",
-                        needs + wants + savings === 100 ? "text-success" : "text-danger"
-                    )}>
-                        Total: {needs + wants + savings}%
-                    </p>
-                    <Button onClick={handleSaveBudgetRule} disabled={needs + wants + savings !== 100} className="rounded-xl">
-                        Salvar Regra
-                    </Button>
-                </div>
-            </div>
 
             {/* Criar Nova Categoria */}
             <div className="card-elevated p-6 space-y-6">

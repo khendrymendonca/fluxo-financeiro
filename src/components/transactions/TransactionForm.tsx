@@ -394,7 +394,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                       {activeTab === 'renda_fixa' ? <RotateCw className="w-4 h-4" /> : <Coins className="w-4 h-4" />}
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest opacity-50">{type === 'income' ? 'income' : 'expense'}</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-50">{type === 'income' ? 'RECEITA' : 'DESPESA'}</p>
                       <p className="text-sm font-black">
                         {activeTab === 'pontual' && 'Lançamento Pontual'}
                         {activeTab === 'parcelamento' && 'Lançamento Parcelado'}

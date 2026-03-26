@@ -129,7 +129,7 @@ export function GoalForm({ onSubmit, onClose }: GoalFormProps) {
 
           {/* Icon Selection */}
           <div className="space-y-2">
-            <Label>Ãcone</Label>
+            <Label>Ícone</Label>
             <div className="flex gap-2 flex-wrap">
               {icons.map(({ name, icon: Icon }) => (
                 <button

@@ -29,8 +29,8 @@ import { Button } from '@/components/ui/button';
 import { Transaction, SavingsGoal } from '@/types/finance';
 import { PendingPayments } from '@/components/dashboard/PendingPayments';
 import { EmergencyReserve } from '@/components/dashboard/EmergencyReserve';
-import { CategoriesManager } from '@/components/coach/CategoriesManager';
-import { BillsManager } from '@/components/coach/BillsManager';
+import { CategoriesManager } from '@/components/settings/CategoriesManager';
+import { BillsManager } from '@/components/accounts/BillsManager';
 import { ExportManager } from '@/components/dashboard/ExportManager';
 
 type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export';

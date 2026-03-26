@@ -1,4 +1,4 @@
-﻿-- MigraÃ§Ã£o: Adicionar campos de limite de conta (cheque especial)
+﻿-- Migração: Adicionar campos de limite de conta (cheque especial)
 -- Execute este SQL no Supabase SQL Editor
 
 ALTER TABLE accounts
