@@ -10,7 +10,7 @@ import { format, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { EditCardDialog } from '@/components/cards/EditCardDialog';
 import { Portal } from '@/components/ui/Portal';
-import { getCardSettingsForDate } from '@/utils/creditCardUtils';
+import { getCardSettingsForDate, getInvoiceStatusDisplay } from '@/utils/creditCardUtils';
 import { Progress } from '@/components/ui/progress';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -119,6 +119,9 @@ export default function CardsDashboard() {
     ? getCardStats(selectedCardId)
     : { used: 0, available: 0, limit: 0, percentUsed: 0, isOverLimit: false };
   const invoiceStatus = selectedCardId ? getInvoiceStatus(selectedCardId) : 'aberta';
+  const dynamicStatus = selectedCard && selectedCardId
+    ? getInvoiceStatusDisplay(selectedCard, viewDate, invoiceStatus === 'paga')
+    : { text: 'Aberta', color: 'text-primary', icon: '🔓' };
 
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -252,9 +255,9 @@ export default function CardsDashboard() {
                     <span className="w-1 h-1 rounded-full bg-border" />
                     <span className={cn(
                       "uppercase tracking-wider flex items-center gap-1",
-                      invoiceStatus === 'paga' ? "text-success" : "text-primary"
+                      dynamicStatus.color
                     )}>
-                      {invoiceStatus === 'paga' ? '✅ Paga' : '🔓 Aberta'}
+                      {dynamicStatus.icon} {dynamicStatus.text}
                     </span>
                   </div>
                 </div>

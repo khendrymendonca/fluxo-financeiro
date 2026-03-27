@@ -42,3 +42,44 @@ export function calcInvoiceMonthYear(
   return format(invoiceDate, 'yyyy-MM');
 }
 
+/**
+ * Função 3: Retorna o status visual da fatura baseado nas datas de fechamento e vencimento.
+ */
+export function getInvoiceStatusDisplay(
+  card: CreditCard,
+  viewDate: Date,
+  isPaid: boolean
+) {
+  if (isPaid) return { text: 'Paga', color: 'text-success', icon: '✅' };
+
+  const { closingDay, dueDay } = getCardSettingsForDate(card, viewDate);
+  if (!closingDay || !dueDay) return { text: 'Aberta', color: 'text-primary', icon: '🔓' };
+
+  const today = new Date();
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+
+  // Data de fechamento no mês de competência
+  const closingDate = new Date(year, month, closingDay, 0, 0, 0);
+
+  // Data de vencimento: se o dia de vencimento for menor ou igual ao de fechamento, vence no mês seguinte
+  let dueYear = year;
+  let dueMonth = month;
+  if (dueDay <= closingDay) {
+    dueMonth++;
+    if (dueMonth > 11) {
+      dueMonth = 0;
+      dueYear++;
+    }
+  }
+  const dueDate = new Date(dueYear, dueMonth, dueDay, 23, 59, 59);
+
+  if (today < closingDate) {
+    return { text: 'Aberta', color: 'text-green-500', icon: '🟢' };
+  } else if (today <= dueDate) {
+    return { text: 'Fechada', color: 'text-yellow-500', icon: '🟡' };
+  } else {
+    return { text: 'Vencida', color: 'text-red-500', icon: '🔴' };
+  }
+}
+
