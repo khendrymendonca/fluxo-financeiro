@@ -1,5 +1,4 @@
-﻿import { useState } from 'react';
-import { Plus, Wallet, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
+﻿import { Plus, Wallet, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useAccounts } from '@/hooks/useFinanceQueries';
@@ -32,17 +31,12 @@ import { EmergencyReserve } from '@/components/dashboard/EmergencyReserve';
 import { CategoriesManager } from '@/components/settings/CategoriesManager';
 import { BillsManager } from '@/components/accounts/BillsManager';
 import { ExportManager } from '@/components/dashboard/ExportManager';
-import RGL, { Layout } from 'react-grid-layout';
-// @ts-ignore
-const WidthProvider = RGL.WidthProvider;
-// @ts-ignore
-const Responsive = RGL.Responsive;
+import { useState, useRef, useEffect } from 'react';
+import { Responsive, Layout } from 'react-grid-layout';
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import { Settings2, Save, RotateCcw, X } from 'lucide-react';
-
-const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const DEFAULT_WIDGETS = [
   'STAT_NETWORTH', 'STAT_INCOME', 'STAT_EXPENSE', 'STAT_PROJECTED',
@@ -72,6 +66,23 @@ export default function Index() {
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(1200);
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+
+    // Aguarda o componente montar para medir
+    setTimeout(updateWidth, 100);
+
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
 
   const [isExpanded, setIsExpanded] = useState(() => {
     const saved = localStorage.getItem('sidebar-expanded');
@@ -289,9 +300,10 @@ export default function Index() {
             )}
 
             {/* Grid de Widgets */}
-            <div className={cn("dashboard-grid", isEditingLayout && "is-editing")}>
-              <ResponsiveGridLayout
+            <div ref={containerRef} className={cn("dashboard-grid w-full", isEditingLayout && "is-editing")}>
+              <Responsive
                 className="layout"
+                width={containerWidth}
                 layouts={layouts}
                 breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
                 cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
@@ -300,7 +312,7 @@ export default function Index() {
                 isDraggable={isEditingLayout}
                 isResizable={isEditingLayout}
                 margin={[16, 16]}
-                onLayoutChange={saveLayout}
+                onLayoutChange={saveLayout as any}
               >
                 {activeWidgets.map(id => (
                   <div key={id} className={cn("group relative", isEditingLayout ? "cursor-move" : "")}>
@@ -329,7 +341,7 @@ export default function Index() {
                     </div>
                   </div>
                 ))}
-              </ResponsiveGridLayout>
+              </Responsive>
             </div>
           </div>
         );
