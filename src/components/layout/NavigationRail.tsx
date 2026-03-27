@@ -24,7 +24,7 @@ const navItems = [
   { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos' },
   { id: 'bills', icon: Receipt, label: 'Contas Fixas' },
   { id: 'cards', icon: CreditCard, label: 'Cartões' },
-  { id: 'accounts', icon: Wallet, label: 'Bancos' },
+  { id: 'accounts', icon: Wallet, label: 'Carteira' },
   { id: 'goals', icon: Target, label: 'Metas' },
   { id: 'debts', icon: TrendingDown, label: 'Dívidas' },
   { id: 'reports', icon: LineChart, label: 'Relatórios' },

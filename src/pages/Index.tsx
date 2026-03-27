@@ -186,7 +186,7 @@ export default function Index() {
     { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos' },
     { id: 'bills', icon: Receipt, label: 'Contas Fixas' },
     { id: 'cards', icon: CardIcon, label: 'Cartões' },
-    { id: 'accounts', icon: Wallet, label: 'Bancos' },
+    { id: 'accounts', icon: Wallet, label: 'Carteira' },
     { id: 'goals', icon: Target, label: 'Metas' },
     { id: 'debts', icon: TrendingDown, label: 'Dívidas' },
     { id: 'reports', icon: LineChart, label: 'Relatórios' },
@@ -196,20 +196,13 @@ export default function Index() {
   ];
 
   const MobileDashboard = () => (
-    <div className="space-y-6 px-4">
-      {/* Resumo Compacto */}
-      <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-6 px-4 py-4">
+      {/* Resumo em Bloco 2x2 */}
+      <div className="grid grid-cols-2 gap-3">
         <StatCard title="Patrimônio" value={totalNetWorth} icon={<Wallet className="w-4 h-4" />} variant={totalNetWorth >= 0 ? 'positive' : 'negative'} isCompact />
         <StatCard title="Projetado" value={projectedBalance} icon={<PiggyBank className="w-4 h-4" />} variant={projectedBalance >= 0 ? 'positive' : 'negative'} isCompact />
-      </div>
-
-      <div className="flex overflow-x-auto pb-4 -mx-4 px-4 gap-4 no-scrollbar scroll-smooth">
-        <div className="min-w-[85%] sm:min-w-[280px]">
-          <StatCard title="Receitas" value={cashflow.totalIncome} icon={<TrendingUp className="w-4 h-4" />} variant="positive" isCompact />
-        </div>
-        <div className="min-w-[85%] sm:min-w-[280px]">
-          <StatCard title="Despesas" value={cashflow.totalExpenses} icon={<TrendingDown className="w-4 h-4" />} variant="negative" isCompact />
-        </div>
+        <StatCard title="Receitas" value={cashflow.totalIncome} icon={<TrendingUp className="w-4 h-4" />} variant="positive" isCompact />
+        <StatCard title="Despesas" value={cashflow.totalExpenses} icon={<TrendingDown className="w-4 h-4" />} variant="negative" isCompact />
       </div>
 
       <div className="space-y-6 pb-8">
@@ -270,7 +263,7 @@ export default function Index() {
                 <MonthSelector />
                 <Button
                   onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }}
-                  className="gap-2 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+                  className="hidden md:flex gap-2 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
                 >
                   <Plus className="w-4 h-4" /> Nova Transação
                 </Button>
@@ -445,7 +438,7 @@ export default function Index() {
       </main>
 
       {/* Floating Action Button (FAB) - Mobile Only */}
-      {isMobile && currentView === 'dashboard' && (
+      {isMobile && (currentView === 'dashboard' || currentView === 'transactions') && (
         <Button
           onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }}
           className="fixed bottom-24 right-4 w-14 h-14 rounded-full shadow-2xl bg-primary text-white z-50 hover:scale-110 active:scale-95 transition-all flex items-center justify-center p-0 border border-white/20"
@@ -476,7 +469,7 @@ export default function Index() {
             className={cn("flex flex-col items-center gap-1", currentView === 'accounts' ? "text-primary" : "text-muted-foreground")}
           >
             <CardIcon className="w-6 h-6" />
-            <span className="text-[10px] font-bold uppercase tracking-tighter">Contas</span>
+            <span className="text-[10px] font-bold uppercase tracking-tighter">Carteira</span>
           </button>
           <button
             onClick={() => setCurrentView('debts')}
