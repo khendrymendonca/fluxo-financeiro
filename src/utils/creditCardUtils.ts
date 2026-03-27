@@ -1,4 +1,4 @@
-﻿import { format } from 'date-fns';
+﻿import { format, isAfter, isBefore, startOfDay, endOfDay, setDate, subMonths } from 'date-fns';
 import { CreditCard } from '@/types/finance';
 
 /**
@@ -50,36 +50,34 @@ export function getInvoiceStatusDisplay(
   viewDate: Date,
   isPaid: boolean
 ) {
-  if (isPaid) return { text: 'Paga', color: 'text-success', icon: '✅' };
+  if (isPaid) return { text: 'Paga', color: 'text-blue-500', icon: '🔵' };
 
   const { closingDay, dueDay } = getCardSettingsForDate(card, viewDate);
   if (!closingDay || !dueDay) return { text: 'Aberta', color: 'text-primary', icon: '🔓' };
 
-  const today = new Date();
-  const year = viewDate.getFullYear();
-  const month = viewDate.getMonth();
+  const today = startOfDay(new Date());
 
-  // Data de fechamento no mês de competência
-  const closingDate = new Date(year, month, closingDay, 0, 0, 0);
+  // Constrói a data de vencimento exata para o mês de referência
+  let dueDate = setDate(viewDate, Number(dueDay));
 
-  // Data de vencimento: se o dia de vencimento for menor ou igual ao de fechamento, vence no mês seguinte
-  let dueYear = year;
-  let dueMonth = month;
-  if (dueDay <= closingDay) {
-    dueMonth++;
-    if (dueMonth > 11) {
-      dueMonth = 0;
-      dueYear++;
-    }
+  // Constrói a data de fechamento exata. 
+  // Se o dia de fechamento for maior que o vencimento (ex: fecha dia 25, vence dia 5),
+  // significa que o fechamento ocorreu no mês anterior em relação ao vencimento.
+  let closingDate = setDate(viewDate, Number(closingDay));
+  if (Number(closingDay) > Number(dueDay)) {
+    closingDate = subMonths(closingDate, 1);
   }
-  const dueDate = new Date(dueYear, dueMonth, dueDay, 23, 59, 59);
 
-  if (today < closingDate) {
-    return { text: 'Aberta', color: 'text-green-500', icon: '🟢' };
-  } else if (today <= dueDate) {
-    return { text: 'Fechada', color: 'text-yellow-500', icon: '🟡' };
-  } else {
+  // Se hoje for após o fim do dia de vencimento -> Vencida
+  if (isAfter(today, endOfDay(dueDate))) {
     return { text: 'Vencida', color: 'text-red-500', icon: '🔴' };
   }
+
+  // Se hoje for após o fim do dia de fechamento -> Fechada
+  if (isAfter(today, endOfDay(closingDate)) || today.getTime() === endOfDay(closingDate).getTime()) {
+    return { text: 'Fechada', color: 'text-yellow-500', icon: '🟡' };
+  }
+
+  return { text: 'Aberta', color: 'text-green-500', icon: '🟢' };
 }
 
