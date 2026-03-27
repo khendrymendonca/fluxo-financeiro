@@ -8,6 +8,7 @@ interface StatCardProps {
   icon: ReactNode;
   variant?: 'positive' | 'negative' | 'neutral' | 'default';
   className?: string;
+  isCompact?: boolean;
 }
 
 export function StatCard({
@@ -16,7 +17,8 @@ export function StatCard({
   subtitle,
   icon,
   variant = 'default',
-  className
+  className,
+  isCompact
 }: StatCardProps) {
   const formatValue = (val: string | number) => {
     if (typeof val === 'number') {
@@ -30,29 +32,32 @@ export function StatCard({
 
   return (
     <div className={cn(
-      "card-elevated p-4 sm:p-5 animate-fade-in overflow-hidden h-full",
+      "card-elevated animate-fade-in overflow-hidden h-full",
+      isCompact ? "p-3" : "p-4 sm:p-5",
       variant === 'positive' && 'border-l-4 border-l-success',
       variant === 'negative' && 'border-l-4 border-l-danger',
       variant === 'neutral' && 'border-l-4 border-l-info',
       className
     )}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="space-y-1 min-w-0 flex-1">
-          <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</p>
+      <div className={cn("flex justify-between gap-2", isCompact ? "items-center" : "items-start")}>
+        <div className={cn("min-w-0 flex-1", isCompact ? "space-y-0" : "space-y-1")}>
+          <p className={cn("font-medium text-muted-foreground truncate", isCompact ? "text-[10px]" : "text-xs sm:text-sm")}>{title}</p>
           <p className={cn(
-            "text-lg sm:text-xl lg:text-2xl font-semibold tracking-tight break-words",
+            "font-semibold tracking-tight break-words",
+            isCompact ? "text-base" : "text-lg sm:text-xl lg:text-2xl",
             variant === 'positive' && 'text-success',
             variant === 'negative' && 'text-danger',
             variant === 'neutral' && 'text-info',
           )}>
             {formatValue(value)}
           </p>
-          {subtitle && (
+          {subtitle && !isCompact && (
             <p className="text-[10px] sm:text-xs text-muted-foreground line-clamp-2">{subtitle}</p>
           )}
         </div>
         <div className={cn(
-          "p-2 sm:p-2.5 rounded-xl shrink-0",
+          "rounded-xl shrink-0",
+          isCompact ? "p-1.5" : "p-2 sm:p-2.5",
           variant === 'positive' && 'bg-success-light text-success',
           variant === 'negative' && 'bg-danger-light text-danger',
           variant === 'neutral' && 'bg-info-light text-info',

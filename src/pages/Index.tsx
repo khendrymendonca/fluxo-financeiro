@@ -1,5 +1,6 @@
-﻿import { useState } from 'react';
-import { Plus, Wallet, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
+﻿import { useState, useRef, useEffect } from 'react';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { Home, List, CreditCard as CardIcon, HelpCircle, LayoutDashboard, Plus, Wallet, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useAccounts } from '@/hooks/useFinanceQueries';
@@ -89,6 +90,8 @@ export default function Index() {
     viewDate
   } = useFinanceStore();
 
+  const isMobile = useIsMobile();
+
   const { cashflow } = useDashboardMetrics(viewDate, currentMonthTransactions);
   const { data: accountsData = [] } = useAccounts();
 
@@ -107,8 +110,6 @@ export default function Index() {
     setIsExpanded(expanded);
     localStorage.setItem('sidebar-expanded', JSON.stringify(expanded));
   };
-
-
 
   const WIDGET_CATALOG: { [key: string]: { name: string, component: React.ReactNode } } = {
     STAT_NETWORTH: {
@@ -179,38 +180,64 @@ export default function Index() {
     }
   };
 
+  const MobileDashboard = () => (
+    <div className="space-y-6">
+      {/* Resumo Compacto */}
+      <div className="grid grid-cols-2 gap-3">
+        <StatCard title="Patrimônio" value={totalNetWorth} icon={<Wallet className="w-4 h-4" />} variant={totalNetWorth >= 0 ? 'positive' : 'negative'} isCompact />
+        <StatCard title="Projetado" value={projectedBalance} icon={<PiggyBank className="w-4 h-4" />} variant={projectedBalance >= 0 ? 'positive' : 'negative'} isCompact />
+      </div>
+
+      <div className="flex overflow-x-auto pb-4 -mx-4 px-4 gap-4 no-scrollbar scroll-smooth">
+        <div className="min-w-[280px]">
+          <StatCard title="Receitas" value={cashflow.totalIncome} icon={<TrendingUp className="w-4 h-4" />} variant="positive" isCompact />
+        </div>
+        <div className="min-w-[280px]">
+          <StatCard title="Despesas" value={cashflow.totalExpenses} icon={<TrendingDown className="w-4 h-4" />} variant="negative" isCompact />
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        {WIDGET_CATALOG.ACCOUNTS_OVERVIEW.component}
+        {WIDGET_CATALOG.EXPENSE_EVOLUTION.component}
+        {WIDGET_CATALOG.PENDING_PAYMENTS.component}
+        {WIDGET_CATALOG.RECENT_TRANSACTIONS.component}
+      </div>
+    </div>
+  );
+
+  const DesktopDashboard = () => (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-primary font-mono lowercase">Fluxo</h1>
+          <p className="text-muted-foreground mt-1">Bem-vindo ao seu painel financeiro.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <MonthSelector />
+          <Button onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }} className="gap-2 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
+            <Plus className="w-4 h-4" /> Novo Lançamento
+          </Button>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {DEFAULT_WIDGETS.map(id => (
+          <div key={id} className={cn(
+            "w-full h-full",
+            id === 'RECENT_TRANSACTIONS' && "md:col-span-2 lg:col-span-3",
+            (id === 'EXPENSE_CHART' || id === 'EXPENSE_EVOLUTION') && "md:col-span-2 lg:col-span-2"
+          )}>
+            {WIDGET_CATALOG[id].component}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':
-        return (
-          <div className="space-y-6 animate-fade-in relative">
-            {/* Header / Toolbar */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-primary font-mono lowercase">Fluxo</h1>
-                <p className="text-muted-foreground mt-1">Bem-vindo ao seu painel financeiro.</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <MonthSelector />
-                <Button onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }} className="gap-2 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
-                  <Plus className="w-4 h-4" /> Novo Lançamento
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {DEFAULT_WIDGETS.map(id => (
-                <div key={id} className={cn(
-                  "w-full h-full",
-                  id === 'RECENT_TRANSACTIONS' && "md:col-span-2 lg:col-span-3",
-                  (id === 'EXPENSE_CHART' || id === 'EXPENSE_EVOLUTION') && "md:col-span-2 lg:col-span-2"
-                )}>
-                  {WIDGET_CATALOG[id].component}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
+        return isMobile ? <MobileDashboard /> : <DesktopDashboard />;
 
       case 'transactions':
         return (
@@ -338,10 +365,55 @@ export default function Index() {
 
       <main className={cn(
         "flex-1 transition-all duration-300 ease-in-out px-4 pt-6 pb-24 md:p-8 w-full max-w-7xl mx-auto overflow-x-hidden",
-        isExpanded ? "md:pl-72" : "md:pl-28"
+        isExpanded && !isMobile ? "md:pl-72" : "md:pl-28",
+        isMobile && "pb-32"
       )}>
         {renderView()}
       </main>
+
+      {/* Floating Action Button (FAB) - Mobile Only */}
+      {isMobile && currentView === 'dashboard' && (
+        <Button
+          onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }}
+          className="fixed bottom-24 right-6 w-14 h-14 rounded-full shadow-2xl bg-primary text-white z-50 hover:scale-110 active:scale-95 transition-all flex items-center justify-center p-0"
+        >
+          <Plus className="w-8 h-8" />
+        </Button>
+      )}
+
+      {/* Bottom Navigation - Mobile Only */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur-xl border-t border-border z-50 px-6 py-3 flex items-center justify-between pb-8">
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className={cn("flex flex-col items-center gap-1", currentView === 'dashboard' ? "text-primary" : "text-muted-foreground")}
+          >
+            <Home className="w-6 h-6" />
+            <span className="text-[10px] font-bold uppercase tracking-tighter">Início</span>
+          </button>
+          <button
+            onClick={() => setCurrentView('transactions')}
+            className={cn("flex flex-col items-center gap-1", currentView === 'transactions' ? "text-primary" : "text-muted-foreground")}
+          >
+            <List className="w-6 h-6" />
+            <span className="text-[10px] font-bold uppercase tracking-tighter">Lançamentos</span>
+          </button>
+          <button
+            onClick={() => setCurrentView('accounts')}
+            className={cn("flex flex-col items-center gap-1", currentView === 'accounts' ? "text-primary" : "text-muted-foreground")}
+          >
+            <CardIcon className="w-6 h-6" />
+            <span className="text-[10px] font-bold uppercase tracking-tighter">Contas</span>
+          </button>
+          <button
+            onClick={() => setCurrentView('debts')}
+            className={cn("flex flex-col items-center gap-1", currentView === 'debts' ? "text-primary" : "text-muted-foreground")}
+          >
+            <HelpCircle className="w-6 h-6" />
+            <span className="text-[10px] font-bold uppercase tracking-tighter">Dívidas</span>
+          </button>
+        </div>
+      )}
 
       {showTransactionForm && (
         <TransactionForm
