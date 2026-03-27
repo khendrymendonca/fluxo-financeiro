@@ -15,7 +15,6 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { ExpenseChart } from '@/components/dashboard/ExpenseChart';
 import { GoalProgress } from '@/components/dashboard/GoalProgress';
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
-import { AccountsOverview } from '@/components/dashboard/AccountsOverview';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { TransactionList } from '@/components/transactions/TransactionList';
 import { GoalCard } from '@/components/goals/GoalCard';
@@ -26,7 +25,6 @@ import { DebtsManager } from '@/components/debts/DebtsManager';
 import ReportsDashboard from './ReportsDashboard';
 import CardsDashboard from './CardsDashboard';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
-import { ExpenseEvolution } from '@/components/dashboard/AccountEvolution';
 import { Button } from '@/components/ui/button';
 import { Transaction, SavingsGoal } from '@/types/finance';
 import { PendingPayments } from '@/components/dashboard/PendingPayments';
@@ -37,8 +35,7 @@ import { ExportManager } from '@/components/dashboard/ExportManager';
 
 const DEFAULT_WIDGETS = [
   'STAT_NETWORTH', 'STAT_INCOME', 'STAT_EXPENSE', 'STAT_PROJECTED',
-  'EXPENSE_CHART', 'EMERGENCY_RESERVE', 'PENDING_PAYMENTS', 'GOAL_PROGRESS',
-  'ACCOUNTS_OVERVIEW', 'EXPENSE_EVOLUTION', 'RECENT_TRANSACTIONS'
+  'PENDING_PAYMENTS', 'RECENT_TRANSACTIONS'
 ];
 
 
@@ -155,24 +152,6 @@ export default function Index() {
         <PendingPayments transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
       )
     },
-    GOAL_PROGRESS: {
-      name: 'Metas e Sonhos',
-      component: (
-        <GoalProgress goals={savingsGoals} />
-      )
-    },
-    ACCOUNTS_OVERVIEW: {
-      name: 'Contas & Cartões',
-      component: (
-        <AccountsOverview accounts={accounts} creditCards={creditCards} />
-      )
-    },
-    EXPENSE_EVOLUTION: {
-      name: 'Evolução Mensal',
-      component: (
-        <ExpenseEvolution />
-      )
-    },
     RECENT_TRANSACTIONS: {
       name: 'Extrato Recente',
       component: (
@@ -188,7 +167,6 @@ export default function Index() {
     { id: 'cards', icon: CardIcon, label: 'Cartões' },
     { id: 'accounts', icon: Wallet, label: 'Carteira' },
     { id: 'goals', icon: Target, label: 'Metas' },
-    { id: 'debts', icon: TrendingDown, label: 'Dívidas' },
     { id: 'reports', icon: LineChart, label: 'Relatórios' },
     { id: 'categories', icon: Settings2, label: 'Categorias' },
     { id: 'export', icon: Database, label: 'Dados' },
@@ -205,15 +183,11 @@ export default function Index() {
         <StatCard title="Despesas" value={cashflow.totalExpenses} icon={<TrendingDown className="w-4 h-4" />} variant="negative" isCompact />
       </div>
 
-      <div className="space-y-6 pb-8">
-        <div className="min-h-[40vh]">
-          {WIDGET_CATALOG.ACCOUNTS_OVERVIEW.component}
-        </div>
-        <div className="h-[45vh] min-h-[350px]">
-          {WIDGET_CATALOG.EXPENSE_EVOLUTION.component}
-        </div>
+      <div className="space-y-6 pb-20">
         {WIDGET_CATALOG.PENDING_PAYMENTS.component}
-        {WIDGET_CATALOG.RECENT_TRANSACTIONS.component}
+        <div className="w-full">
+          {WIDGET_CATALOG.RECENT_TRANSACTIONS.component}
+        </div>
       </div>
     </div>
   );
@@ -449,34 +423,34 @@ export default function Index() {
 
       {/* Bottom Navigation - Mobile Only */}
       {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur-xl border-t border-border z-50 px-6 py-3 flex items-center justify-between pb-8">
+        <div className="fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur-xl border-t border-border z-50 px-8 py-3 flex items-center justify-between pb-8">
           <button
             onClick={() => setCurrentView('dashboard')}
-            className={cn("flex flex-col items-center gap-1", currentView === 'dashboard' ? "text-primary" : "text-muted-foreground")}
+            className={cn("flex flex-col items-center gap-1.5 transition-all", currentView === 'dashboard' ? "text-primary px-3" : "text-muted-foreground")}
           >
             <Home className="w-6 h-6" />
             <span className="text-[10px] font-bold uppercase tracking-tighter">Início</span>
           </button>
           <button
             onClick={() => setCurrentView('transactions')}
-            className={cn("flex flex-col items-center gap-1", currentView === 'transactions' ? "text-primary" : "text-muted-foreground")}
+            className={cn("flex flex-col items-center gap-1.5 transition-all", currentView === 'transactions' ? "text-primary px-3" : "text-muted-foreground")}
           >
             <List className="w-6 h-6" />
             <span className="text-[10px] font-bold uppercase tracking-tighter">Lançamentos</span>
           </button>
           <button
             onClick={() => setCurrentView('accounts')}
-            className={cn("flex flex-col items-center gap-1", currentView === 'accounts' ? "text-primary" : "text-muted-foreground")}
+            className={cn("flex flex-col items-center gap-1.5 transition-all", currentView === 'accounts' ? "text-primary px-3" : "text-muted-foreground")}
           >
             <CardIcon className="w-6 h-6" />
             <span className="text-[10px] font-bold uppercase tracking-tighter">Carteira</span>
           </button>
           <button
-            onClick={() => setCurrentView('debts')}
-            className={cn("flex flex-col items-center gap-1", currentView === 'debts' ? "text-primary" : "text-muted-foreground")}
+            onClick={() => setCurrentView('goals')}
+            className={cn("flex flex-col items-center gap-1.5 transition-all", currentView === 'goals' ? "text-primary px-3" : "text-muted-foreground")}
           >
-            <HelpCircle className="w-6 h-6" />
-            <span className="text-[10px] font-bold uppercase tracking-tighter">Dívidas</span>
+            <Target className="w-6 h-6" />
+            <span className="text-[10px] font-bold uppercase tracking-tighter">Metas</span>
           </button>
         </div>
       )}

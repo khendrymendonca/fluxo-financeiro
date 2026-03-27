@@ -41,7 +41,7 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
   const paidTransactions = transactions
     .filter(t => t.isPaid)
     .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime())
-    .slice(0, 5);
+    .slice(0, 10);
 
   if (paidTransactions.length === 0) {
     return (
