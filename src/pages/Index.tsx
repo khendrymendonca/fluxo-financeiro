@@ -1,6 +1,7 @@
 ﻿import { useState, useRef, useEffect } from 'react';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { Home, List, CreditCard as CardIcon, HelpCircle, LayoutDashboard, Plus, Wallet, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
+import { Home, List, CreditCard as CardIcon, HelpCircle, LayoutDashboard, Plus, Wallet, TrendingUp, TrendingDown, PiggyBank, Menu, ArrowUpDown, Receipt, Target, LineChart, Settings2, Database, Calculator } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useAccounts } from '@/hooks/useFinanceQueries';
@@ -180,26 +181,44 @@ export default function Index() {
     }
   };
 
+  const navItemsMobile = [
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Painel' },
+    { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos' },
+    { id: 'bills', icon: Receipt, label: 'Contas Fixas' },
+    { id: 'cards', icon: CardIcon, label: 'Cartões' },
+    { id: 'accounts', icon: Wallet, label: 'Bancos' },
+    { id: 'goals', icon: Target, label: 'Metas' },
+    { id: 'debts', icon: TrendingDown, label: 'Dívidas' },
+    { id: 'reports', icon: LineChart, label: 'Relatórios' },
+    { id: 'categories', icon: Settings2, label: 'Categorias' },
+    { id: 'export', icon: Database, label: 'Dados' },
+    { id: 'simulator', icon: Calculator, label: 'Simulador' },
+  ];
+
   const MobileDashboard = () => (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4">
       {/* Resumo Compacto */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         <StatCard title="Patrimônio" value={totalNetWorth} icon={<Wallet className="w-4 h-4" />} variant={totalNetWorth >= 0 ? 'positive' : 'negative'} isCompact />
         <StatCard title="Projetado" value={projectedBalance} icon={<PiggyBank className="w-4 h-4" />} variant={projectedBalance >= 0 ? 'positive' : 'negative'} isCompact />
       </div>
 
       <div className="flex overflow-x-auto pb-4 -mx-4 px-4 gap-4 no-scrollbar scroll-smooth">
-        <div className="min-w-[280px]">
+        <div className="min-w-[85%] sm:min-w-[280px]">
           <StatCard title="Receitas" value={cashflow.totalIncome} icon={<TrendingUp className="w-4 h-4" />} variant="positive" isCompact />
         </div>
-        <div className="min-w-[280px]">
+        <div className="min-w-[85%] sm:min-w-[280px]">
           <StatCard title="Despesas" value={cashflow.totalExpenses} icon={<TrendingDown className="w-4 h-4" />} variant="negative" isCompact />
         </div>
       </div>
 
-      <div className="space-y-6">
-        {WIDGET_CATALOG.ACCOUNTS_OVERVIEW.component}
-        {WIDGET_CATALOG.EXPENSE_EVOLUTION.component}
+      <div className="space-y-6 pb-8">
+        <div className="min-h-[40vh]">
+          {WIDGET_CATALOG.ACCOUNTS_OVERVIEW.component}
+        </div>
+        <div className="h-[45vh] min-h-[350px]">
+          {WIDGET_CATALOG.EXPENSE_EVOLUTION.component}
+        </div>
         {WIDGET_CATALOG.PENDING_PAYMENTS.component}
         {WIDGET_CATALOG.RECENT_TRANSACTIONS.component}
       </div>
@@ -210,8 +229,8 @@ export default function Index() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary font-mono lowercase">Fluxo</h1>
-          <p className="text-muted-foreground mt-1">Bem-vindo ao seu painel financeiro.</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary font-mono lowercase">Fluxo</h1>
+          <p className="text-xs md:text-sm text-muted-foreground mt-1">Bem-vindo ao seu painel financeiro.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <MonthSelector />
@@ -241,11 +260,11 @@ export default function Index() {
 
       case 'transactions':
         return (
-          <div className="space-y-6 animate-fade-in">
+          <div className="space-y-6 animate-fade-in px-4 py-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">Lançamentos</h1>
-                <p className="text-muted-foreground mt-1">Gerencie suas receitas e despesas.</p>
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Lançamentos</h1>
+                <p className="text-xs md:text-sm text-muted-foreground mt-1">Gerencie suas receitas e despesas.</p>
               </div>
               <div className="flex items-center gap-3">
                 <MonthSelector />
@@ -275,7 +294,7 @@ export default function Index() {
 
       case 'accounts':
         return (
-          <div className="space-y-6 animate-fade-in">
+          <div className="space-y-6 animate-fade-in px-4 py-4">
             <AccountsManager
               accounts={accounts}
               onAddAccount={addAccount}
@@ -287,11 +306,11 @@ export default function Index() {
 
       case 'goals':
         return (
-          <div className="space-y-6 animate-fade-in">
+          <div className="space-y-6 animate-fade-in px-4 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">Metas</h1>
-                <p className="text-muted-foreground mt-1">Acompanhe seu progresso.</p>
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Metas</h1>
+                <p className="text-xs md:text-sm text-muted-foreground mt-1">Acompanhe seu progresso.</p>
               </div>
               <Button onClick={() => setShowGoalForm(true)} className="gap-2 rounded-xl">
                 <Plus className="w-4 h-4" /> Nova Meta
@@ -313,32 +332,48 @@ export default function Index() {
         );
 
       case 'reports':
-        return <ReportsDashboard />;
+        return (
+          <div className="px-4 py-4 animate-fade-in">
+            <ReportsDashboard />
+          </div>
+        );
 
       case 'debts':
         return (
-          <DebtsManager
-            debts={debts}
-            onAddDebt={addDebt}
-            onUpdateDebt={(id, updates) => updateDebt(id, updates)}
-            onDeleteDebt={deleteDebt}
-          />
+          <div className="px-4 py-4 animate-fade-in">
+            <DebtsManager
+              debts={debts}
+              onAddDebt={addDebt}
+              onUpdateDebt={(id, updates) => updateDebt(id, updates)}
+              onDeleteDebt={deleteDebt}
+            />
+          </div>
         );
 
       case 'simulator':
         return (
-          <WhatIfSimulator
-            totalIncome={cashflow.totalIncome}
-            totalExpenses={cashflow.totalExpenses}
-            categoryExpenses={categoryExpenses.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)}
-          />
+          <div className="px-4 py-4 animate-fade-in min-h-[80dvh]">
+            <WhatIfSimulator
+              totalIncome={cashflow.totalIncome}
+              totalExpenses={cashflow.totalExpenses}
+              categoryExpenses={categoryExpenses.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)}
+            />
+          </div>
         );
 
       case 'categories':
-        return <CategoriesManager />;
+        return (
+          <div className="px-4 py-4 animate-fade-in">
+            <CategoriesManager />
+          </div>
+        );
 
       case 'export':
-        return <ExportManager />;
+        return (
+          <div className="px-4 py-4 animate-fade-in">
+            <ExportManager />
+          </div>
+        );
 
       default:
         return null;
@@ -359,14 +394,52 @@ export default function Index() {
         />
       </div>
 
-      <div className="md:hidden">
-        <MobileNav currentView={currentView} onNavigate={(view: any) => setCurrentView(view)} />
+      <div className="md:hidden fixed top-0 left-0 right-0 h-14 flex items-center px-4 bg-background/80 backdrop-blur-md border-b z-40">
+        <Sheet>
+          <SheetTrigger asChild>
+            <button className="p-2 rounded-xl hover:bg-muted text-foreground transition-colors">
+              <Menu className="w-6 h-6" />
+            </button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[85%] max-w-[300px] p-0 border-r border-border bg-card">
+            <SheetHeader className="p-6 border-b border-border text-left">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
+                  <span className="text-primary-foreground font-bold text-lg">F</span>
+                </div>
+                <SheetTitle className="font-bold text-xl tracking-tight text-primary font-mono lowercase">Fluxo</SheetTitle>
+              </div>
+            </SheetHeader>
+            <div className="flex flex-col gap-1 p-4 overflow-y-auto h-[calc(100dvh-100px)]">
+              {navItemsMobile.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentView === item.id;
+                return (
+                  <SheetClose asChild key={item.id}>
+                    <button
+                      onClick={() => { setCurrentView(item.id as any); }}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-200 text-left w-full",
+                        isActive ? "bg-primary-light text-primary font-bold shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <Icon className={cn("w-5 h-5", isActive && "text-primary")} />
+                      <span className="text-sm">{item.label}</span>
+                    </button>
+                  </SheetClose>
+                );
+              })}
+            </div>
+          </SheetContent>
+        </Sheet>
+        <div className="flex-1 flex justify-center mr-10">
+          <span className="font-bold text-lg tracking-tight text-primary font-mono lowercase">Fluxo</span>
+        </div>
       </div>
 
       <main className={cn(
-        "flex-1 transition-all duration-300 ease-in-out px-4 pt-6 pb-24 md:p-8 w-full max-w-7xl mx-auto overflow-x-hidden",
-        isExpanded && !isMobile ? "md:pl-72" : "md:pl-28",
-        isMobile && "pb-32"
+        "flex-1 transition-all duration-300 ease-in-out px-0 md:px-4 pt-16 md:pt-6 pb-32 md:p-8 w-full max-w-7xl mx-auto overflow-x-hidden",
+        isExpanded && !isMobile ? "md:pl-72" : "md:pl-28"
       )}>
         {renderView()}
       </main>
@@ -375,9 +448,9 @@ export default function Index() {
       {isMobile && currentView === 'dashboard' && (
         <Button
           onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }}
-          className="fixed bottom-24 right-6 w-14 h-14 rounded-full shadow-2xl bg-primary text-white z-50 hover:scale-110 active:scale-95 transition-all flex items-center justify-center p-0"
+          className="fixed bottom-24 right-4 w-14 h-14 rounded-full shadow-2xl bg-primary text-white z-50 hover:scale-110 active:scale-95 transition-all flex items-center justify-center p-0 border border-white/20"
         >
-          <Plus className="w-8 h-8" />
+          <Plus className="w-6 h-6" />
         </Button>
       )}
 

@@ -58,20 +58,20 @@ export function ExpenseEvolution() {
 
     return (
         <div className="flex flex-col h-full lg:grid lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 card-elevated p-6 space-y-4 h-full flex flex-col">
+            <div className="lg:col-span-2 card-elevated p-4 sm:p-6 space-y-4 h-full flex flex-col">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                        <div className="p-2 rounded-xl bg-primary/10 text-primary shadow-sm">
                             <TrendingUp className="w-5 h-5" />
                         </div>
                         <div>
-                            <h3 className="font-bold">Evolução de Despesas</h3>
-                            <p className="text-xs text-muted-foreground">Comparativo dos últimos 6 meses</p>
+                            <h3 className="font-bold text-base sm:text-lg">Evolução de Despesas</h3>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground">Comparativo dos últimos 6 meses</p>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex-1 min-h-[200px] w-full mt-4">
+                <div className="flex-1 min-h-[35dvh] sm:min-h-[300px] w-full mt-4">
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={data}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
