@@ -208,7 +208,10 @@ export default function CardsDashboard() {
           <div
             ref={scrollRef}
             onScroll={handleScroll}
-            className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 no-scrollbar -mx-4 px-4 mask-fade-edges"
+            className={cn(
+              "flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 no-scrollbar -mx-4 px-4 mask-fade-edges",
+              "md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:snap-none md:flex-wrap md:mx-0 md:px-0 md:mask-none"
+            )}
           >
             {creditCards.map(card => {
               const cardStats = getCardStats(card.id);
@@ -217,198 +220,253 @@ export default function CardsDashboard() {
                   key={card.id}
                   className={cn(
                     "snap-center shrink-0 transition-opacity duration-300",
-                    selectedCardId !== card.id && "opacity-50"
+                    "md:snap-align-none md:shrink",
+                    selectedCardId !== card.id && "opacity-50 md:opacity-100" // No opacity fix on Desktop since it's a grid
                   )}
                 >
                   <CreditCardVisual
                     card={card}
                     usedLimit={cardStats.used}
                     availableLimit={cardStats.available}
-                    onClick={() => {
-                      // Scroll logic if clicked
-                    }}
+                    className={cn(selectedCardId === card.id && "md:ring-2 md:ring-primary md:ring-offset-2")} // Highlight active card on Desktop
+                    onClick={() => setSelectedCardId(card.id)}
                   />
                 </div>
               );
             })}
-            <div className="snap-center shrink-0 w-8" /> {/* Spacer */}
+            <div className="snap-center shrink-0 w-8 md:hidden" /> {/* Spacer only on mobile */}
           </div>
 
           {selectedCard && (
-            <div className="space-y-8 mt-4 animate-slide-up">
-
-              {/* Itaú Info Panel */}
-              <div className="text-center space-y-1">
-                <p className="text-xs uppercase font-black text-muted-foreground tracking-[0.2em]">Fatura Atual</p>
-                <h2 className="text-5xl font-black tracking-tighter transition-all">
-                  {formatCurrency(currentInvoiceTotal)}
-                </h2>
-                <div className="flex items-center justify-center gap-2 text-xs font-bold text-muted-foreground mt-2">
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>Vence {selectedCard.dueDay} {format(viewDate, 'MMM', { locale: ptBR })}</span>
-                  <span className="w-1 h-1 rounded-full bg-border" />
-                  <span className={cn(
-                    "uppercase tracking-wider flex items-center gap-1",
-                    invoiceStatus === 'paga' ? "text-success" : "text-primary"
-                  )}>
-                    {invoiceStatus === 'paga' ? '✅ Paga' : '🔓 Aberta'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Progress Panel */}
-              <div className="card-elevated p-6 rounded-[2.5rem] shadow-sm border-none bg-muted/30">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-end">
-                    <div className="space-y-1">
-                      <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Limite Disponível</p>
-                      <p className="text-2xl font-black text-foreground">{formatCurrency(stats.available)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] text-muted-foreground font-bold">Total: {formatCurrency(stats.limit)}</p>
-                    </div>
-                  </div>
-
-                  <Progress value={stats.percentUsed} className="h-2.5 bg-background" />
-
-                  <div className="flex justify-between items-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs font-bold p-0 h-auto hover:bg-transparent text-primary gap-1"
-                      onClick={() => setShowEditCard(true)}
-                    >
-                      Ajustar Limite <Pencil className="w-3 h-3" />
-                    </Button>
-                    <p className="text-[10px] font-black text-muted-foreground">
-                      {stats.percentUsed.toFixed(0)}% USADO
-                    </p>
+            <div className="md:grid md:grid-cols-[1fr_350px] md:gap-8 items-start">
+              <div className="space-y-8 mt-4 animate-slide-up">
+                {/* Itaú Info Panel */}
+                <div className="text-center md:text-left space-y-1">
+                  <p className="text-xs uppercase font-black text-muted-foreground tracking-[0.2em]">Fatura Atual</p>
+                  <h2 className="text-5xl font-black tracking-tighter transition-all">
+                    {formatCurrency(currentInvoiceTotal)}
+                  </h2>
+                  <div className="flex items-center justify-center md:justify-start gap-2 text-xs font-bold text-muted-foreground mt-2">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>Vence {selectedCard.dueDay} {format(viewDate, 'MMM', { locale: ptBR })}</span>
+                    <span className="w-1 h-1 rounded-full bg-border" />
+                    <span className={cn(
+                      "uppercase tracking-wider flex items-center gap-1",
+                      invoiceStatus === 'paga' ? "text-success" : "text-primary"
+                    )}>
+                      {invoiceStatus === 'paga' ? '✅ Paga' : '🔓 Aberta'}
+                    </span>
                   </div>
                 </div>
 
-                <div className="mt-8 pt-6 border-t border-border/50">
-                  <Drawer>
-                    <DrawerTrigger asChild>
-                      <Button className="w-full h-14 rounded-2xl bg-foreground text-background font-black text-base shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all gap-2">
-                        Antecipar Pagamento <ArrowRight className="w-5 h-5" />
-                      </Button>
-                    </DrawerTrigger>
-                    <DrawerContent>
-                      <div className="mx-auto w-full max-w-sm">
-                        <DrawerHeader>
-                          <DrawerTitle className="text-center text-2xl font-black">Pagar Fatura</DrawerTitle>
-                          <p className="text-center text-muted-foreground text-sm">Libere seu limite agora.</p>
-                        </DrawerHeader>
-                        <div className="p-4 space-y-6">
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Valor do Pagamento</label>
-                            <div className="relative">
-                              <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-xl">R$</span>
-                              <Input
-                                type="number"
-                                value={paymentAmount}
-                                onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                                className="h-16 pl-12 text-2xl font-black rounded-2xl border-2 focus:border-primary transition-all"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Conta de Origem</label>
-                            <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
-                              <SelectTrigger className="h-14 rounded-2xl border-2 font-bold">
-                                <SelectValue placeholder="Escolha uma conta" />
-                              </SelectTrigger>
-                              <SelectContent className="rounded-2xl border-2">
-                                {accounts.map(acc => (
-                                  <SelectItem key={acc.id} value={acc.id} className="font-bold py-3">
-                                    <div className="flex items-center gap-2">
-                                      <Wallet className="w-4 h-4 text-muted-foreground" />
-                                      <span>{acc.name}</span>
-                                      <span className="text-muted-foreground ml-auto opacity-50">{formatCurrency(acc.balance)}</span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {selectedAccount && (
-                              <div className={cn(
-                                "flex items-center gap-2 mt-2 px-1 text-xs font-bold",
-                                paymentAmount > selectedAccount.balance ? "text-danger" : "text-muted-foreground"
-                              )}>
-                                {paymentAmount > selectedAccount.balance ? (
-                                  <>O valor excede o saldo disponível de {formatCurrency(selectedAccount.balance)}</>
-                                ) : (
-                                  <>Saldo disponível: {formatCurrency(selectedAccount.balance)}</>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <DrawerFooter className="pb-8">
-                          <Button
-                            disabled={!canPay || isProcessingPayment}
-                            onClick={handlePayInvoice}
-                            className="h-14 rounded-2xl font-black text-lg gap-2"
-                          >
-                            {isProcessingPayment ? "Processando..." : "Confirmar Pagamento"}
-                            <CheckCircle2 className="w-5 h-5" />
-                          </Button>
-                          <DrawerClose asChild>
-                            <Button variant="ghost" className="font-bold">Cancelar</Button>
-                          </DrawerClose>
-                        </DrawerFooter>
+                {/* Progress Panel Mobile/Common */}
+                <div className="card-elevated p-6 rounded-[2.5rem] shadow-sm border-none bg-muted/30 md:hidden">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-end">
+                      <div className="space-y-1">
+                        <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Limite Disponível</p>
+                        <p className="text-2xl font-black text-foreground">{formatCurrency(stats.available)}</p>
                       </div>
-                    </DrawerContent>
-                  </Drawer>
-                </div>
-              </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-muted-foreground font-bold">Total: {formatCurrency(stats.limit)}</p>
+                      </div>
+                    </div>
 
-              {/* Transaction List */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs uppercase font-black text-muted-foreground tracking-widest ml-1">Lançamentos</h3>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" onClick={() => setViewDate(prev => subMonths(prev, 1))} className="h-8 w-8 rounded-xl">{"<"}</Button>
-                    <p className="text-xs font-black capitalize w-24 text-center">{format(viewDate, 'MMMM yyyy', { locale: ptBR })}</p>
-                    <Button variant="outline" size="icon" onClick={() => setViewDate(prev => addMonths(prev, 1))} className="h-8 w-8 rounded-xl">{">"}</Button>
+                    <Progress value={stats.percentUsed} className="h-2.5 bg-background" />
+
+                    <div className="flex justify-between items-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs font-bold p-0 h-auto hover:bg-transparent text-primary gap-1"
+                        onClick={() => setShowEditCard(true)}
+                      >
+                        Ajustar Limite <Pencil className="w-3 h-3" />
+                      </Button>
+                      <p className="text-[10px] font-black text-muted-foreground">
+                        {stats.percentUsed.toFixed(0)}% USADO
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 pt-6 border-t border-border/50">
+                    <Drawer>
+                      <DrawerTrigger asChild>
+                        <Button className="w-full h-14 rounded-2xl bg-foreground text-background font-black text-base shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all gap-2">
+                          Antecipar Pagamento <ArrowRight className="w-5 h-5" />
+                        </Button>
+                      </DrawerTrigger>
+                      <DrawerContent>
+                        <div className="mx-auto w-full max-w-sm">
+                          <DrawerHeader>
+                            <DrawerTitle className="text-center text-2xl font-black">Pagar Fatura</DrawerTitle>
+                            <p className="text-center text-muted-foreground text-sm">Libere seu limite agora.</p>
+                          </DrawerHeader>
+                          <div className="p-4 space-y-6">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Valor do Pagamento</label>
+                              <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-xl">R$</span>
+                                <Input
+                                  type="number"
+                                  value={paymentAmount}
+                                  onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                                  className="h-16 pl-12 text-2xl font-black rounded-2xl border-2 focus:border-primary transition-all"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Conta de Origem</label>
+                              <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
+                                <SelectTrigger className="h-14 rounded-2xl border-2 font-bold">
+                                  <SelectValue placeholder="Escolha uma conta" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-2xl border-2">
+                                  {accounts.map(acc => (
+                                    <SelectItem key={acc.id} value={acc.id} className="font-bold py-3">
+                                      <div className="flex items-center gap-2">
+                                        <Wallet className="w-4 h-4 text-muted-foreground" />
+                                        <span>{acc.name}</span>
+                                        <span className="text-muted-foreground ml-auto opacity-50">{formatCurrency(acc.balance)}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <DrawerFooter className="pb-8">
+                            <Button
+                              disabled={!canPay || isProcessingPayment}
+                              onClick={handlePayInvoice}
+                              className="h-14 rounded-2xl font-black text-lg gap-2"
+                            >
+                              {isProcessingPayment ? "Processando..." : "Confirmar Pagamento"}
+                              <CheckCircle2 className="w-5 h-5" />
+                            </Button>
+                            <DrawerClose asChild>
+                              <Button variant="ghost" className="font-bold">Cancelar</Button>
+                            </DrawerClose>
+                          </DrawerFooter>
+                        </div>
+                      </DrawerContent>
+                    </Drawer>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  {currentInvoiceTransactions.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground opacity-30 italic font-medium">
-                      Nenhum gasto nesta fatura.
+                {/* Transaction List */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs uppercase font-black text-muted-foreground tracking-widest ml-1">Lançamentos</h3>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="icon" onClick={() => setViewDate(prev => subMonths(prev, 1))} className="h-8 w-8 rounded-xl">{"<"}</Button>
+                      <p className="text-xs font-black capitalize w-24 text-center">{format(viewDate, 'MMMM yyyy', { locale: ptBR })}</p>
+                      <Button variant="outline" size="icon" onClick={() => setViewDate(prev => addMonths(prev, 1))} className="h-8 w-8 rounded-xl">{">"}</Button>
                     </div>
-                  ) : (
-                    currentInvoiceTransactions.map(t => {
-                      const category = categories.find(c => c.id === t.categoryId);
-                      return (
-                        <div key={t.id} className="flex items-center justify-between p-4 rounded-[2rem] bg-muted/10 hover:bg-muted/30 transition-all border border-border/20">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
-                              <Receipt className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <p className="font-bold text-sm leading-tight mb-0.5">{t.description}</p>
-                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold">
-                                <span>{format(parseLocalDate(t.date), 'dd MMM')}</span>
-                                {category && <span className="text-primary/70">{category.name}</span>}
+                  </div>
+
+                  <div className="space-y-2">
+                    {currentInvoiceTransactions.length === 0 ? (
+                      <div className="text-center py-12 text-muted-foreground opacity-30 italic font-medium">
+                        Nenhum gasto nesta fatura.
+                      </div>
+                    ) : (
+                      currentInvoiceTransactions.map(t => {
+                        const category = categories.find(c => c.id === t.categoryId);
+                        return (
+                          <div key={t.id} className="flex items-center justify-between p-4 rounded-[2rem] bg-muted/10 hover:bg-muted/30 transition-all border border-border/20">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
+                                <Receipt className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <p className="font-bold text-sm leading-tight mb-0.5">{t.description}</p>
+                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold">
+                                  <span>{format(parseLocalDate(t.date), 'dd MMM')}</span>
+                                  {category && <span className="text-primary/70">{category.name}</span>}
+                                </div>
                               </div>
                             </div>
+                            <div className="text-right">
+                              <p className={cn("font-black text-sm", t.type === 'income' ? 'text-success' : 'text-foreground')}>
+                                {t.type === 'income' ? '-' : ''}{formatCurrency(t.amount)}
+                              </p>
+                              {t.installmentTotal && (
+                                <p className="text-[8px] text-muted-foreground font-black uppercase">P {t.installmentNumber}/{t.installmentTotal}</p>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className={cn("font-black text-sm", t.type === 'income' ? 'text-success' : 'text-foreground')}>
-                              {t.type === 'income' ? '-' : ''}{formatCurrency(t.amount)}
-                            </p>
-                            {t.installmentTotal && (
-                              <p className="text-[8px] text-muted-foreground font-black uppercase">P {t.installmentNumber}/{t.installmentTotal}</p>
-                            )}
-                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sidebar Panel for Desktop */}
+              <div className="hidden md:block space-y-6 mt-4">
+                <div className="card-elevated p-6 rounded-[2.5rem] shadow-sm border-none bg-muted/30 sticky top-24">
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest text-center">Limite Disponível</p>
+                      <p className="text-3xl font-black text-foreground text-center">{formatCurrency(stats.available)}</p>
+                      <Progress value={stats.percentUsed} className="h-2 bg-background" />
+                      <div className="flex justify-between items-center text-[10px] font-black text-muted-foreground">
+                        <span>{stats.percentUsed.toFixed(0)}% USADO</span>
+                        <span>{formatCurrency(stats.limit)} TOTAL</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-border/50 space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Antecipar Pagamento</label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-lg">R$</span>
+                          <Input
+                            type="number"
+                            value={paymentAmount}
+                            onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                            className="h-12 pl-10 text-xl font-black rounded-xl border-2 focus:border-primary"
+                          />
                         </div>
-                      );
-                    })
-                  )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Conta</label>
+                        <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
+                          <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
+                            <SelectValue placeholder="Escolha" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl border-2">
+                            {accounts.map(acc => (
+                              <SelectItem key={acc.id} value={acc.id} className="font-bold">
+                                {acc.name} ({formatCurrency(acc.balance)})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <Button
+                        disabled={!canPay || isProcessingPayment}
+                        onClick={handlePayInvoice}
+                        className="w-full h-12 rounded-xl font-black text-base gap-2"
+                      >
+                        {isProcessingPayment ? "Processando..." : "Pagar Fatura"}
+                        <CheckCircle2 className="w-5 h-5" />
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs font-bold text-primary gap-1"
+                        onClick={() => setShowEditCard(true)}
+                      >
+                        Ajustar Limite <Pencil className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

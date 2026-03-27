@@ -267,11 +267,7 @@ export function BillsManager() {
                                                 <CheckCircle2 className="w-5 h-5" /> Baixar Conta
                                             </Button>
                                         )}
-                                        {(transaction.debtId || transaction.transactionType === 'installment') ? (
-                                            <div className="h-11 w-11 flex items-center justify-center text-muted-foreground/30" title="Parcelas de acordos só podem ser excluídas na tela de Acordos">
-                                                <Trash2 className="w-4 h-4" />
-                                            </div>
-                                        ) : (
+                                        {!(transaction.debtId || transaction.transactionType === 'installment') && (
                                             <Button size="sm" variant="ghost"
                                                 onClick={() => setItemToDelete(transaction)}
                                                 className="h-11 px-3 rounded-2xl hover:bg-danger/10 text-danger"

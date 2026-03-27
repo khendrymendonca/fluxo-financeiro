@@ -22,8 +22,8 @@ export function CreditCardVisual({ card, usedLimit, availableLimit, onClick, cla
         <div
             onClick={onClick}
             className={cn(
-                "relative w-full md:aspect-[1.586/1] aspect-[1.8/1] rounded-2xl p-4 md:p-6 text-white overflow-hidden shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer group",
-                "w-[80vw] max-w-[320px] md:w-full", // Mobile specific width
+                "relative rounded-2xl p-4 md:p-6 text-white overflow-hidden shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer group",
+                "w-[85vw] max-w-[320px] md:w-full md:max-w-none h-[45vw] max-h-[180px] md:h-52",
                 className
             )}
             style={{
