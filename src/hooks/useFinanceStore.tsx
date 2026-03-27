@@ -281,7 +281,8 @@ function useFinanceProvider() {
           t.cardId === id &&
           t.type === 'expense' &&
           !t.isInvoicePayment &&
-          !t.deleted_at // Assumindo que temos Soft Delete agora
+          !t.isPaid && // âœ… Apenas transações não pagas consomem limite
+          !t.deleted_at
         )
         .reduce((acc, t) => acc + Number(t.amount), 0);
     }
