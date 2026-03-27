@@ -31,6 +31,10 @@ export function useAddGoal() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savings-goals'] });
       toast({ title: 'Meta criada com sucesso!' });
+    },
+    onError: (err) => {
+      console.error('Erro ao adicionar meta:', err);
+      toast({ title: 'Erro ao criar meta', variant: 'destructive' });
     }
   });
 }
@@ -51,6 +55,11 @@ export function useUpdateGoal() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savings-goals'] });
+      toast({ title: 'Meta atualizada!' });
+    },
+    onError: (err) => {
+      console.error('Erro ao atualizar meta:', err);
+      toast({ title: 'Erro ao atualizar meta', variant: 'destructive' });
     }
   });
 }
@@ -68,6 +77,10 @@ export function useDeleteGoal() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savings-goals'] });
       toast({ title: 'Meta removida.' });
+    },
+    onError: (err) => {
+      console.error('Erro ao remover meta:', err);
+      toast({ title: 'Erro ao remover meta', variant: 'destructive' });
     }
   });
 }
@@ -121,7 +134,13 @@ export function useDepositToGoal() {
       queryClient.invalidateQueries({ queryKey: ['savings-goals'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
       toast({ title: 'Depósito realizado!' });
+    },
+    onError: (err) => {
+      console.error('Erro no depósito:', err);
+      toast({ title: 'Erro ao realizar depósito', variant: 'destructive' });
     }
   });
 }

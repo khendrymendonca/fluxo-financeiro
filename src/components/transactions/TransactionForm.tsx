@@ -16,7 +16,7 @@ import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { OverdraftWarningDialog } from '@/components/ui/OverdraftWarningDialog';
 import { formatCurrency } from '@/utils/formatters';
 import { toast } from '@/components/ui/use-toast';
-import { parseLocalDate } from '@/utils/dateUtils';
+import { parseLocalDate, todayLocalString } from '@/utils/dateUtils';
 import { calcInvoiceMonthYear } from '@/utils/creditCardUtils';
 
 interface TransactionFormProps {
@@ -49,7 +49,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
   const [categoryId, setCategoryId] = useState<string>(initialData?.categoryId || '');
   const [subcategoryId, setSubcategoryId] = useState<string>(initialData?.subcategoryId || '');
-  const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(initialData?.date || todayLocalString());
   const [accountId, setAccountId] = useState<string>(initialData?.accountId || '');
   const [cardId, setCardId] = useState<string>(initialData?.cardId || '');
   const [paymentMethod, setPaymentMethod] = useState<'account' | 'card'>(initialData?.cardId ? 'card' : 'account');
@@ -67,7 +67,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [debtTotal, setDebtTotal] = useState('');
   const [debtInstallments, setDebtInstallments] = useState('');
   const [debtInterest, setDebtInterest] = useState('0');
-  const [debtFirstPaymentDate, setDebtFirstPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [debtFirstPaymentDate, setDebtFirstPaymentDate] = useState(todayLocalString());
 
   // Transfer Specific
   const [transferFrom, setTransferFrom] = useState('');

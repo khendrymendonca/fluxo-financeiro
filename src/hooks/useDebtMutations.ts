@@ -35,7 +35,12 @@ export function useAddDebt() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       toast({ title: 'Acordo registrado!' });
+    },
+    onError: (err) => {
+      console.error('Erro ao adicionar acordo:', err);
+      toast({ title: 'Erro ao registrar acordo', variant: 'destructive' });
     }
   });
 }
@@ -107,6 +112,12 @@ export function useUpdateDebt() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      toast({ title: 'Acordo atualizado!' });
+    },
+    onError: (err) => {
+      console.error('Erro ao atualizar acordo:', err);
+      toast({ title: 'Erro ao atualizar acordo', variant: 'destructive' });
     }
   });
 }
@@ -123,7 +134,12 @@ export function useDeleteDebt() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       toast({ title: 'Acordo removido.' });
+    },
+    onError: (err) => {
+      console.error('Erro ao remover acordo:', err);
+      toast({ title: 'Erro ao remover acordo', variant: 'destructive' });
     }
   });
 }
@@ -187,7 +203,12 @@ export function useRenegotiateDebt() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
       toast({ title: 'Acordo gerado com sucesso!' });
+    },
+    onError: (err) => {
+      console.error('Erro na renegociação:', err);
+      toast({ title: 'Erro ao renegociar acordo', variant: 'destructive' });
     }
   });
 }

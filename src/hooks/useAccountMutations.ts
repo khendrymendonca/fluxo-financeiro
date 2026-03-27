@@ -44,7 +44,7 @@ export function useUpdateAccount() {
       if (updates.accountType) payload.account_type = updates.accountType;
       if (updates.hasOverdraft !== undefined) payload.has_overdraft = updates.hasOverdraft;
       if (updates.overdraftLimit !== undefined) payload.overdraft_limit = updates.overdraftLimit;
-      
+
       const { error } = await supabase.from('accounts').update(payload).eq('id', id);
       if (error) throw error;
       return id;

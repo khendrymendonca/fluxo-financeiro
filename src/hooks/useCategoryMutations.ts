@@ -26,6 +26,10 @@ export function useAddCategory() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       toast({ title: 'Categoria criada!' });
+    },
+    onError: (err) => {
+      console.error('Erro ao adicionar categoria:', err);
+      toast({ title: 'Erro ao criar categoria', variant: 'destructive' });
     }
   });
 }
@@ -42,6 +46,10 @@ export function useDeleteCategory() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       toast({ title: 'Categoria removida.' });
+    },
+    onError: (err) => {
+      console.error('Erro ao remover categoria:', err);
+      toast({ title: 'Erro ao remover categoria', variant: 'destructive' });
     }
   });
 }
@@ -62,6 +70,10 @@ export function useAddSubcategory() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subcategories'] });
       toast({ title: 'Subcategoria criada!' });
+    },
+    onError: (err) => {
+      console.error('Erro ao adicionar subcategoria:', err);
+      toast({ title: 'Erro ao criar subcategoria', variant: 'destructive' });
     }
   });
 }
@@ -78,6 +90,10 @@ export function useDeleteSubcategory() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subcategories'] });
       toast({ title: 'Subcategoria removida.' });
+    },
+    onError: (err) => {
+      console.error('Erro ao remover subcategoria:', err);
+      toast({ title: 'Erro ao remover subcategoria', variant: 'destructive' });
     }
   });
 }
@@ -103,6 +119,10 @@ export function useUpdateBudgetRule() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budgetRule'] });
       toast({ title: 'Regra de orçamento atualizada!' });
+    },
+    onError: (err) => {
+      console.error('Erro ao atualizar regra:', err);
+      toast({ title: 'Erro ao atualizar regra de orçamento', variant: 'destructive' });
     }
   });
 }

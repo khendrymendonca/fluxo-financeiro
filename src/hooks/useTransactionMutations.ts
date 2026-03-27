@@ -56,6 +56,8 @@ export function useAddTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
       toast({ title: 'Transação guardada!' });
     },
     onError: (err) => {
@@ -119,6 +121,8 @@ export function useDeleteTransaction() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
     }
   });
 }
@@ -148,9 +152,18 @@ export function useToggleTransactionPaid() {
       });
       return { previousTransactions };
     },
+    onError: (err, variables, context) => {
+      if (context?.previousTransactions) {
+        queryClient.setQueryData(['transactions'], context.previousTransactions);
+      }
+      console.error('Erro ao alterar status:', err);
+      toast({ title: 'Erro ao alterar status de pagamento', variant: 'destructive' });
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
     }
   });
 }
@@ -207,8 +220,14 @@ export function useUpdateTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
       toast({ title: 'Alterações salvas!' });
     },
+    onError: (err) => {
+      console.error('Erro ao atualizar:', err);
+      toast({ title: 'Erro ao atualizar lançamento', variant: 'destructive' });
+    }
   });
 }
 
@@ -285,6 +304,8 @@ export function useBulkDeleteTransactions() {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['bills'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
       toast({ title: 'Lançamentos removidos com sucesso!' });
     },
     onError: (err) => {
@@ -359,7 +380,8 @@ export function useAnticipateInstallments() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['credit_cards'] }); // Recalcular limites
+      queryClient.invalidateQueries({ queryKey: ['credit-cards'] }); // Recalcular limites
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
       toast({ title: 'Parcelas antecipadas com sucesso!' });
     },
     onError: (err) => {

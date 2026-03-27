@@ -2,11 +2,12 @@
 
 export const parseLocalDate = (dateStr: string) => {
     if (!dateStr) return new Date();
-    // Se já for uma data ISO completa, o parseISO resolve
-    if (dateStr.includes('T')) return parseISO(dateStr);
 
-    // Trata o formato YYYY-MM-DD para evitar problemas de fuso horário
-    const [year, month, day] = dateStr.split('-').map(Number);
+    // Extrair apenas YYYY-MM-DD para evitar disparidade de fuso horário
+    // (Ignora T00:00:00Z ou qualquer offset vindo do Supabase)
+    const literalDate = dateStr.split('T')[0];
+    const [year, month, day] = literalDate.split('-').map(Number);
+
     return new Date(year, month - 1, day);
 };
 

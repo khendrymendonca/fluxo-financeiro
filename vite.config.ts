@@ -17,6 +17,11 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'fluxo_logo.png', 'robots.txt'],
+      workbox: {
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
+      },
       manifest: {
         name: 'Fluxo - Gestão Financeira',
         short_name: 'Fluxo',

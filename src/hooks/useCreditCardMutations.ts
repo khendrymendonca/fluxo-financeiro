@@ -24,7 +24,7 @@ export function useAddCreditCard() {
       };
 
       const { data, error } = await supabase.from('credit_cards').insert(payload).select();
-      
+
       if (error) throw error;
       return data;
     },
@@ -46,19 +46,25 @@ export function useUpdateCreditCard() {
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string, updates: Partial<CreditCard> }) => {
       const payload: any = { ...updates };
-      
+
       if (updates.dueDay !== undefined) payload.due_day = updates.dueDay;
       if (updates.closingDay !== undefined) payload.closing_day = updates.closingDay;
 
       const { error } = await supabase.from('credit_cards').update(payload).eq('id', id);
-      
+
       if (error) throw error;
       return id;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
       queryClient.invalidateQueries({ queryKey: ['bills'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
       toast({ title: 'Cartão atualizado!' });
+    },
+    onError: (err) => {
+      console.error('Erro ao atualizar cartão:', err);
+      toast({ title: 'Erro ao atualizar cartão', variant: 'destructive' });
     }
   });
 }
@@ -76,7 +82,12 @@ export function useDeleteCreditCard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
       queryClient.invalidateQueries({ queryKey: ['bills'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       toast({ title: 'Cartão removido.' });
+    },
+    onError: (err) => {
+      console.error('Erro ao remover cartão:', err);
+      toast({ title: 'Erro ao remover cartão', variant: 'destructive' });
     }
   });
 }
