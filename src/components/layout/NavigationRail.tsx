@@ -26,7 +26,7 @@ const navItems = [
   { id: 'cards', icon: CreditCard, label: 'Cartões' },
   { id: 'accounts', icon: Wallet, label: 'Carteira' },
   { id: 'goals', icon: Target, label: 'Metas' },
-  { id: 'debts', icon: TrendingDown, label: 'Dívidas' },
+  { id: 'debts', icon: TrendingDown, label: 'Acordos' },
   { id: 'reports', icon: LineChart, label: 'Relatórios' },
   { id: 'categories', icon: Settings2, label: 'Categorias' },
   { id: 'export', icon: Database, label: 'Dados' },

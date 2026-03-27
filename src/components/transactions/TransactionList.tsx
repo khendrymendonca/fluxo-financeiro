@@ -383,7 +383,7 @@ export function TransactionList({
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              {item.categoryId === 'debt-payment' ? 'Pagamento de Dívida' :
+                              {item.categoryId === 'debt-payment' ? 'Pagamento de Acordo' :
                                 item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || 'Outros' : 'Outros'}
                               {item.isPending && item.cardId && <span> • Compra: {formatShortDate(item.date)}</span>}
                             </p>
@@ -419,12 +419,18 @@ export function TransactionList({
                                   className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary shrink-0">
                                   <Pencil className="w-4 h-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon"
-                                  onClick={() => setItemToDelete(item as Transaction)}
-                                  disabled={item.isVirtual || isDeletingTransaction || isBulkDeleting}
-                                  className="h-9 w-9 rounded-xl hover:bg-danger/10 hover:text-danger shrink-0">
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                                {(item.debtId || item.transactionType === 'installment') ? (
+                                  <div className="h-9 w-9 flex items-center justify-center text-muted-foreground/30" title="Parcelas de acordos só podem ser excluídas na tela de Acordos">
+                                    <Trash2 className="w-4 h-4" />
+                                  </div>
+                                ) : (
+                                  <Button variant="ghost" size="icon"
+                                    onClick={() => setItemToDelete(item as Transaction)}
+                                    disabled={item.isVirtual || isDeletingTransaction || isBulkDeleting}
+                                    className="h-9 w-9 rounded-xl hover:bg-danger/10 hover:text-danger shrink-0">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
                               </div>
                             ) : (
                               <div className="flex opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all gap-1 justify-end w-full">
@@ -443,18 +449,24 @@ export function TransactionList({
                                   className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary">
                                   <Pencil className="w-4 h-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon"
-                                  onClick={() => {
-                                    if (hasInstallmentGroup || item.isRecurring || item.transactionType === 'recurring') {
-                                      setItemToDelete(item as Transaction);
-                                    } else {
-                                      deleteTransaction(item as Transaction, 'this');
-                                    }
-                                  }}
-                                  disabled={isDeletingTransaction || isBulkDeleting}
-                                  className="h-9 w-9 rounded-lg hover:bg-danger/10 hover:text-danger">
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                                {(item.debtId || item.transactionType === 'installment') ? (
+                                  <div className="h-9 w-9 flex items-center justify-center text-muted-foreground/30" title="Parcelas de acordos só podem ser excluídas na tela de Acordos">
+                                    <Trash2 className="w-4 h-4" />
+                                  </div>
+                                ) : (
+                                  <Button variant="ghost" size="icon"
+                                    onClick={() => {
+                                      if (hasInstallmentGroup || item.isRecurring || item.transactionType === 'recurring') {
+                                        setItemToDelete(item as Transaction);
+                                      } else {
+                                        deleteTransaction(item as Transaction, 'this');
+                                      }
+                                    }}
+                                    disabled={isDeletingTransaction || isBulkDeleting}
+                                    className="h-9 w-9 rounded-lg hover:bg-danger/10 hover:text-danger">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
                               </div>
                             )}
                           </div>

@@ -167,6 +167,7 @@ export default function Index() {
     { id: 'cards', icon: CardIcon, label: 'Cartões' },
     { id: 'accounts', icon: Wallet, label: 'Carteira' },
     { id: 'goals', icon: Target, label: 'Metas' },
+    { id: 'debts', icon: TrendingDown, label: 'Acordos' },
     { id: 'reports', icon: LineChart, label: 'Relatórios' },
     { id: 'categories', icon: Settings2, label: 'Categorias' },
     { id: 'export', icon: Database, label: 'Dados' },
@@ -308,6 +309,10 @@ export default function Index() {
       case 'debts':
         return (
           <div className="px-4 py-4 animate-fade-in">
+            <div className="mb-6">
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Acordos</h1>
+              <p className="text-xs md:text-sm text-muted-foreground mt-1">Gerencie suas renegociações e acordos parcelados.</p>
+            </div>
             <DebtsManager
               debts={debts}
               onAddDebt={addDebt}

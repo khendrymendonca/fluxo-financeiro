@@ -106,16 +106,16 @@ export function DebtsManager({
             <TrendingDown className="w-5 h-5 text-danger" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">Controle de Dívidas</h2>
+            <h2 className="text-xl font-semibold">Controle de Acordos</h2>
             <p className="text-sm text-muted-foreground">
-              Acompanhe e quite suas dívidas
+              Acompanhe e quite seus acordos
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 rounded-2xl bg-danger-light">
-            <p className="text-sm text-muted-foreground">Total em Dívidas</p>
+            <p className="text-sm text-muted-foreground">Total em Acordos</p>
             <p className="text-2xl font-bold text-danger">
               {formatCurrency(totalDebt)}
             </p>
@@ -139,7 +139,7 @@ export function DebtsManager({
         variant="outline"
       >
         <Plus className="w-5 h-5 mr-2" />
-        Adicionar Dívida
+        Adicionar Acordo
       </Button>
 
       {/* Debts List */}
@@ -147,7 +147,7 @@ export function DebtsManager({
         {debts.length === 0 ? (
           <div className="card-elevated p-12 text-center">
             <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">Nenhuma dívida cadastrada</p>
+            <p className="text-muted-foreground">Nenhum acordo cadastrado</p>
             <p className="text-sm text-muted-foreground mt-1">
               Que bom! Continue assim 🎉
             </p>
@@ -271,7 +271,7 @@ export function DebtsManager({
           <div className="bg-card rounded-3xl shadow-xl w-full max-w-md animate-scale-in">
             <div className="flex items-center justify-between p-6 border-b border-border">
               <h2 className="text-lg font-semibold">
-                {editingDebt ? 'Editar Dívida' : 'Nova Dívida'}
+                {editingDebt ? 'Editar Acordo' : 'Novo Acordo'}
               </h2>
               <button
                 onClick={handleCloseForm}
@@ -368,7 +368,7 @@ export function DebtsManager({
                 "w-full rounded-xl",
                 editingDebt?.status === 'renegotiated' ? "bg-success hover:bg-success/90" : "bg-danger hover:bg-danger/90"
               )}>
-                {editingDebt?.status === 'renegotiated' ? 'Atualizar Acordo' : editingDebt ? 'Atualizar Dívida' : 'Adicionar Dívida'}
+                {editingDebt?.status === 'renegotiated' ? 'Atualizar Acordo' : editingDebt ? 'Atualizar Acordo' : 'Adicionar Acordo'}
               </Button>
             </form>
           </div>

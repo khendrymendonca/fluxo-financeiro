@@ -20,6 +20,13 @@ export function CategoriesManager() {
     const { data: categories = [] } = useCategories();
     const { data: subcategories = [] } = useSubcategories();
     const { data: categoryGroups = [] } = useCategoryGroups();
+
+    // Mutations
+    const { mutate: addCategory } = useAddCategory();
+    const { mutate: deleteCategory } = useDeleteCategory();
+    const { mutate: addSubcategory } = useAddSubcategory();
+    const { mutate: deleteSubcategory } = useDeleteSubcategory();
+
     // New Category State
     const [newCatName, setNewCatName] = useState('');
     const [newCatType, setNewCatType] = useState<'expense' | 'income'>('expense');
@@ -159,7 +166,15 @@ export function CategoriesManager() {
                                                     <span className="font-medium text-sm">{cat.name}</span>
                                                     <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                                         <button onClick={() => setActiveCategoryId(cat.id)} className="p-1.5 text-info hover:bg-info/10 rounded-lg"><Plus className="w-3.5 h-3.5" /></button>
-                                                        <button onClick={() => deleteCategory(cat.id)} className="p-1.5 text-danger hover:bg-danger/10 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                        {['Renegociação', 'Fatura de Cartão de Crédito', 'Outros'].includes(cat.name) ? (
+                                                            <div className="p-1.5 text-muted-foreground/30" title="Categorias de sistema não podem ser excluídas">
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </div>
+                                                        ) : (
+                                                            <button onClick={() => deleteCategory(cat.id)} className="p-1.5 text-danger hover:bg-danger/10 rounded-lg" title="Excluir categoria">
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
 
@@ -198,7 +213,15 @@ export function CategoriesManager() {
                             {categories.filter(c => c.type === 'income').map(cat => (
                                 <div key={cat.id} className="flex items-center justify-between p-2 rounded-xl border hover:border-success/30 transition-colors group">
                                     <span className="font-medium text-sm">{cat.name}</span>
-                                    <button onClick={() => deleteCategory(cat.id)} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 text-danger hover:bg-danger/10 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
+                                    {['Renegociação', 'Fatura de Cartão de Crédito', 'Outros'].includes(cat.name) ? (
+                                        <div className="p-1.5 text-muted-foreground/30" title="Categorias de sistema não podem ser excluídas">
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </div>
+                                    ) : (
+                                        <button onClick={() => deleteCategory(cat.id)} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 text-danger hover:bg-danger/10 rounded-lg" title="Excluir categoria">
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
                                 </div>
                             ))}
                         </div>

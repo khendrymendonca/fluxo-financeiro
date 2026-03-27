@@ -5,6 +5,7 @@ import { Debt } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 import { addMonths, format } from 'date-fns';
 import { parseLocalDate } from '@/utils/dateUtils';
+import { useFinanceStore } from './useFinanceStore';
 
 // --- 1. ADICIONAR DÃ VIDA ---
 export function useAddDebt() {
@@ -34,7 +35,7 @@ export function useAddDebt() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
-      toast({ title: 'Dívida registada!' });
+      toast({ title: 'Acordo registrado!' });
     }
   });
 }
@@ -122,21 +123,22 @@ export function useDeleteDebt() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
-      toast({ title: 'Dívida removida.' });
+      toast({ title: 'Acordo removido.' });
     }
   });
 }
 
-// --- 4. RENEGOCIAR DÍVIDA ---
+// --- 4. RENEGOCIAR ACORDO ---
 export function useRenegotiateDebt() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { categories } = useFinanceStore();
 
   return useMutation({
     mutationFn: async ({ debt, firstInstallmentDate }: { debt: Debt, firstInstallmentDate?: string }) => {
       if (!user) throw new Error('Utilizador não autenticado');
 
-      // 1. Atualizar status da dívida e data se fornecida
+      // 1. Atualizar status do acordo e data se fornecida
       const debtUpdates: any = { status: 'renegotiated' };
       if (firstInstallmentDate) debtUpdates.startDate = firstInstallmentDate;
 
@@ -166,6 +168,7 @@ export function useRenegotiateDebt() {
           amount,
           date: dateStr,
           debt_id: debt.id,
+          category_id: categories.find(c => c.name === 'Renegociação')?.id,
           is_paid: false,
           installment_group_id: groupId,
           installment_number: i + 1,

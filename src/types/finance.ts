@@ -2,7 +2,7 @@
 export type TransactionStatus = 'punctual' | 'installment' | 'recurring' | 'adjustment';
 export type AccountType = 'corrente' | 'poupanca' | 'caixinha' | 'investment' | 'benefit_vr' | 'benefit_va' | 'benefit_flex';
 export type BillStatus = 'pending' | 'paid' | 'late' | 'cancelled';
-export type CategoryGroupName = 'Essenciais' | 'Estilo de Vida' | 'Metas/Dívidas' | 'essencial' | 'lazer' | 'metas';
+export type CategoryGroupName = 'Essenciais' | 'Estilo de Vida' | 'Metas/Acordos' | 'essencial' | 'lazer' | 'metas';
 
 export interface CategoryGroup {
   id: string;
@@ -106,7 +106,7 @@ export interface Debt {
   dueDay?: number;
   strategyPriority?: number;
   minimumPayment?: number;
-  // ✅ ADICIONADO: de qual conta sai o pagamento da dívida
+  // ✅ ADICIONADO: de qual conta sai o pagamento do acordo
   accountId?: string;
   // ✅ ADICIONADO: controle de renegociação
   status?: 'active' | 'renegotiated' | 'paid';

@@ -248,10 +248,10 @@ export default function CardsDashboard() {
                   <span>Vence {selectedCard.dueDay} {format(viewDate, 'MMM', { locale: ptBR })}</span>
                   <span className="w-1 h-1 rounded-full bg-border" />
                   <span className={cn(
-                    "uppercase tracking-wider",
+                    "uppercase tracking-wider flex items-center gap-1",
                     invoiceStatus === 'paga' ? "text-success" : "text-primary"
                   )}>
-                    {invoiceStatus === 'paga' ? 'Paga' : 'Aberta'}
+                    {invoiceStatus === 'paga' ? '✅ Paga' : '🔓 Aberta'}
                   </span>
                 </div>
               </div>
