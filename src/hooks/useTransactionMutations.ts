@@ -293,3 +293,78 @@ export function useBulkDeleteTransactions() {
     }
   });
 }
+
+// --- 6. ANTECIPAR PARCELAS DE CARTÃO ---
+export function useAnticipateInstallments() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      transactionId,
+      installmentsToAnticipate,
+      newDiscountedTotal,
+      installmentGroupId
+    }: {
+      transactionId: string;
+      installmentsToAnticipate: number;
+      newDiscountedTotal: number;
+      installmentGroupId: string;
+    }) => {
+      // Passo A: Buscar as parcelas futuras (ordenadas por data/número) para deletar
+      const { data: futureTxs, error: fetchError } = await supabase
+        .from('transactions')
+        .select('id, installment_number')
+        .eq('installment_group_id', installmentGroupId)
+        .neq('id', transactionId)
+        .order('installment_number', { ascending: true });
+
+      if (fetchError) throw fetchError;
+
+      // Pegar os IDs das N parcelas mais próximas (as que serão antecipadas)
+      const idsToDelete = futureTxs
+        .slice(0, installmentsToAnticipate)
+        .map(tx => tx.id);
+
+      // Passo B: Deletar as parcelas antecipadas (Soft Delete)
+      if (idsToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('transactions')
+          .update({ deleted_at: new Date().toISOString() })
+          .in('id', idsToDelete);
+        if (deleteError) throw deleteError;
+      }
+
+      // Passo C: Atualizar a transação atual com o novo valor e descrição
+      const { data: currentTx } = await supabase
+        .from('transactions')
+        .select('description, installment_number, installment_total')
+        .eq('id', transactionId)
+        .single();
+
+      const newDescription = `${currentTx.description} (Antecipação +${installmentsToAnticipate})`;
+
+      const { error: updateError } = await supabase
+        .from('transactions')
+        .update({
+          amount: newDiscountedTotal,
+          description: newDescription,
+          installment_total: currentTx.installment_total // Mantém o total original para histórico
+        })
+        .eq('id', transactionId);
+
+      if (updateError) throw updateError;
+
+      return { transactionId, deletedCount: idsToDelete.length };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['credit_cards'] }); // Recalcular limites
+      toast({ title: 'Parcelas antecipadas com sucesso!' });
+    },
+    onError: (err) => {
+      console.error('Erro ao antecipar parcelas:', err);
+      toast({ title: 'Erro ao processar antecipação', variant: 'destructive' });
+    }
+  });
+}

@@ -15,6 +15,8 @@ import { Progress } from '@/components/ui/progress';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { AnticipateInstallmentsDialog } from '@/components/cards/AnticipateInstallmentsDialog';
+import { Transaction } from '@/types/finance';
 
 export default function CardsDashboard() {
   const {
@@ -34,6 +36,7 @@ export default function CardsDashboard() {
   const [showAddCard, setShowAddCard] = useState(false);
   const [showEditCard, setShowEditCard] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [transactionToAnticipate, setTransactionToAnticipate] = useState<Transaction | null>(null);
 
   // Carousel Logic
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -378,9 +381,20 @@ export default function CardsDashboard() {
                       currentInvoiceTransactions.map(t => {
                         const category = categories.find(c => c.id === t.categoryId);
                         return (
-                          <div key={t.id} className="flex items-center justify-between p-4 rounded-[2rem] bg-muted/10 hover:bg-muted/30 transition-all border border-border/20">
+                          <div
+                            key={t.id}
+                            onClick={() => {
+                              if (t.installmentTotal && t.installmentNumber && t.installmentGroupId) {
+                                setTransactionToAnticipate(t);
+                              }
+                            }}
+                            className={cn(
+                              "flex items-center justify-between p-4 rounded-[2rem] bg-muted/10 hover:bg-muted/30 transition-all border border-border/20",
+                              t.installmentTotal && "cursor-pointer group"
+                            )}
+                          >
                             <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
+                              <div className="w-10 h-10 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary transition-colors">
                                 <Receipt className="w-5 h-5" />
                               </div>
                               <div>
@@ -396,7 +410,9 @@ export default function CardsDashboard() {
                                 {t.type === 'income' ? '-' : ''}{formatCurrency(t.amount)}
                               </p>
                               {t.installmentTotal && (
-                                <p className="text-[8px] text-muted-foreground font-black uppercase">P {t.installmentNumber}/{t.installmentTotal}</p>
+                                <p className="text-[8px] text-primary font-black uppercase flex items-center gap-1 justify-end animate-in fade-in slide-in-from-right-1">
+                                  P {t.installmentNumber}/{t.installmentTotal} <span className="text-[7px] bg-primary/10 px-1 rounded">Antecipar?</span>
+                                </p>
                               )}
                             </div>
                           </div>
@@ -494,6 +510,16 @@ export default function CardsDashboard() {
             isOpen={showEditCard}
             onClose={() => setShowEditCard(false)}
             onSave={(updated) => updateCreditCard(updated.id, updated)}
+          />
+        </Portal>
+      )}
+
+      {transactionToAnticipate && (
+        <Portal>
+          <AnticipateInstallmentsDialog
+            isOpen={!!transactionToAnticipate}
+            onClose={() => setTransactionToAnticipate(null)}
+            transaction={transactionToAnticipate}
           />
         </Portal>
       )}

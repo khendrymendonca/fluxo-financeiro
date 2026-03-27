@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { useUpdateTransaction, useDeleteTransaction } from '@/hooks/useTransactionMutations';
+import { useUpdateTransaction, useDeleteTransaction, useAddTransaction, useToggleTransactionPaid } from '@/hooks/useTransactionMutations';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,8 +11,9 @@ import {
 } from 'lucide-react';
 import { Portal } from '@/components/ui/Portal';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, isSameMonth, isSameYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { getCardSettingsForDate } from '@/utils/creditCardUtils';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
 import { BulkDeleteDialog } from '../transactions/BulkDeleteDialog';
 
@@ -33,6 +34,8 @@ export function BillsManager() {
 
     const { mutateAsync: updateTransactionMutation } = useUpdateTransaction();
     const { mutateAsync: deleteTransactionMutation } = useDeleteTransaction();
+    const { mutateAsync: addTransactionMutation } = useAddTransaction();
+    const { mutateAsync: togglePaidMutation } = useToggleTransactionPaid();
 
     const [filter, setFilter] = useState<'all' | 'expense' | 'income'>('all');
     const [isPaying, setIsPaying] = useState<Transaction | null>(null);
@@ -49,16 +52,46 @@ export function BillsManager() {
         const amountValue = paymentAmount ? parseFloat(paymentAmount) : isPaying.amount;
 
         try {
-            await updateTransactionMutation({
-                id: isPaying.id,
-                updates: {
+            if (isPaying.isVirtual) {
+                // 1. Criar transação física de pagamento
+                await addTransactionMutation({
+                    description: isPaying.description,
+                    amount: amountValue,
+                    type: 'expense',
+                    transactionType: 'punctual',
+                    date: new Date().toISOString(),
                     isPaid: true,
                     paymentDate: paymentDate,
                     accountId: isCard ? undefined : targetId,
-                    cardId: isCard ? targetId : undefined,
-                    amount: amountValue
+                    cardId: isCard ? targetId : isPaying.cardId,
+                    isInvoicePayment: true,
+                    invoiceMonthYear: isPaying.invoiceMonthYear,
+                    categoryId: 'card-payment'
+                });
+
+                // 2. Marcar transações individuais da fatura como pagas
+                const txsToMarkAsPaid = transactions.filter(t =>
+                    t.cardId === isPaying.cardId &&
+                    !t.isPaid &&
+                    t.categoryId !== 'card-payment' &&
+                    t.invoiceMonthYear === isPaying.invoiceMonthYear
+                );
+
+                for (const tx of txsToMarkAsPaid) {
+                    await togglePaidMutation({ id: tx.id, isPaid: true });
                 }
-            });
+            } else {
+                await updateTransactionMutation({
+                    id: isPaying.id,
+                    updates: {
+                        isPaid: true,
+                        paymentDate: paymentDate,
+                        accountId: isCard ? undefined : targetId,
+                        cardId: isCard ? targetId : undefined,
+                        amount: amountValue
+                    }
+                });
+            }
             setIsPaying(null);
             toast({ title: "Pagamento registrado com sucesso!" });
         } catch (error) {
@@ -66,15 +99,58 @@ export function BillsManager() {
         }
     };
 
-    // Filtra transações recorrentes, contas fixas e faturas de cartão do mês atual
-    const recurringTransactions = currentMonthTransactions.filter(t => {
+    // 1. Calcular faturas virtuais dinâmicas
+    const virtualInvoices: Transaction[] = creditCards.map(card => {
+        const viewDateStr = format(viewDate, 'yyyy-MM');
+
+        // Verifica se já existe um pagamento físico (baixado ou não) para esta fatura
+        const physicalPaymentExists = transactions.some(t =>
+            t.cardId === card.id &&
+            t.categoryId === 'card-payment' &&
+            t.invoiceMonthYear === viewDateStr
+        );
+
+        if (physicalPaymentExists) return null;
+
+        // Somar gastos reais deste cartão nesta competência
+        const totalAmount = transactions
+            .filter(t =>
+                t.cardId === card.id &&
+                !t.isVirtual &&
+                t.categoryId !== 'card-payment' &&
+                t.invoiceMonthYear === viewDateStr
+            )
+            .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
+
+        if (totalAmount <= 0) return null;
+
+        const { dueDay } = getCardSettingsForDate(card, viewDate);
+        const cardDueDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), dueDay);
+
+        return {
+            id: `fat-virtual-${card.id}`,
+            description: `Fatura ${card.name}`,
+            amount: totalAmount,
+            date: cardDueDate.toISOString(),
+            type: 'expense',
+            transactionType: 'recurring', // Marcar como recorrente para fluxos de caixa
+            categoryId: 'card-payment',
+            cardId: card.id,
+            isPaid: false,
+            isVirtual: true,
+            userId: '',
+            invoiceMonthYear: viewDateStr
+        } as Transaction;
+    }).filter(Boolean) as Transaction[];
+
+    // 2. Filtrar transações recorrentes e injetar as virtuais
+    const recurringTransactions = [...currentMonthTransactions, ...virtualInvoices].filter(t => {
         // ✅ REGRA DE FILTRO (KEEP ONLY): Esta tela mostra apenas Fluxo de Caixa (Fixas, Recorrentes e Faturas Consolidadas)
         const isCashFlow = t.isRecurring || t.transactionType === 'recurring' || t.categoryId === 'card-payment' || t.isVirtual || t.debtId != null;
         if (!isCashFlow) return false;
 
         // ✅ REGRA DE EXCLUSÃO: Esconder compras individuais feitas no cartão de crédito
-        // Mesmo que sejam recorrentes (ex: streaming), elas aparecem na fatura consolidada.
-        if (t.cardId && t.categoryId !== 'card-payment' && !t.isVirtual) return false;
+        if (t.cardId && t.categoryId !== 'card-payment') return false;
 
         // Busca por Texto
         if (searchQuery.trim() !== '') {
