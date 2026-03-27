@@ -48,8 +48,10 @@ export function calcInvoiceMonthYear(
 export function getInvoiceStatusDisplay(
   card: CreditCard,
   viewDate: Date,
-  isPaid: boolean
+  isPaid: boolean,
+  amount: number = 0
 ) {
+  if (!amount || Number(amount) <= 0) return null;
   if (isPaid) return { text: 'Paga', color: 'text-blue-500', icon: '🔵' };
 
   const { closingDay, dueDay } = getCardSettingsForDate(card, viewDate);

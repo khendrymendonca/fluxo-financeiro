@@ -9,9 +9,12 @@ interface CreditCardVisualProps {
     availableLimit: number;
     onClick?: () => void;
     className?: string;
+    invoiceStatus?: { text: string; color: string; icon: string } | null;
 }
 
-export function CreditCardVisual({ card, usedLimit, availableLimit, onClick, className }: CreditCardVisualProps) {
+export function CreditCardVisual({
+    card, usedLimit, availableLimit, onClick, className, invoiceStatus
+}: CreditCardVisualProps) {
     const cardColor = card.color || '#3b82f6';
     const cardBank = (card.bank || 'Banco').toUpperCase();
     const cardName = card.name || 'Cartão';
@@ -46,8 +49,18 @@ export function CreditCardVisual({ card, usedLimit, availableLimit, onClick, cla
                         </div>
                         <Wifi className="md:w-4 md:h-4 w-3 h-3 rotate-90" />
                     </div>
-                    <div className="md:text-lg text-sm font-bold tracking-widest italic opacity-80">
-                        {cardBank}
+                    <div className="flex flex-col items-end">
+                        <div className="md:text-lg text-sm font-bold tracking-widest italic opacity-80">
+                            {cardBank}
+                        </div>
+                        {invoiceStatus && (
+                            <div className={cn(
+                                "text-[8px] md:text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md mt-1 border border-white/10",
+                                invoiceStatus.text === 'Vencida' ? "bg-red-500/40 text-white animate-pulse" : "text-white"
+                            )}>
+                                {invoiceStatus.icon} {invoiceStatus.text}
+                            </div>
+                        )}
                     </div>
                 </div>
 

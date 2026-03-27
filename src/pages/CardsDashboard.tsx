@@ -123,8 +123,8 @@ export default function CardsDashboard() {
     : { used: 0, available: 0, limit: 0, percentUsed: 0, isOverLimit: false };
   const invoiceStatus = selectedCardId ? getInvoiceStatus(selectedCardId) : 'aberta';
   const dynamicStatus = selectedCard && selectedCardId
-    ? getInvoiceStatusDisplay(selectedCard, viewDate, invoiceStatus === 'paga')
-    : { text: 'Aberta', color: 'text-primary', icon: '🔓' };
+    ? getInvoiceStatusDisplay(selectedCard, viewDate, invoiceStatus === 'paga', currentInvoiceTotal)
+    : null;
 
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -236,6 +236,13 @@ export default function CardsDashboard() {
                     availableLimit={cardStats.available}
                     className={cn(selectedCardId === card.id && "md:ring-2 md:ring-primary md:ring-offset-2")} // Highlight active card on Desktop
                     onClick={() => setSelectedCardId(card.id)}
+                    invoiceStatus={getInvoiceStatusDisplay(
+                      card,
+                      viewDate,
+                      transactions.some(t => t.cardId === card.id && t.isInvoicePayment && t.invoiceMonthYear === format(viewDate, 'yyyy-MM')),
+                      transactions.filter(t => t.cardId === card.id && !t.isVirtual && t.categoryId !== 'card-payment' && t.invoiceMonthYear === format(viewDate, 'yyyy-MM'))
+                        .reduce((sum, t) => sum + (t.type === 'income' ? -t.amount : t.amount), 0)
+                    )}
                   />
                 </div>
               );
@@ -256,12 +263,14 @@ export default function CardsDashboard() {
                     <Calendar className="w-3.5 h-3.5" />
                     <span>Vence {selectedCard.dueDay} {format(viewDate, 'MMM', { locale: ptBR })}</span>
                     <span className="w-1 h-1 rounded-full bg-border" />
-                    <span className={cn(
-                      "uppercase tracking-wider flex items-center gap-1",
-                      dynamicStatus.color
-                    )}>
-                      {dynamicStatus.icon} {dynamicStatus.text}
-                    </span>
+                    {dynamicStatus && (
+                      <span className={cn(
+                        "uppercase tracking-wider flex items-center gap-1",
+                        dynamicStatus.color
+                      )}>
+                        {dynamicStatus.icon} {dynamicStatus.text}
+                      </span>
+                    )}
                   </div>
                 </div>
 
