@@ -21,6 +21,7 @@ export default defineConfig(({ mode }) => ({
         name: 'Fluxo - Gestão Financeira',
         short_name: 'Fluxo',
         description: 'Seu controle financeiro inteligente e simplificado.',
+        start_url: '/',
         theme_color: '#9b87f5',
         background_color: '#1A1F2C',
         display: 'standalone',

@@ -1,4 +1,5 @@
-﻿import { Plus, Wallet, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
+﻿import { useState } from 'react';
+import { Plus, Wallet, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useAccounts } from '@/hooks/useFinanceQueries';
@@ -31,12 +32,6 @@ import { EmergencyReserve } from '@/components/dashboard/EmergencyReserve';
 import { CategoriesManager } from '@/components/settings/CategoriesManager';
 import { BillsManager } from '@/components/accounts/BillsManager';
 import { ExportManager } from '@/components/dashboard/ExportManager';
-import { useState, useRef, useEffect } from 'react';
-import { Responsive, Layout } from 'react-grid-layout';
-
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
-import { Settings2, Save, RotateCcw, X } from 'lucide-react';
 
 const DEFAULT_WIDGETS = [
   'STAT_NETWORTH', 'STAT_INCOME', 'STAT_EXPENSE', 'STAT_PROJECTED',
@@ -44,21 +39,7 @@ const DEFAULT_WIDGETS = [
   'ACCOUNTS_OVERVIEW', 'EXPENSE_EVOLUTION', 'RECENT_TRANSACTIONS'
 ];
 
-const INITIAL_LAYOUTS: any = {
-  lg: [
-    { i: 'STAT_NETWORTH', x: 0, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-    { i: 'STAT_INCOME', x: 3, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-    { i: 'STAT_EXPENSE', x: 6, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-    { i: 'STAT_PROJECTED', x: 9, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-    { i: 'EXPENSE_CHART', x: 0, y: 2, w: 6, h: 5, minW: 4, minH: 4 },
-    { i: 'EMERGENCY_RESERVE', x: 6, y: 2, w: 3, h: 5, minW: 2, minH: 4 },
-    { i: 'PENDING_PAYMENTS', x: 9, y: 2, w: 3, h: 5, minW: 2, minH: 4 },
-    { i: 'GOAL_PROGRESS', x: 0, y: 7, w: 3, h: 5, minW: 2, minH: 4 },
-    { i: 'ACCOUNTS_OVERVIEW', x: 3, y: 7, w: 3, h: 5, minW: 2, minH: 4 },
-    { i: 'EXPENSE_EVOLUTION', x: 6, y: 7, w: 6, h: 5, minW: 4, minH: 4 },
-    { i: 'RECENT_TRANSACTIONS', x: 0, y: 12, w: 12, h: 8, minW: 6, minH: 4 },
-  ]
-};
+
 
 type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export';
 
@@ -67,22 +48,7 @@ export default function Index() {
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(1200);
 
-  useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.offsetWidth);
-      }
-    };
-
-    // Aguarda o componente montar para medir
-    setTimeout(updateWidth, 100);
-
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
-  }, []);
 
   const [isExpanded, setIsExpanded] = useState(() => {
     const saved = localStorage.getItem('sidebar-expanded');
@@ -142,42 +108,7 @@ export default function Index() {
     localStorage.setItem('sidebar-expanded', JSON.stringify(expanded));
   };
 
-  const [activeWidgets, setActiveWidgets] = useState<string[]>(() => {
-    const saved = localStorage.getItem('active-dashboard-widgets');
-    return saved ? JSON.parse(saved) : DEFAULT_WIDGETS;
-  });
 
-  const [layouts, setLayouts] = useState(() => {
-    const saved = localStorage.getItem('dashboard-layout-v2');
-    return saved ? JSON.parse(saved) : INITIAL_LAYOUTS;
-  });
-
-  const [isEditingLayout, setIsEditingLayout] = useState(false);
-
-  const saveLayout = (currentLayout: Layout[], allLayouts: { [key: string]: Layout[] }) => {
-    setLayouts(allLayouts);
-    localStorage.setItem('dashboard-layout-v2', JSON.stringify(allLayouts));
-  };
-
-  const removeWidget = (id: string) => {
-    const nextWidgets = activeWidgets.filter(w => w !== id);
-    setActiveWidgets(nextWidgets);
-    localStorage.setItem('active-dashboard-widgets', JSON.stringify(nextWidgets));
-  };
-
-  const addWidget = (id: string) => {
-    if (activeWidgets.includes(id)) return;
-    const nextWidgets = [...activeWidgets, id];
-    setActiveWidgets(nextWidgets);
-    localStorage.setItem('active-dashboard-widgets', JSON.stringify(nextWidgets));
-  };
-
-  const resetLayout = () => {
-    setLayouts(INITIAL_LAYOUTS);
-    setActiveWidgets(DEFAULT_WIDGETS);
-    localStorage.removeItem('dashboard-layout-v2');
-    localStorage.removeItem('active-dashboard-widgets');
-  };
 
   const WIDGET_CATALOG: { [key: string]: { name: string, component: React.ReactNode } } = {
     STAT_NETWORTH: {
@@ -261,87 +192,22 @@ export default function Index() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <MonthSelector />
-                <div className="flex bg-muted p-1 rounded-xl">
-                  <Button variant={isEditingLayout ? "secondary" : "ghost"} size="sm" onClick={() => setIsEditingLayout(!isEditingLayout)} className="rounded-lg h-9 px-3 gap-2">
-                    <Settings2 className="w-3.5 h-3.5" /> {isEditingLayout ? 'Modo Visualizar' : 'Customizar'}
-                  </Button>
-                  {isEditingLayout && (
-                    <Button variant="ghost" size="sm" onClick={resetLayout} className="rounded-lg h-9 px-3 text-danger hover:bg-danger/10">
-                      <RotateCcw className="w-3.5 h-3.5 mr-1" /> Resetar
-                    </Button>
-                  )}
-                </div>
                 <Button onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }} className="gap-2 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
                   <Plus className="w-4 h-4" /> Novo Lançamento
                 </Button>
               </div>
             </div>
 
-            {/* Editor Bar */}
-            {isEditingLayout && (
-              <div className="bg-primary/5 border-2 border-primary/20 p-4 rounded-2xl animate-in slide-in-from-top-2 flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-black uppercase tracking-widest text-primary">Catálogo de Painéis</span>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.keys(WIDGET_CATALOG).filter(id => !activeWidgets.includes(id)).map(id => (
-                      <Button key={id} variant="outline" size="sm" onClick={() => addWidget(id)} className="rounded-full text-[10px] font-bold h-7 border-primary/30 text-primary">
-                        + {WIDGET_CATALOG[id].name}
-                      </Button>
-                    ))}
-                    {Object.keys(WIDGET_CATALOG).every(id => activeWidgets.includes(id)) && (
-                      <span className="text-[10px] italic text-muted-foreground">Todos os painéis já estão na tela.</span>
-                    )}
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {DEFAULT_WIDGETS.map(id => (
+                <div key={id} className={cn(
+                  "w-full h-full",
+                  id === 'RECENT_TRANSACTIONS' && "md:col-span-2 lg:col-span-3",
+                  (id === 'EXPENSE_CHART' || id === 'EXPENSE_EVOLUTION') && "md:col-span-2 lg:col-span-2"
+                )}>
+                  {WIDGET_CATALOG[id].component}
                 </div>
-                <Button size="sm" onClick={() => setIsEditingLayout(false)} className="bg-success hover:bg-success/90 rounded-xl h-8 text-[10px] font-black uppercase tracking-widest">
-                  <Save className="w-3.5 h-3.5 mr-2" /> Salvar Layout
-                </Button>
-              </div>
-            )}
-
-            {/* Grid de Widgets */}
-            <div ref={containerRef} className={cn("dashboard-grid w-full", isEditingLayout && "is-editing")}>
-              <Responsive
-                className="layout"
-                width={containerWidth}
-                layouts={layouts}
-                breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-                cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
-                rowHeight={30}
-                draggableHandle=".widget-drag-handle"
-                isDraggable={isEditingLayout}
-                isResizable={isEditingLayout}
-                margin={[16, 16]}
-                onLayoutChange={saveLayout as any}
-              >
-                {activeWidgets.map(id => (
-                  <div key={id} className={cn("group relative", isEditingLayout ? "cursor-move" : "")}>
-                    {/* Alça de Arrastar e Botão Remover (apenas no modo edição) */}
-                    {isEditingLayout && (
-                      <div className="absolute inset-x-0 top-0 z-30 h-10 flex items-center justify-between px-3 pointer-events-none">
-                        <div className="widget-drag-handle flex-1 h-full cursor-move pointer-events-auto" />
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          onClick={(e) => { e.stopPropagation(); removeWidget(id); }}
-                          className="w-7 h-7 rounded-full shadow-lg pointer-events-auto hover:scale-110 active:scale-95"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* Placeholder visual durante edição */}
-                    {isEditingLayout && (
-                      <div className="absolute inset-0 border-2 border-dashed border-primary/20 rounded-2xl group-hover:border-primary/40 pointer-events-none transition-colors" />
-                    )}
-
-                    <div className="w-full h-full">
-                      {WIDGET_CATALOG[id].component}
-                    </div>
-                  </div>
-                ))}
-              </Responsive>
+              ))}
             </div>
           </div>
         );
