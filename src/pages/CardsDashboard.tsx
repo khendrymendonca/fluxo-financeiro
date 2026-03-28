@@ -12,11 +12,8 @@ import { EditCardDialog } from '@/components/cards/EditCardDialog';
 import { Portal } from '@/components/ui/Portal';
 import { getCardSettingsForDate, getInvoiceStatusDisplay } from '@/utils/creditCardUtils';
 import { Progress } from '@/components/ui/progress';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { AnticipateInstallmentsDialog } from '@/components/cards/AnticipateInstallmentsDialog';
 import { Transaction } from '@/types/finance';
+import { AnticipateInstallmentsDialog } from '@/components/cards/AnticipateInstallmentsDialog';
 
 export default function CardsDashboard() {
   const {
@@ -27,7 +24,6 @@ export default function CardsDashboard() {
     updateCreditCard,
     addCreditCard,
     getCardUsedLimit,
-    addTransaction,
     togglePaid
   } = useFinanceStore();
 
@@ -51,8 +47,8 @@ export default function CardsDashboard() {
     if (!scrollRef.current) return;
     const container = scrollRef.current;
     const scrollLeft = container.scrollLeft;
-    const cardWidth = container.offsetWidth * 0.8; // Approximate based on w-[80vw]
-    const index = Math.round(scrollLeft / (cardWidth + 16)); // 16 is gap-4
+    const cardWidth = container.offsetWidth * 0.8;
+    const index = Math.round(scrollLeft / (cardWidth + 16));
     if (creditCards[index] && creditCards[index].id !== selectedCardId) {
       setSelectedCardId(creditCards[index].id);
     }
@@ -60,8 +56,6 @@ export default function CardsDashboard() {
 
   const selectedCard = creditCards.find(c => c.id === selectedCardId);
 
-  // âœ… CORRIGIDO: usa getCardUsedLimit e getCardAvailableLimit do store
-  // que já filtram isVirtual, isInvoicePayment, paidInvoices e cardId corretamente
   const getCardStats = (cardId: string) => {
     const card = creditCards.find(c => c.id === cardId);
     const limit = Number(card?.limit || 0);
@@ -85,7 +79,7 @@ export default function CardsDashboard() {
     const allInvoiceTransactions = transactions
       .filter(t => {
         if (t.cardId !== cardId || t.isInvoicePayment) return false;
-        if (t.isVirtual) return false; // âœ… nunca mostrar projeções na fatura
+        if (t.isVirtual) return false;
         if (t.invoiceMonthYear) {
           return t.invoiceMonthYear === viewDateStr;
         }
@@ -93,7 +87,6 @@ export default function CardsDashboard() {
         return tDate >= startInv && tDate <= endInv;
       });
 
-    // Filtro de Busca por Texto
     const filteredInvoiceTransactions = allInvoiceTransactions.filter(t => {
       if (searchQuery.trim() === '') return true;
       const query = searchQuery.toLowerCase();
@@ -128,60 +121,6 @@ export default function CardsDashboard() {
 
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
-
-  // --- Antecipar Pagamento Logic ---
-  const [paymentAmount, setPaymentAmount] = useState(0);
-  const [sourceAccountId, setSourceAccountId] = useState('');
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-
-  useEffect(() => {
-    if (currentInvoiceTotal > 0) {
-      setPaymentAmount(currentInvoiceTotal);
-    } else {
-      setPaymentAmount(0);
-    }
-  }, [currentInvoiceTotal, selectedCardId]);
-
-  const selectedAccount = accounts.find(a => a.id === sourceAccountId);
-  const canPay = selectedAccount && paymentAmount > 0 && paymentAmount <= selectedAccount.balance;
-
-  const handlePayInvoice = async () => {
-    if (!selectedCard || !selectedAccount || !canPay) return;
-    setIsProcessingPayment(true);
-    try {
-      // 1. Criar transação de despesa na conta
-      const payCategory = categories.find(c =>
-        c.name.toLowerCase().includes('pagamento') ||
-        c.name.toLowerCase().includes('cartão') ||
-        c.name.toLowerCase().includes('fatura')
-      ) || categories[0];
-
-      await addTransaction({
-        description: `Pgto Fatura - ${selectedCard.name}`,
-        amount: Math.abs(paymentAmount),
-        type: 'expense',
-        transactionType: 'punctual',
-        accountId: sourceAccountId,
-        categoryId: payCategory?.id,
-        date: new Date().toISOString(),
-        isPaid: true,
-        paymentDate: new Date().toISOString(),
-        isInvoicePayment: true,
-        cardId: selectedCard.id,
-        invoiceMonthYear: format(viewDate, 'yyyy-MM')
-      });
-
-      // 2. Marcar transações da fatura como pagas
-      const txsToMarkAsPaid = currentInvoiceTransactions.filter(t => !t.isPaid);
-      for (const tx of txsToMarkAsPaid) {
-        await togglePaid({ id: tx.id, isPaid: true });
-      }
-
-      // Invalidação de queries já acontece nas mutações
-    } finally {
-      setIsProcessingPayment(false);
-    }
-  };
 
   return (
     <div className="space-y-4 animate-fade-in pb-24 max-w-4xl mx-auto px-4 md:px-0">
@@ -227,14 +166,14 @@ export default function CardsDashboard() {
                   className={cn(
                     "snap-center shrink-0 transition-opacity duration-300",
                     "md:snap-align-none md:shrink",
-                    selectedCardId !== card.id && "opacity-50 md:opacity-100" // No opacity fix on Desktop since it's a grid
+                    selectedCardId !== card.id && "opacity-50 md:opacity-100"
                   )}
                 >
                   <CreditCardVisual
                     card={card}
                     usedLimit={cardStats.used}
                     availableLimit={cardStats.available}
-                    className={cn(selectedCardId === card.id && "md:ring-2 md:ring-primary md:ring-offset-2")} // Highlight active card on Desktop
+                    className={cn(selectedCardId === card.id && "md:ring-2 md:ring-primary md:ring-offset-2")}
                     onClick={() => setSelectedCardId(card.id)}
                     invoiceStatus={getInvoiceStatusDisplay(
                       card,
@@ -247,13 +186,13 @@ export default function CardsDashboard() {
                 </div>
               );
             })}
-            <div className="snap-center shrink-0 w-8 md:hidden" /> {/* Spacer only on mobile */}
+            <div className="snap-center shrink-0 w-8 md:hidden" />
           </div>
 
           {selectedCard && (
             <div className="md:grid md:grid-cols-[1fr_350px] md:gap-8 items-start">
               <div className="space-y-8 mt-4 animate-slide-up">
-                {/* Itaú Info Panel */}
+                {/* Info Panel */}
                 <div className="text-center md:text-left space-y-1">
                   <p className="text-xs uppercase font-black text-muted-foreground tracking-[0.2em]">Fatura Atual</p>
                   <h2 className="text-5xl font-black tracking-tighter transition-all">
@@ -274,7 +213,7 @@ export default function CardsDashboard() {
                   </div>
                 </div>
 
-                {/* Progress Panel Mobile/Common */}
+                {/* Progress Panel Mobile */}
                 <div className="card-elevated p-6 rounded-[2.5rem] shadow-sm border-none bg-muted/30 md:hidden">
                   <div className="space-y-4">
                     <div className="flex justify-between items-end">
@@ -305,68 +244,14 @@ export default function CardsDashboard() {
                   </div>
 
                   <div className="mt-8 pt-6 border-t border-border/50">
-                    <Drawer>
-                      <DrawerTrigger asChild>
-                        <Button className="w-full h-14 rounded-2xl bg-foreground text-background font-black text-base shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all gap-2">
-                          Antecipar Pagamento <ArrowRight className="w-5 h-5" />
-                        </Button>
-                      </DrawerTrigger>
-                      <DrawerContent>
-                        <div className="mx-auto w-full max-w-sm">
-                          <DrawerHeader>
-                            <DrawerTitle className="text-center text-2xl font-black">Pagar Fatura</DrawerTitle>
-                            <p className="text-center text-muted-foreground text-sm">Libere seu limite agora.</p>
-                          </DrawerHeader>
-                          <div className="p-4 space-y-6">
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Valor do Pagamento</label>
-                              <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-xl">R$</span>
-                                <Input
-                                  type="number"
-                                  value={paymentAmount}
-                                  onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                                  className="h-16 pl-12 text-2xl font-black rounded-2xl border-2 focus:border-primary transition-all"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Conta de Origem</label>
-                              <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
-                                <SelectTrigger className="h-14 rounded-2xl border-2 font-bold">
-                                  <SelectValue placeholder="Escolha uma conta" />
-                                </SelectTrigger>
-                                <SelectContent className="rounded-2xl border-2">
-                                  {accounts.map(acc => (
-                                    <SelectItem key={acc.id} value={acc.id} className="font-bold py-3">
-                                      <div className="flex items-center gap-2">
-                                        <Wallet className="w-4 h-4 text-muted-foreground" />
-                                        <span>{acc.name}</span>
-                                        <span className="text-muted-foreground ml-auto opacity-50">{formatCurrency(acc.balance)}</span>
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                          <DrawerFooter className="pb-8">
-                            <Button
-                              disabled={!canPay || isProcessingPayment}
-                              onClick={handlePayInvoice}
-                              className="h-14 rounded-2xl font-black text-lg gap-2"
-                            >
-                              {isProcessingPayment ? "Processando..." : "Confirmar Pagamento"}
-                              <CheckCircle2 className="w-5 h-5" />
-                            </Button>
-                            <DrawerClose asChild>
-                              <Button variant="ghost" className="font-bold">Cancelar</Button>
-                            </DrawerClose>
-                          </DrawerFooter>
-                        </div>
-                      </DrawerContent>
-                    </Drawer>
+                    <div className="px-6 py-4 rounded-2xl bg-primary/5 border border-primary/10 text-center">
+                      <p className="text-xs font-bold text-primary flex items-center justify-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" /> Pagamento Centralizado
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Para pagar esta fatura, utilize a aba de <span className="font-bold">Gestão de Contas</span>.
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -447,43 +332,14 @@ export default function CardsDashboard() {
                     </div>
 
                     <div className="pt-4 border-t border-border/50 space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Antecipar Pagamento</label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-lg">R$</span>
-                          <Input
-                            type="number"
-                            value={paymentAmount}
-                            onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                            className="h-12 pl-10 text-xl font-black rounded-xl border-2 focus:border-primary"
-                          />
-                        </div>
+                      <div className="px-4 py-3 rounded-xl bg-primary/5 border border-primary/10 text-center">
+                        <p className="text-[10px] font-bold text-primary flex items-center justify-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Pagamento Centralizado
+                        </p>
+                        <p className="text-[9px] text-muted-foreground mt-1">
+                          Utilize a aba de <span className="font-bold">Gestão de Contas</span> para liqüidar esta fatura.
+                        </p>
                       </div>
-
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Conta</label>
-                        <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
-                          <SelectTrigger className="h-12 rounded-xl border-2 font-bold">
-                            <SelectValue placeholder="Escolha" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl border-2">
-                            {accounts.map(acc => (
-                              <SelectItem key={acc.id} value={acc.id} className="font-bold">
-                                {acc.name} ({formatCurrency(acc.balance)})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <Button
-                        disabled={!canPay || isProcessingPayment}
-                        onClick={handlePayInvoice}
-                        className="w-full h-12 rounded-xl font-black text-base gap-2"
-                      >
-                        {isProcessingPayment ? "Processando..." : "Pagar Fatura"}
-                        <CheckCircle2 className="w-5 h-5" />
-                      </Button>
 
                       <Button
                         variant="ghost"
@@ -535,5 +391,3 @@ export default function CardsDashboard() {
     </div>
   );
 }
-
-

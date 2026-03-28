@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { ArrowDownRight, CheckCircle2, Calendar, Filter } from 'lucide-react';
+import { ArrowDownRight, CheckCircle2, Calendar, Filter, Clock } from 'lucide-react';
 import { Transaction, Account, CreditCard } from '@/types/finance';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -118,14 +118,9 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
                                     <span className={cn("font-bold text-sm", isOverdue ? "text-danger" : "text-muted-foreground")}>
                                         {formatCurrency(t.amount)}
                                     </span>
-                                    <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        onClick={() => togglePaid({ id: t.id, isPaid: true })}
-                                        className="h-8 w-8 rounded-lg hover:bg-success/10 hover:text-success text-muted-foreground transition-colors"
-                                    >
-                                        <CheckCircle2 className="w-4 h-4" />
-                                    </Button>
+                                    <div className="flex items-center gap-1 text-[10px] font-bold text-danger uppercase opacity-50">
+                                        <Clock className="w-3 h-3" /> Pendente
+                                    </div>
                                 </div>
                             </div>
                         );
