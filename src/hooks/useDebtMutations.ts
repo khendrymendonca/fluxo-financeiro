@@ -128,14 +128,60 @@ export function useDeleteDebt() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      // 1. Pre-flight check: Buscar transações pagas vinculadas a este acordo
+      const { data: paidTxs, error: fetchError } = await supabase
+        .from('transactions')
+        .select('id, amount, account_id, type')
+        .eq('debt_id', id)
+        .eq('is_paid', true);
+
+      if (fetchError) throw fetchError;
+
+      // 2. Estorno Manual de Saldos (Reembolso)
+      if (paidTxs && paidTxs.length > 0) {
+        for (const tx of paidTxs) {
+          if (tx.account_id) {
+            // Se for despesa (padrão de dívida), somamos de volta. Se for receita, subtraímos.
+            const adjustment = tx.type === 'income' ? -tx.amount : tx.amount;
+
+            // Buscar saldo atual para garantir precisão
+            const { data: acc, error: accError } = await supabase
+              .from('accounts')
+              .select('balance')
+              .eq('id', tx.account_id)
+              .single();
+
+            if (accError) {
+              console.error(`Erro ao buscar conta ${tx.account_id} para estorno:`, accError);
+              continue; // Tenta o próximo se um falhar
+            }
+
+            const newBalance = (acc.balance || 0) + adjustment;
+
+            const { error: updateError } = await supabase
+              .from('accounts')
+              .update({ balance: newBalance })
+              .eq('id', tx.account_id);
+
+            if (updateError) {
+              console.error(`Erro ao estornar saldo na conta ${tx.account_id}:`, updateError);
+            }
+          }
+        }
+      }
+
+      // 3. Exclusão do Acordo (Cascata apaga as transações)
       const { error } = await supabase.from('debts').delete().eq('id', id);
       if (error) throw error;
+
       return id;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      toast({ title: 'Acordo removido.' });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['cards'] }); // Recalcular limites baseados nas transações restantes
+      toast({ title: 'Acordo removido e saldos estornados.' });
     },
     onError: (err) => {
       console.error('Erro ao remover acordo:', err);
