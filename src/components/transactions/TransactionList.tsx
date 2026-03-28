@@ -19,6 +19,7 @@ export interface TransactionListProps {
   transactions: Transaction[];
   onEdit: (transaction: Transaction) => void;
   onPayBill: (transaction: Transaction) => Promise<void>;
+  allowSettlement?: boolean;
 }
 
 import { parseLocalDate, todayLocalString, toLocalDateString } from '@/utils/dateUtils';
@@ -26,7 +27,8 @@ import { parseLocalDate, todayLocalString, toLocalDateString } from '@/utils/dat
 export function TransactionList({
   transactions,
   onEdit,
-  onPayBill
+  onPayBill,
+  allowSettlement = true
 }: TransactionListProps) {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [sourceFilter, setSourceFilter] = useState<'all' | 'account' | 'card'>('all');
@@ -398,12 +400,18 @@ export function TransactionList({
                           <div className="flex items-center gap-2 w-full md:w-auto">
                             {isPending ? (
                               <div className="flex items-center gap-2 w-full">
-                                <Button size="sm" variant="outline"
-                                  onClick={() => { setPayingItem(item); setPaymentDate(item.date?.split('T')[0] || todayLocalString()); setPaymentMethod('account'); }}
-                                  disabled={item.isVirtual || isDeletingTransaction || isBulkDeleting}
-                                  className="flex-1 md:flex-none h-9 px-4 rounded-xl border-primary/30 text-primary hover:bg-primary/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider transition-all hover:scale-105 active:scale-95">
-                                  <CheckCircle2 className="w-4 h-4" /> Baixar Agora
-                                </Button>
+                                {allowSettlement ? (
+                                  <Button size="sm" variant="outline"
+                                    onClick={() => { setPayingItem(item); setPaymentDate(item.date?.split('T')[0] || todayLocalString()); setPaymentMethod('account'); }}
+                                    disabled={item.isVirtual || isDeletingTransaction || isBulkDeleting}
+                                    className="flex-1 md:flex-none h-9 px-4 rounded-xl border-primary/30 text-primary hover:bg-primary/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider transition-all hover:scale-105 active:scale-95">
+                                    <CheckCircle2 className="w-4 h-4" /> Baixar Agora
+                                  </Button>
+                                ) : (
+                                  <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground text-[10px] font-black uppercase tracking-wider">
+                                    <Clock className="w-3.5 h-3.5" /> Pendente
+                                  </div>
+                                )}
                                 {hasInstallmentGroup && futureInstallments.length > 0 && !item.isRecurring && (
                                   <Button size="sm" variant="outline"
                                     onClick={() => setExpandedGroup(isGroupExpanded ? null : item.installmentGroupId)}
@@ -432,13 +440,19 @@ export function TransactionList({
                               </div>
                             ) : (
                               <div className="flex opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all gap-1 justify-end w-full">
-                                <Button variant="ghost" size="icon"
-                                  onClick={() => togglePaidMutation({ id: item.id, isPaid: false })}
-                                  disabled={isDeletingTransaction || isBulkDeleting}
-                                  title="Estornar Pagamento"
-                                  className="h-9 w-9 rounded-lg hover:bg-amber-100 hover:text-amber-600 text-amber-600">
-                                  <RotateCcw className="w-4 h-4" />
-                                </Button>
+                                {allowSettlement ? (
+                                  <Button variant="ghost" size="icon"
+                                    onClick={() => togglePaidMutation({ id: item.id, isPaid: false })}
+                                    disabled={isDeletingTransaction || isBulkDeleting}
+                                    title="Estornar Pagamento"
+                                    className="h-9 w-9 rounded-lg hover:bg-amber-100 hover:text-amber-600 text-amber-600">
+                                    <RotateCcw className="w-4 h-4" />
+                                  </Button>
+                                ) : (
+                                  <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-success/10 text-success text-[10px] font-black uppercase tracking-wider h-9">
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> Liquidado
+                                  </div>
+                                )}
                                 {hasInstallmentGroup && futureInstallments.length > 0 && !item.isRecurring && (
                                   <Button size="sm" variant="outline"
                                     onClick={() => setExpandedGroup(isGroupExpanded ? null : item.installmentGroupId)}

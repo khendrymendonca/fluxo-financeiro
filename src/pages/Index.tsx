@@ -246,6 +246,7 @@ export default function Index() {
             </div>
             <TransactionList
               transactions={currentMonthTransactions}
+              allowSettlement={false}
               onEdit={handleEditTransaction}
               onPayBill={async (transaction: Transaction) => {
                 await updateTransaction(transaction.id, { isPaid: true }, undefined, undefined, transaction.cardId);

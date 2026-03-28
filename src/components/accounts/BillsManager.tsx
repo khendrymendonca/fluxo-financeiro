@@ -145,11 +145,10 @@ export function BillsManager() {
 
     // 2. Filtrar transações recorrentes e injetar as virtuais
     const recurringTransactions = [...currentMonthTransactions, ...virtualInvoices].filter(t => {
-        // ✅ REGRA DE FILTRO (KEEP ONLY): Esta tela mostra apenas Fluxo de Caixa (Fixas, Recorrentes e Faturas Consolidadas)
-        const isCashFlow = t.isRecurring || t.transactionType === 'recurring' || t.categoryId === 'card-payment' || t.isVirtual || t.debtId != null;
-        if (!isCashFlow) return false;
+        // ✅ REGRA DE FILTRO: Esta tela centraliza TODA a liquidação financeira do app.
+        // Mostramos: Recorrentes, Parcelamentos, Acordos e Lançamentos Pontuais em Conta.
 
-        // ✅ REGRA DE EXCLUSÃO: Esconder compras individuais feitas no cartão de crédito
+        // Esconder compras individuais feitas no cartão de crédito (estas são liquidadas via fatura)
         if (t.cardId && t.categoryId !== 'card-payment') return false;
 
         // Busca por Texto
