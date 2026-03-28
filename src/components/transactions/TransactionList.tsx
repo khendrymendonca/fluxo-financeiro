@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react';
 import { formatCurrency } from '@/utils/formatters';
-import { ArrowUpRight, ArrowDownRight, Trash2, Pencil, FastForward, ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Trash2, Pencil, FastForward, ChevronDown, ChevronUp, Plus, RotateCcw } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useToggleTransactionPaid } from '@/hooks/useTransactionMutations';
@@ -432,6 +432,13 @@ export function TransactionList({
                               </div>
                             ) : (
                               <div className="flex opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all gap-1 justify-end w-full">
+                                <Button variant="ghost" size="icon"
+                                  onClick={() => togglePaidMutation({ id: item.id, isPaid: false })}
+                                  disabled={isDeletingTransaction || isBulkDeleting}
+                                  title="Estornar Pagamento"
+                                  className="h-9 w-9 rounded-lg hover:bg-amber-100 hover:text-amber-600 text-amber-600">
+                                  <RotateCcw className="w-4 h-4" />
+                                </Button>
                                 {hasInstallmentGroup && futureInstallments.length > 0 && !item.isRecurring && (
                                   <Button size="sm" variant="outline"
                                     onClick={() => setExpandedGroup(isGroupExpanded ? null : item.installmentGroupId)}
@@ -441,7 +448,7 @@ export function TransactionList({
                                     {isGroupExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                   </Button>
                                 )}
-                                {(item.debtId || item.transactionType === 'installment') ? null : (
+                                {!(item.debtId || item.transactionType === 'installment') && (
                                   <>
                                     <Button variant="ghost" size="icon"
                                       onClick={() => onEdit(item as Transaction)}

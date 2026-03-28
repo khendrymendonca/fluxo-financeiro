@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import {
     Receipt, Plus, Trash2, CheckCircle2, Clock, Calendar,
     AlertCircle, ArrowUpCircle, ArrowDownCircle, Filter,
-    ShieldAlert, CreditCard as CardIcon
+    ShieldAlert, CreditCard as CardIcon, RotateCcw
 } from 'lucide-react';
 import { Portal } from '@/components/ui/Portal';
 import { cn } from '@/lib/utils';
@@ -331,7 +331,7 @@ export function BillsManager() {
                                                 )}
                                             </div>
                                         </div>
-                                        {!transaction.isPaid && (
+                                        {!transaction.isPaid ? (
                                             <Button size="sm" variant="ghost"
                                                 onClick={() => {
                                                     setIsPaying(transaction);
@@ -341,6 +341,12 @@ export function BillsManager() {
                                                 }}
                                                 className="h-11 px-4 rounded-2xl bg-success/5 text-success hover:bg-success/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider">
                                                 <CheckCircle2 className="w-5 h-5" /> Baixar Conta
+                                            </Button>
+                                        ) : (
+                                            <Button size="sm" variant="ghost"
+                                                onClick={() => togglePaidMutation({ id: transaction.id, isPaid: false })}
+                                                className="h-11 px-4 rounded-2xl bg-amber-500/5 text-amber-600 hover:bg-amber-500/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider">
+                                                <RotateCcw className="w-5 h-5" /> Estornar
                                             </Button>
                                         )}
                                         {!(transaction.debtId || transaction.transactionType === 'installment') && (

@@ -134,9 +134,16 @@ export function useToggleTransactionPaid() {
   return useMutation({
     mutationFn: async ({ id, isPaid, date }: { id: string, isPaid: boolean, date?: string }) => {
       const paymentDate = isPaid ? (date || format(new Date(), 'yyyy-MM-dd')) : null;
+      const updates: any = { is_paid: isPaid, payment_date: paymentDate };
+
+      // Ao desmarcar como pago (estorno), limpamos também a conta de origem
+      if (!isPaid) {
+        updates.account_id = null;
+      }
+
       const { error } = await supabase
         .from('transactions')
-        .update({ is_paid: isPaid, payment_date: paymentDate })
+        .update(updates)
         .eq('id', id);
       if (error) throw error;
       return id;
