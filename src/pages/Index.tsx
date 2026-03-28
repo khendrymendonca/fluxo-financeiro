@@ -32,6 +32,7 @@ import { EmergencyReserve } from '@/components/dashboard/EmergencyReserve';
 import { CategoriesManager } from '@/components/settings/CategoriesManager';
 import { BillsManager } from '@/components/accounts/BillsManager';
 import { ExportManager } from '@/components/dashboard/ExportManager';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 const DEFAULT_WIDGETS = [
   'STAT_NETWORTH', 'STAT_INCOME', 'STAT_EXPENSE', 'STAT_PROJECTED',
@@ -195,18 +196,14 @@ export default function Index() {
 
   const DesktopDashboard = () => (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary font-mono lowercase">Fluxo</h1>
-          <p className="text-xs md:text-sm text-muted-foreground mt-1">Bem-vindo ao seu painel financeiro.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <PageHeader title="Fluxo" icon={Home}>
+        <div className="flex items-center gap-2">
           <MonthSelector />
           <Button onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }} className="gap-2 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
             <Plus className="w-4 h-4" /> Novo Lançamento
           </Button>
         </div>
-      </div>
+      </PageHeader>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {DEFAULT_WIDGETS.map(id => (
           <div key={id} className={cn(
@@ -229,11 +226,7 @@ export default function Index() {
       case 'transactions':
         return (
           <div className="space-y-6 animate-fade-in px-4 py-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Lançamentos</h1>
-                <p className="text-xs md:text-sm text-muted-foreground mt-1">Gerencie suas receitas e despesas.</p>
-              </div>
+            <PageHeader title="Lançamentos" icon={ArrowUpDown}>
               <div className="flex items-center gap-3">
                 <MonthSelector />
                 <Button
@@ -243,7 +236,7 @@ export default function Index() {
                   <Plus className="w-4 h-4" /> Nova Transação
                 </Button>
               </div>
-            </div>
+            </PageHeader>
             <TransactionList
               transactions={currentMonthTransactions}
               allowSettlement={false}
@@ -276,15 +269,11 @@ export default function Index() {
       case 'goals':
         return (
           <div className="space-y-6 animate-fade-in px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Metas</h1>
-                <p className="text-xs md:text-sm text-muted-foreground mt-1">Acompanhe seu progresso.</p>
-              </div>
+            <PageHeader title="Metas" icon={Target}>
               <Button onClick={() => setShowGoalForm(true)} className="gap-2 rounded-xl">
                 <Plus className="w-4 h-4" /> Nova Meta
               </Button>
-            </div>
+            </PageHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {savingsGoals.map(goal => (
                 <GoalCard
@@ -310,10 +299,7 @@ export default function Index() {
       case 'debts':
         return (
           <div className="px-4 py-4 animate-fade-in">
-            <div className="mb-6">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Acordos</h1>
-              <p className="text-xs md:text-sm text-muted-foreground mt-1">Gerencie suas renegociações e acordos parcelados.</p>
-            </div>
+            <PageHeader title="Acordos" icon={TrendingDown} />
             <DebtsManager
               debts={debts}
               onAddDebt={addDebt}

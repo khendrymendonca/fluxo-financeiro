@@ -20,6 +20,7 @@ import { BulkDeleteDialog } from '../transactions/BulkDeleteDialog';
 import { parseLocalDate, todayLocalString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/formatters';
 import { Transaction } from '@/types/finance';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export function BillsManager() {
     const {
@@ -171,16 +172,7 @@ export function BillsManager() {
         <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
 
             {/* Header & Stats */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-2xl bg-primary/10 text-primary">
-                        <Receipt className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <h2 className="text-2xl font-bold">Gestão de Contas</h2>
-                        <p className="text-muted-foreground">Acompanhe suas despesas fixas e recorrentes.</p>
-                    </div>
-                </div>
+            <PageHeader title="Gestão de Contas" icon={Receipt}>
                 <div className="flex flex-wrap items-center gap-3">
                     <MonthSelector />
                     <div className="px-4 py-2 rounded-xl bg-danger/5 border border-danger/10">
@@ -188,7 +180,7 @@ export function BillsManager() {
                         <p className="text-lg font-bold text-danger">{formatCurrency(totalPendingPayable)}</p>
                     </div>
                 </div>
-            </div>
+            </PageHeader>
 
             {/* Busca e Filtros */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

@@ -14,6 +14,7 @@ import { getCardSettingsForDate, getInvoiceStatusDisplay } from '@/utils/creditC
 import { Progress } from '@/components/ui/progress';
 import { Transaction } from '@/types/finance';
 import { AnticipateInstallmentsDialog } from '@/components/cards/AnticipateInstallmentsDialog';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 export default function CardsDashboard() {
   const {
@@ -124,11 +125,7 @@ export default function CardsDashboard() {
 
   return (
     <div className="space-y-4 animate-fade-in pb-24 max-w-4xl mx-auto px-4 md:px-0">
-      <header className="flex items-center justify-between py-4">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight">Meus Cartões</h1>
-          <p className="text-muted-foreground text-sm">Gere seu limite com inteligência.</p>
-        </div>
+      <PageHeader title="Meus Cartões" icon={CreditCard}>
         <Button
           variant="outline"
           size="icon"
@@ -137,7 +134,7 @@ export default function CardsDashboard() {
         >
           <Plus className="w-5 h-5 text-primary" />
         </Button>
-      </header>
+      </PageHeader>
 
       {creditCards.length === 0 ? (
         <div className="card-elevated p-12 text-center text-muted-foreground bg-muted/20 border-dashed border-2 rounded-3xl">

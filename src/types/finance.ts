@@ -20,6 +20,7 @@ export interface Category {
   color?: string;
   isActive: boolean;
   targetAmount?: number;
+  isFixed?: boolean;
 }
 
 export interface Subcategory {

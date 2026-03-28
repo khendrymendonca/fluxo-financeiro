@@ -5,15 +5,18 @@ import {
     useAddCategory,
     useDeleteCategory,
     useAddSubcategory,
-    useDeleteSubcategory
+    useDeleteSubcategory,
+    useUpdateCategory
 } from '@/hooks/useCategoryMutations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, Edit2, Settings2, FolderTree } from 'lucide-react';
+import { Plus, Trash2, Edit2, Settings2, FolderTree, Anchor, Pin, PinOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/use-toast';
 import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Switch } from '@/components/ui/switch';
 
 export function CategoriesManager() {
     // Queries
@@ -23,6 +26,7 @@ export function CategoriesManager() {
 
     // Mutations
     const { mutate: addCategory } = useAddCategory();
+    const { mutate: updateCategory } = useUpdateCategory();
     const { mutate: deleteCategory } = useDeleteCategory();
     const { mutate: addSubcategory } = useAddSubcategory();
     const { mutate: deleteSubcategory } = useDeleteSubcategory();
@@ -32,6 +36,7 @@ export function CategoriesManager() {
     const [newCatType, setNewCatType] = useState<'expense' | 'income'>('expense');
     const [newCatGroup, setNewCatGroup] = useState<string>('');
     const [newCatColor, setNewCatColor] = useState(APP_COLORS[0]);
+    const [newCatIsFixed, setNewCatIsFixed] = useState(false);
 
     // New Subcategory State
     const [newSubName, setNewSubName] = useState('');
@@ -56,9 +61,11 @@ export function CategoriesManager() {
             groupId: groupId,
             icon: 'Tag',
             color: newCatColor,
-            isActive: true
+            isActive: true,
+            isFixed: newCatIsFixed
         });
         setNewCatName('');
+        setNewCatIsFixed(false);
     };
 
     const handleAddSubcategory = () => {
@@ -74,17 +81,7 @@ export function CategoriesManager() {
 
     return (
         <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
-
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-6">
-                <div className="p-3 rounded-2xl bg-primary/10 text-primary">
-                    <Settings2 className="w-6 h-6" />
-                </div>
-                <div>
-                    <h2 className="text-2xl font-bold">Gestão de Categorias e Orçamento</h2>
-                    <p className="text-muted-foreground">Personalize sua estrutura financeira e a regra do seu Coach.</p>
-                </div>
-            </div>
+            <PageHeader title="Categorias e Orçamento" icon={Settings2} />
 
 
             {/* Criar Nova Categoria */}
@@ -121,6 +118,16 @@ export function CategoriesManager() {
                                 </select>
                             </div>
                         )}
+
+                        <div className="flex flex-col justify-end pb-1">
+                            <div className="flex items-center gap-3 p-3 rounded-xl border-2 bg-muted/20 h-12">
+                                <Switch checked={newCatIsFixed} onCheckedChange={setNewCatIsFixed} />
+                                <div className="flex flex-col">
+                                    <Label className="text-[10px] font-black uppercase leading-none">Conta Fixa</Label>
+                                    <span className="text-[8px] text-muted-foreground">Ex: Aluguel, Internet</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <ColorSelector
@@ -163,8 +170,22 @@ export function CategoriesManager() {
                                         {groupCats.map(cat => (
                                             <div key={cat.id} className="group">
                                                 <div className="flex items-center justify-between p-2 rounded-xl hover:bg-muted/50 transition-colors">
-                                                    <span className="font-medium text-sm">{cat.name}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-medium text-sm">{cat.name}</span>
+                                                        {cat.isFixed && (
+                                                            <div className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 text-[8px] font-black uppercase tracking-tighter flex items-center gap-0.5">
+                                                                <Pin className="w-2.5 h-2.5" /> Fixa
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                     <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => updateCategory({ id: cat.id, updates: { isFixed: !cat.isFixed } })}
+                                                            className={cn("p-1.5 rounded-lg transition-colors", cat.isFixed ? "text-amber-500 hover:bg-amber-500/10" : "text-muted-foreground hover:bg-muted")}
+                                                            title={cat.isFixed ? "Remover de Contas Fixas" : "Marcar como Conta Fixa"}
+                                                        >
+                                                            {cat.isFixed ? <Pin className="w-3.5 h-3.5" /> : <PinOff className="w-3.5 h-3.5" />}
+                                                        </button>
                                                         <button onClick={() => setActiveCategoryId(cat.id)} className="p-1.5 text-info hover:bg-info/10 rounded-lg"><Plus className="w-3.5 h-3.5" /></button>
                                                         {['Renegociação', 'Fatura de Cartão de Crédito', 'Outros'].includes(cat.name) ? (
                                                             <div className="p-1.5 text-muted-foreground/30" title="Categorias de sistema não podem ser excluídas">

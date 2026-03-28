@@ -17,6 +17,7 @@ export function useAddCategory() {
         icon: category.icon,
         color: category.color,
         group_id: category.groupId,
+        is_fixed: category.isFixed || false,
         user_id: user.id
       }).select();
 
@@ -30,6 +31,39 @@ export function useAddCategory() {
     onError: (err) => {
       console.error('Erro ao adicionar categoria:', err);
       toast({ title: 'Erro ao criar categoria', variant: 'destructive' });
+    }
+  });
+}
+
+export function useUpdateCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string, updates: Partial<Category> }) => {
+      const { data, error } = await supabase
+        .from('categories')
+        .update({
+          name: updates.name,
+          type: updates.type,
+          icon: updates.icon,
+          color: updates.color,
+          group_id: updates.groupId,
+          is_fixed: updates.isFixed,
+          isActive: updates.isActive
+        })
+        .eq('id', id)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      toast({ title: 'Categoria atualizada!' });
+    },
+    onError: (err) => {
+      console.error('Erro ao atualizar categoria:', err);
+      toast({ title: 'Erro ao atualizar categoria', variant: 'destructive' });
     }
   });
 }

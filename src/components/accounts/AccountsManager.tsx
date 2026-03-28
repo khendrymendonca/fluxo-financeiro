@@ -14,6 +14,7 @@ import { useAddTransaction } from '@/hooks/useTransactionMutations';
 import { toast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
 import { todayLocalString } from '@/utils/dateUtils';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 interface AccountsManagerProps {
   accounts: Account[];
@@ -224,6 +225,8 @@ export function AccountsManager({
 
   return (
     <div className="space-y-6">
+      <PageHeader title="Minha Carteira" icon={Wallet} />
+
       {/* Summary Card */}
       <div className="card-elevated p-8 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20 animate-fade-in relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-5">
