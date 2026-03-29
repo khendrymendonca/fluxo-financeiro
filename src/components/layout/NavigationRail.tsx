@@ -22,7 +22,7 @@ import { useTheme } from '@/hooks/useTheme';
 const navItems = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Painel' },
   { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos' },
-  { id: 'bills', icon: Receipt, label: 'Contas Fixas' },
+  { id: 'bills', icon: Receipt, label: 'Gestão de Contas' },
   { id: 'cards', icon: CreditCard, label: 'Cartões' },
   { id: 'accounts', icon: Wallet, label: 'Carteira' },
   { id: 'goals', icon: Target, label: 'Metas' },
