@@ -225,25 +225,12 @@ export default function Index() {
         // Dashboard Mobile (Nu-Style)
         return (
           <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto pb-24">
-            {/* Header Nu Style */}
-            <div className="flex items-center justify-between px-1 py-4">
-              <div className="flex items-center gap-3">
-                <Avatar className="w-12 h-12 border-2 border-gray-100 dark:border-zinc-900 shadow-sm">
-                  <AvatarFallback className="bg-gray-100 dark:bg-zinc-900 text-gray-500 dark:text-zinc-400 font-bold">{userInitials}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-black uppercase tracking-widest leading-none">Olá,</p>
-                  <p className="font-bold text-lg leading-tight">{userName}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-colors" onClick={() => setIsBalanceVisible(!isBalanceVisible)}>
-                  {isBalanceVisible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </Button>
-
+            {/* Header Estilo App Nativo (Safe Area + Alinhamento) */}
+            <div className="flex items-center justify-between pt-12 md:pt-6 px-1 py-4">
+              <div className="flex items-center gap-4">
                 <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-colors md:hidden">
+                    <Button variant="ghost" size="icon" className="text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                       <Menu className="w-6 h-6" />
                     </Button>
                   </SheetTrigger>
@@ -320,6 +307,22 @@ export default function Index() {
                     </div>
                   </SheetContent>
                 </Sheet>
+
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-10 h-10 border-2 border-gray-100 dark:border-zinc-900 shadow-sm">
+                    <AvatarFallback className="bg-gray-100 dark:bg-zinc-900 text-gray-500 dark:text-zinc-400 font-bold">{userInitials}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-black uppercase tracking-widest leading-none">Olá,</p>
+                    <p className="font-bold text-base leading-tight">{userName}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-colors" onClick={() => setIsBalanceVisible(!isBalanceVisible)}>
+                  {isBalanceVisible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </Button>
               </div>
             </div>
 

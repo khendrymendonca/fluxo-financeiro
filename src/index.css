@@ -26,7 +26,7 @@
     --card-foreground: 220 20% 15%;
     --popover: 0 0% 100%;
     --popover-foreground: 220 20% 15%;
-    --primary: 174 60% 45%;
+    --primary: 180 100% 30%;
     --primary-foreground: 0 0% 100%;
     --primary-light: 174 55% 92%;
     --primary-muted: 174 40% 70%;
@@ -77,8 +77,8 @@
     --card-foreground: 0 0% 100%;
     --popover: 240 10% 4%;
     --popover-foreground: 0 0% 100%;
-    --primary: 270 70% 60%;
-    /* Roxo Nubank */
+    --primary: 180 100% 45%;
+    /* Verde Ciano Vibrante */
     --primary-foreground: 0 0% 100%;
     --primary-light: 270 70% 15%;
     --primary-muted: 270 40% 30%;
@@ -340,4 +340,16 @@
     box-shadow: none !important;
     border: 1px solid #eee !important;
   }
+}
+
+/* AMOLED Mode (True Black) */
+html.dark.amoled {
+  --background: 0 0% 0% !important;
+  --card: 240 10% 4% !important;
+  --popover: 0 0% 2% !important;
+  --sidebar-background: 0 0% 0% !important;
+  --secondary: 240 10% 8% !important;
+  --muted: 240 10% 8% !important;
+  --border: 240 10% 8% !important;
+  --primary-foreground: 0 0% 100% !important;
 }
