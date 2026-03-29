@@ -55,7 +55,7 @@ export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }
   return (
     <nav
       className={cn(
-        "hidden md:flex flex-col py-6 px-3 bg-zinc-950 border-r border-zinc-800 h-screen transition-all duration-300 ease-in-out shrink-0 sticky top-0 left-0 z-50",
+        "hidden md:flex flex-col py-6 px-3 bg-white dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-800 h-screen transition-all duration-300 ease-in-out shrink-0 sticky top-0 left-0 z-50",
         isExpanded ? "w-64" : "w-20"
       )}
     >
@@ -73,7 +73,7 @@ export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }
 
         <button
           onClick={toggleSidebar}
-          className="p-2 rounded-xl hover:bg-muted text-muted-foreground transition-colors"
+          className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-900 text-gray-400 dark:text-zinc-500 transition-colors"
         >
           {isExpanded ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
         </button>
@@ -93,8 +93,8 @@ export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }
                 "flex items-center rounded-2xl transition-all duration-200 group relative",
                 isExpanded ? "px-4 py-3 gap-3 w-full" : "w-14 h-14 justify-center mx-auto",
                 isActive
-                  ? "bg-primary-light text-primary shadow-sm"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-primary/10 text-primary shadow-sm"
+                  : "text-gray-500 hover:bg-gray-100 dark:text-zinc-500 dark:hover:bg-zinc-900 hover:text-gray-900 dark:hover:text-zinc-50"
               )}
             >
               <Icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
@@ -110,7 +110,7 @@ export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }
 
               {/* Tooltip on hover (only when collapsed) */}
               {!isExpanded && (
-                <div className="absolute left-full ml-3 px-3 py-2 bg-foreground text-background text-xs font-semibold rounded-xl opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100 pointer-events-none whitespace-nowrap z-50 shadow-xl border border-border/10">
+                <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-semibold rounded-xl opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100 pointer-events-none whitespace-nowrap z-50 shadow-xl border border-border/10">
                   {item.label}
                 </div>
               )}
@@ -119,10 +119,10 @@ export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }
         })}
       </div>
 
-      <div className="mt-auto pt-6 border-t border-zinc-800 flex flex-col gap-4">
+      <div className="mt-auto pt-6 border-t border-gray-100 dark:border-zinc-800 flex flex-col gap-4">
         {isExpanded ? (
           <div className="flex flex-col gap-2">
-            <p className="text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-2 px-2">Aparência</p>
+            <p className="text-[10px] uppercase font-black tracking-widest text-gray-400 dark:text-zinc-500 mb-2 px-2">Aparência</p>
             <div className="grid grid-cols-3 gap-1">
               {[
                 { id: 'light', icon: Sun, label: 'Claro' },
@@ -136,7 +136,7 @@ export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }
                     "flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all",
                     theme === t.id
                       ? "bg-primary/10 border-primary text-primary"
-                      : "bg-zinc-900 border-transparent text-zinc-500 hover:text-zinc-300"
+                      : "bg-gray-50 dark:bg-zinc-900 border-transparent text-gray-400 dark:text-zinc-500 hover:text-gray-900 dark:hover:text-zinc-300"
                   )}
                 >
                   <t.icon className="w-4 h-4" />
@@ -152,7 +152,7 @@ export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }
               const nextIndex = (modes.indexOf(theme) + 1) % modes.length;
               setTheme(modes[nextIndex]);
             }}
-            className="w-14 h-14 flex items-center justify-center mx-auto rounded-2xl bg-zinc-900 text-zinc-400 hover:text-primary transition-all"
+            className="w-14 h-14 flex items-center justify-center mx-auto rounded-2xl bg-gray-100 dark:bg-zinc-900 text-gray-400 dark:text-zinc-400 hover:text-primary transition-all"
           >
             {theme === 'light' ? <Sun className="w-5 h-5" /> : theme === 'dark' ? <Moon className="w-5 h-5" /> : <Zap className="w-5 h-5 text-primary" />}
           </button>

@@ -47,13 +47,15 @@ export function StatCard({
           )}>
             {title}
           </p>
-          <p className={cn(
-            "font-black tracking-tighter leading-tight truncate",
-            isCompact ? "text-base" : "text-lg sm:text-xl lg:text-2xl xl:text-3xl",
-            variant === 'positive' && 'text-success',
-            variant === 'negative' && 'text-danger',
-            variant === 'neutral' && 'text-info',
-          )}>
+          <p
+            className={cn(
+              "font-black tracking-tighter leading-tight text-[clamp(1.2rem,2.5vw,2rem)] truncate block w-full",
+              variant === 'positive' && 'text-success',
+              variant === 'negative' && 'text-danger',
+              variant === 'neutral' && 'text-info',
+            )}
+            title={formatValue(value) as string}
+          >
             {formatValue(value)}
           </p>
           {subtitle && !isCompact && (

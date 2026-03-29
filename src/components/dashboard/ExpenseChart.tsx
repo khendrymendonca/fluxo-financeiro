@@ -48,11 +48,7 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
   };
 
   if (chartData.length === 0) {
-    return (
-      <div className="card-elevated p-4 flex items-center justify-center h-full min-h-[120px]">
-        <p className="text-xs text-muted-foreground">Nenhuma despesa registrada</p>
-      </div>
-    );
+    return null;
   }
 
   const CustomTooltip = ({ active, payload }: any) => {
