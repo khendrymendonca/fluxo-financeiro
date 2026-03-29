@@ -63,55 +63,49 @@
     --sidebar-ring: 174 60% 45%;
   }
 
-  /* Theme Verde-Black (Premium Matrix Style) */
+  /* Theme Verde-Black (Premium Nubank Style) */
   .theme-green-black {
-    --background: 45 17% 6%;
-    /* #0F0E0B - Quase Preto */
-    --foreground: 84 50% 95%;
-    /* Off-white esverdeado */
-    --card: 104 95% 8%;
-    /* #082901 - Verde Profundo */
-    --card-foreground: 84 50% 95%;
-    --popover: 104 95% 5%;
-    --popover-foreground: 84 50% 95%;
-    --primary: 84 51% 51%;
-    /* #8FBF45 - Verde Lima Vibrante */
-    --primary-foreground: 104 95% 5%;
-    --primary-light: 84 51% 15%;
-    --primary-muted: 84 40% 30%;
-    --secondary: 98 100% 12%;
-    /* #184000 - Verde Escuro Meta */
-    --secondary-foreground: 84 50% 95%;
-    --success: 84 51% 51%;
-    --success-foreground: 104 95% 5%;
-    --success-light: 84 51% 10%;
-    --danger: 0 70% 55%;
+    --background: 240 10% 2%;    /* #09090b - Zinc 950 */
+    --foreground: 0 0% 100%;    /* Branco */
+    --card: 240 10% 6%;         /* #18181b - Zinc 900 */
+    --card-foreground: 0 0% 100%;
+    --popover: 240 10% 4%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 270 70% 60%;     /* Roxo Nubank */
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 270 70% 15%;
+    --primary-muted: 270 40% 30%;
+    --secondary: 240 10% 12%;   /* Zinc 800 */
+    --secondary-foreground: 240 10% 90%;
+    --success: 142 70% 45%;     /* Verde vibrante */
+    --success-foreground: 0 0% 100%;
+    --success-light: 142 70% 10%;
+    --danger: 0 84% 60%;        /* Vermelho vibrante */
     --danger-foreground: 0 0% 100%;
-    --danger-light: 0 50% 15%;
-    --warning: 45 90% 50%;
-    --warning-foreground: 45 90% 10%;
-    --warning-light: 45 60% 15%;
-    --info: 190 80% 50%;
-    --info-foreground: 190 80% 10%;
-    --info-light: 190 60% 15%;
-    --muted: 104 30% 15%;
-    --muted-foreground: 84 20% 65%;
-    --accent: 84 51% 20%;
-    --accent-foreground: 84 51% 90%;
-    --destructive: 0 60% 50%;
-    --destructive-foreground: 0 0% 95%;
-    --border: 91 47% 37%;
-    /* #5C8B32 - Verde Médio */
-    --input: 104 40% 12%;
-    --ring: 84 51% 51%;
-    --sidebar-background: 104 95% 6%;
-    --sidebar-foreground: 84 30% 85%;
-    --sidebar-primary: 84 51% 51%;
-    --sidebar-primary-foreground: 104 95% 5%;
-    --sidebar-accent: 84 51% 12%;
-    --sidebar-accent-foreground: 84 51% 95%;
-    --sidebar-border: 91 40% 20%;
-    --sidebar-ring: 84 51% 51%;
+    --danger-light: 0 84% 10%;
+    --warning: 45 93% 47%;
+    --warning-foreground: 45 93% 10%;
+    --warning-light: 45 93% 10%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+    --info-light: 199 89% 10%;
+    --muted: 240 10% 12%;       /* Zinc 800 */
+    --muted-foreground: 240 5% 65%; /* Zinc 400 aproximado */
+    --accent: 240 10% 15%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 10% 12%;      /* Zinc 800 */
+    --input: 240 10% 12%;
+    --ring: 270 70% 60%;
+    --sidebar-background: 240 10% 2%;
+    --sidebar-foreground: 240 5% 85%;
+    --sidebar-primary: 270 70% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 10% 12%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 240 10% 12%;
+    --sidebar-ring: 270 70% 60%;
   }
 
   /* Dynamic shadows for Verde-Black */

@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react';
 import { formatCurrency } from '@/utils/formatters';
-import { ArrowUpRight, ArrowDownRight, Trash2, Pencil, FastForward, ChevronDown, ChevronUp, Plus, RotateCcw } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Trash2, Pencil, FastForward, ChevronDown, ChevronUp, Plus, RotateCcw, ArrowRight } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useToggleTransactionPaid } from '@/hooks/useTransactionMutations';
@@ -338,9 +338,9 @@ export function TransactionList({
         Object.keys(groupedItems)
           .sort((a, b) => parseLocalDate(b).getTime() - parseLocalDate(a).getTime())
           .map(date => (
-            <div key={date} className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground px-2">{formatDate(date)}</p>
-              <div className="card-elevated divide-y divide-border">
+            <div key={date} className="space-y-3">
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-4">{formatDate(date)}</p>
+              <div className="divide-y divide-zinc-900 bg-transparent">
                 {groupedItems[date].map(item => {
                   const isIncome = item.type === 'income';
                   const isPending = item.isPending;
@@ -351,9 +351,9 @@ export function TransactionList({
                     : [];
 
                   return (
-                    <div key={item.id} className="overflow-hidden flex items-center">
+                    <div key={item.id} className="group relative">
                       {isSelectionMode && (
-                        <div className="pl-4">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
                           <Checkbox
                             checked={selectedIds.has(item.id)}
                             onCheckedChange={() => toggleSelectId(item.id)}
@@ -362,146 +362,62 @@ export function TransactionList({
                         </div>
                       )}
                       <div className={cn(
-                        "flex-1 flex flex-col md:flex-row md:items-center justify-between p-4 hover:bg-muted/30 transition-colors group gap-4",
-                        isPending && "bg-primary/5 border-l-4 border-l-primary"
-                      )}>
+                        "flex items-center justify-between p-4 transition-all active:bg-white/5 cursor-pointer",
+                        isSelectionMode && "pl-14"
+                      )} onClick={() => {
+                        if (isSelectionMode) toggleSelectId(item.id);
+                        else onEdit(item as Transaction);
+                      }}>
                         {/* Lado esquerdo */}
-                        <div className="flex items-center gap-3">
-                          <div className={cn("p-2.5 rounded-xl flex-shrink-0",
-                            isPending ? "bg-primary/10 text-primary" : (isIncome ? "bg-success-light text-success" : "bg-danger-light text-danger"))}>
+                        <div className="flex items-center gap-4">
+                          <div className={cn("p-2.5 rounded-full border border-zinc-800 bg-zinc-900 group-hover:border-zinc-700 transition-colors",
+                            isPending ? "text-primary border-primary/20 bg-primary/5" : (isIncome ? "text-success" : "text-zinc-400"))}>
                             {item.icon ? <item.icon className="w-5 h-5" /> : (
                               isPending ? <Clock className="w-5 h-5" /> : (isIncome ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />)
                             )}
                           </div>
                           <div>
-                            <p className="font-bold">{item.description}</p>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {isPending && <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">Pendente</span>}
-                              {item.isVirtual && <span className="text-[10px] bg-amber-500/20 text-amber-600 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter shadow-sm border border-amber-500/20 animate-pulse">Projetado</span>}
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-white text-sm">{item.description}</p>
+                              {isPending && <span className="text-[8px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Pendente</span>}
+                              {item.isVirtual && <span className="text-[8px] bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Projetado</span>}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                              <span>
+                                {item.categoryId === 'debt-payment' ? 'Pagamento de Acordo' :
+                                  item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || 'Outros' : 'Outros'}
+                              </span>
                               {item.installmentNumber && item.installmentTotal && (
-                                <span className="text-[10px] bg-info/20 text-info px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">
-                                  {item.installmentNumber}/{item.installmentTotal}
-                                </span>
+                                <>
+                                  <span className="opacity-30">•</span>
+                                  <span className="font-bold">{item.installmentNumber}/{item.installmentTotal}</span>
+                                </>
                               )}
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              {item.categoryId === 'debt-payment' ? 'Pagamento de Acordo' :
-                                item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || 'Outros' : 'Outros'}
-                              {item.isPending && item.cardId && <span> • Compra: {formatShortDate(item.date)}</span>}
-                            </p>
                           </div>
                         </div>
 
                         {/* Lado direito */}
-                        <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-                          <span className={cn("font-black text-lg md:text-base", isIncome ? "text-success" : "text-danger")}>
+                        <div className="flex items-center gap-4">
+                          <span className={cn("font-bold text-sm", isIncome ? "text-success" : "text-white")}>
                             {isIncome ? '+' : '-'} {formatCurrency(item.amount)}
                           </span>
-                          <div className="flex items-center gap-2 w-full md:w-auto">
-                            {isPending ? (
-                              <div className="flex items-center gap-2 w-full">
-                                {allowSettlement ? (
-                                  <Button size="sm" variant="outline"
-                                    onClick={() => { setPayingItem(item); setPaymentDate(item.date?.split('T')[0] || todayLocalString()); setPaymentMethod('account'); }}
-                                    disabled={item.isVirtual || isDeletingTransaction || isBulkDeleting}
-                                    className="flex-1 md:flex-none h-9 px-4 rounded-xl border-primary/30 text-primary hover:bg-primary/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider transition-all hover:scale-105 active:scale-95">
-                                    <CheckCircle2 className="w-4 h-4" /> Baixar Agora
-                                  </Button>
-                                ) : (
-                                  <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-muted text-muted-foreground text-[10px] font-black uppercase tracking-wider">
-                                    <Clock className="w-3.5 h-3.5" /> Pendente
-                                  </div>
-                                )}
-                                {hasInstallmentGroup && futureInstallments.length > 0 && !item.isRecurring && (
-                                  <Button size="sm" variant="outline"
-                                    onClick={() => setExpandedGroup(isGroupExpanded ? null : item.installmentGroupId)}
-                                    disabled={isDeletingTransaction || isBulkDeleting}
-                                    className="h-9 px-3 rounded-xl border-info/30 text-info hover:bg-info/10 flex items-center gap-1 font-black uppercase text-[10px] tracking-wider transition-all">
-                                    <FastForward className="w-4 h-4" />
-                                    {isGroupExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                                  </Button>
-                                )}
-                                {(item.debtId || item.transactionType === 'installment') ? null : (
-                                  <>
-                                    <Button variant="ghost" size="icon"
-                                      onClick={() => onEdit(item as Transaction)}
-                                      disabled={item.isVirtual || isDeletingTransaction || isBulkDeleting}
-                                      className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary shrink-0">
-                                      <Pencil className="w-4 h-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon"
-                                      onClick={() => setItemToDelete(item as Transaction)}
-                                      disabled={item.isVirtual || isDeletingTransaction || isBulkDeleting}
-                                      className="h-9 w-9 rounded-xl hover:bg-danger/10 hover:text-danger shrink-0">
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="flex opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all gap-1 justify-end w-full">
-                                {allowSettlement ? (
-                                  <Button variant="ghost" size="icon"
-                                    onClick={() => togglePaidMutation({ id: item.id, isPaid: false })}
-                                    disabled={isDeletingTransaction || isBulkDeleting}
-                                    title="Estornar Pagamento"
-                                    className="h-9 w-9 rounded-lg hover:bg-amber-100 hover:text-amber-600 text-amber-600">
-                                    <RotateCcw className="w-4 h-4" />
-                                  </Button>
-                                ) : (
-                                  <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-success/10 text-success text-[10px] font-black uppercase tracking-wider h-9">
-                                    <CheckCircle2 className="w-3.5 h-3.5" /> Liquidado
-                                  </div>
-                                )}
-                                {hasInstallmentGroup && futureInstallments.length > 0 && !item.isRecurring && (
-                                  <Button size="sm" variant="outline"
-                                    onClick={() => setExpandedGroup(isGroupExpanded ? null : item.installmentGroupId)}
-                                    disabled={isDeletingTransaction || isBulkDeleting}
-                                    className="h-9 px-3 rounded-xl border-info/30 text-info hover:bg-info/10 flex items-center gap-1 font-black uppercase text-[10px] tracking-wider transition-all">
-                                    <FastForward className="w-4 h-4" />
-                                    {isGroupExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                                  </Button>
-                                )}
-                                {!(item.debtId || item.transactionType === 'installment') && (
-                                  <>
-                                    <Button variant="ghost" size="icon"
-                                      onClick={() => onEdit(item as Transaction)}
-                                      disabled={isDeletingTransaction || isBulkDeleting}
-                                      className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary">
-                                      <Pencil className="w-4 h-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon"
-                                      onClick={() => {
-                                        if (hasInstallmentGroup || item.isRecurring || item.transactionType === 'recurring') {
-                                          setItemToDelete(item as Transaction);
-                                        } else {
-                                          deleteTransaction(item as Transaction, 'this');
-                                        }
-                                      }}
-                                      disabled={isDeletingTransaction || isBulkDeleting}
-                                      className="h-9 w-9 rounded-lg hover:bg-danger/10 hover:text-danger">
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
-                            )}
-                          </div>
+                          <ArrowRight className="w-4 h-4 text-zinc-800 group-hover:text-zinc-600 transition-colors" />
                         </div>
                       </div>
 
-                      {/* Painel de parcelas futuras */}
+                      {/* Ações Rápidas (Desktop ou Expanded) */}
                       {isGroupExpanded && hasInstallmentGroup && (
-                        <div className={cn("border-t p-4 animate-fade-in", isIncome ? "bg-success/5 border-success/20" : "bg-info/5 border-info/20")}>
+                        <div className={cn("border-t border-zinc-900 p-4 animate-fade-in", isIncome ? "bg-success/5" : "bg-info/5")}>
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
                             <div>
-                              <h4 className={cn("text-sm font-black uppercase tracking-wider flex items-center gap-2", isIncome ? "text-success" : "text-info")}>
+                              <h4 className={cn("text-xs font-black uppercase tracking-wider flex items-center gap-2", isIncome ? "text-success" : "text-info")}>
                                 <FastForward className="w-4 h-4" /> {isIncome ? 'Receber Parcelas Futuras' : 'Antecipar Parcelas Futuras'}
                               </h4>
-                              <p className="text-xs text-muted-foreground mt-1">{futureInstallments.length} parcela(s) pendente(s).</p>
+                              <p className="text-[10px] text-zinc-500 mt-1">{futureInstallments.length} parcela(s) pendente(s).</p>
                             </div>
                             <div className="flex items-center gap-2">
-                              <select className="h-9 rounded-lg border border-input bg-background px-2 py-1 text-xs font-bold flex-1 md:w-40"
+                              <select className="h-8 rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1 text-[10px] font-bold text-white flex-1 md:w-40"
                                 value={anticipateAccount} onChange={e => setAnticipateAccount(e.target.value)}>
                                 <option value="">{isIncome ? 'Entrar na conta...' : 'Debitar de...'}</option>
                                 {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
@@ -509,43 +425,43 @@ export function TransactionList({
                               {anticipatingIds.size > 0 && (
                                 <Button size="sm"
                                   onClick={() => handleAnticipateSelected(futureInstallments)}
-                                  className={cn("h-9 px-4 rounded-xl text-white font-black uppercase text-[10px] tracking-wider", isIncome ? "bg-success/80 hover:bg-success/70" : "bg-info/80 hover:bg-info/70")}>
+                                  className={cn("h-8 px-3 rounded-lg text-white font-black uppercase text-[9px] tracking-wider", isIncome ? "bg-success/80 hover:bg-success/70" : "bg-info/80 hover:bg-info/70")}>
                                   Selecionadas ({anticipatingIds.size})
                                 </Button>
                               )}
                               <Button size="sm"
                                 onClick={() => handleAnticipateAll(futureInstallments)}
-                                className={cn("h-9 px-4 rounded-xl text-white font-black uppercase text-[10px] tracking-wider", isIncome ? "bg-success hover:bg-success/90" : "bg-info hover:bg-info/90")}>
+                                className={cn("h-8 px-3 rounded-lg text-white font-black uppercase text-[9px] tracking-wider", isIncome ? "bg-success hover:bg-success/90" : "bg-info hover:bg-info/90")}>
                                 Tudo ({futureInstallments.length})
                               </Button>
                             </div>
                           </div>
-                          <div className="space-y-1 max-h-60 overflow-y-auto">
+                          <div className="space-y-1 max-h-60 overflow-y-auto custom-scrollbar">
                             {futureInstallments.map(inst => (
                               <div key={inst.id} className={cn(
-                                "flex items-center justify-between p-3 rounded-xl bg-background/60 border border-border/50",
+                                "flex items-center justify-between p-3 rounded-xl bg-zinc-900/50 border border-zinc-800",
                                 anticipatingIds.has(inst.id) && (isIncome ? "border-success/50 bg-success/10" : "border-info/50 bg-info/10")
                               )}>
                                 <div className="flex items-center gap-3">
-                                  <input type="checkbox" checked={anticipatingIds.has(inst.id)}
-                                    onChange={e => {
+                                  <Checkbox checked={anticipatingIds.has(inst.id)}
+                                    onCheckedChange={checked => {
                                       setAnticipatingIds(prev => {
                                         const next = new Set(prev);
-                                        if (e.target.checked) next.add(inst.id);
+                                        if (checked) next.add(inst.id);
                                         else next.delete(inst.id);
                                         return next;
                                       });
-                                    }} className="w-4 h-4 rounded" />
+                                    }} />
                                   <div>
-                                    <span className={cn("text-xs font-black", isIncome ? "text-success" : "text-info")}>Parcela {inst.installmentNumber}/{inst.installmentTotal}</span>
-                                    <p className="text-[10px] text-muted-foreground">Vence em {formatShortDate(inst.date)}</p>
+                                    <span className={cn("text-[10px] font-black", isIncome ? "text-success" : "text-info")}>Parcela {inst.installmentNumber}/{inst.installmentTotal}</span>
+                                    <p className="text-[10px] text-zinc-500">Vence em {formatShortDate(inst.date)}</p>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <span className={cn("text-sm font-black", isIncome ? "text-success" : "text-danger")}>{formatCurrency(inst.amount)}</span>
+                                  <span className={cn("text-xs font-black", isIncome ? "text-success" : "text-white")}>{formatCurrency(inst.amount)}</span>
                                   <Button size="sm" variant="outline"
                                     onClick={() => handleAnticipatePayment(inst)}
-                                    className={cn("h-8 px-3 rounded-lg text-[10px] font-black uppercase", isIncome ? "border-success/30 text-success hover:bg-success/20" : "border-info/30 text-info hover:bg-info/20")}>
+                                    className={cn("h-7 px-2 rounded-lg text-[9px] font-black uppercase", isIncome ? "border-success/30 text-success" : "border-info/30 text-info")}>
                                     {isIncome ? 'Receber' : 'Pagar'}
                                   </Button>
                                 </div>
@@ -563,112 +479,114 @@ export function TransactionList({
       )}
 
       {/* Modal de Pagamento */}
-      {payingItem && (
-        <Portal>
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
-            onClick={() => setPayingItem(null)}>
-            <div className="bg-card rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-border max-h-[85vh] flex flex-col overflow-hidden"
-              onClick={e => e.stopPropagation()}>
-              <div className="px-5 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
-                <h2 className="text-lg font-black tracking-tight">
-                  {payingItem.type === 'income' ? 'Receber com qual conta?' : 'Pagar com qual conta?'}
-                </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  <span className={cn("font-bold", payingItem.type === 'income' ? "text-success" : "text-danger")}>
-                    {formatCurrency(payingItem.amount)}
-                  </span>{' — '}{payingItem.description}
-                </p>
-              </div>
-              <div className="p-4 space-y-4">
-                <div className="space-y-2 relative">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Data do Pagamento</label>
-                  <label className="relative flex items-center bg-muted/30 border border-input rounded-xl p-3 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all cursor-pointer">
-                    <Calendar className="absolute left-3 w-4 h-4 text-primary" />
-                    <input type="date" value={paymentDate?.split('T')[0] || ''} onChange={e => setPaymentDate(e.target.value)}
-                      className="w-full pl-8 pr-2 bg-transparent text-sm font-bold focus:outline-none appearance-none cursor-pointer text-foreground" />
-                  </label>
+      {
+        payingItem && (
+          <Portal>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+              onClick={() => setPayingItem(null)}>
+              <div className="bg-card rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-border max-h-[85vh] flex flex-col overflow-hidden"
+                onClick={e => e.stopPropagation()}>
+                <div className="px-5 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
+                  <h2 className="text-lg font-black tracking-tight">
+                    {payingItem.type === 'income' ? 'Receber com qual conta?' : 'Pagar com qual conta?'}
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    <span className={cn("font-bold", payingItem.type === 'income' ? "text-success" : "text-danger")}>
+                      {formatCurrency(payingItem.amount)}
+                    </span>{' — '}{payingItem.description}
+                  </p>
                 </div>
-                <div className="flex rounded-xl bg-muted/40 p-1">
-                  <button onClick={() => setPaymentMethod('account')}
-                    className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
-                      paymentMethod === 'account' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                    Conta Bancária
-                  </button>
-                  {payingItem?.type !== 'income' && (
-                    <button onClick={() => setPaymentMethod('credit_card')}
+                <div className="p-4 space-y-4">
+                  <div className="space-y-2 relative">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Data do Pagamento</label>
+                    <label className="relative flex items-center bg-muted/30 border border-input rounded-xl p-3 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all cursor-pointer">
+                      <Calendar className="absolute left-3 w-4 h-4 text-primary" />
+                      <input type="date" value={paymentDate?.split('T')[0] || ''} onChange={e => setPaymentDate(e.target.value)}
+                        className="w-full pl-8 pr-2 bg-transparent text-sm font-bold focus:outline-none appearance-none cursor-pointer text-foreground" />
+                    </label>
+                  </div>
+                  <div className="flex rounded-xl bg-muted/40 p-1">
+                    <button onClick={() => setPaymentMethod('account')}
                       className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
-                        paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                      Cartão de Crédito
+                        paymentMethod === 'account' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                      Conta Bancária
                     </button>
-                  )}
+                    {payingItem?.type !== 'income' && (
+                      <button onClick={() => setPaymentMethod('credit_card')}
+                        className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
+                          paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                        Cartão de Crédito
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="flex-1 overflow-y-auto p-3 pt-0 space-y-2">
-                {paymentMethod === 'account' && (
-                  accounts.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8 text-sm">Nenhuma conta cadastrada.</p>
-                  ) : (
-                    accounts.map(acc => {
-                      const availableTotal = acc.balance + (acc.hasOverdraft ? (acc.overdraftLimit || 0) : 0);
-                      const wouldGoNegative = payingItem.type === 'expense' && acc.balance < payingItem.amount;
-                      const hasEnoughWithOverdraft = acc.hasOverdraft && availableTotal >= payingItem.amount;
-                      const insufficientFunds = wouldGoNegative && !hasEnoughWithOverdraft;
-                      return (
-                        <button key={acc.id} onClick={() => handleSubmitPayment(acc.id, false)}
-                          disabled={insufficientFunds}
-                          className={cn("w-full p-3 rounded-xl border-2 text-left transition-all",
-                            insufficientFunds ? "border-border/30 opacity-40 cursor-not-allowed" : "border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] cursor-pointer")}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: acc.color }} />
-                              <div>
-                                <p className="font-bold text-sm leading-tight">{acc.name}</p>
-                                <p className="text-[10px] text-muted-foreground font-bold uppercase">{acc.bank}</p>
+                <div className="flex-1 overflow-y-auto p-3 pt-0 space-y-2">
+                  {paymentMethod === 'account' && (
+                    accounts.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8 text-sm">Nenhuma conta cadastrada.</p>
+                    ) : (
+                      accounts.map(acc => {
+                        const availableTotal = acc.balance + (acc.hasOverdraft ? (acc.overdraftLimit || 0) : 0);
+                        const wouldGoNegative = payingItem.type === 'expense' && acc.balance < payingItem.amount;
+                        const hasEnoughWithOverdraft = acc.hasOverdraft && availableTotal >= payingItem.amount;
+                        const insufficientFunds = wouldGoNegative && !hasEnoughWithOverdraft;
+                        return (
+                          <button key={acc.id} onClick={() => handleSubmitPayment(acc.id, false)}
+                            disabled={insufficientFunds}
+                            className={cn("w-full p-3 rounded-xl border-2 text-left transition-all",
+                              insufficientFunds ? "border-border/30 opacity-40 cursor-not-allowed" : "border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] cursor-pointer")}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: acc.color }} />
+                                <div>
+                                  <p className="font-bold text-sm leading-tight">{acc.name}</p>
+                                  <p className="text-[10px] text-muted-foreground font-bold uppercase">{acc.bank}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className={cn("font-black text-sm", acc.balance < 0 && "text-danger")}>
+                                  {formatCurrency(acc.balance)}
+                                </p>
+                                {acc.hasOverdraft && (acc.overdraftLimit || 0) > 0 && (
+                                  <p className="text-[9px] text-amber-600 font-bold">Limite: {formatCurrency(acc.overdraftLimit || 0)}</p>
+                                )}
+                                {insufficientFunds && <p className="text-[9px] text-danger font-bold">Saldo inadequado</p>}
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className={cn("font-black text-sm", acc.balance < 0 && "text-danger")}>
-                                {formatCurrency(acc.balance)}
-                              </p>
-                              {acc.hasOverdraft && (acc.overdraftLimit || 0) > 0 && (
-                                <p className="text-[9px] text-amber-600 font-bold">Limite: {formatCurrency(acc.overdraftLimit || 0)}</p>
-                              )}
-                              {insufficientFunds && <p className="text-[9px] text-danger font-bold">Saldo inadequado</p>}
+                          </button>
+                        );
+                      })
+                    )
+                  )}
+                  {paymentMethod === 'credit_card' && (
+                    creditCards.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8 text-sm">Nenhum cartão cadastrado.</p>
+                    ) : (
+                      creditCards.map(card => (
+                        <button key={card.id} onClick={() => handleSubmitPayment(card.id, true)}
+                          className="w-full p-3 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] transition-all text-left cursor-pointer">
+                          <div className="flex items-center gap-3">
+                            <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: card.color }} />
+                            <div>
+                              <p className="font-bold text-sm leading-tight">{card.name}</p>
+                              <p className="text-[10px] text-muted-foreground font-bold uppercase">{card.bank}</p>
                             </div>
                           </div>
                         </button>
-                      );
-                    })
-                  )
-                )}
-                {paymentMethod === 'credit_card' && (
-                  creditCards.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8 text-sm">Nenhum cartão cadastrado.</p>
-                  ) : (
-                    creditCards.map(card => (
-                      <button key={card.id} onClick={() => handleSubmitPayment(card.id, true)}
-                        className="w-full p-3 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] transition-all text-left cursor-pointer">
-                        <div className="flex items-center gap-3">
-                          <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: card.color }} />
-                          <div>
-                            <p className="font-bold text-sm leading-tight">{card.name}</p>
-                            <p className="text-[10px] text-muted-foreground font-bold uppercase">{card.bank}</p>
-                          </div>
-                        </div>
-                      </button>
-                    ))
-                  )
-                )}
-              </div>
-              <div className="px-5 py-3 border-t border-border">
-                <Button variant="ghost" onClick={() => setPayingItem(null)} className="w-full rounded-xl text-sm font-bold">
-                  Cancelar
-                </Button>
+                      ))
+                    )
+                  )}
+                </div>
+                <div className="px-5 py-3 border-t border-border">
+                  <Button variant="ghost" onClick={() => setPayingItem(null)} className="w-full rounded-xl text-sm font-bold">
+                    Cancelar
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </Portal>
-      )}
+          </Portal>
+        )
+      }
 
       {/* Modal de Exclusão Individual (Single Item) */}
       <BulkDeleteDialog
@@ -699,39 +617,41 @@ export function TransactionList({
       />
 
       {/* Floating Bulk Action Bar */}
-      {isSelectionMode && selectedIds.size > 0 && (
-        <Portal>
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-300">
-            <div className="bg-foreground text-background px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-6 border border-background/10">
-              <div className="flex flex-col">
-                <span className="text-xs font-black uppercase opacity-70 tracking-tighter">Selecionados</span>
-                <span className="text-lg font-black leading-none">{selectedIds.size}</span>
-              </div>
+      {
+        isSelectionMode && selectedIds.size > 0 && (
+          <Portal>
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-300">
+              <div className="bg-foreground text-background px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-6 border border-background/10">
+                <div className="flex flex-col">
+                  <span className="text-xs font-black uppercase opacity-70 tracking-tighter">Selecionados</span>
+                  <span className="text-lg font-black leading-none">{selectedIds.size}</span>
+                </div>
 
-              <div className="h-8 w-px bg-background/20" />
+                <div className="h-8 w-px bg-background/20" />
 
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearSelection}
-                  className="hover:bg-background/10 text-background font-bold text-xs"
-                >
-                  Limpar
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setShowBulkDeleteDialog(true)}
-                  className="bg-danger hover:bg-danger/90 text-white font-black uppercase text-[10px] tracking-widest px-6 rounded-xl"
-                >
-                  Remover
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSelection}
+                    className="hover:bg-background/10 text-background font-bold text-xs"
+                  >
+                    Limpar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setShowBulkDeleteDialog(true)}
+                    className="bg-danger hover:bg-danger/90 text-white font-black uppercase text-[10px] tracking-widest px-6 rounded-xl"
+                  >
+                    Remover
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </Portal>
-      )}
+          </Portal>
+        )
+      }
 
       {/* Bulk Delete Dialog */}
       <BulkDeleteDialog
@@ -768,7 +688,7 @@ export function TransactionList({
           toggleSelectionMode(); // Sai do modo de seleção após deletar
         }}
       />
-    </div>
+    </div >
   );
 }
 

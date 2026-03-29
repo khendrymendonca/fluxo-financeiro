@@ -1,21 +1,42 @@
-﻿import { useState, useRef, useEffect, useMemo } from 'react';
+﻿import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { Home, List, CreditCard as CardIcon, HelpCircle, LayoutDashboard, Plus, Wallet, TrendingUp, TrendingDown, PiggyBank, Menu, ArrowUpDown, Receipt, Target, LineChart, Settings2, Database, Calculator } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import {
+  Home,
+  List,
+  CreditCard as CardIcon,
+  HelpCircle,
+  LayoutDashboard,
+  Plus,
+  Wallet,
+  TrendingUp,
+  TrendingDown,
+  PiggyBank,
+  Menu,
+  ArrowUpDown,
+  Receipt,
+  Target,
+  LineChart,
+  Settings2,
+  Database,
+  Calculator,
+  Eye,
+  EyeOff,
+  Bell,
+  ArrowRight,
+  Send,
+  History,
+  BarChart3,
+  ArrowRightLeft,
+  Info
+} from 'lucide-react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
-import { useAccounts } from '@/hooks/useFinanceQueries';
 import { useEmergencyFund } from '@/hooks/useEmergencyFund';
 import { todayLocalString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 import { NavigationRail } from '@/components/layout/NavigationRail';
-import { MobileNav } from '@/components/layout/MobileNav';
-import { StatCard } from '@/components/dashboard/StatCard';
-import { ExpenseChart } from '@/components/dashboard/ExpenseChart';
-import { GoalProgress } from '@/components/dashboard/GoalProgress';
-import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { TransactionList } from '@/components/transactions/TransactionList';
 import { GoalCard } from '@/components/goals/GoalCard';
@@ -25,22 +46,19 @@ import { AccountsManager } from '@/components/accounts/AccountsManager';
 import { DebtsManager } from '@/components/debts/DebtsManager';
 import ReportsDashboard from './ReportsDashboard';
 import CardsDashboard from './CardsDashboard';
-import { MonthSelector } from '@/components/dashboard/MonthSelector';
 import { Button } from '@/components/ui/button';
 import { Transaction, SavingsGoal } from '@/types/finance';
-import { PendingPayments } from '@/components/dashboard/PendingPayments';
 import { EmergencyReserve } from '@/components/dashboard/EmergencyReserve';
 import { CategoriesManager } from '@/components/settings/CategoriesManager';
-import { BillsManager } from '@/components/accounts/BillsManager';
-import { ExportManager } from '@/components/dashboard/ExportManager';
 import { PageHeader } from '@/components/ui/PageHeader';
-
-const DEFAULT_WIDGETS = [
-  'STAT_NETWORTH', 'STAT_INCOME', 'STAT_EXPENSE', 'STAT_PROJECTED',
-  'PENDING_PAYMENTS', 'RECENT_TRANSACTIONS'
-];
-
-
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { BottomNavigation } from '@/components/layout/BottomNavigation';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 
 type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export';
 
@@ -51,10 +69,10 @@ export default function Index() {
   const setCurrentView = (view: ViewType) => {
     setSearchParams({ view });
   };
+
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
-
-
+  const [isBalanceVisible, setIsBalanceVisible] = useState(true);
 
   const [isExpanded, setIsExpanded] = useState(() => {
     const saved = localStorage.getItem('sidebar-expanded');
@@ -70,17 +88,12 @@ export default function Index() {
     debts,
     savingsGoals,
     currentMonthTransactions,
-    getCategoryExpenses,
     setEmergencyMonths,
     addTransaction,
     updateTransaction,
-    deleteTransaction,
     addAccount,
     updateAccount,
     deleteAccount,
-    addCreditCard,
-    updateCreditCard,
-    deleteCreditCard,
     addDebt,
     updateDebt,
     deleteDebt,
@@ -88,369 +101,228 @@ export default function Index() {
     updateSavingsGoal,
     deleteSavingsGoal,
     depositToGoal,
-    categories,
-    transferBetweenAccounts,
-    loading,
     totalPendingOutflows,
     viewDate
   } = useFinanceStore();
 
   const isMobile = useIsMobile();
+  const { cashflow, categoryExpenses } = useDashboardMetrics(viewDate, currentMonthTransactions);
+  const { ...emergencyData } = useEmergencyFund(currentMonthTransactions);
 
-  const { cashflow } = useDashboardMetrics(viewDate, currentMonthTransactions);
-  const { data: accountsData = [] } = useAccounts();
+  const totalNetWorth = useMemo(() => accounts.reduce((sum, acc) => sum + Number(acc.balance), 0), [accounts]);
+  const projectedBalance = useMemo(() => totalNetWorth - totalPendingOutflows, [totalNetWorth, totalPendingOutflows]);
 
-  const totalNetWorth = accountsData.reduce((sum, acc) => sum + Number(acc.balance), 0);
-  const projectedBalance = totalNetWorth - totalPendingOutflows;
-
-  const emergencyData = useEmergencyFund(currentMonthTransactions);
-  const categoryExpenses = getCategoryExpenses();
-
-  const handleEditTransaction = (item: Transaction) => {
+  const handleEditTransaction = useCallback((item: Transaction) => {
     setEditingTransaction(item);
     setShowTransactionForm(true);
-  };
+  }, []);
 
-  const handleToggleSidebar = (expanded: boolean) => {
+  const handleToggleSidebar = useCallback((expanded: boolean) => {
     setIsExpanded(expanded);
     localStorage.setItem('sidebar-expanded', JSON.stringify(expanded));
-  };
-
-  const WIDGET_CATALOG: { [key: string]: { name: string, component: React.ReactNode } } = {
-    STAT_NETWORTH: {
-      name: 'Resumo: Patrimônio Total',
-      component: (
-        <StatCard title="Patrimônio Total" value={totalNetWorth} icon={<Wallet className="w-5 h-5" />} variant={totalNetWorth >= 0 ? 'positive' : 'negative'} />
-      )
-    },
-    STAT_INCOME: {
-      name: 'Resumo: Receitas',
-      component: (
-        <StatCard title="Receitas" value={cashflow.totalIncome} icon={<TrendingUp className="w-4 h-4 text-success" />} variant="positive" />
-      )
-    },
-    STAT_EXPENSE: {
-      name: 'Resumo: Despesas',
-      component: (
-        <StatCard title="Despesas" value={cashflow.totalExpenses} icon={<TrendingDown className="w-4 h-4 text-danger" />} variant="negative" />
-      )
-    },
-    STAT_PROJECTED: {
-      name: 'Resumo: Saldo Projetado',
-      component: (
-        <StatCard title="Saldo Projetado" value={projectedBalance} icon={<PiggyBank className="w-5 h-5" />} variant={projectedBalance >= 0 ? 'positive' : 'negative'} subtitle="Incluindo saídas pendentes" />
-      )
-    },
-    EXPENSE_CHART: {
-      name: 'Distribuição por Categorias',
-      component: (
-        <ExpenseChart data={categoryExpenses.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)} />
-      )
-    },
-    EMERGENCY_RESERVE: {
-      name: 'Reserva de Emergência',
-      component: (
-        <EmergencyReserve data={emergencyData} onMonthsChange={setEmergencyMonths} accounts={accounts} onTransfer={(from, to, amount, desc) => { transferBetweenAccounts(from, to, amount, desc, todayLocalString()); return Promise.resolve(); }} />
-      )
-    },
-    PENDING_PAYMENTS: {
-      name: 'Pagamentos Pendentes',
-      component: (
-        <PendingPayments transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
-      )
-    },
-    RECENT_TRANSACTIONS: {
-      name: 'Extrato Recente',
-      component: (
-        <RecentTransactions transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
-      )
-    }
-  };
-
-  const navItemsMobile = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Painel' },
-    { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos' },
-    { id: 'bills', icon: Receipt, label: 'Gestão de Contas' },
-    { id: 'cards', icon: CardIcon, label: 'Cartões' },
-    { id: 'accounts', icon: Wallet, label: 'Carteira' },
-    { id: 'goals', icon: Target, label: 'Metas' },
-    { id: 'debts', icon: TrendingDown, label: 'Acordos' },
-    { id: 'reports', icon: LineChart, label: 'Relatórios' },
-    { id: 'categories', icon: Settings2, label: 'Categorias' },
-    { id: 'export', icon: Database, label: 'Dados' },
-    { id: 'simulator', icon: Calculator, label: 'Simulador' },
-  ];
-
-  const MobileDashboard = () => (
-    <div className="space-y-6 px-4 py-4">
-      {/* Resumo em Bloco 2x2 */}
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard title="Patrimônio" value={totalNetWorth} icon={<Wallet className="w-4 h-4" />} variant={totalNetWorth >= 0 ? 'positive' : 'negative'} isCompact />
-        <StatCard title="Projetado" value={projectedBalance} icon={<PiggyBank className="w-4 h-4" />} variant={projectedBalance >= 0 ? 'positive' : 'negative'} isCompact />
-        <StatCard title="Receitas" value={cashflow.totalIncome} icon={<TrendingUp className="w-4 h-4" />} variant="positive" isCompact />
-        <StatCard title="Despesas" value={cashflow.totalExpenses} icon={<TrendingDown className="w-4 h-4" />} variant="negative" isCompact />
-      </div>
-
-      <div className="space-y-6 pb-20">
-        {WIDGET_CATALOG.PENDING_PAYMENTS.component}
-        <div className="w-full">
-          {WIDGET_CATALOG.RECENT_TRANSACTIONS.component}
-        </div>
-      </div>
-    </div>
-  );
-
-  const DesktopDashboard = () => (
-    <div className="space-y-6">
-      <PageHeader title="Fluxo" icon={Home}>
-        <div className="flex items-center gap-2">
-          <MonthSelector />
-          <Button onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }} className="gap-2 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
-            <Plus className="w-4 h-4" /> Novo Lançamento
-          </Button>
-        </div>
-      </PageHeader>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {DEFAULT_WIDGETS.map(id => (
-          <div key={id} className={cn(
-            "w-full h-full",
-            id === 'RECENT_TRANSACTIONS' && "md:col-span-2 lg:col-span-3",
-            (id === 'EXPENSE_CHART' || id === 'EXPENSE_EVOLUTION') && "md:col-span-2 lg:col-span-2"
-          )}>
-            {WIDGET_CATALOG[id].component}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  }, []);
 
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':
-        return isMobile ? <MobileDashboard /> : <DesktopDashboard />;
-
-      case 'transactions':
         return (
-          <div className="space-y-6 animate-fade-in px-4 py-4">
-            <PageHeader title="Lançamentos" icon={ArrowUpDown}>
+          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto pb-24">
+            {/* Header Nu Style */}
+            <div className="flex items-center justify-between px-1 py-4">
               <div className="flex items-center gap-3">
-                <MonthSelector />
-                <Button
-                  onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }}
-                  className="hidden md:flex gap-2 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
-                >
-                  <Plus className="w-4 h-4" /> Nova Transação
+                <Avatar className="w-12 h-12 border-2 border-zinc-900">
+                  <AvatarFallback className="bg-zinc-900 text-zinc-500 font-bold">KM</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Olá,</p>
+                  <p className="text-white font-bold text-lg">Khendry</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white" onClick={() => setIsBalanceVisible(!isBalanceVisible)}>
+                  {isBalanceVisible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </Button>
+                <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white">
+                  <Bell className="w-5 h-5" />
                 </Button>
               </div>
-            </PageHeader>
+            </div>
+
+            {/* Saldo Principal */}
+            <div className="px-1 py-4">
+              <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-1">Patrimônio Total</p>
+              <h1 className="text-4xl font-black tracking-tighter transition-all duration-300">
+                {isBalanceVisible ? formatCurrency(totalNetWorth) : '••••••'}
+              </h1>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="flex items-center gap-1 text-emerald-500 text-[10px] font-black uppercase tracking-wider">
+                  <TrendingUp className="w-3 h-3" /> +12% <span className="text-zinc-500">este mês</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Ações Rápidas */}
+            <div className="flex gap-4 overflow-x-auto no-scrollbar py-2 -mx-1 px-1 snap-x">
+              {[
+                { id: 'add', icon: Plus, label: 'Lançar', color: 'bg-primary/20 text-primary border-primary/30', action: () => setShowTransactionForm(true) },
+                { id: 'transfer', icon: ArrowRightLeft, label: 'Transferir', color: 'bg-zinc-900 text-white border-zinc-800' },
+                { id: 'pay', icon: Receipt, label: 'Pagar', color: 'bg-zinc-900 text-white border-zinc-800' },
+                { id: 'invest', icon: Target, label: 'Investir', color: 'bg-zinc-900 text-white border-zinc-800', action: () => setCurrentView('goals') },
+              ].map(action => (
+                <button
+                  key={action.id}
+                  onClick={action.action}
+                  className="flex flex-col items-center gap-2 min-w-[70px] snap-start group active:scale-95 transition-transform"
+                >
+                  <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center border transition-all group-hover:bg-zinc-800 shadow-lg", action.color)}>
+                    <action.icon className="w-6 h-6" />
+                  </div>
+                  <span className="text-[10px] font-bold text-zinc-500 group-hover:text-zinc-300">{action.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Métricas Principais */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-zinc-900/40 border border-zinc-900 p-6 rounded-[2.5rem]">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Saldo Projetado</p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger><Info className="w-3.5 h-3.5 text-zinc-700" /></TooltipTrigger>
+                      <TooltipContent className="bg-zinc-900 border-zinc-800 text-[10px]">Saldo previsto considerando pendências</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <h3 className="text-2xl font-bold tracking-tight">
+                  {isBalanceVisible ? formatCurrency(projectedBalance) : '••••••'}
+                </h3>
+              </div>
+
+              <div className="bg-zinc-900/40 border border-zinc-900 p-6 rounded-[2.5rem]">
+                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3">Fluxo do Mês</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[9px] text-emerald-500 font-black uppercase mb-0.5">Entradas</p>
+                    <p className="font-bold text-sm tracking-tight">{isBalanceVisible ? formatCurrency(cashflow.totalIncome) : '••••'}</p>
+                  </div>
+                  <div className="w-[1px] h-6 bg-zinc-800" />
+                  <div>
+                    <p className="text-[9px] text-zinc-500 font-black uppercase mb-0.5">Saídas</p>
+                    <p className="font-bold text-sm tracking-tight">{isBalanceVisible ? formatCurrency(cashflow.totalExpenses) : '••••'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Widgets de Gestão */}
+            <div className="space-y-6 pt-2">
+              <EmergencyReserve
+                data={emergencyData as any}
+                onMonthsChange={setEmergencyMonths}
+              />
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-2">
+                  <h2 className="text-lg font-bold tracking-tight">Minhas Contas</h2>
+                  <Button variant="link" className="text-primary text-xs font-bold" onClick={() => setCurrentView('accounts')}>Ver todas</Button>
+                </div>
+                <AccountsManager
+                  accounts={accounts}
+                  onAddAccount={addAccount}
+                  onUpdateAccount={updateAccount}
+                  onDeleteAccount={deleteAccount}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      case 'transactions':
+        return (
+          <div className="max-w-2xl mx-auto pt-4">
             <TransactionList
               transactions={currentMonthTransactions}
-              allowSettlement={false}
               onEdit={handleEditTransaction}
-              onPayBill={async (transaction: Transaction) => {
-                await updateTransaction(transaction.id, { isPaid: true, accountId: transaction.accountId }, undefined, undefined, transaction.cardId);
-              }}
+              onPayBill={async (tx) => { await updateTransaction(tx.id, { isPaid: true, paymentDate: todayLocalString() }); }}
             />
           </div>
         );
-
-      case 'bills':
-        return <BillsManager />;
-
-      case 'cards':
-        return <CardsDashboard />;
-
-      case 'accounts':
-        return (
-          <div className="space-y-6 animate-fade-in px-4 py-4">
-            <AccountsManager
-              accounts={accounts}
-              onAddAccount={addAccount}
-              onUpdateAccount={(id, updates) => updateAccount(id, updates)}
-              onDeleteAccount={deleteAccount}
-            />
-          </div>
-        );
-
       case 'goals':
         return (
-          <div className="space-y-6 animate-fade-in px-4 py-4">
-            <PageHeader title="Metas" icon={Target}>
-              <Button onClick={() => setShowGoalForm(true)} className="gap-2 rounded-xl">
-                <Plus className="w-4 h-4" /> Nova Meta
-              </Button>
-            </PageHeader>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="space-y-6 pt-4 max-w-4xl mx-auto">
+            <div className="flex items-center justify-between px-2">
+              <h2 className="text-2xl font-bold tracking-tight">Metas</h2>
+              <Button size="sm" className="rounded-xl font-bold" onClick={() => setShowGoalForm(true)}>Criar Meta</Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {savingsGoals.map(goal => (
                 <GoalCard
                   key={goal.id}
                   goal={goal}
                   accounts={accounts}
-                  onDelete={() => deleteSavingsGoal(goal.id)}
-                  onUpdate={(id, updates) => updateSavingsGoal(id, updates)}
+                  onUpdate={updateSavingsGoal}
+                  onDelete={deleteSavingsGoal}
                   onDeposit={depositToGoal}
                 />
               ))}
             </div>
           </div>
         );
-
-      case 'reports':
-        return (
-          <div className="px-4 py-4 animate-fade-in">
-            <ReportsDashboard />
-          </div>
-        );
-
       case 'debts':
         return (
-          <div className="px-4 py-4 animate-fade-in">
-            <PageHeader title="Acordos" icon={TrendingDown} />
+          <div className="max-w-2xl mx-auto">
             <DebtsManager
               debts={debts}
               onAddDebt={addDebt}
-              onUpdateDebt={(id, updates) => updateDebt(id, updates)}
+              onUpdateDebt={updateDebt}
               onDeleteDebt={deleteDebt}
             />
           </div>
         );
-
       case 'simulator':
         return (
-          <div className="px-4 py-4 animate-fade-in min-h-[80dvh]">
+          <div className="max-w-4xl mx-auto">
             <WhatIfSimulator
               totalIncome={cashflow.totalIncome}
               totalExpenses={cashflow.totalExpenses}
-              categoryExpenses={categoryExpenses.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {} as Record<string, number>)}
+              categoryExpenses={Object.fromEntries(categoryExpenses.map(c => [c.name, c.value]))}
             />
           </div>
         );
-
       case 'categories':
-        return (
-          <div className="px-4 py-4 animate-fade-in">
-            <CategoriesManager />
-          </div>
-        );
-
-      case 'export':
-        return (
-          <div className="px-4 py-4 animate-fade-in">
-            <ExportManager />
-          </div>
-        );
-
+        return <div className="max-w-2xl mx-auto"><CategoriesManager /></div>;
+      case 'reports':
+        return <ReportsDashboard />;
+      case 'cards':
+        return <div className="max-w-2xl mx-auto"><CardsDashboard /></div>;
       default:
-        return null;
+        return <div className="text-center py-20 text-zinc-500 italic">Em breve...</div>;
     }
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-background text-foreground overflow-x-hidden">
-      <div className={cn(
-        "hidden md:flex flex-col border-r border-border bg-card/50 backdrop-blur-xl fixed left-0 top-0 h-full z-40 transition-all duration-300 ease-in-out",
-        isExpanded ? "w-64" : "w-20"
-      )}>
+    <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-primary/30">
+      {!isMobile && (
         <NavigationRail
-          currentView={currentView}
-          onNavigate={(view: any) => setCurrentView(view)}
           isExpanded={isExpanded}
           onToggle={handleToggleSidebar}
+          currentView={currentView}
+          onNavigate={setCurrentView}
         />
-      </div>
-
-      <div className="md:hidden fixed top-0 left-0 right-0 h-14 flex items-center px-4 bg-background/80 backdrop-blur-md border-b z-40">
-        <Sheet>
-          <SheetTrigger asChild>
-            <button className="p-2 rounded-xl hover:bg-muted text-foreground transition-colors">
-              <Menu className="w-6 h-6" />
-            </button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-[85%] max-w-[300px] p-0 border-r border-border bg-card">
-            <SheetHeader className="p-6 border-b border-border text-left">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
-                  <span className="text-primary-foreground font-bold text-lg">F</span>
-                </div>
-                <SheetTitle className="font-bold text-xl tracking-tight text-primary font-mono lowercase">Fluxo</SheetTitle>
-              </div>
-            </SheetHeader>
-            <div className="flex flex-col gap-1 p-4 overflow-y-auto h-[calc(100dvh-100px)]">
-              {navItemsMobile.map((item) => {
-                const Icon = item.icon;
-                const isActive = currentView === item.id;
-                return (
-                  <SheetClose asChild key={item.id}>
-                    <button
-                      onClick={() => { setCurrentView(item.id as any); }}
-                      className={cn(
-                        "flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-200 text-left w-full",
-                        isActive ? "bg-primary-light text-primary font-bold shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      <Icon className={cn("w-5 h-5", isActive && "text-primary")} />
-                      <span className="text-sm">{item.label}</span>
-                    </button>
-                  </SheetClose>
-                );
-              })}
-            </div>
-          </SheetContent>
-        </Sheet>
-        <div className="flex-1 flex justify-center mr-10">
-          <span className="font-bold text-lg tracking-tight text-primary font-mono lowercase">Fluxo</span>
-        </div>
-      </div>
+      )}
 
       <main className={cn(
-        "flex-1 transition-all duration-300 ease-in-out px-0 md:px-4 pt-16 md:pt-6 pb-32 md:p-8 w-full max-w-7xl mx-auto overflow-x-hidden",
-        isExpanded && !isMobile ? "md:pl-72" : "md:pl-28"
+        "transition-all duration-300 ease-in-out pb-24 md:pb-8 px-4",
+        !isMobile && (isExpanded ? "pl-72" : "pl-24")
       )}>
         {renderView()}
       </main>
 
-      {/* Floating Action Button (FAB) - Mobile Only */}
-      {isMobile && (currentView === 'dashboard' || currentView === 'transactions') && (
-        <Button
-          onClick={() => { setEditingTransaction(undefined); setShowTransactionForm(true); }}
-          className="fixed bottom-24 right-4 w-14 h-14 rounded-full shadow-2xl bg-primary text-white z-50 hover:scale-110 active:scale-95 transition-all flex items-center justify-center p-0 border border-white/20"
-        >
-          <Plus className="w-6 h-6" />
-        </Button>
-      )}
-
-      {/* Bottom Navigation - Mobile Only */}
       {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur-xl border-t border-border z-50 px-8 py-3 flex items-center justify-between pb-8">
-          <button
-            onClick={() => setCurrentView('dashboard')}
-            className={cn("flex flex-col items-center gap-1.5 transition-all", currentView === 'dashboard' ? "text-primary px-3" : "text-muted-foreground")}
-          >
-            <Home className="w-6 h-6" />
-            <span className="text-[10px] font-bold uppercase tracking-tighter">Início</span>
-          </button>
-          <button
-            onClick={() => setCurrentView('transactions')}
-            className={cn("flex flex-col items-center gap-1.5 transition-all", currentView === 'transactions' ? "text-primary px-3" : "text-muted-foreground")}
-          >
-            <List className="w-6 h-6" />
-            <span className="text-[10px] font-bold uppercase tracking-tighter">Lançamentos</span>
-          </button>
-          <button
-            onClick={() => setCurrentView('accounts')}
-            className={cn("flex flex-col items-center gap-1.5 transition-all", currentView === 'accounts' ? "text-primary px-3" : "text-muted-foreground")}
-          >
-            <CardIcon className="w-6 h-6" />
-            <span className="text-[10px] font-bold uppercase tracking-tighter">Carteira</span>
-          </button>
-          <button
-            onClick={() => setCurrentView('goals')}
-            className={cn("flex flex-col items-center gap-1.5 transition-all", currentView === 'goals' ? "text-primary px-3" : "text-muted-foreground")}
-          >
-            <Target className="w-6 h-6" />
-            <span className="text-[10px] font-bold uppercase tracking-tighter">Metas</span>
-          </button>
-        </div>
+        <BottomNavigation
+          activeView={currentView}
+          onViewChange={(v) => setCurrentView(v as ViewType)}
+        />
       )}
 
       {showTransactionForm && (
@@ -458,30 +330,13 @@ export default function Index() {
           accounts={accounts}
           creditCards={creditCards}
           initialData={editingTransaction}
-          onSubmit={(data, _customInstallments, applyScope) => {
-            if (editingTransaction) {
-              updateTransaction(
-                editingTransaction.id,
-                data,
-                data.cardClosingDay,
-                data.cardDueDay,
-                editingTransaction.cardId,
-                applyScope
-              );
-            } else {
-              addTransaction(data);
-            }
+          onSubmit={async (tx) => {
+            if (editingTransaction) await updateTransaction(editingTransaction.id, tx);
+            else await addTransaction(tx as any);
             setShowTransactionForm(false);
             setEditingTransaction(undefined);
           }}
           onClose={() => {
-            setShowTransactionForm(false);
-            setEditingTransaction(undefined);
-          }}
-          onDelete={(id, scope) => {
-            if (editingTransaction) {
-              deleteTransaction(editingTransaction, scope);
-            }
             setShowTransactionForm(false);
             setEditingTransaction(undefined);
           }}
@@ -490,14 +345,9 @@ export default function Index() {
 
       {showGoalForm && (
         <GoalForm
-          onSubmit={(data) => {
-            if (editingGoal) {
-              updateSavingsGoal(editingGoal.id, data);
-            } else {
-              addSavingsGoal(data);
-            }
+          onSubmit={async (goal) => {
+            await addSavingsGoal(goal);
             setShowGoalForm(false);
-            setEditingGoal(undefined);
           }}
           onClose={() => {
             setShowGoalForm(false);
