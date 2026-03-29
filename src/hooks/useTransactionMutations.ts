@@ -132,9 +132,16 @@ export function useToggleTransactionPaid() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, isPaid, date }: { id: string, isPaid: boolean, date?: string }) => {
+    mutationFn: async ({ id, isPaid, date, accountId }: { id: string, isPaid: boolean, date?: string, accountId?: string }) => {
       const paymentDate = isPaid ? (date || format(new Date(), 'yyyy-MM-dd')) : null;
-      const updates: any = { is_paid: isPaid, payment_date: paymentDate };
+      const updates: any = {
+        is_paid: isPaid,
+        payment_date: paymentDate
+      };
+
+      if (isPaid && accountId) {
+        updates.account_id = accountId;
+      }
 
 
       const { error } = await supabase

@@ -302,7 +302,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const renderStep1 = () => (
     <div className="grid grid-cols-2 gap-4 p-6 animate-in fade-in zoom-in duration-300">
       <button
-        onClick={() => { setType('income'); setStep('SELECT_SUBTYPE'); }}
+        onClick={() => { setType('income'); setCategoryId(''); setStep('SELECT_SUBTYPE'); }}
         className="flex flex-col items-center justify-center p-8 rounded-3xl border-2 border-transparent bg-success/10 hover:bg-success/20 hover:border-success/30 transition-all group"
       >
         <div className="p-4 rounded-2xl bg-success text-success-foreground mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-success/20">
@@ -313,7 +313,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       </button>
 
       <button
-        onClick={() => { setType('expense'); setStep('SELECT_SUBTYPE'); }}
+        onClick={() => { setType('expense'); setCategoryId(''); setStep('SELECT_SUBTYPE'); }}
         className="flex flex-col items-center justify-center p-8 rounded-3xl border-2 border-transparent bg-danger/10 hover:bg-danger/20 hover:border-danger/30 transition-all group"
       >
         <div className="p-4 rounded-2xl bg-danger text-danger-foreground mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-danger/20">
@@ -513,7 +513,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Valor (R$)</Label>
-                      <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="h-12 rounded-2xl border-2 font-black text-xl" required />
+                      <Input type="number" step="0.01" min="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="h-12 rounded-2xl border-2 font-black text-xl" required />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">

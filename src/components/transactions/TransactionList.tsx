@@ -190,7 +190,7 @@ export function TransactionList({
       toast({ title: 'Selecione uma conta para pagamento', variant: 'destructive' });
       return;
     }
-    await togglePaidMutation({ id: installment.id, isPaid: true, date: todayLocalString() });
+    await togglePaidMutation({ id: installment.id, isPaid: true, date: todayLocalString(), accountId: anticipateAccount });
     setAnticipatingIds(prev => { const next = new Set(prev); next.delete(installment.id); return next; });
   };
 
@@ -201,7 +201,7 @@ export function TransactionList({
     }
     const today = todayLocalString();
     for (const inst of installments) {
-      if (!inst.isPaid) await togglePaidMutation({ id: inst.id, isPaid: true, date: today });
+      if (!inst.isPaid) await togglePaidMutation({ id: inst.id, isPaid: true, date: today, accountId: anticipateAccount });
     }
     setExpandedGroup(null);
     toast({ title: `${installments.length} parcelas antecipadas com sucesso!` });
@@ -219,7 +219,7 @@ export function TransactionList({
     }
     const today = todayLocalString();
     for (const inst of selected) {
-      await togglePaidMutation({ id: inst.id, isPaid: true, date: today });
+      await togglePaidMutation({ id: inst.id, isPaid: true, date: today, accountId: anticipateAccount });
     }
     setAnticipatingIds(new Set());
     toast({ title: `${selected.length} parcela(s) antecipada(s)!` });
@@ -594,11 +594,13 @@ export function TransactionList({
                       paymentMethod === 'account' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
                     Conta Bancária
                   </button>
-                  <button onClick={() => setPaymentMethod('credit_card')}
-                    className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
-                      paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                    Cartão de Crédito
-                  </button>
+                  {payingItem?.type !== 'income' && (
+                    <button onClick={() => setPaymentMethod('credit_card')}
+                      className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
+                        paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                      Cartão de Crédito
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-3 pt-0 space-y-2">

@@ -248,7 +248,7 @@ export default function Index() {
               allowSettlement={false}
               onEdit={handleEditTransaction}
               onPayBill={async (transaction: Transaction) => {
-                await updateTransaction(transaction.id, { isPaid: true }, undefined, undefined, transaction.cardId);
+                await updateTransaction(transaction.id, { isPaid: true, accountId: transaction.accountId }, undefined, undefined, transaction.cardId);
               }}
             />
           </div>
