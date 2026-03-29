@@ -151,7 +151,19 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         toast({ title: 'Origem e destino não podem ser iguais', variant: 'destructive' });
         return;
       }
-      transferBetweenAccounts(transferFrom, transferTo, parseFloat(amount), transferDescription, date, transferToType);
+
+      let invoiceMonthYear;
+      if (transferToType === 'card') {
+        const selectedCard = creditCards.find(c => c.id === transferTo);
+        if (selectedCard) {
+          invoiceMonthYear = calcInvoiceMonthYear(parseLocalDate(date), {
+            closingDay: selectedCard.closingDay,
+            dueDay: selectedCard.dueDay
+          });
+        }
+      }
+
+      transferBetweenAccounts(transferFrom, transferTo, parseFloat(amount), transferDescription, date, transferToType, invoiceMonthYear);
       onClose();
       return;
     }
@@ -255,7 +267,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       // Ajuste de dízima na última parcela
       const totalGenerated = installmentList.reduce((sum, inst) => sum + inst.amount, 0);
       const diff = parseFloat((parsedAmount - totalGenerated).toFixed(2));
-      if (Math.abs(diff) > 0.001) {
+      if (!Number.isNaN(diff) && Math.abs(diff) > 0.001) {
         installmentList[count - 1].amount = parseFloat((installmentList[count - 1].amount + diff).toFixed(2));
       }
 
@@ -305,7 +317,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     });
 
     const diff = parseFloat((baseAmount - newInst.reduce((s, i) => s + i.amount, 0)).toFixed(2));
-    if (newInst.length > 0 && Math.abs(diff) > 0.001) {
+    if (newInst.length > 0 && !Number.isNaN(diff) && Math.abs(diff) > 0.001) {
       newInst[newInst.length - 1].amount = parseFloat((newInst[newInst.length - 1].amount + diff).toFixed(2));
     }
     setCustomInstallmentDates(newInst);

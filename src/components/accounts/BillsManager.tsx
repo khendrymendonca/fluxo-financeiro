@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useState, useMemo } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useUpdateTransaction, useDeleteTransaction, useAddTransaction, useToggleTransactionPaid } from '@/hooks/useTransactionMutations';
 import { toast } from '@/components/ui/use-toast';
@@ -101,48 +101,50 @@ export function BillsManager() {
     };
 
     // 1. Calcular faturas virtuais dinâmicas
-    const virtualInvoices: Transaction[] = creditCards.map(card => {
-        const viewDateStr = format(viewDate, 'yyyy-MM');
+    const virtualInvoices: Transaction[] = useMemo(() => {
+        return creditCards.map(card => {
+            const viewDateStr = format(viewDate, 'yyyy-MM');
 
-        // Verifica se já existe um pagamento físico (baixado ou não) para esta fatura
-        const physicalPaymentExists = transactions.some(t =>
-            t.cardId === card.id &&
-            t.categoryId === 'card-payment' &&
-            t.invoiceMonthYear === viewDateStr
-        );
-
-        if (physicalPaymentExists) return null;
-
-        // Somar gastos reais deste cartão nesta competência
-        const totalAmount = transactions
-            .filter(t =>
+            // Verifica se já existe um pagamento físico (baixado ou não) para esta fatura
+            const physicalPaymentExists = transactions.some(t =>
                 t.cardId === card.id &&
-                !t.isVirtual &&
-                t.categoryId !== 'card-payment' &&
+                t.categoryId === 'card-payment' &&
                 t.invoiceMonthYear === viewDateStr
-            )
-            .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
+            );
 
-        if (totalAmount <= 0) return null;
+            if (physicalPaymentExists) return null;
 
-        const { dueDay } = getCardSettingsForDate(card, viewDate);
-        const cardDueDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), dueDay);
+            // Somar gastos reais deste cartão nesta competência
+            const totalAmount = transactions
+                .filter(t =>
+                    t.cardId === card.id &&
+                    !t.isVirtual &&
+                    t.categoryId !== 'card-payment' &&
+                    t.invoiceMonthYear === viewDateStr
+                )
+                .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
 
-        return {
-            id: `fat-virtual-${card.id}`,
-            description: `Fatura ${card.name}`,
-            amount: totalAmount,
-            date: cardDueDate.toISOString(),
-            type: 'expense',
-            transactionType: 'recurring', // Marcar como recorrente para fluxos de caixa
-            categoryId: 'card-payment',
-            cardId: card.id,
-            isPaid: false,
-            isVirtual: true,
-            userId: '',
-            invoiceMonthYear: viewDateStr
-        } as Transaction;
-    }).filter(Boolean) as Transaction[];
+            if (totalAmount <= 0) return null;
+
+            const { dueDay } = getCardSettingsForDate(card, viewDate);
+            const cardDueDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), dueDay);
+
+            return {
+                id: `fat-virtual-${card.id}`,
+                description: `Fatura ${card.name}`,
+                amount: totalAmount,
+                date: cardDueDate.toISOString(),
+                type: 'expense',
+                transactionType: 'recurring', // Marcar como recorrente para fluxos de caixa
+                categoryId: 'card-payment',
+                cardId: card.id,
+                isPaid: false,
+                isVirtual: true,
+                userId: '',
+                invoiceMonthYear: viewDateStr
+            } as Transaction;
+        }).filter(Boolean) as Transaction[];
+    }, [creditCards, transactions, viewDate]);
 
     // 2. Filtrar transações recorrentes e injetar as virtuais
     const recurringTransactions = [...currentMonthTransactions, ...virtualInvoices].filter(t => {

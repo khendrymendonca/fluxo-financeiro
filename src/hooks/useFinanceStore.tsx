@@ -249,8 +249,8 @@ function useFinanceProvider() {
     addAccount: addAccountMutation.mutateAsync,
     updateAccount: (id: string, updates: Partial<Account>) => updateAccountMutation.mutateAsync({ id, updates }),
     deleteAccount: deleteAccountMutation.mutateAsync,
-    transferBetweenAccounts: (from: string, to: string, amount: number, desc: string, date: string, toType: 'account' | 'card' = 'account') =>
-      transferMutation.mutateAsync({ from, to, amount: Number(amount), description: desc, date, type: toType } as any),
+    transferBetweenAccounts: (from: string, to: string, amount: number, desc: string, date: string, toType: 'account' | 'card' = 'account', invoiceMonthYear?: string) =>
+      transferMutation.mutateAsync({ from, to, amount: Number(amount), description: desc, date, type: toType, invoiceMonthYear } as any),
 
     addCreditCard: addCardMutation.mutateAsync,
     updateCreditCard: (id: string, updates: Partial<CreditCard>) => updateCardMutation.mutateAsync({ id, updates }),

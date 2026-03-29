@@ -23,23 +23,17 @@ export function AccountsOverview({ accounts, creditCards }: AccountsOverviewProp
   };
 
   return (
-    <div className={cn("card-elevated animate-fade-in h-full", isMobile ? "p-4" : "p-6")}>
+    <div className={cn("card-elevated animate-fade-in h-full", "p-4 md:p-6")}>
       <h3 className="text-lg font-semibold mb-4">Contas e Cartões</h3>
 
       {/* Bank Accounts */}
       <div className="mb-6">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Contas</p>
-        <div className={cn(
-          "gap-3",
-          isMobile ? "flex overflow-x-auto pb-2 -mx-2 px-2 no-scrollbar" : "space-y-3"
-        )}>
+        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-2 gap-3 overflow-x-auto md:overflow-visible pb-2 md:pb-0 -mx-2 md:mx-0 px-2 md:px-0 no-scrollbar">
           {accounts.map((account) => (
             <div
               key={account.id}
-              className={cn(
-                "flex items-center justify-between p-3 rounded-xl bg-muted/30",
-                isMobile ? "min-w-[200px] flex-shrink-0" : "w-full"
-              )}
+              className="flex items-center justify-between p-3 rounded-xl bg-muted/30 min-w-[200px] md:min-w-0 flex-shrink-0 md:flex-shrink"
             >
               <div className="flex items-center gap-3">
                 <div
@@ -65,10 +59,7 @@ export function AccountsOverview({ accounts, creditCards }: AccountsOverviewProp
       {creditCards.length > 0 && (
         <div>
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Cartões</p>
-          <div className={cn(
-            "gap-3",
-            isMobile ? "flex overflow-x-auto pb-2 -mx-2 px-2 no-scrollbar" : "space-y-3"
-          )}>
+          <div className="flex md:grid md:grid-cols-2 lg:grid-cols-2 gap-3 overflow-x-auto md:overflow-visible pb-2 md:pb-0 -mx-2 md:mx-0 px-2 md:px-0 no-scrollbar">
             {creditCards.map((card) => {
               const currentExpenses = getCardUsedLimit(card.id);
               const usagePercentage = (currentExpenses / card.limit) * 100;
@@ -76,13 +67,10 @@ export function AccountsOverview({ accounts, creditCards }: AccountsOverviewProp
               return (
                 <div
                   key={card.id}
-                  className={cn(
-                    "p-3 rounded-xl bg-muted/30 space-y-2",
-                    isMobile ? "min-w-[240px] flex-shrink-0" : "w-full"
-                  )}
+                  className="p-3 rounded-xl bg-muted/30 space-y-2 min-w-[240px] md:min-w-0 flex-shrink-0 md:flex-shrink"
                 >
                   <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div
                         className="p-2 rounded-xl"
                         style={{ backgroundColor: `${card.color}20` }}
@@ -101,16 +89,16 @@ export function AccountsOverview({ accounts, creditCards }: AccountsOverviewProp
                         {formatCurrency(currentExpenses)}
                       </p>
                       <p className="text-[10px] text-muted-foreground">
-                        limite {formatCurrency(card.limit)}
+                        {formatCurrency(card.limit)}
                       </p>
                     </div>
                   </div>
-                  <div className="progress-gradient h-1.5">
+                  <div className="progress-gradient h-1.5 w-full">
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{
                         width: `${Math.min(usagePercentage, 100)}%`,
-                        backgroundColor: usagePercentage > 80 ? 'hsl(VAR_DESTRUCTIVE)' : card.color,
+                        backgroundColor: usagePercentage > 80 ? 'hsl(var(--destructive))' : card.color,
                       }}
                     />
                   </div>

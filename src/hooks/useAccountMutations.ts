@@ -79,7 +79,7 @@ export function useTransferBetweenAccounts() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ from, to, amount, description, date, type = 'account' }: { from: string, to: string, amount: number, description: string, date: string, type?: 'account' | 'card' }) => {
+    mutationFn: async ({ from, to, amount, description, date, type = 'account', invoiceMonthYear }: { from: string, to: string, amount: number, description: string, date: string, type?: 'account' | 'card', invoiceMonthYear?: string }) => {
       if (!user) throw new Error('Utilizador não autenticado');
 
       const txs = [
@@ -103,7 +103,8 @@ export function useTransferBetweenAccounts() {
           date: date,
           is_paid: true,
           payment_date: date,
-          is_invoice_payment: type === 'card'
+          is_invoice_payment: type === 'card',
+          invoice_month_year: invoiceMonthYear
         }
       ];
 
