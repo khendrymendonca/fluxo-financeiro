@@ -26,7 +26,8 @@
     --card-foreground: 220 20% 15%;
     --popover: 0 0% 100%;
     --popover-foreground: 220 20% 15%;
-    --primary: 180 100% 25%;
+    --primary: 174 84% 31%;
+    /* Teal 600 - #0d9488 */
     --primary-foreground: 0 0% 100%;
     --primary-light: 174 55% 92%;
     --primary-muted: 174 40% 70%;
@@ -77,8 +78,8 @@
     --card-foreground: 0 0% 100%;
     --popover: 240 10% 4%;
     --popover-foreground: 0 0% 100%;
-    --primary: 181 84% 32%;
-    /* Verde Ciano Sóbrio */
+    --primary: 174 84% 35%;
+    /* Teal 500 elegante */
     --primary-foreground: 0 0% 100%;
     --primary-light: 270 70% 15%;
     --primary-muted: 270 40% 30%;
@@ -352,4 +353,6 @@ html.dark.amoled {
   --muted: 240 5% 10% !important;
   --border: 240 5% 10% !important;
   --primary-foreground: 0 0% 100% !important;
+  --primary: 174 84% 25% !important;
+  /* Ciano mais fechado para AMOLED */
 }
