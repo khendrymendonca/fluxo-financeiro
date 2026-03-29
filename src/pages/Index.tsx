@@ -65,7 +65,6 @@ import EmergencyFund from './EmergencyFund';
 import { BillsManager } from '@/components/accounts/BillsManager';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { ExpenseChart } from '@/components/dashboard/ExpenseChart';
-import { GoalProgress } from '@/components/dashboard/GoalProgress';
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { PendingPayments } from '@/components/dashboard/PendingPayments';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
@@ -229,7 +228,6 @@ export default function Index() {
                 {/* Coluna 3: Transações e Metas */}
                 <div className="space-y-6">
                   <RecentTransactions transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
-                  <GoalProgress goals={savingsGoals} />
                 </div>
               </div>
             </div>

@@ -23,7 +23,7 @@ export function AppLayout({
         <div className="flex h-[100dvh] overflow-hidden bg-background transition-colors font-sans selection:bg-primary/30 text-gray-900 dark:text-zinc-50">
             {/* Sidebar Fixa (Apenas Desktop) */}
             <aside className={cn(
-                "hidden md:flex flex-col w-64 flex-shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 z-50",
+                "hidden md:flex flex-col flex-shrink-0 z-50",
                 !sidebar && "md:hidden"
             )}>
                 {sidebar}

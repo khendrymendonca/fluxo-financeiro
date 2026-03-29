@@ -65,17 +65,23 @@ export function CreditCardVisual({
                 </div>
 
                 <div className="space-y-2 md:space-y-4">
-                    <div className="flex justify-between items-end">
-                        <div>
+                    <div className="flex justify-between items-end gap-3 min-w-0 flex-1 overflow-hidden">
+                        <div className="min-w-0 flex-1">
                             <p className="text-[10px] md:text-xs opacity-75 mb-0.5 md:mb-1">Cartão</p>
-                            <p className="font-bold tracking-wider uppercase truncate max-w-[150px] md:max-w-[200px] text-xs md:text-base">
+                            <p
+                                className="font-bold tracking-wider uppercase truncate block w-full text-xs md:text-base"
+                                title={cardName}
+                            >
                                 {cardName}
                             </p>
                         </div>
 
-                        <div className="text-right">
-                            <p className="text-[10px] md:text-xs opacity-75 mb-0.5 md:mb-1">Limite Disponível</p>
-                            <p className="font-bold text-sm md:text-lg">
+                        <div className="text-right min-w-0">
+                            <p className="text-[10px] md:text-xs opacity-75 mb-0.5 md:mb-1 whitespace-nowrap">Limite Disponível</p>
+                            <p
+                                className="font-black text-[clamp(0.875rem,1.5vw,1.125rem)] truncate block max-w-full"
+                                title={formatCurrency(availableLimit)}
+                            >
                                 {formatCurrency(availableLimit)}
                             </p>
                         </div>
