@@ -87,13 +87,22 @@ export function useCategories() {
   return useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('categories').select('*');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', user.id);
+
       if (error) throw error;
       return (data || []).map((c: any) => ({
         ...c,
         userId: c.user_id,
         groupId: c.group_id,
-        isActive: c.is_active
+        isActive: c.is_active,
+        budgetGroup: c.budget_group,
+        isFixed: c.is_fixed
       })) as Category[];
     }
   });

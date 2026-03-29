@@ -51,7 +51,7 @@ export function useUpdateCategory() {
           group_id: updates.groupId,
           budget_group: updates.budgetGroup,
           is_fixed: updates.isFixed,
-          isActive: updates.isActive
+          is_active: updates.isActive
         })
         .eq('id', id)
         .select();

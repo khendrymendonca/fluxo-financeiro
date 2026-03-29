@@ -344,7 +344,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         <div className="flex items-center gap-2 mb-2">
           <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_TYPE')} className="rounded-xl text-xs font-bold uppercase tracking-tighter">← Voltar</Button>
           <span className={cn("text-[10px] font-black uppercase px-2 py-0.5 rounded-md", type === 'income' ? "bg-success/10 text-success" : "bg-danger/10 text-danger")}>
-            {type === 'income' ? 'income' : 'expense'} selecionada
+            {type === 'income' ? 'Receita' : 'Despesa'} selecionada
           </span>
         </div>
         <div className="grid grid-cols-1 gap-3">
