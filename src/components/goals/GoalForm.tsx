@@ -7,6 +7,7 @@ import { SavingsGoal } from '@/types/finance';
 import { cn } from '@/lib/utils';
 import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
 import { format } from 'date-fns';
+import { toast } from '@/components/ui/use-toast';
 
 interface GoalFormProps {
   onSubmit: (goal: Omit<SavingsGoal, 'id' | 'userId'>) => void;
@@ -37,7 +38,18 @@ export function GoalForm({ onSubmit, onClose }: GoalFormProps) {
     const parsedTarget = parseFloat(targetAmount);
     const parsedCurrent = parseFloat(currentAmount) || 0;
 
-    if (!name || isNaN(parsedTarget) || parsedTarget <= 0) return;
+    const errors: string[] = [];
+    if (!name) errors.push('Nome da Meta');
+    if (isNaN(parsedTarget) || parsedTarget <= 0) errors.push('Valor Alvo');
+
+    if (errors.length > 0) {
+      toast({
+        title: 'Campos obrigatórios',
+        description: `Preencha: ${errors.join(', ')}`,
+        variant: 'destructive'
+      });
+      return;
+    }
 
     // Garantir que o valor atual não supere o alvo na criação (opcional, mas evita bugs visuais)
     if (parsedCurrent > parsedTarget) {

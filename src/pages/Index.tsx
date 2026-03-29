@@ -1,4 +1,5 @@
-﻿import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { Home, List, CreditCard as CardIcon, HelpCircle, LayoutDashboard, Plus, Wallet, TrendingUp, TrendingDown, PiggyBank, Menu, ArrowUpDown, Receipt, Target, LineChart, Settings2, Database, Calculator } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet';
@@ -44,7 +45,12 @@ const DEFAULT_WIDGETS = [
 type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export';
 
 export default function Index() {
-  const [currentView, setCurrentView] = useState<ViewType>('dashboard');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentView = (searchParams.get('view') as ViewType) || 'dashboard';
+
+  const setCurrentView = (view: ViewType) => {
+    setSearchParams({ view });
+  };
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
 
@@ -452,14 +458,15 @@ export default function Index() {
           accounts={accounts}
           creditCards={creditCards}
           initialData={editingTransaction}
-          onSubmit={(data) => {
+          onSubmit={(data, _customInstallments, applyScope) => {
             if (editingTransaction) {
               updateTransaction(
                 editingTransaction.id,
                 data,
                 data.cardClosingDay,
                 data.cardDueDay,
-                editingTransaction.cardId
+                editingTransaction.cardId,
+                applyScope
               );
             } else {
               addTransaction(data);

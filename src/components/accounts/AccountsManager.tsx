@@ -115,7 +115,19 @@ export function AccountsManager({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accountName || !accountBank || !accountBalance) return;
+    const errors: string[] = [];
+    if (!accountName) errors.push('Nome da Conta');
+    if (!accountBank) errors.push('Instituição');
+    if (!accountBalance || parseFloat(accountBalance) < 0) errors.push('Saldo');
+
+    if (errors.length > 0) {
+      toast({
+        title: 'Campos obrigatórios',
+        description: `Preencha: ${errors.join(', ')}`,
+        variant: 'destructive'
+      });
+      return;
+    }
 
     const parsedNewBalance = parseFloat(accountBalance);
 
@@ -176,7 +188,19 @@ export function AccountsManager({
 
   const handleTransferSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!transferFrom || !transferTo || !transferAmount) return;
+    const errors: string[] = [];
+    if (!transferFrom) errors.push('Conta de Origem');
+    if (!transferTo) errors.push('Conta de Destino');
+    if (!transferAmount || parseFloat(transferAmount) <= 0) errors.push('Valor');
+
+    if (errors.length > 0) {
+      toast({
+        title: 'Campos obrigatórios',
+        description: `Preencha: ${errors.join(', ')}`,
+        variant: 'destructive'
+      });
+      return;
+    }
     if (transferFrom === transferTo) {
       toast({ title: 'As contas de origem e destino devem ser diferentes', variant: 'destructive' });
       return;

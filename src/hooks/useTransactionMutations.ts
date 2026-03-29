@@ -185,13 +185,15 @@ export function useUpdateTransaction() {
       updates,
       currentCardId,
       cardClosingDay,
-      cardDueDay
+      cardDueDay,
+      applyScope = 'this'
     }: {
       id: string;
       updates: Partial<Transaction>;
       currentCardId?: string | null;
       cardClosingDay?: number;
       cardDueDay?: number;
+      applyScope?: 'this' | 'future' | 'all';
     }) => {
       const dbUpdates: any = {};
       if (updates.description !== undefined) dbUpdates.description = updates.description;
@@ -216,11 +218,28 @@ export function useUpdateTransaction() {
         dbUpdates.invoice_month_year = null;
       }
 
-      const { data, error } = await supabase
-        .from('transactions')
-        .update(dbUpdates)
-        .eq('id', id)
-        .select();
+      // Se não há grupo ou o escopo é apenas 'this', faz o update simples
+      const { data: currentTx } = await supabase.from('transactions').select('*').eq('id', id).single();
+      const groupId = currentTx?.installment_group_id;
+
+      if (applyScope === 'this' || !groupId) {
+        const { data, error } = await supabase
+          .from('transactions')
+          .update(dbUpdates)
+          .eq('id', id)
+          .select();
+        if (error) throw error;
+        return data;
+      }
+
+      // Se há escopo future ou all, aplicamos o filtro correspondente
+      let query = supabase.from('transactions').update(dbUpdates).eq('installment_group_id', groupId);
+
+      if (applyScope === 'future') {
+        query = query.gte('date', currentTx.date);
+      }
+
+      const { data, error } = await query.select();
       if (error) throw error;
       return data;
     },

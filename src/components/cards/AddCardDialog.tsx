@@ -6,6 +6,7 @@ import { CreditCard } from '@/types/finance';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
+import { toast } from '@/components/ui/use-toast';
 
 interface AddCardDialogProps {
     isOpen: boolean;
@@ -29,7 +30,19 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!name || !bank || !limit) return;
+        const errors: string[] = [];
+        if (!name) errors.push('Nome do Cartão');
+        if (!bank) errors.push('Banco/Bandeira');
+        if (!limit || parseFloat(limit) <= 0) errors.push('Limite');
+
+        if (errors.length > 0) {
+            toast({
+                title: 'Campos obrigatórios',
+                description: `Preencha: ${errors.join(', ')}`,
+                variant: 'destructive'
+            });
+            return;
+        }
 
         onAdd({
             name,

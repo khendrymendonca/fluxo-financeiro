@@ -72,10 +72,20 @@ export function CategoriesManager() {
             return;
         }
 
+        const groupId = categoryGroups[0]?.id;
+        if (!groupId) {
+            toast({
+                title: 'Erro de Grupo',
+                description: 'Nenhum grupo de categorias encontrado. Por favor, recarregue a página ou entre em contato com o suporte.',
+                variant: 'destructive'
+            });
+            return;
+        }
+
         addCategory({
             name: newCatName,
             type: newCatType,
-            groupId: categoryGroups[0]?.id || '', // Default to first group
+            groupId: groupId,
             budgetGroup: newCatType === 'income' ? 'income' : newCatBudgetGroup,
             icon: 'Tag',
             color: newCatColor,
@@ -86,7 +96,7 @@ export function CategoriesManager() {
                 setNewCatName('');
                 setNewCatIsFixed(false);
                 setIsModalOpen(false);
-                toast({ title: 'Categoria criada com sucesso!' });
+                // O toast já é disparado pelo hook da mutation
             }
         });
     };
@@ -339,6 +349,9 @@ export function CategoriesManager() {
 
                 {/* Receitas */}
                 <div className="card-elevated p-6 space-y-4 border-l-4 border-l-success bg-success/5 mt-4">
+                    <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-success flex items-center gap-2 pb-2 border-b border-success/10">
+                        <TrendingUp className="w-4 h-4" /> Receitas
+                    </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                         {categories.filter(c => c.type === 'income').map(cat => (
                             <div key={cat.id} className="flex items-center justify-between p-3 rounded-2xl border-2 hover:border-success/30 transition-all group bg-background shadow-sm">

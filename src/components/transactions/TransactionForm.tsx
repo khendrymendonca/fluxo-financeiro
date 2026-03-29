@@ -124,7 +124,16 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
 
     if (activeTab === 'transfer') {
-      if (!transferFrom || !transferTo || !amount) return;
+      const errors: string[] = [];
+      if (!transferFrom) errors.push('Conta de Origem');
+      if (!transferTo) errors.push('Conta de Destino');
+      if (!amount || parseFloat(amount) <= 0) errors.push('Valor');
+
+      if (errors.length > 0) {
+        toast({ title: 'Campos obrigatórios', description: `Preencha: ${errors.join(', ')}`, variant: 'destructive' });
+        return;
+      }
+
       if (transferFrom === transferTo && transferToType === 'account') {
         toast({ title: 'Origem e destino não podem ser iguais', variant: 'destructive' });
         return;
@@ -134,14 +143,32 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       return;
     }
 
-    if (!description || !amount) return;
-    if (activeTab !== 'renda_fixa' && !categoryId) return;
+    const errors: string[] = [];
+    if (!description) errors.push('Descrição');
+    if (!amount || parseFloat(amount) <= 0) errors.push('Valor');
+    if (activeTab !== 'renda_fixa' && !categoryId) errors.push('Categoria');
+    if (paymentMethod === 'account' && !accountId) errors.push('Conta');
+    if (paymentMethod === 'card' && !cardId) errors.push('Cartão');
+
+    if (errors.length > 0) {
+      toast({
+        title: 'Campos obrigatórios',
+        description: `Preencha: ${errors.join(', ')}`,
+        variant: 'destructive'
+      });
+      return;
+    }
 
     let finalCategoryId = categoryId;
     if (activeTab === 'renda_fixa' && !categoryId) {
       const salaryCat = categories.find(c => c.name.toLowerCase().includes('salário') || c.name.toLowerCase().includes('renda'));
       const firstIncomeCat = categories.find(c => c.type === 'income');
       finalCategoryId = salaryCat?.id || firstIncomeCat?.id || '';
+
+      if (!finalCategoryId) {
+        toast({ title: 'Erro de Categoria', description: 'Nenhuma categoria de receita encontrada. Crie uma em Configurações.', variant: 'destructive' });
+        return;
+      }
     }
 
     const parsedAmount = parseFloat(amount);

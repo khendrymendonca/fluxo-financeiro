@@ -224,8 +224,8 @@ function useFinanceProvider() {
     selectAll,
 
     addTransaction: addTransactionMutation.mutateAsync,
-    updateTransaction: (id: string, updates: Partial<Transaction>, cardClosingDay?: number, cardDueDay?: number, currentCardId?: string | null) =>
-      updateTransactionMutation.mutateAsync({ id, updates, cardClosingDay, cardDueDay, currentCardId } as any),
+    updateTransaction: (id: string, updates: Partial<Transaction>, cardClosingDay?: number, cardDueDay?: number, currentCardId?: string | null, applyScope?: 'this' | 'future' | 'all') =>
+      updateTransactionMutation.mutateAsync({ id, updates, cardClosingDay, cardDueDay, currentCardId, applyScope } as any),
     deleteTransaction: (transaction: Transaction, scope: 'this' | 'future' | 'all' = 'this') =>
       deleteTransactionMutation.mutateAsync({ transaction, applyScope: scope }),
     togglePaid: togglePaidMutation.mutateAsync,
