@@ -205,26 +205,25 @@ export default function Index() {
                 </div>
               </div>
 
+              {/* Linha 1: Métricas principais - 4 cards lado a lado */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-500">
+                <StatCard title="Saldo Total" value={totalNetWorth} icon={<Wallet className="w-5 h-5" />} variant="neutral" />
+                <StatCard title="Projetado" value={projectedBalance} icon={<Calculator className="w-5 h-5" />} variant={projectedBalance < 0 ? 'negative' : 'neutral'} />
+                <StatCard title="Receitas" value={cashflow.totalIncome} icon={<TrendingUp className="w-5 h-5" />} variant="positive" />
+                <StatCard title="Despesas" value={cashflow.totalExpenses} icon={<TrendingDown className="w-5 h-5" />} variant="negative" />
+              </div>
+
               {/* Grid Principal - 3 Colunas no Desktop */}
-              <div className={cn(
-                "animate-in fade-in duration-500",
-                !isMobile ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-6"
-              )}>
-                {/* Coluna 1: Saldo e Contas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
+                {/* Coluna 1: Contas a pagar e Emergência */}
                 <div className="space-y-6">
-                  {!isMobile && <StatCard title="Saldo Total" value={totalNetWorth} icon={<Wallet />} variant="neutral" />}
-                  {!isMobile && <StatCard title="Projetado" value={projectedBalance} icon={<Calculator />} variant={projectedBalance < 0 ? 'negative' : 'neutral'} />}
                   <PendingPayments transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
+                  <EmergencyReserve data={emergencyData as any} onMonthsChange={setEmergencyMonths} />
                 </div>
 
-                {/* Coluna 2: Fluxo e Gráficos */}
+                {/* Coluna 2: Gráfico de gastos */}
                 <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <StatCard title="Receitas" value={cashflow.totalIncome} icon={<TrendingUp />} variant="positive" />
-                    <StatCard title="Despesas" value={cashflow.totalExpenses} icon={<TrendingDown />} variant="negative" />
-                  </div>
                   <ExpenseChart data={Object.fromEntries(categoryExpenses.map(c => [c.name, c.value]))} />
-                  {!isMobile && <EmergencyReserve data={emergencyData as any} onMonthsChange={setEmergencyMonths} />}
                 </div>
 
                 {/* Coluna 3: Transações e Metas */}

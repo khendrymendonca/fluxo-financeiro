@@ -32,19 +32,24 @@ export function StatCard({
 
   return (
     <div className={cn(
-      "card-elevated animate-fade-in overflow-hidden h-full w-full",
+      "card-elevated animate-fade-in overflow-hidden h-full w-full min-w-0",
       isCompact ? "p-3" : "p-4 sm:p-6",
       variant === 'positive' && 'border-l-4 border-l-success',
       variant === 'negative' && 'border-l-4 border-l-danger',
       variant === 'neutral' && 'border-l-4 border-l-info',
       className
     )}>
-      <div className={cn("flex justify-between gap-3", isCompact ? "items-center" : "items-start")}>
-        <div className={cn("min-w-0 flex-1", isCompact ? "space-y-0" : "space-y-1.5")}>
-          <p className={cn("font-bold text-muted-foreground uppercase tracking-widest truncate", isCompact ? "text-[8px]" : "text-[10px] sm:text-xs")}>{title}</p>
+      <div className={cn("flex justify-between gap-2", isCompact ? "items-center" : "items-start")}>
+        <div className={cn("min-w-0 flex-1 overflow-hidden", isCompact ? "space-y-0" : "space-y-1.5")}>
           <p className={cn(
-            "font-black tracking-tighter break-words leading-tight",
-            isCompact ? "text-lg" : "text-xl sm:text-2xl lg:text-3xl",
+            "font-bold text-muted-foreground uppercase tracking-widest truncate",
+            isCompact ? "text-[8px]" : "text-[10px] sm:text-xs"
+          )}>
+            {title}
+          </p>
+          <p className={cn(
+            "font-black tracking-tighter leading-tight truncate",
+            isCompact ? "text-base" : "text-lg sm:text-xl lg:text-2xl xl:text-3xl",
             variant === 'positive' && 'text-success',
             variant === 'negative' && 'text-danger',
             variant === 'neutral' && 'text-info',
@@ -57,7 +62,7 @@ export function StatCard({
         </div>
         <div className={cn(
           "rounded-2xl shrink-0 shadow-sm",
-          isCompact ? "p-2" : "p-3 sm:p-4",
+          isCompact ? "p-2" : "p-3",
           variant === 'positive' && 'bg-success/10 text-success',
           variant === 'negative' && 'bg-danger/10 text-danger',
           variant === 'neutral' && 'bg-info/10 text-info',
@@ -69,5 +74,3 @@ export function StatCard({
     </div>
   );
 }
-
-
