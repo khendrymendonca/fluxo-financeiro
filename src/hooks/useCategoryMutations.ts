@@ -17,6 +17,7 @@ export function useAddCategory() {
         icon: category.icon,
         color: category.color,
         group_id: category.groupId,
+        budget_group: category.budgetGroup,
         is_fixed: category.isFixed || false,
         user_id: user.id
       }).select();
@@ -48,6 +49,7 @@ export function useUpdateCategory() {
           icon: updates.icon,
           color: updates.color,
           group_id: updates.groupId,
+          budget_group: updates.budgetGroup,
           is_fixed: updates.isFixed,
           isActive: updates.isActive
         })
