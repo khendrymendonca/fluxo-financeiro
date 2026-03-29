@@ -231,8 +231,20 @@ function useFinanceProvider() {
     togglePaid: togglePaidMutation.mutateAsync,
     bulkDeleteTransactions: bulkDeleteMutation.mutateAsync,
 
+    isAddingTransaction: addTransactionMutation.isPending,
+    isUpdatingTransaction: updateTransactionMutation.isPending,
     isDeletingTransaction: deleteTransactionMutation.isPending,
     isBulkDeleting: bulkDeleteMutation.isPending,
+    isTransferring: transferMutation.isPending,
+
+    isAddingGoal: addGoalMutation.isPending,
+    isUpdatingGoal: updateGoalMutation.isPending,
+    isDeletingGoal: deleteGoalMutation.isPending,
+    isDepositingGoal: depositGoalMutation.isPending,
+
+    isAddingDebt: addDebtMutation.isPending,
+    isUpdatingDebt: updateDebtMutation.isPending,
+    isDeletingDebt: deleteDebtMutation.isPending,
 
     addAccount: addAccountMutation.mutateAsync,
     updateAccount: (id: string, updates: Partial<Account>) => updateAccountMutation.mutateAsync({ id, updates }),

@@ -35,11 +35,12 @@ export function useTransactions(viewDate: Date) {
       // 1. Transações NORMAIS deste mês
       // 2. Transações RECORRENTES que começaram antes/durante este mês
       // 3. Transações que pertencem Ã  FATURA deste mês (mesmo que a data seja do mês anterior)
+      // 🛡️ Performance: Filtros rigorosos no Supabase para baixar apenas o necessário
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
         .is('deleted_at', null)
-        .or(`and(is_recurring.eq.false,date.gte.${start},date.lte.${end}),and(is_recurring.eq.true,date.lte.${end}),invoice_month_year.eq.${viewDateStr}`);
+        .or(`and(date.gte.${start},date.lte.${end}),and(is_recurring.eq.true,date.lte.${end}),invoice_month_year.eq.${viewDateStr}`);
 
       if (error) throw error;
 

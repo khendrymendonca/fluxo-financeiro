@@ -55,6 +55,13 @@ import { CategoriesManager } from '@/components/settings/CategoriesManager';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
+import { BillsManager } from '@/components/accounts/BillsManager';
+import { StatCard } from '@/components/dashboard/StatCard';
+import { ExpenseChart } from '@/components/dashboard/ExpenseChart';
+import { GoalProgress } from '@/components/dashboard/GoalProgress';
+import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
+import { PendingPayments } from '@/components/dashboard/PendingPayments';
+import { MonthSelector } from '@/components/dashboard/MonthSelector';
 import {
   Tooltip,
   TooltipContent,
@@ -84,6 +91,7 @@ export default function Index() {
 
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>(undefined);
   const [editingGoal, setEditingGoal] = useState<SavingsGoal | undefined>(undefined);
+  const [initialFormTab, setInitialFormTab] = useState<'pontual' | 'transfer' | undefined>(undefined);
 
   const {
     accounts,
@@ -143,6 +151,40 @@ export default function Index() {
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':
+        if (!isMobile) {
+          return (
+            <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
+              {/* Header Desktop com Seletor de Período */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+                <PageHeader title={`Dashboard`} icon={LayoutDashboard} />
+                <MonthSelector />
+              </div>
+
+              {/* Grid de Stats Superiores */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard title="Saldo em Contas" value={totalNetWorth} icon={<Wallet />} variant="neutral" />
+                <StatCard title="Entradas (Mês)" value={cashflow.totalIncome} icon={<TrendingUp />} variant="positive" />
+                <StatCard title="Saídas (Mês)" value={cashflow.totalExpenses} icon={<TrendingDown />} variant="negative" />
+                <StatCard title="Projetado" value={projectedBalance} icon={<Calculator />} variant={projectedBalance < 0 ? 'negative' : 'neutral'} subtitle="Considerando contas a pagar" />
+              </div>
+
+              {/* Grid Layout Principal */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-6">
+                  <ExpenseChart data={Object.fromEntries(categoryExpenses.map(c => [c.name, c.value]))} />
+                  <RecentTransactions transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
+                </div>
+                <div className="space-y-6">
+                  <PendingPayments transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
+                  <GoalProgress goals={savingsGoals} />
+                  <EmergencyReserve data={emergencyData as any} onMonthsChange={setEmergencyMonths} />
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // Dashboard Mobile (Nu-Style)
         return (
           <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto pb-24">
             {/* Header Nu Style */}
@@ -193,10 +235,11 @@ export default function Index() {
                 {
                   id: 'transfer', icon: ArrowRightLeft, label: 'Transferir', color: 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white border-gray-100 dark:border-zinc-800', action: () => {
                     setEditingTransaction(undefined);
+                    setInitialFormTab('transfer');
                     setShowTransactionForm(true);
                   }
                 },
-                { id: 'pay', icon: Receipt, label: 'Pagar', color: 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white border-gray-100 dark:border-zinc-800', action: () => setCurrentView('transactions') },
+                { id: 'pay', icon: Receipt, label: 'Pagar', color: 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white border-gray-100 dark:border-zinc-800', action: () => setCurrentView('bills') },
                 { id: 'invest', icon: Target, label: 'Investir', color: 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white border-gray-100 dark:border-zinc-800', action: () => setCurrentView('goals') },
               ].map(action => (
                 <button
@@ -269,7 +312,11 @@ export default function Index() {
         );
       case 'transactions':
         return (
-          <div className="max-w-2xl mx-auto pt-4">
+          <div className="max-w-4xl mx-auto space-y-4 pt-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <PageHeader title="Extrato de Lançamentos" icon={List} />
+              <MonthSelector />
+            </div>
             <TransactionList
               transactions={currentMonthTransactions}
               onEdit={handleEditTransaction}
@@ -335,7 +382,9 @@ export default function Index() {
       case 'reports':
         return <ReportsDashboard />;
       case 'cards':
-        return <div className="max-w-2xl mx-auto"><CardsDashboard /></div>;
+        return <div className="max-w-4xl mx-auto"><CardsDashboard /></div>;
+      case 'bills':
+        return <BillsManager />;
       default:
         return <div className="text-center py-20 text-zinc-500 italic">Em breve...</div>;
     }
@@ -366,11 +415,25 @@ export default function Index() {
         />
       )}
 
+      {isMobile && currentView !== 'bills' && (
+        <Button
+          onClick={() => {
+            setEditingTransaction(undefined);
+            setInitialFormTab(undefined);
+            setShowTransactionForm(true);
+          }}
+          className="fixed bottom-24 right-4 w-14 h-14 rounded-full shadow-2xl bg-primary text-primary-foreground hover:scale-110 active:scale-95 transition-all p-0 flex items-center justify-center z-40 border-4 border-white dark:border-zinc-950"
+        >
+          <Plus className="w-7 h-7" />
+        </Button>
+      )}
+
       {showTransactionForm && (
         <TransactionForm
           accounts={accounts}
           creditCards={creditCards}
           initialData={editingTransaction}
+          initialTab={initialFormTab}
           onSubmit={async (tx, _customInstallments, applyScope) => {
             if (editingTransaction) {
               await updateTransaction(editingTransaction.id, tx, tx.cardClosingDay, tx.cardDueDay, editingTransaction.cardId, applyScope);
@@ -388,6 +451,7 @@ export default function Index() {
           onClose={() => {
             setShowTransactionForm(false);
             setEditingTransaction(undefined);
+            setInitialFormTab(undefined);
           }}
         />
       )}

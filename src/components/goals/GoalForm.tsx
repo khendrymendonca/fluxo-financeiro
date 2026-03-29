@@ -1,6 +1,7 @@
 ﻿import { useState } from 'react';
-import { X, Target, Plane, Shield, PiggyBank, Home, Car, GraduationCap } from 'lucide-react';
+import { X, Target, Plane, Shield, PiggyBank, Home, Car, GraduationCap, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SavingsGoal } from '@/types/finance';
@@ -26,6 +27,13 @@ const icons = [
 ];
 
 export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
+  const {
+    isAddingGoal,
+    isUpdatingGoal
+  } = useFinanceStore();
+
+  const isPending = isAddingGoal || isUpdatingGoal;
+
   const [name, setName] = useState(initialData?.name || '');
   const [targetAmount, setTargetAmount] = useState(initialData?.targetAmount.toString() || '');
   const [currentAmount, setCurrentAmount] = useState(initialData?.currentAmount.toString() || '0');
@@ -50,11 +58,6 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
         variant: 'destructive'
       });
       return;
-    }
-
-    // Garantir que o valor atual não supere o alvo na criação (opcional, mas evita bugs visuais)
-    if (parsedCurrent > parsedTarget) {
-      // Opcional: mostrar erro ou clamp. Vamos apenas garantir que não quebre.
     }
 
     onSubmit({
@@ -170,16 +173,18 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
           />
 
           {/* Submit Button */}
-          <Button
-            type="submit"
-            className="w-full rounded-xl py-6 font-semibold bg-info hover:bg-info/90"
-          >
-            {initialData ? 'Salvar Alterações' : 'Criar Meta'}
+          <Button type="submit" disabled={isPending} className="w-full h-12 rounded-2xl font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+            {isPending ? (
+              <div className="flex items-center gap-2">
+                <RotateCw className="w-5 h-5 animate-spin" />
+                <span>Salvando...</span>
+              </div>
+            ) : (
+              initialData ? 'Salvar Alterações' : 'Criar Meta'
+            )}
           </Button>
         </form>
       </div>
     </div>
   );
 }
-
-

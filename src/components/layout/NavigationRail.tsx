@@ -1,35 +1,41 @@
 ﻿import {
-  LayoutDashboard,
   ArrowUpDown,
-  CreditCard,
-  Target,
   Calculator,
-  TrendingDown,
-  Wallet,
+  Database,
+  LayoutDashboard,
   LineChart,
+  List,
+  LogOut,
+  Moon,
   Receipt,
   Settings2,
-  Database,
+  Sun,
+  Target,
+  TrendingDown,
+  Wallet,
+  Home,
+  CreditCard as CardIcon,
+  BarChart3,
+  History,
   ChevronLeft,
   ChevronRight,
-  Palette,
-  Sun
+  Palette
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 
 const navItems = [
-  { id: 'dashboard', icon: LayoutDashboard, label: 'Painel' },
-  { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos' },
+  { id: 'dashboard', icon: Home, label: 'Início' },
+  { id: 'transactions', icon: List, label: 'Extrato' },
   { id: 'bills', icon: Receipt, label: 'Gestão de Contas' },
-  { id: 'cards', icon: CreditCard, label: 'Cartões' },
-  { id: 'accounts', icon: Wallet, label: 'Carteira' },
+  { id: 'cards', icon: CardIcon, label: 'Cartões' },
+  { id: 'accounts', icon: Wallet, label: 'Contas Bancárias' },
   { id: 'goals', icon: Target, label: 'Metas' },
-  { id: 'debts', icon: TrendingDown, label: 'Acordos' },
-  { id: 'reports', icon: LineChart, label: 'Relatórios' },
+  { id: 'reports', icon: BarChart3, label: 'Relatórios' },
+  { id: 'debts', icon: History, label: 'Acordos' },
   { id: 'categories', icon: Settings2, label: 'Categorias' },
-  { id: 'export', icon: Database, label: 'Dados' },
+  { id: 'export', icon: Database, label: 'Exportar' },
   { id: 'simulator', icon: Calculator, label: 'Simulador' },
 ];
 

@@ -26,6 +26,7 @@ interface TransactionFormProps {
   onSubmit: (transaction: Omit<Transaction, 'id'> & { cardClosingDay?: number, cardDueDay?: number }, customInstallments?: { date: string, amount: number }[], applyScope?: 'this' | 'future' | 'all') => void;
   onDelete?: (id: string, applyScope: 'this' | 'future' | 'all') => void;
   onClose: () => void;
+  initialTab?: TabType;
 }
 
 type TabType = 'pontual' | 'parcelamento' | 'fixo' | 'transfer' | 'renda_fixa';
@@ -38,10 +39,10 @@ const isDateTodayOrPast = (dateStr: string): boolean => {
   return d <= today;
 };
 
-export function TransactionForm({ accounts, creditCards, initialData, onSubmit, onDelete, onClose }: TransactionFormProps) {
+export function TransactionForm({ accounts, creditCards, initialData, onSubmit, onDelete, onClose, initialTab }: TransactionFormProps) {
   // Wizard State
-  const [step, setStep] = useState<Step>(initialData ? 'DETAILS' : 'SELECT_TYPE');
-  const [activeTab, setActiveTab] = useState<TabType>('pontual');
+  const [step, setStep] = useState<Step>(initialData || initialTab ? 'DETAILS' : 'SELECT_TYPE');
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab || 'pontual');
   const [type, setType] = useState<'income' | 'expense'>(initialData?.type || 'expense');
 
   // Form Fields
@@ -90,7 +91,19 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [overdraftAccountName, setOverdraftAccountName] = useState('');
   const [pendingAmount, setPendingAmount] = useState<number | null>(null);
 
-  const { debts, categories, subcategories, transferBetweenAccounts, getAccountViewBalance, getCardExpenses } = useFinanceStore();
+  const {
+    debts,
+    categories,
+    subcategories,
+    transferBetweenAccounts,
+    getAccountViewBalance,
+    getCardExpenses,
+    isAddingTransaction,
+    isUpdatingTransaction,
+    isTransferring
+  } = useFinanceStore();
+
+  const isPending = isAddingTransaction || isUpdatingTransaction || isTransferring;
 
   const [openCategory, setOpenCategory] = useState(false);
   const [openSubcategory, setOpenSubcategory] = useState(false);
@@ -418,7 +431,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                       </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_SUBTYPE')} className="text-[10px] font-bold uppercase">Alterar</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_SUBTYPE')} disabled={isPending} className="text-[10px] font-bold uppercase">Alterar</Button>
                 </div>
               )}
 
@@ -695,11 +708,18 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
               {/* Action Buttons */}
               <div className="flex flex-col gap-3 pt-2">
-                <Button type="submit" className={cn("w-full rounded-2xl py-7 text-lg font-black shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]",
+                <Button type="submit" disabled={isPending} className={cn("w-full rounded-2xl py-7 text-lg font-black shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]",
                   type === 'income' ? "bg-success hover:bg-success/90 shadow-success/20" : "bg-danger hover:bg-danger/90 shadow-danger/20")}>
-                  {initialData ? 'Salvar Alterações' :
-                    activeTab === 'renda_fixa' ? 'Confirmar Renda Fixa' :
-                      activeTab === 'transfer' ? 'Confirmar Transferência' : 'Concluir Lançamento'}
+                  {isPending ? (
+                    <div className="flex items-center gap-2">
+                      <RotateCw className="w-5 h-5 animate-spin" />
+                      <span>Processando...</span>
+                    </div>
+                  ) : (
+                    initialData ? 'Salvar Alterações' :
+                      activeTab === 'renda_fixa' ? 'Confirmar Renda Fixa' :
+                        activeTab === 'transfer' ? 'Confirmar Transferência' : 'Concluir Lançamento'
+                  )}
                 </Button>
 
                 {initialData && onDelete && (
