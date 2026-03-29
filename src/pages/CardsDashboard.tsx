@@ -124,7 +124,7 @@ export default function CardsDashboard() {
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   return (
-    <div className="space-y-4 animate-fade-in pb-24 max-w-4xl mx-auto px-4 md:px-0 pt-2">
+    <div className="space-y-4 animate-fade-in pb-24 w-full pt-2">
       <PageHeader title="Meus Cartões" icon={CreditCard}>
         <Button
           variant="outline"

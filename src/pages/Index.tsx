@@ -1,4 +1,5 @@
 ﻿import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { useSearchParams } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import {
@@ -207,19 +208,17 @@ export default function Index() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Coluna 1: Saldo e Contas */}
                 <div className="space-y-6">
-                  <StatCard title="Patrimônio Total" value={totalNetWorth} icon={<Wallet />} variant="neutral" />
-                  <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-900 p-6 rounded-[2.5rem]">
-                    <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest mb-4">Ações Rápidas</p>
-                    <div className="flex flex-wrap gap-3">
-                      <Button onClick={() => setShowTransactionForm(true)} className="rounded-2xl gap-2 font-bold"><Plus className="w-4 h-4" /> Novo Lançamento</Button>
-                      <Button variant="secondary" onClick={() => setCurrentView('bills')} className="rounded-2xl gap-2 font-bold"><Receipt className="w-4 h-4" /> Pagar Contas</Button>
-                    </div>
-                  </div>
+                  <StatCard title="Saldo Total" value={totalNetWorth} icon={<Wallet />} variant="neutral" />
+                  <StatCard title="Projetado" value={projectedBalance} icon={<Calculator />} variant={projectedBalance < 0 ? 'negative' : 'neutral'} />
                   <PendingPayments transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
                 </div>
 
-                {/* Coluna 2: Gráficos e Reserva */}
+                {/* Coluna 2: Fluxo e Gráficos */}
                 <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <StatCard title="Receitas" value={cashflow.totalIncome} icon={<TrendingUp />} variant="positive" />
+                    <StatCard title="Despesas" value={cashflow.totalExpenses} icon={<TrendingDown />} variant="negative" />
+                  </div>
                   <ExpenseChart data={Object.fromEntries(categoryExpenses.map(c => [c.name, c.value]))} />
                   <EmergencyReserve data={emergencyData as any} onMonthsChange={setEmergencyMonths} />
                 </div>
@@ -421,7 +420,7 @@ export default function Index() {
         );
       case 'transactions':
         return (
-          <div className="max-w-4xl mx-auto space-y-4 pt-2">
+          <div className="space-y-4 pt-2">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <PageHeader title="Extrato de Lançamentos" icon={List} />
               <MonthSelector />
@@ -442,7 +441,7 @@ export default function Index() {
         );
       case 'goals':
         return (
-          <div className="space-y-6 pt-2 max-w-4xl mx-auto">
+          <div className="space-y-6 pt-2">
             <div className="flex items-center justify-between px-2">
               <h2 className="text-2xl font-bold tracking-tight">Metas</h2>
               <Button size="sm" className="rounded-xl font-bold" onClick={() => setShowGoalForm(true)}>Criar Meta</Button>
@@ -478,7 +477,7 @@ export default function Index() {
         );
       case 'simulator':
         return (
-          <div className="max-w-4xl mx-auto">
+          <div className="w-full">
             <WhatIfSimulator
               totalIncome={cashflow.totalIncome}
               totalExpenses={cashflow.totalExpenses}
@@ -491,7 +490,7 @@ export default function Index() {
       case 'reports':
         return <ReportsDashboard />;
       case 'cards':
-        return <div className="max-w-4xl mx-auto"><CardsDashboard /></div>;
+        return <div className="w-full"><CardsDashboard /></div>;
       case 'bills':
         return <BillsManager />;
       case 'emergency':
@@ -502,42 +501,114 @@ export default function Index() {
   };
 
   return (
-    <div className="font-sans selection:bg-primary/30">
-      {!isMobile && (
+    <AppLayout
+      sidebar={
         <NavigationRail
           isExpanded={isExpanded}
           onToggle={handleToggleSidebar}
           currentView={currentView}
           onNavigate={setCurrentView}
         />
-      )}
+      }
+      headerMobile={
+        <div className="flex items-center justify-between px-4 pt-4 pb-2">
+          <div className="flex items-center gap-4">
+            <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-gray-500 dark:text-zinc-400">
+                  <Menu className="w-6 h-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[300px] sm:w-[350px] bg-white dark:bg-zinc-950 border-r border-gray-100 dark:border-zinc-900 p-0 flex flex-col h-full">
+                <SheetHeader className="p-6 text-left border-b border-gray-100 dark:border-zinc-900 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-10 h-10">
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold">{userInitials}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <SheetTitle className="text-sm font-bold">{userName}</SheetTitle>
+                      <SheetDescription className="text-[10px] uppercase font-black tracking-widest text-zinc-500">Menu Principal</SheetDescription>
+                    </div>
+                  </div>
+                </SheetHeader>
 
-      <main className={cn(
-        "transition-all duration-300 ease-in-out pb-24 md:pb-8",
-        !isMobile && (isExpanded ? "md:pl-64" : "md:pl-20")
-      )}>
-        {renderView()}
-      </main>
+                <div className="flex-1 overflow-y-auto py-4 space-y-1 no-scrollbar">
+                  {navigationItems.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setCurrentView(item.id as ViewType);
+                        setIsDrawerOpen(false);
+                      }}
+                      className={cn(
+                        "w-full flex items-center gap-4 px-6 py-4 text-sm font-bold transition-all",
+                        currentView === item.id
+                          ? "text-primary bg-primary/5 border-r-4 border-primary"
+                          : "text-gray-500 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-900"
+                      )}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
 
-      {isMobile && (
+                <div className="mt-auto border-t border-gray-100 dark:border-zinc-900 p-6 space-y-6">
+                  <div>
+                    <p className="text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-4">Aparência</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[{ id: 'light', icon: Sun, label: 'Claro' }, { id: 'dark', icon: Moon, label: 'Escuro' }, { id: 'amoled', icon: Zap, label: 'AMOLED' }].map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => setTheme(t.id as any)}
+                          className={cn(
+                            "flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all",
+                            theme === t.id ? "bg-primary/10 border-primary text-primary" : "bg-gray-50 dark:bg-zinc-900 border-transparent text-zinc-500"
+                          )}
+                        >
+                          <t.icon className="w-4 h-4" />
+                          <span className="text-[9px] font-bold">{t.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            <div className="flex items-center gap-3">
+              <Avatar className="w-8 h-8">
+                <AvatarFallback className="bg-gray-100 dark:bg-zinc-900 text-gray-500 dark:text-zinc-400 font-bold text-[10px]">{userInitials}</AvatarFallback>
+              </Avatar>
+              <p className="font-bold text-sm">{userName}</p>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => setIsBalanceVisible(!isBalanceVisible)}>
+            {isBalanceVisible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+          </Button>
+        </div>
+      }
+      bottomNav={
         <BottomNavigation
           activeView={currentView}
           onViewChange={(v) => setCurrentView(v as ViewType)}
         />
-      )}
-
-      {isMobile && currentView !== 'bills' && (
-        <Button
-          onClick={() => {
-            setEditingTransaction(undefined);
-            setInitialFormTab(undefined);
-            setShowTransactionForm(true);
-          }}
-          className="fixed bottom-24 right-4 w-14 h-14 rounded-full shadow-2xl bg-primary text-primary-foreground hover:scale-110 active:scale-95 transition-all p-0 flex items-center justify-center z-40 border-4 border-white dark:border-zinc-950"
-        >
-          <Plus className="w-7 h-7" />
-        </Button>
-      )}
+      }
+      fab={
+        currentView !== 'bills' && (
+          <Button
+            onClick={() => {
+              setEditingTransaction(undefined);
+              setShowTransactionForm(true);
+            }}
+            className="fixed bottom-24 right-4 w-14 h-14 rounded-full shadow-2xl bg-primary text-primary-foreground z-40"
+          >
+            <Plus className="w-7 h-7" />
+          </Button>
+        )
+      }
+    >
+      {renderView()}
 
       {showTransactionForm && (
         <TransactionForm
@@ -582,6 +653,6 @@ export default function Index() {
           }}
         />
       )}
-    </div>
+    </AppLayout>
   );
 }
