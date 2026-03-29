@@ -15,6 +15,14 @@ import { toast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
 import { todayLocalString } from '@/utils/dateUtils';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Separator } from '@/components/ui/separator';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface AccountsManagerProps {
   accounts: Account[];
@@ -45,9 +53,9 @@ export function AccountsManager({
 
   // Account form state
   const [accountName, setAccountName] = useState('');
-  const [accountBank, setAccountBank] = useState('');
+  const [accountInstitution, setAccountInstitution] = useState('');
   const [accountBalance, setAccountBalance] = useState('');
-  const [accountType, setAccountType] = useState<AccountType>('corrente');
+  const [accountType, setAccountType] = useState<string>('corrente');
   const [accountColor, setAccountColor] = useState(APP_COLORS[0]);
   const [hasOverdraft, setHasOverdraft] = useState(false);
   const [overdraftLimit, setOverdraftLimit] = useState('');
@@ -80,7 +88,7 @@ export function AccountsManager({
 
   const resetForm = () => {
     setAccountName('');
-    setAccountBank('');
+    setAccountInstitution('');
     setAccountBalance('');
     setAccountType('corrente');
     setAccountColor(APP_COLORS[0]);
@@ -98,7 +106,7 @@ export function AccountsManager({
   const openEditForm = (account: Account) => {
     setEditingAccount(account);
     setAccountName(account.name);
-    setAccountBank(account.bank);
+    setAccountInstitution(account.institution || account.bank || '');
     setAccountBalance(account.balance.toFixed(2));
     setAccountType(account.accountType);
     setAccountColor(account.color);
@@ -117,7 +125,7 @@ export function AccountsManager({
     e.preventDefault();
     const errors: string[] = [];
     if (!accountName) errors.push('Nome da Conta');
-    if (!accountBank) errors.push('Instituição');
+    if (!accountInstitution) errors.push('Instituição');
     if (!accountBalance || parseFloat(accountBalance) < 0) errors.push('Saldo');
 
     if (errors.length > 0) {
@@ -159,7 +167,8 @@ export function AccountsManager({
       // pois a Trigger do banco fará o cálculo usando a transação recém-criada
       const accountDataToUpdate = {
         name: accountName,
-        bank: accountBank,
+        institution: accountInstitution,
+        bank: accountInstitution, // Fallback p/ legado
         color: accountColor,
         accountType: accountType,
         hasOverdraft: hasOverdraft,
@@ -172,7 +181,8 @@ export function AccountsManager({
     } else {
       const accountData = {
         name: accountName,
-        bank: accountBank,
+        institution: accountInstitution,
+        bank: accountInstitution, // Fallback p/ legado
         balance: parsedNewBalance,
         color: accountColor,
         accountType: accountType,
@@ -286,101 +296,74 @@ export function AccountsManager({
         </div>
       </div>
 
-      {/* Bank Accounts Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-        {accounts.map((account) => {
-          const viewAccountBalance = getAccountViewBalance(account.id);
-          const availableTotal = viewAccountBalance + (account.hasOverdraft ? (account.overdraftLimit || 0) : 0);
-          const isNegative = viewAccountBalance < 0;
-          const overdraftUsed = isNegative ? Math.abs(viewAccountBalance) : 0;
-          const hasYield = (account.monthlyYieldRate || 0) > 0;
-          const estimatedMonthlyYield = hasYield ? (viewAccountBalance > 0 ? viewAccountBalance * ((account.monthlyYieldRate || 0) / 100) : 0) : 0;
+      {/* Bank Accounts Grouped by Institution */}
+      <div className="space-y-4 animate-fade-in">
+        {Object.entries(
+          accounts.reduce((acc, account) => {
+            const inst = account.institution || account.bank || 'Outros';
+            if (!acc[inst]) acc[inst] = [];
+            acc[inst].push(account);
+            return acc;
+          }, {} as Record<string, Account[]>)
+        ).map(([institution, instAccounts]) => {
+          const instTotal = instAccounts.reduce((sum, a) => sum + Number(a.balance), 0);
 
           return (
-            <div
-              key={account.id}
-              className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 group hover:border-primary/50 transition-all flex flex-col justify-between h-auto min-h-[12rem] relative overflow-hidden cursor-pointer"
-              onClick={() => openEditForm(account)}
-            >
-              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Building2 className="w-16 h-16" />
-              </div>
-
-              <div className="flex justify-between items-start relative z-10">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: account.color }} />
-                    <p className="text-xs font-black uppercase text-muted-foreground tracking-tighter">
-                      {account.bank} • {getAccountTypeLabel(account.accountType)}
-                    </p>
-                    {account.hasOverdraft && (
-                      <span className="text-[8px] bg-amber-500/15 text-amber-600 px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter flex items-center gap-0.5">
-                        <ShieldCheck className="w-2.5 h-2.5" /> Limite
-                      </span>
-                    )}
-                    {hasYield && (
-                      <span className="text-[8px] bg-success/15 text-success px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter flex items-center gap-0.5">
-                        <TrendingUp className="w-2.5 h-2.5" /> {account.monthlyYieldRate}% a.m.
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-xl font-bold truncate max-w-[180px] text-gray-900 dark:text-zinc-50">{account.name}</h3>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={(e) => { e.stopPropagation(); openEditForm(account); }} className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-primary/10 text-primary transition-all" title="Editar conta">
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); onDeleteAccount(account.id); }} className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-danger/10 text-danger transition-all" title="Excluir conta">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-auto relative z-10 space-y-2">
-                <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Saldo em Periodo</p>
-                  <p className={cn("text-2xl font-black text-gray-900 dark:text-zinc-50", getAccountViewBalance(account.id) < 0 && "text-danger")}>
-                    {formatCurrency(getAccountViewBalance(account.id))}
-                  </p>
-                </div>
-
-                {hasYield && estimatedMonthlyYield > 0 && (
-                  <p className="text-[9px] font-bold text-success flex items-center gap-1">
-                    <TrendingUp className="w-2.5 h-2.5" /> +{formatCurrency(estimatedMonthlyYield)} ref. mês
-                  </p>
-                )}
-
-                {account.hasOverdraft && (account.overdraftLimit || 0) > 0 && (
-                  <div className="pt-2 border-t border-gray-100 dark:border-zinc-800 space-y-1">
-                    <div className="flex justify-between items-center">
-                      <p className="text-[9px] font-bold text-muted-foreground uppercase">Limite Total da Conta</p>
-                      <span className="font-semibold text-sm">
-                        {formatCurrency(account.overdraftLimit || 0)}
-                      </span>
-                    </div>
-                    {isNegative && (
-                      <div className="space-y-1">
-                        <div className="h-1.5 rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden">
-                          <div className="h-full rounded-full bg-amber-500 transition-all duration-500" style={{ width: `${Math.min(100, (overdraftUsed / (account.overdraftLimit || 1)) * 100)}%` }} />
-                        </div>
-                        <div className="flex justify-between items-center text-[9px] font-bold">
-                          <p className="text-amber-600">{formatCurrency(overdraftUsed)} usado</p>
-                          <p className="text-muted-foreground">Restante: {formatCurrency(Math.max(0, (account.overdraftLimit || 0) - overdraftUsed))}</p>
-                        </div>
+            <Accordion type="single" collapsible key={institution} className="w-full">
+              <AccordionItem value={institution} className="border-none bg-white dark:bg-zinc-900 rounded-3xl mb-4 overflow-hidden border border-gray-100 dark:border-zinc-800 shadow-sm transition-all hover:shadow-md">
+                <AccordionTrigger className="px-6 py-5 hover:no-underline group">
+                  <div className="flex items-center justify-between w-full pr-4 text-left">
+                    <div className="flex items-center gap-4">
+                      <Avatar className="w-10 h-10 border border-gray-100 dark:border-zinc-800">
+                        <AvatarFallback className="bg-primary/10 text-primary font-black uppercase text-xs">
+                          {institution.substring(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-bold text-lg text-gray-900 dark:text-zinc-50">{institution}</h3>
+                        <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">{instAccounts.length} {instAccounts.length === 1 ? 'conta' : 'contas'}</p>
                       </div>
-                    )}
-                    {!isNegative && (
-                      <p className="text-[9px] text-muted-foreground">
-                        Limite disponível: <span className="font-bold text-success">{formatCurrency(account.overdraftLimit || 0)}</span>
-                      </p>
-                    )}
-                    <p className="text-[9px] text-muted-foreground">
-                      Disponível total (Saldo + Limite): <span className="font-bold text-foreground">{formatCurrency(availableTotal)}</span>
-                    </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground mb-1">Saldo Consolidado</p>
+                      <p className="font-black text-xl text-primary">{formatCurrency(instTotal)}</p>
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-6 pb-6 pt-2">
+                  <Separator className="mb-6 opacity-50" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {instAccounts.map((account) => {
+                      const viewAccountBalance = getAccountViewBalance(account.id);
+                      return (
+                        <div
+                          key={account.id}
+                          className="p-5 rounded-2xl bg-gray-50/50 dark:bg-zinc-800/20 border border-gray-100 dark:border-zinc-800 hover:border-primary/30 transition-all cursor-pointer group"
+                          onClick={() => openEditForm(account)}
+                        >
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <p className="text-[10px] font-black uppercase text-zinc-500 mb-1">{account.accountType}</p>
+                              <h4 className="font-bold text-zinc-900 dark:text-zinc-50">{account.name}</h4>
+                            </div>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={(e) => { e.stopPropagation(); openEditForm(account); }} className="p-1.5 rounded-lg hover:bg-primary/10 text-primary"><Pencil className="w-3.5 h-3.5" /></button>
+                              <button onClick={(e) => { e.stopPropagation(); onDeleteAccount(account.id); }} className="p-1.5 rounded-lg hover:bg-danger/10 text-danger"><Trash2 className="w-3.5 h-3.5" /></button>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-zinc-500">Saldo</span>
+                            <span className={cn("font-black text-lg", viewAccountBalance < 0 ? "text-danger" : "text-zinc-900 dark:text-zinc-50")}>
+                              {formatCurrency(viewAccountBalance)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           );
         })}
 
@@ -411,8 +394,8 @@ export function AccountsManager({
                     <Input value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="Ex: Conta Corrente" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4" required />
                   </div>
                   <div className="space-y-1.5 col-span-2 md:col-span-1">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Instituição</Label>
-                    <Input value={accountBank} onChange={(e) => setAccountBank(e.target.value)} placeholder="Ex: Banco Itaú" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4" required />
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Instituição (Banco)</Label>
+                    <Input value={accountInstitution} onChange={(e) => setAccountInstitution(e.target.value)} placeholder="Ex: Itaú, Nubank" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4" required />
                   </div>
                 </div>
 

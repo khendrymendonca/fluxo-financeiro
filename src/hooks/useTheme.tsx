@@ -1,6 +1,6 @@
 ﻿import React, { createContext, useContext, useEffect, useState } from 'react';
 
-export type ThemeType = 'original' | 'green-black';
+export type ThemeType = 'light' | 'dark' | 'amoled';
 
 interface ThemeContextType {
     theme: ThemeType;
@@ -11,7 +11,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setThemeState] = useState<ThemeType>(() => {
-        return (localStorage.getItem('app-theme') as ThemeType) || 'original';
+        return (localStorage.getItem('app-theme') as ThemeType) || 'dark';
     });
 
     const setTheme = (newTheme: ThemeType) => {
@@ -21,18 +21,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         const root = window.document.documentElement;
-        const body = window.document.body;
 
-        // Tailwind darkMode: 'class' looks at the html element
-        if (theme === 'green-black') {
+        // Reset classes
+        root.classList.remove('dark', 'amoled');
+
+        if (theme === 'dark') {
             root.classList.add('dark');
-        } else {
-            root.classList.remove('dark');
+        } else if (theme === 'amoled') {
+            root.classList.add('dark', 'amoled');
         }
 
-        // Keep body classes for CSS variables if needed, but the .dark on html is the key for Tailwind
-        body.classList.remove('theme-original', 'theme-green-black');
-        body.classList.add(`theme-${theme}`);
     }, [theme]);
 
     return (

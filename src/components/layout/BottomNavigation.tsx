@@ -1,4 +1,4 @@
-import { LayoutDashboard, ArrowUpDown, CreditCard, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, ArrowUpDown, CreditCard, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -17,7 +17,7 @@ export function BottomNavigation({ activeView, onViewChange }: BottomNavigationP
         { id: 'dashboard', icon: LayoutDashboard, label: 'Início' },
         { id: 'transactions', icon: ArrowUpDown, label: 'Extrato' },
         { id: 'cards', icon: CreditCard, label: 'Cartões' },
-        { id: 'reports', icon: BarChart3, label: 'Relatórios' },
+        { id: 'menu', icon: Menu, label: 'Menu' },
     ];
 
     return (

@@ -151,7 +151,7 @@ export default function CardsDashboard() {
             ref={scrollRef}
             onScroll={handleScroll}
             className={cn(
-              "flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 no-scrollbar -mx-4 px-4 mask-fade-edges",
+              "flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 no-scrollbar -mx-4 px-6 mask-fade-edges",
               "md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:snap-none md:flex-wrap md:mx-0 md:px-0 md:mask-none"
             )}
           >

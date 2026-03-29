@@ -29,10 +29,15 @@ import {
   BarChart3,
   ArrowRightLeft,
   Info,
-  LogOut
+  LogOut,
+  Shield,
+  Sun,
+  Moon,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { useTheme } from '@/hooks/useTheme';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useEmergencyFund } from '@/hooks/useEmergencyFund';
 import { todayLocalString } from '@/utils/dateUtils';
@@ -55,6 +60,7 @@ import { CategoriesManager } from '@/components/settings/CategoriesManager';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
+import EmergencyFund from './EmergencyFund';
 import { BillsManager } from '@/components/accounts/BillsManager';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { ExpenseChart } from '@/components/dashboard/ExpenseChart';
@@ -68,8 +74,17 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "@/components/ui/tooltip";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
 
-type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export';
+type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export' | 'emergency' | 'menu';
 
 export default function Index() {
   const { user } = useAuth();
@@ -89,6 +104,7 @@ export default function Index() {
     return saved !== null ? JSON.parse(saved) : false;
   });
 
+  const { theme, setTheme } = useTheme();
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>(undefined);
   const [editingGoal, setEditingGoal] = useState<SavingsGoal | undefined>(undefined);
   const [initialFormTab, setInitialFormTab] = useState<'pontual' | 'transfer' | undefined>(undefined);
@@ -147,6 +163,28 @@ export default function Index() {
     setIsExpanded(expanded);
     localStorage.setItem('sidebar-expanded', JSON.stringify(expanded));
   }, []);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    if (currentView === 'menu') {
+      setIsDrawerOpen(true);
+      setCurrentView('dashboard'); // Reset p/ não ficar preso no estado 'menu'
+    }
+  }, [currentView]);
+
+  const navigationItems = [
+    { id: 'dashboard', icon: Home, label: 'Início' },
+    { id: 'transactions', icon: List, label: 'Extrato' },
+    { id: 'bills', icon: Receipt, label: 'Gestão de Contas' },
+    { id: 'accounts', icon: Wallet, label: 'Minhas Contas (Carteira)' },
+    { id: 'emergency', icon: Shield, label: 'Reserva de Emergência' },
+    { id: 'goals', icon: Target, label: 'Metas' },
+    { id: 'debts', icon: History, label: 'Acordos' },
+    { id: 'reports', icon: BarChart3, label: 'Relatórios' },
+    { id: 'categories', icon: Settings2, label: 'Categorias' },
+    { id: 'simulator', icon: Calculator, label: 'Simulador' },
+    { id: 'export', icon: Database, label: 'Exportar' },
+  ];
 
   const renderView = () => {
     switch (currentView) {
@@ -202,16 +240,86 @@ export default function Index() {
                 <Button variant="ghost" size="icon" className="text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-colors" onClick={() => setIsBalanceVisible(!isBalanceVisible)}>
                   {isBalanceVisible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                  onClick={() => {
-                    import('sonner').then(({ toast }) => toast('Notificações em breve!'));
-                  }}
-                >
-                  <Bell className="w-5 h-5" />
-                </Button>
+
+                <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-colors md:hidden">
+                      <Menu className="w-6 h-6" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-[300px] sm:w-[350px] bg-white dark:bg-zinc-950 border-r border-gray-100 dark:border-zinc-900 p-0 overflow-y-auto no-scrollbar">
+                    <SheetHeader className="p-6 text-left border-b border-gray-100 dark:border-zinc-900">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="w-10 h-10">
+                          <AvatarFallback className="bg-primary/10 text-primary font-bold">{userInitials}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <SheetTitle className="text-sm font-bold">{userName}</SheetTitle>
+                          <SheetDescription className="text-[10px] uppercase font-black tracking-widest text-zinc-500">Menu Principal</SheetDescription>
+                        </div>
+                      </div>
+                    </SheetHeader>
+
+                    <div className="py-4 space-y-1">
+                      {navigationItems.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            setCurrentView(item.id as ViewType);
+                            setIsDrawerOpen(false);
+                          }}
+                          className={cn(
+                            "w-full flex items-center gap-4 px-6 py-4 text-sm font-bold transition-all",
+                            currentView === item.id
+                              ? "text-primary bg-primary/5 border-r-4 border-primary"
+                              : "text-gray-500 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-900"
+                          )}
+                        >
+                          <item.icon className="w-5 h-5" />
+                          <span>{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="absolute bottom-6 left-6 right-6 space-y-6">
+                      <div className="pt-6 border-t border-gray-100 dark:border-zinc-900">
+                        <p className="text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-4">Aparência</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { id: 'light', icon: Sun, label: 'Claro' },
+                            { id: 'dark', icon: Moon, label: 'Escuro' },
+                            { id: 'amoled', icon: Zap, label: 'AMOLED' },
+                          ].map((t) => (
+                            <button
+                              key={t.id}
+                              onClick={() => setTheme(t.id as any)}
+                              className={cn(
+                                "flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all",
+                                theme === t.id
+                                  ? "bg-primary/10 border-primary text-primary"
+                                  : "bg-gray-50 dark:bg-zinc-900 border-transparent text-zinc-500"
+                              )}
+                            >
+                              <t.icon className="w-4 h-4" />
+                              <span className="text-[9px] font-bold">{t.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          import('sonner').then(({ toast }) => toast('Logout em breve...'));
+                          setIsDrawerOpen(false);
+                        }}
+                        className="flex items-center gap-4 text-sm font-bold text-danger hover:opacity-80 transition-opacity"
+                      >
+                        <LogOut className="w-5 h-5" />
+                        <span>Sair do App</span>
+                      </button>
+                    </div>
+                  </SheetContent>
+                </Sheet>
               </div>
             </div>
 
@@ -240,7 +348,6 @@ export default function Index() {
                   }
                 },
                 { id: 'pay', icon: Receipt, label: 'Pagar', color: 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white border-gray-100 dark:border-zinc-800', action: () => setCurrentView('bills') },
-                { id: 'invest', icon: Target, label: 'Investir', color: 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white border-gray-100 dark:border-zinc-800', action: () => setCurrentView('goals') },
               ].map(action => (
                 <button
                   key={action.id}
@@ -288,25 +395,12 @@ export default function Index() {
               </div>
             </div>
 
-            {/* Widgets de Gestão */}
+            {/* Dashboards Extras Mobile */}
             <div className="space-y-6 pt-2">
               <EmergencyReserve
                 data={emergencyData as any}
                 onMonthsChange={setEmergencyMonths}
               />
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between px-2">
-                  <h2 className="text-lg font-bold tracking-tight">Minhas Contas</h2>
-                  <Button variant="link" className="text-primary text-xs font-bold" onClick={() => setCurrentView('accounts')}>Ver todas</Button>
-                </div>
-                <AccountsManager
-                  accounts={accounts}
-                  onAddAccount={addAccount}
-                  onUpdateAccount={updateAccount}
-                  onDeleteAccount={deleteAccount}
-                />
-              </div>
             </div>
           </div>
         );
@@ -385,6 +479,8 @@ export default function Index() {
         return <div className="max-w-4xl mx-auto"><CardsDashboard /></div>;
       case 'bills':
         return <BillsManager />;
+      case 'emergency':
+        return <EmergencyFund />;
       default:
         return <div className="text-center py-20 text-zinc-500 italic">Em breve...</div>;
     }

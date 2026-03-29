@@ -66,11 +66,12 @@ export interface Account {
   id: string;
   userId: string;
   name: string;
-  bank: string;
+  bank: string; // Mantido por retrocompatibilidade, mas usaremos institution preferencialmente
+  institution: string;
   balance: number;
   color: string;
   icon?: string;
-  accountType: AccountType;
+  accountType: string; // Alterado para string para aceitar tipos personalizados do form
   hasOverdraft?: boolean;
   overdraftLimit?: number;
   monthlyYieldRate?: number;
