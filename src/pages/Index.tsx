@@ -191,31 +191,43 @@ export default function Index() {
       case 'dashboard':
         if (!isMobile) {
           return (
-            <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
-              {/* Header Desktop com Seletor de Período */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-                <PageHeader title={`Dashboard`} icon={LayoutDashboard} />
-                <MonthSelector />
-              </div>
-
-              {/* Grid de Stats Superiores */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard title="Saldo em Contas" value={totalNetWorth} icon={<Wallet />} variant="neutral" />
-                <StatCard title="Entradas (Mês)" value={cashflow.totalIncome} icon={<TrendingUp />} variant="positive" />
-                <StatCard title="Saídas (Mês)" value={cashflow.totalExpenses} icon={<TrendingDown />} variant="negative" />
-                <StatCard title="Projetado" value={projectedBalance} icon={<Calculator />} variant={projectedBalance < 0 ? 'negative' : 'neutral'} subtitle="Considerando contas a pagar" />
-              </div>
-
-              {/* Grid Layout Principal */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                  <ExpenseChart data={Object.fromEntries(categoryExpenses.map(c => [c.name, c.value]))} />
-                  <RecentTransactions transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
+            <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto p-2 md:p-8">
+              {/* Header Desktop com Saudação */}
+              <div className="mb-8">
+                <p className="text-[10px] text-gray-400 dark:text-zinc-500 font-black uppercase tracking-[0.2em] mb-1">Visão Geral</p>
+                <div className="flex items-center justify-between">
+                  <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
+                    Olá, <span className="text-primary">{userName}</span>
+                  </h1>
+                  <MonthSelector />
                 </div>
+              </div>
+
+              {/* Grid Principal - 3 Colunas no Desktop */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Coluna 1: Saldo e Contas */}
                 <div className="space-y-6">
+                  <StatCard title="Patrimônio Total" value={totalNetWorth} icon={<Wallet />} variant="neutral" />
+                  <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-900 p-6 rounded-[2.5rem]">
+                    <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest mb-4">Ações Rápidas</p>
+                    <div className="flex flex-wrap gap-3">
+                      <Button onClick={() => setShowTransactionForm(true)} className="rounded-2xl gap-2 font-bold"><Plus className="w-4 h-4" /> Novo Lançamento</Button>
+                      <Button variant="secondary" onClick={() => setCurrentView('bills')} className="rounded-2xl gap-2 font-bold"><Receipt className="w-4 h-4" /> Pagar Contas</Button>
+                    </div>
+                  </div>
                   <PendingPayments transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
-                  <GoalProgress goals={savingsGoals} />
+                </div>
+
+                {/* Coluna 2: Gráficos e Reserva */}
+                <div className="space-y-6">
+                  <ExpenseChart data={Object.fromEntries(categoryExpenses.map(c => [c.name, c.value]))} />
                   <EmergencyReserve data={emergencyData as any} onMonthsChange={setEmergencyMonths} />
+                </div>
+
+                {/* Coluna 3: Transações e Metas */}
+                <div className="space-y-6">
+                  <RecentTransactions transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
+                  <GoalProgress goals={savingsGoals} />
                 </div>
               </div>
             </div>
@@ -230,7 +242,7 @@ export default function Index() {
               <div className="flex items-center gap-4">
                 <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                    <Button variant="ghost" size="icon" className="text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-colors md:hidden">
                       <Menu className="w-6 h-6" />
                     </Button>
                   </SheetTrigger>
@@ -501,8 +513,8 @@ export default function Index() {
       )}
 
       <main className={cn(
-        "transition-all duration-300 ease-in-out pb-24 md:pb-8 px-4",
-        !isMobile && (isExpanded ? "pl-72" : "pl-24")
+        "transition-all duration-300 ease-in-out pb-24 md:pb-8",
+        !isMobile && (isExpanded ? "md:pl-64" : "md:pl-20")
       )}>
         {renderView()}
       </main>

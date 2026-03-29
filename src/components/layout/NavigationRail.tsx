@@ -19,24 +19,25 @@
   History,
   ChevronLeft,
   ChevronRight,
-  Palette
+  Shield,
+  Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 
 const navItems = [
-  { id: 'dashboard', icon: Home, label: 'Início' },
+  { id: 'dashboard', icon: LayoutDashboard, label: 'Início' },
   { id: 'transactions', icon: List, label: 'Extrato' },
   { id: 'bills', icon: Receipt, label: 'Gestão de Contas' },
   { id: 'cards', icon: CardIcon, label: 'Cartões' },
-  { id: 'accounts', icon: Wallet, label: 'Contas Bancárias' },
+  { id: 'accounts', icon: Wallet, label: 'Minhas Contas (Carteira)' },
+  { id: 'emergency', icon: Shield, label: 'Reserva de Emergência' },
   { id: 'goals', icon: Target, label: 'Metas' },
-  { id: 'reports', icon: BarChart3, label: 'Relatórios' },
   { id: 'debts', icon: History, label: 'Acordos' },
+  { id: 'reports', icon: BarChart3, label: 'Relatórios' },
   { id: 'categories', icon: Settings2, label: 'Categorias' },
-  { id: 'export', icon: Database, label: 'Exportar' },
   { id: 'simulator', icon: Calculator, label: 'Simulador' },
+  { id: 'export', icon: Database, label: 'Exportar' },
 ];
 
 interface NavigationRailProps {
@@ -54,7 +55,7 @@ export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }
   return (
     <nav
       className={cn(
-        "hidden md:flex flex-col py-6 px-3 bg-card border-r border-border h-screen transition-all duration-300 ease-in-out shrink-0 sticky top-0 left-0 z-50",
+        "hidden md:flex flex-col py-6 px-3 bg-zinc-950 border-r border-zinc-800 h-screen transition-all duration-300 ease-in-out shrink-0 sticky top-0 left-0 z-50",
         isExpanded ? "w-64" : "w-20"
       )}
     >
@@ -118,34 +119,44 @@ export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }
         })}
       </div>
 
-      {/* Footer Actions */}
-      <div className="mt-auto pt-6 border-t border-border/50 flex flex-col gap-2">
-        <button
-          onClick={() => {
-            const themes: ('original' | 'green-black')[] = ['original', 'green-black'];
-            const nextIndex = (themes.indexOf(theme as any) + 1) % themes.length;
-            setTheme(themes[nextIndex]);
-          }}
-          className={cn(
-            "flex items-center rounded-2xl transition-all duration-200 group relative",
-            isExpanded ? "px-4 py-3 gap-3 w-full" : "w-14 h-14 justify-center mx-auto",
-            "text-muted-foreground hover:bg-muted hover:text-foreground"
-          )}
-        >
-          {theme === 'original' ? <Palette className="w-5 h-5" /> : <Sun className="w-5 h-5 text-primary" />}
-
-          {isExpanded && (
-            <span className="font-medium whitespace-nowrap overflow-hidden">
-              Alterar Tema
-            </span>
-          )}
-
-          {!isExpanded && (
-            <div className="absolute left-full ml-3 px-3 py-2 bg-foreground text-background text-xs font-semibold rounded-xl opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100 pointer-events-none whitespace-nowrap z-50 shadow-xl">
-              {theme === 'original' ? 'Verde-Black' : 'Pastel Original'}
+      <div className="mt-auto pt-6 border-t border-zinc-800 flex flex-col gap-4">
+        {isExpanded ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-2 px-2">Aparência</p>
+            <div className="grid grid-cols-3 gap-1">
+              {[
+                { id: 'light', icon: Sun, label: 'Claro' },
+                { id: 'dark', icon: Moon, label: 'Escuro' },
+                { id: 'amoled', icon: Zap, label: 'AMOLED' },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTheme(t.id as any)}
+                  className={cn(
+                    "flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all",
+                    theme === t.id
+                      ? "bg-primary/10 border-primary text-primary"
+                      : "bg-zinc-900 border-transparent text-zinc-500 hover:text-zinc-300"
+                  )}
+                >
+                  <t.icon className="w-4 h-4" />
+                  <span className="text-[8px] font-bold">{t.label}</span>
+                </button>
+              ))}
             </div>
-          )}
-        </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => {
+              const modes: any[] = ['light', 'dark', 'amoled'];
+              const nextIndex = (modes.indexOf(theme) + 1) % modes.length;
+              setTheme(modes[nextIndex]);
+            }}
+            className="w-14 h-14 flex items-center justify-center mx-auto rounded-2xl bg-zinc-900 text-zinc-400 hover:text-primary transition-all"
+          >
+            {theme === 'light' ? <Sun className="w-5 h-5" /> : theme === 'dark' ? <Moon className="w-5 h-5" /> : <Zap className="w-5 h-5 text-primary" />}
+          </button>
+        )}
       </div>
     </nav>
   );
