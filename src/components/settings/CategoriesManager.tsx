@@ -299,8 +299,8 @@ export function CategoriesManager() {
             <div className="space-y-6">
                 <div className="flex flex-col md:grid md:grid-cols-3 gap-6">
                     {/* 1. Essenciais */}
-                    <div className="card-elevated p-5 space-y-4 border-t-4 border-t-info bg-info/5 flex flex-col min-h-[120px]">
-                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-info flex items-center gap-2 pb-2 border-b border-info/10">
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 space-y-4 border-t-4 border-t-info flex flex-col min-h-[120px]">
+                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-info flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-zinc-800">
                             <Zap className="w-4 h-4 fill-info/20" /> Essenciais
                         </h4>
                         <div className="flex-1 space-y-1">
@@ -315,8 +315,8 @@ export function CategoriesManager() {
                     </div>
 
                     {/* 2. Estilo de Vida */}
-                    <div className="card-elevated p-5 space-y-4 border-t-4 border-t-amber-500 bg-amber-500/5 flex flex-col min-h-[120px]">
-                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-600 flex items-center gap-2 pb-2 border-b border-amber-500/10">
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 space-y-4 border-t-4 border-t-amber-500 flex flex-col min-h-[120px]">
+                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-600 flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-zinc-800">
                             <Anchor className="w-4 h-4 fill-amber-500/20" /> Estilo de Vida
                         </h4>
                         <div className="flex-1 space-y-1">
@@ -331,8 +331,8 @@ export function CategoriesManager() {
                     </div>
 
                     {/* 3. Objetivos */}
-                    <div className="card-elevated p-5 space-y-4 border-t-4 border-t-success bg-success/5 flex flex-col min-h-[120px]">
-                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-success flex items-center gap-2 pb-2 border-b border-success/10">
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 space-y-4 border-t-4 border-t-success flex flex-col min-h-[120px]">
+                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-success flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-zinc-800">
                             <TrendingUp className="w-4 h-4 fill-success/20" /> Objetivos
                         </h4>
                         <div className="flex-1 space-y-1">
@@ -348,8 +348,8 @@ export function CategoriesManager() {
                 </div>
 
                 {/* Receitas */}
-                <div className="card-elevated p-6 space-y-4 border-l-4 border-l-success bg-success/5 mt-4">
-                    <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-success flex items-center gap-2 pb-2 border-b border-success/10">
+                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 space-y-4 border-l-4 border-l-success mt-4">
+                    <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-success flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-zinc-800">
                         <TrendingUp className="w-4 h-4" /> Receitas
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">

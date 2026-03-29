@@ -234,7 +234,7 @@ export function TransactionList({
           placeholder="Pesquisar lançamentos ou categorias..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full h-12 pl-4 pr-10 rounded-2xl border-2 border-border bg-card focus:border-primary focus:ring-0 transition-all outline-none font-medium"
+          className="w-full h-12 pl-4 pr-10 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:border-primary focus:ring-0 transition-all outline-none font-medium text-gray-900 dark:text-zinc-50"
         />
         {searchQuery && (
           <button
@@ -247,45 +247,45 @@ export function TransactionList({
       </div>
 
       {/* Filtros */}
-      <div className="card-elevated p-4 space-y-4">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 space-y-4">
         <div className="flex flex-wrap gap-4 items-center justify-between">
           <div className="flex flex-wrap gap-4 items-center">
             {/* Receita/Despesa */}
-            <div className="flex gap-1 p-1 bg-muted rounded-xl">
+            <div className="flex gap-1 p-1 bg-gray-50 dark:bg-zinc-800 rounded-xl">
               {(['all', 'income', 'expense'] as const).map(f => (
                 <button key={f} onClick={() => setFilter(f)}
                   className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
-                    filter === f ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                    filter === f ? "bg-white dark:bg-zinc-700 shadow-sm text-gray-900 dark:text-zinc-50" : "text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200")}>
                   {f === 'all' ? 'Todos' : f === 'income' ? 'Receitas' : 'Despesas'}
                 </button>
               ))}
             </div>
 
             {/* Origem */}
-            <div className="flex gap-1 p-1 bg-muted rounded-xl">
+            <div className="flex gap-1 p-1 bg-gray-50 dark:bg-zinc-800 rounded-xl">
               <button onClick={() => { setSourceFilter('all'); setSpecificSourceId('all'); }}
                 className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
-                  sourceFilter === 'all' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                  sourceFilter === 'all' ? "bg-white dark:bg-zinc-700 shadow-sm text-gray-900 dark:text-zinc-50" : "text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200")}>
                 Todas Origens
               </button>
               <button onClick={() => { setSourceFilter('account'); setSpecificSourceId('all'); }}
                 className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
-                  sourceFilter === 'account' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                  sourceFilter === 'account' ? "bg-white dark:bg-zinc-700 shadow-sm text-gray-900 dark:text-zinc-50" : "text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200")}>
                 Débito
               </button>
               <button onClick={() => { setSourceFilter('card'); setSpecificSourceId('all'); }}
                 className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
-                  sourceFilter === 'card' ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                  sourceFilter === 'card' ? "bg-white dark:bg-zinc-700 shadow-sm text-gray-900 dark:text-zinc-50" : "text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200")}>
                 Cartão
               </button>
             </div>
 
             {/* Tipo */}
-            <div className="flex gap-1 p-1 bg-muted rounded-xl">
+            <div className="flex gap-1 p-1 bg-gray-50 dark:bg-zinc-800 rounded-xl">
               {(['all', 'punctual', 'installment', 'fixed'] as const).map(f => (
                 <button key={f} onClick={() => setTypeFilter(f)}
                   className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
-                    typeFilter === f ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                    typeFilter === f ? "bg-white dark:bg-zinc-700 shadow-sm text-gray-900 dark:text-zinc-50" : "text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200")}>
                   {f === 'all' ? 'Qualquer Tipo' : f === 'punctual' ? 'Pontual' : f === 'installment' ? 'Parcelado' : 'Fixo'}
                 </button>
               ))}
@@ -338,9 +338,9 @@ export function TransactionList({
         Object.keys(groupedItems)
           .sort((a, b) => parseLocalDate(b).getTime() - parseLocalDate(a).getTime())
           .map(date => (
-            <div key={date} className="space-y-3">
-              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-4">{formatDate(date)}</p>
-              <div className="divide-y divide-zinc-900 bg-transparent">
+            <div key={date} className="space-y-3 pt-2">
+              <p className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest px-4">{formatDate(date)}</p>
+              <div className="divide-y divide-gray-100 dark:divide-zinc-800 bg-transparent">
                 {groupedItems[date].map(item => {
                   const isIncome = item.type === 'income';
                   const isPending = item.isPending;
@@ -370,15 +370,15 @@ export function TransactionList({
                       }}>
                         {/* Lado esquerdo */}
                         <div className="flex items-center gap-4">
-                          <div className={cn("p-2.5 rounded-full border border-zinc-800 bg-zinc-900 group-hover:border-zinc-700 transition-colors",
-                            isPending ? "text-primary border-primary/20 bg-primary/5" : (isIncome ? "text-success" : "text-zinc-400"))}>
+                          <div className={cn("p-2.5 rounded-full border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 group-hover:border-gray-200 dark:group-hover:border-zinc-700 transition-colors",
+                            isPending ? "text-primary border-primary/20 bg-primary/5" : (isIncome ? "text-success bg-success/5 border-success/10" : "text-gray-400 dark:text-zinc-400"))}>
                             {item.icon ? <item.icon className="w-5 h-5" /> : (
                               isPending ? <Clock className="w-5 h-5" /> : (isIncome ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />)
                             )}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <p className="font-bold text-white text-sm">{item.description}</p>
+                              <p className="font-bold text-gray-900 dark:text-white text-sm">{item.description}</p>
                               {isPending && <span className="text-[8px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Pendente</span>}
                               {item.isVirtual && <span className="text-[8px] bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Projetado</span>}
                             </div>
@@ -399,10 +399,10 @@ export function TransactionList({
 
                         {/* Lado direito */}
                         <div className="flex items-center gap-4">
-                          <span className={cn("font-bold text-sm", isIncome ? "text-success" : "text-white")}>
+                          <span className={cn("font-bold text-sm", isIncome ? "text-success" : "text-gray-900 dark:text-white")}>
                             {isIncome ? '+' : '-'} {formatCurrency(item.amount)}
                           </span>
-                          <ArrowRight className="w-4 h-4 text-zinc-800 group-hover:text-zinc-600 transition-colors" />
+                          <ArrowRight className="w-4 h-4 text-gray-200 dark:text-zinc-800 group-hover:text-gray-400 dark:group-hover:text-zinc-600 transition-colors" />
                         </div>
                       </div>
 
@@ -476,7 +476,8 @@ export function TransactionList({
               </div>
             </div>
           ))
-      )}
+      )
+      }
 
       {/* Modal de Pagamento */}
       {

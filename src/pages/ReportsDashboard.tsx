@@ -217,7 +217,7 @@ export default function ReportsDashboard() {
       <PageHeader title="Relatórios" icon={BarChart3}>
         <div className="flex flex-wrap items-center gap-3 no-print">
           <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-            <SelectTrigger className="h-10 w-[180px] rounded-xl bg-card border-2 font-bold">
+            <SelectTrigger className="h-10 w-[180px] rounded-xl bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 font-bold text-gray-900 dark:text-zinc-50">
               <Wallet className="w-4 h-4 mr-2 text-primary" />
               <SelectValue placeholder="Filtrar Conta" />
             </SelectTrigger>
@@ -231,7 +231,7 @@ export default function ReportsDashboard() {
             </SelectContent>
           </Select>
 
-          <div className="flex bg-muted/30 p-1 rounded-xl border border-border/50">
+          <div className="flex bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-xl border border-gray-100 dark:border-zinc-800">
             {(['month', 'semester', 'year'] as Period[]).map((p) => (
               <button
                 key={p}
@@ -252,12 +252,12 @@ export default function ReportsDashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="card-elevated p-6 relative overflow-hidden group">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
             <TrendingDown className="w-16 h-16" />
           </div>
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total Despesas</p>
-          <h3 className="text-3xl font-black tracking-tight">{formatCurrency(metrics.totalExpenses)}</h3>
+          <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest mb-1">Total Despesas</p>
+          <h3 className="text-3xl font-black tracking-tight text-gray-900 dark:text-zinc-50">{formatCurrency(metrics.totalExpenses)}</h3>
           <div className="flex items-center gap-1 mt-2">
             {metrics.trend > 0 ? (
               <span className="text-xs font-bold text-danger flex items-center">
@@ -272,23 +272,23 @@ export default function ReportsDashboard() {
           </div>
         </div>
 
-        <div className="card-elevated p-6 relative overflow-hidden group">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
             <Zap className="w-16 h-16" />
           </div>
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Contas Fixas</p>
-          <h3 className="text-3xl font-black tracking-tight text-amber-600">{formatCurrency(metrics.fixedExpenses)}</h3>
-          <p className="text-[10px] text-muted-foreground mt-2 font-medium">
+          <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest mb-1">Contas Fixas</p>
+          <h3 className="text-3xl font-black tracking-tight text-amber-600 dark:text-amber-500">{formatCurrency(metrics.fixedExpenses)}</h3>
+          <p className="text-[10px] text-gray-500 dark:text-zinc-500 mt-2 font-medium">
             Representa <span className="font-bold">{(metrics.totalExpenses > 0 ? (metrics.fixedExpenses / metrics.totalExpenses) * 100 : 0).toFixed(0)}%</span> dos gastos totais.
           </p>
         </div>
 
-        <div className="card-elevated p-4 md:p-6 bg-primary/5 border-primary/20">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 md:p-6 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 bg-primary/5 dark:bg-primary/5 border-primary/20 dark:border-primary/20">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 rounded-lg bg-primary/10 text-primary">
               <Zap className="w-4 h-4" />
             </div>
-            <h4 className="text-xs font-black uppercase tracking-widest">Contas Fixas (6 Meses)</h4>
+            <h4 className="text-xs font-black uppercase tracking-widest text-gray-900 dark:text-zinc-50">Contas Fixas (6 Meses)</h4>
           </div>
           <div className="h-[80px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -307,11 +307,11 @@ export default function ReportsDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="card-elevated p-6">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-4 bg-danger rounded-full" />
-              <h3 className="text-sm font-black uppercase tracking-widest">Maiores Despesas</h3>
+              <h3 className="text-sm font-black uppercase tracking-widest text-gray-900 dark:text-zinc-50">Maiores Despesas</h3>
             </div>
             <p className="text-[10px] font-bold text-muted-foreground">Por Categoria</p>
           </div>
@@ -350,10 +350,10 @@ export default function ReportsDashboard() {
           )}
         </div>
 
-        <div className="card-elevated p-6 flex flex-col">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 flex flex-col">
           <div className="flex items-center gap-2 mb-6">
             <PieChartIcon className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-black uppercase tracking-widest">Perfil de Consumo</h3>
+            <h3 className="text-sm font-black uppercase tracking-widest text-gray-900 dark:text-zinc-50">Perfil de Consumo</h3>
           </div>
           <div className="flex-1 flex flex-col md:flex-row items-center gap-4">
             <div className="h-[180px] w-full md:w-[180px]">
@@ -397,11 +397,11 @@ export default function ReportsDashboard() {
         </div>
       </div>
 
-      <div className="card-elevated p-6">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-black uppercase tracking-widest">Evolução Histórica</h3>
+            <h3 className="text-sm font-black uppercase tracking-widest text-gray-900 dark:text-zinc-50">Evolução Histórica</h3>
           </div>
         </div>
         <div className="h-[250px] w-full">
@@ -452,7 +452,7 @@ export default function ReportsDashboard() {
       <div className="flex flex-col md:flex-row gap-4 no-print">
         <button
           onClick={handleExportPDF}
-          className="flex-1 card-elevated p-4 flex items-center justify-between group hover:border-success/50 transition-all font-black uppercase tracking-widest text-xs"
+          className="flex-1 bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 flex items-center justify-between group hover:border-success/50 transition-all font-black uppercase tracking-widest text-xs text-gray-900 dark:text-zinc-50"
         >
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-success/10 text-success">
@@ -460,7 +460,7 @@ export default function ReportsDashboard() {
             </div>
             Exportar Relatório PDF
           </div>
-          <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-success transition-colors" />
+          <ArrowRight className="w-4 h-4 text-gray-400 dark:text-zinc-600 group-hover:text-success transition-colors" />
         </button>
       </div>
     </div>

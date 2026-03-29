@@ -21,7 +21,7 @@ export function BottomNavigation({ activeView, onViewChange }: BottomNavigationP
     ];
 
     return (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-950/90 backdrop-blur-md border-t border-zinc-800 pb-safe">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md border-t border-gray-100 dark:border-zinc-800 pb-safe shadow-lg dark:shadow-none">
             <div className="flex justify-around items-center h-16 px-2">
                 {items.map((item) => {
                     const isActive = activeView === item.id;
@@ -33,7 +33,9 @@ export function BottomNavigation({ activeView, onViewChange }: BottomNavigationP
                             onClick={() => onViewChange(item.id)}
                             className={cn(
                                 "flex flex-col items-center justify-center gap-1 flex-1 py-1 transition-all duration-300",
-                                isActive ? "text-primary scale-110" : "text-zinc-500 hover:text-zinc-300"
+                                isActive
+                                    ? "text-primary scale-110"
+                                    : "text-gray-500 dark:text-zinc-500 hover:text-gray-900 dark:hover:text-zinc-300"
                             )}
                         >
                             <div className={cn(

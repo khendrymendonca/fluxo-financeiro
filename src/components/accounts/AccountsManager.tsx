@@ -252,14 +252,14 @@ export function AccountsManager({
       <PageHeader title="Minha Carteira" icon={Wallet} />
 
       {/* Summary Card */}
-      <div className="card-elevated p-8 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20 animate-fade-in relative overflow-hidden">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl p-8 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent animate-fade-in relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-5">
           <Wallet className="w-32 h-32" />
         </div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <p className="text-sm font-bold text-primary/70 uppercase tracking-widest mb-1">Patrimônio (Soma das Carteiras)</p>
-            <h2 className="text-4xl font-black tracking-tight">{formatCurrency(totalNetWorth)}</h2>
+            <h2 className="text-4xl font-black tracking-tight text-gray-900 dark:text-white">{formatCurrency(totalNetWorth)}</h2>
             <p className="text-[10px] text-muted-foreground mt-1 font-medium">
               Apenas Contas Corrente e Benefícios. Poupança e Investimentos não inclusos.
             </p>
@@ -299,7 +299,7 @@ export function AccountsManager({
           return (
             <div
               key={account.id}
-              className="card-elevated p-6 group hover:border-primary/50 transition-all flex flex-col justify-between h-auto min-h-[12rem] relative overflow-hidden cursor-pointer"
+              className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 group hover:border-primary/50 transition-all flex flex-col justify-between h-auto min-h-[12rem] relative overflow-hidden cursor-pointer"
               onClick={() => openEditForm(account)}
             >
               <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -324,7 +324,7 @@ export function AccountsManager({
                       </span>
                     )}
                   </div>
-                  <h3 className="text-xl font-bold truncate max-w-[180px]">{account.name}</h3>
+                  <h3 className="text-xl font-bold truncate max-w-[180px] text-gray-900 dark:text-zinc-50">{account.name}</h3>
                 </div>
                 <div className="flex items-center gap-1">
                   <button onClick={(e) => { e.stopPropagation(); openEditForm(account); }} className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-primary/10 text-primary transition-all" title="Editar conta">
@@ -339,7 +339,7 @@ export function AccountsManager({
               <div className="mt-auto relative z-10 space-y-2">
                 <div>
                   <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Saldo em Periodo</p>
-                  <p className={cn("text-2xl font-black", getAccountViewBalance(account.id) < 0 && "text-danger")}>
+                  <p className={cn("text-2xl font-black text-gray-900 dark:text-zinc-50", getAccountViewBalance(account.id) < 0 && "text-danger")}>
                     {formatCurrency(getAccountViewBalance(account.id))}
                   </p>
                 </div>
@@ -351,7 +351,7 @@ export function AccountsManager({
                 )}
 
                 {account.hasOverdraft && (account.overdraftLimit || 0) > 0 && (
-                  <div className="pt-2 border-t border-border/50 space-y-1">
+                  <div className="pt-2 border-t border-gray-100 dark:border-zinc-800 space-y-1">
                     <div className="flex justify-between items-center">
                       <p className="text-[9px] font-bold text-muted-foreground uppercase">Limite Total da Conta</p>
                       <span className="font-semibold text-sm">
@@ -360,7 +360,7 @@ export function AccountsManager({
                     </div>
                     {isNegative && (
                       <div className="space-y-1">
-                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div className="h-1.5 rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden">
                           <div className="h-full rounded-full bg-amber-500 transition-all duration-500" style={{ width: `${Math.min(100, (overdraftUsed / (account.overdraftLimit || 1)) * 100)}%` }} />
                         </div>
                         <div className="flex justify-between items-center text-[9px] font-bold">

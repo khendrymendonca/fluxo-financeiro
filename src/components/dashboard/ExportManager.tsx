@@ -104,26 +104,26 @@ export function ExportManager() {
     };
 
     return (
-        <div className="card-elevated p-4 md:p-8 space-y-6">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 md:p-8 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 space-y-6">
             <div className="flex items-center gap-4 mb-2">
                 <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                     <FileText className="w-6 h-6" />
                 </div>
                 <div>
-                    <h3 className="text-xl font-black">Dados e Backup</h3>
-                    <p className="text-sm text-muted-foreground">Exporte seus dados para Excel ou importe arquivos externos.</p>
+                    <h3 className="text-xl font-black text-gray-900 dark:text-zinc-50">Dados e Backup</h3>
+                    <p className="text-sm text-gray-500 dark:text-zinc-500">Exporte seus dados para Excel ou importe arquivos externos.</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Export Card */}
-                <div className="p-6 rounded-3xl border-2 border-dashed border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors flex flex-col items-center text-center gap-4 group">
-                    <div className="w-16 h-16 rounded-full bg-background flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                <div className="p-6 rounded-3xl border-2 border-dashed border-primary/20 bg-primary/5 dark:bg-primary/5 hover:bg-primary/10 transition-colors flex flex-col items-center text-center gap-4 group">
+                    <div className="w-16 h-16 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                         <Download className="w-8 h-8 text-primary" />
                     </div>
                     <div>
-                        <h4 className="font-bold">Exportar CSV</h4>
-                        <p className="text-xs text-muted-foreground px-4">Baixe todas as suas transações em formato compatível com Excel.</p>
+                        <h4 className="font-bold text-gray-900 dark:text-zinc-50">Exportar CSV</h4>
+                        <p className="text-xs text-gray-500 dark:text-zinc-500 px-4">Baixe todas as suas transações em formato compatível com Excel.</p>
                     </div>
                     <Button onClick={exportToCSV} className="w-full rounded-2xl h-12 font-bold gap-2">
                         Iniciar Download
@@ -131,13 +131,13 @@ export function ExportManager() {
                 </div>
 
                 {/* Import Card */}
-                <div className="p-6 rounded-3xl border-2 border-dashed border-muted bg-muted/5 hover:bg-muted/10 transition-colors flex flex-col items-center text-center gap-4 group relative">
-                    <div className="w-16 h-16 rounded-full bg-background flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                        <Upload className="w-8 h-8 text-muted-foreground" />
+                <div className="p-6 rounded-3xl border-2 border-dashed border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/50 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors flex flex-col items-center text-center gap-4 group relative">
+                    <div className="w-16 h-16 rounded-full bg-white dark:bg-zinc-900 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                        <Upload className="w-8 h-8 text-gray-500 dark:text-zinc-500" />
                     </div>
                     <div>
-                        <h4 className="font-bold">Importar Dados</h4>
-                        <p className="text-xs text-muted-foreground px-4">Sincronize transações de outros apps via arquivo CSV.</p>
+                        <h4 className="font-bold text-gray-900 dark:text-zinc-50">Importar Dados</h4>
+                        <p className="text-xs text-gray-500 dark:text-zinc-500 px-4">Sincronize transações de outros apps via arquivo CSV.</p>
                     </div>
 
                     <label className="w-full">
@@ -150,7 +150,7 @@ export function ExportManager() {
                         />
                         <div className={cn(
                             "w-full rounded-2xl h-12 flex items-center justify-center font-bold gap-2 border-2 cursor-pointer transition-all",
-                            isImporting ? "opacity-50 cursor-wait bg-muted" : "bg-background hover:bg-muted"
+                            isImporting ? "opacity-50 cursor-wait bg-gray-100 dark:bg-zinc-800" : "bg-white dark:bg-zinc-900 hover:bg-gray-50 dark:hover:bg-zinc-800 border-gray-100 dark:border-zinc-800 text-gray-900 dark:text-zinc-50"
                         )}>
                             {isImporting ? "Processando..." : "Selecionar Arquivo"}
                         </div>

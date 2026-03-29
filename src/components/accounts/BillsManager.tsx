@@ -175,8 +175,8 @@ export function BillsManager() {
             <PageHeader title="Gestão de Contas" icon={Receipt}>
                 <div className="flex flex-wrap items-center gap-3">
                     <MonthSelector />
-                    <div className="px-4 py-2 rounded-xl bg-danger/5 border border-danger/10">
-                        <p className="text-[10px] uppercase font-bold text-danger/70">A Pagar Pendente</p>
+                    <div className="px-4 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 shadow-sm dark:shadow-none">
+                        <p className="text-[10px] uppercase font-bold text-gray-500 dark:text-zinc-500">A Pagar Pendente</p>
                         <p className="text-lg font-bold text-danger">{formatCurrency(totalPendingPayable)}</p>
                     </div>
                 </div>
@@ -190,7 +190,7 @@ export function BillsManager() {
                         placeholder="Pesquisar contas ou categorias..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full h-11 pl-4 pr-10 rounded-2xl border-2 border-border bg-card focus:border-primary focus:ring-0 transition-all outline-none font-medium text-sm"
+                        className="w-full h-11 pl-4 pr-10 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-900 dark:text-zinc-50 focus:border-primary focus:ring-0 transition-all outline-none font-medium text-sm"
                     />
                     {searchQuery && (
                         <button
@@ -233,9 +233,9 @@ export function BillsManager() {
                         return (
                             <div key={transaction.id} className="flex flex-col gap-1">
                                 <div className={cn(
-                                    "card-elevated p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:translate-x-1 border-l-4",
-                                    transaction.isPaid ? "border-success opacity-80" :
-                                        isLate ? "border-danger bg-danger/5" : "border-info"
+                                    "bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:translate-x-1 border-l-4",
+                                    transaction.isPaid ? "border-l-success opacity-80" :
+                                        isLate ? "border-l-danger bg-danger/5 dark:bg-danger/5" : "border-l-info"
                                 )}>
                                     <div className="flex items-center gap-4">
                                         <div className={cn("p-3 rounded-2xl",
@@ -407,9 +407,9 @@ export function BillsManager() {
                 <Portal>
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
                         onClick={() => setIsPaying(null)}>
-                        <div className="bg-card rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-border max-h-[80vh] overflow-y-auto"
+                        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-sm animate-in zoom-in-95 duration-200 border border-gray-100 dark:border-zinc-800 max-h-[80vh] overflow-y-auto"
                             onClick={e => e.stopPropagation()}>
-                            <div className="px-5 py-4 border-b border-border sticky top-0 bg-card rounded-t-2xl z-10">
+                            <div className="px-5 py-4 border-b border-gray-100 dark:border-zinc-800 sticky top-0 bg-white dark:bg-zinc-900 rounded-t-2xl z-10">
                                 <h2 className="text-lg font-black tracking-tight">
                                     {isPaying.type === 'income' ? 'Receber com qual conta?' : 'Pagar com qual conta?'}
                                 </h2>

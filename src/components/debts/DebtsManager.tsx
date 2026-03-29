@@ -100,14 +100,14 @@ export function DebtsManager({
 
   return (
     <div className="space-y-6">
-      <div className="card-elevated p-6 animate-fade-in">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 animate-fade-in">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-2.5 rounded-xl bg-danger-light">
+          <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800">
             <TrendingDown className="w-5 h-5 text-danger" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">Controle de Acordos</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-zinc-50">Controle de Acordos</h2>
+            <p className="text-sm text-gray-500 dark:text-zinc-500">
               Acompanhe e quite seus acordos
             </p>
           </div>
@@ -166,11 +166,11 @@ export function DebtsManager({
                     : 0;
 
                   return (
-                    <div key={debt.id} className="card-elevated p-5 space-y-4 group animate-fade-in border-l-4 border-warning">
+                    <div key={debt.id} className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 space-y-4 group animate-fade-in border-l-4 border-l-warning">
                       <div className="flex items-start justify-between">
                         <div>
-                          <h3 className="font-semibold text-lg">{debt.name}</h3>
-                          <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter">
+                          <h3 className="font-semibold text-lg text-gray-900 dark:text-zinc-50">{debt.name}</h3>
+                          <p className="text-xs text-gray-500 dark:text-zinc-500 uppercase font-bold tracking-tighter">
                             {debt.dueDay && `Vence dia ${debt.dueDay} • `}
                             ~{monthsRemaining} parcelas estimadas
                           </p>
@@ -185,14 +185,14 @@ export function DebtsManager({
                         </div>
                       </div>
 
-                      <div className="flex justify-between items-center py-2 border-y border-border/50">
+                      <div className="flex justify-between items-center py-2 border-y border-gray-100 dark:border-zinc-800">
                         <div>
-                          <p className="text-[10px] text-muted-foreground font-bold uppercase">Saldo Devedor</p>
+                          <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-bold uppercase">Saldo Devedor</p>
                           <p className="text-xl font-black text-danger">{formatCurrency(debt.remainingAmount)}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-[10px] text-muted-foreground font-bold uppercase">Valor Sugerido Parcela</p>
-                          <p className="text-lg font-bold">{formatCurrency(debt.installmentAmount || 0)}</p>
+                          <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-bold uppercase">Valor Sugerido Parcela</p>
+                          <p className="text-lg font-bold text-gray-900 dark:text-zinc-50">{formatCurrency(debt.installmentAmount || 0)}</p>
                         </div>
                       </div>
 
@@ -220,13 +220,13 @@ export function DebtsManager({
                     : 0;
 
                   return (
-                    <div key={debt.id} className="card-elevated p-5 space-y-4 group animate-fade-in border-l-4 border-success opacity-90 hover:opacity-100 transition-opacity">
+                    <div key={debt.id} className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 space-y-4 group animate-fade-in border-l-4 border-l-success opacity-90 hover:opacity-100 transition-opacity">
                       <div className="flex items-start justify-between">
                         <div>
-                          <h3 className="font-semibold text-lg">{debt.name}</h3>
+                          <h3 className="font-semibold text-lg text-gray-900 dark:text-zinc-50">{debt.name}</h3>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="px-1.5 py-0.5 rounded bg-success/10 text-success text-[8px] font-black uppercase">Acordo Ativo</span>
-                            <p className="text-[10px] text-muted-foreground font-bold">
+                            <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-bold">
                               {debt.totalInstallments} parcelas • Dia {debt.dueDay}
                             </p>
                           </div>
@@ -246,7 +246,7 @@ export function DebtsManager({
                           <span className="text-muted-foreground">Pago: {formatCurrency(Math.max(0, (Number(debt.totalAmount) || 0) - (Number(debt.remainingAmount) || 0)))}</span>
                           <span className="text-danger">Restante: {formatCurrency(Number(debt.remainingAmount) || 0)}</span>
                         </div>
-                        <div className="h-2 rounded-full bg-muted overflow-hidden">
+                        <div className="h-2 rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden">
                           <div className="h-full rounded-full bg-success transition-all duration-500" style={{ width: `${progress}%` }} />
                         </div>
                       </div>

@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { toast } from '@/components/ui/use-toast';
 
 interface GoalFormProps {
+  initialData?: SavingsGoal;
   onSubmit: (goal: Omit<SavingsGoal, 'id' | 'userId'>) => void;
   onClose: () => void;
 }
@@ -24,13 +25,13 @@ const icons = [
   { name: 'GraduationCap', icon: GraduationCap },
 ];
 
-export function GoalForm({ onSubmit, onClose }: GoalFormProps) {
-  const [name, setName] = useState('');
-  const [targetAmount, setTargetAmount] = useState('');
-  const [currentAmount, setCurrentAmount] = useState('0');
-  const [deadline, setDeadline] = useState('');
-  const [selectedIcon, setSelectedIcon] = useState('Target');
-  const [selectedColor, setSelectedColor] = useState(APP_COLORS[0]);
+export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
+  const [name, setName] = useState(initialData?.name || '');
+  const [targetAmount, setTargetAmount] = useState(initialData?.targetAmount.toString() || '');
+  const [currentAmount, setCurrentAmount] = useState(initialData?.currentAmount.toString() || '0');
+  const [deadline, setDeadline] = useState(initialData?.deadline || '');
+  const [selectedIcon, setSelectedIcon] = useState(initialData?.icon || 'Target');
+  const [selectedColor, setSelectedColor] = useState(initialData?.color || APP_COLORS[0]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +73,7 @@ export function GoalForm({ onSubmit, onClose }: GoalFormProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/20 backdrop-blur-sm">
       <div className="bg-card rounded-3xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto animate-scale-in">
         <div className="flex items-center justify-between p-6 border-b border-border">
-          <h2 className="text-xl font-semibold">Nova Meta</h2>
+          <h2 className="text-xl font-semibold">{initialData ? 'Editar Meta' : 'Nova Meta'}</h2>
           <button
             onClick={onClose}
             className="p-2 rounded-xl hover:bg-muted transition-colors"
@@ -173,7 +174,7 @@ export function GoalForm({ onSubmit, onClose }: GoalFormProps) {
             type="submit"
             className="w-full rounded-xl py-6 font-semibold bg-info hover:bg-info/90"
           >
-            Criar Meta
+            {initialData ? 'Salvar Alterações' : 'Criar Meta'}
           </Button>
         </form>
       </div>

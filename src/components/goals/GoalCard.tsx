@@ -15,6 +15,7 @@ interface GoalCardProps {
   onUpdate: (id: string, updates: Partial<SavingsGoal>) => void;
   onDelete: (id: string) => void;
   onDeposit: (goalId: string, amount: number, accountId: string) => void;
+  onEdit?: (goal: SavingsGoal) => void;
 }
 
 const iconMap: Record<string, any> = {
@@ -24,7 +25,7 @@ const iconMap: Record<string, any> = {
   PiggyBank,
 };
 
-export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit }: GoalCardProps) {
+export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit, onEdit }: GoalCardProps) {
   const [showAddFunds, setShowAddFunds] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id || '');
@@ -59,7 +60,7 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit }: Goal
   };
 
   return (
-    <div className="card-elevated p-6 space-y-4 animate-fade-in group">
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 space-y-4 animate-fade-in group">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div
@@ -69,7 +70,7 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit }: Goal
             <Icon className="w-6 h-6" style={{ color: goal.color }} />
           </div>
           <div>
-            <h3 className="font-semibold text-lg">{goal.name}</h3>
+            <h3 className="font-semibold text-lg text-gray-900 dark:text-zinc-50">{goal.name}</h3>
             {goal.deadline && (
               <p className="text-sm text-muted-foreground capitalize">
                 Meta: {format(parseLocalDate(goal.deadline), "MMMM 'de' yyyy", { locale: ptBR })}
@@ -77,12 +78,22 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit }: Goal
             )}
           </div>
         </div>
-        <button
-          onClick={() => onDelete(goal.id)}
-          className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-danger-light text-danger transition-all"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+          {onEdit && (
+            <button
+              onClick={() => onEdit(goal)}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-500 dark:text-zinc-400 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={() => onDelete(goal.id)}
+            className="p-2 rounded-lg hover:bg-danger-light text-danger transition-all"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Progress Bar */}
@@ -95,7 +106,7 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit }: Goal
             {progress.toFixed(1)}%
           </span>
         </div>
-        <div className="h-3 rounded-full bg-muted overflow-hidden">
+        <div className="h-3 rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-700 ease-out"
             style={{
@@ -123,7 +134,7 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit }: Goal
             <select
               value={selectedAccountId}
               onChange={(e) => setSelectedAccountId(e.target.value)}
-              className="w-full h-11 rounded-xl border-2 border-input bg-background px-3 py-1 text-sm font-bold focus:border-primary/50 outline-none"
+              className="w-full h-11 rounded-xl border-2 border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-1 text-sm font-bold text-gray-900 dark:text-zinc-50 focus:border-primary/50 outline-none"
             >
               <option value="">Selecione uma conta</option>
               {accounts.map(acc => (
@@ -140,7 +151,7 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit }: Goal
               value={fundAmount}
               onChange={(e) => setFundAmount(e.target.value)}
               placeholder="Valor"
-              className="rounded-xl h-11 border-2 font-bold"
+              className="rounded-xl h-11 border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-900 dark:text-zinc-50 font-bold"
             />
             <Button
               onClick={handleAddFunds}

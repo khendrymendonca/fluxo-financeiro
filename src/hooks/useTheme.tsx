@@ -20,11 +20,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
 
     useEffect(() => {
-        const root = window.document.body;
-        // Remove previous theme classes
-        root.classList.remove('theme-original', 'theme-green-black');
-        // Add current theme class
-        root.classList.add(`theme-${theme}`);
+        const root = window.document.documentElement;
+        const body = window.document.body;
+
+        // Tailwind darkMode: 'class' looks at the html element
+        if (theme === 'green-black') {
+            root.classList.add('dark');
+        } else {
+            root.classList.remove('dark');
+        }
+
+        // Keep body classes for CSS variables if needed, but the .dark on html is the key for Tailwind
+        body.classList.remove('theme-original', 'theme-green-black');
+        body.classList.add(`theme-${theme}`);
     }, [theme]);
 
     return (
