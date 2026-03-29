@@ -238,7 +238,7 @@ export default function Index() {
         return (
           <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto pb-24">
             {/* Header Estilo App Nativo (Safe Area + Alinhamento) */}
-            <div className="flex items-center justify-between pt-6 md:pt-4 px-1 py-4">
+            <div className="flex items-center justify-between pt-2 md:pt-4 px-1 py-4">
               <div className="flex items-center gap-4">
                 <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
                   <SheetTrigger asChild>
@@ -421,7 +421,7 @@ export default function Index() {
         );
       case 'transactions':
         return (
-          <div className="max-w-4xl mx-auto space-y-4 pt-4">
+          <div className="max-w-4xl mx-auto space-y-4 pt-2">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <PageHeader title="Extrato de Lançamentos" icon={List} />
               <MonthSelector />
@@ -442,7 +442,7 @@ export default function Index() {
         );
       case 'goals':
         return (
-          <div className="space-y-6 pt-4 max-w-4xl mx-auto">
+          <div className="space-y-6 pt-2 max-w-4xl mx-auto">
             <div className="flex items-center justify-between px-2">
               <h2 className="text-2xl font-bold tracking-tight">Metas</h2>
               <Button size="sm" className="rounded-xl font-bold" onClick={() => setShowGoalForm(true)}>Criar Meta</Button>
