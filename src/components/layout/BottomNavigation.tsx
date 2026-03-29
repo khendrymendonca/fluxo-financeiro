@@ -17,6 +17,7 @@ export function BottomNavigation({ activeView, onViewChange }: BottomNavigationP
         { id: 'dashboard', icon: LayoutDashboard, label: 'Início' },
         { id: 'transactions', icon: ArrowUpDown, label: 'Extrato' },
         { id: 'cards', icon: CreditCard, label: 'Cartões' },
+        { id: 'menu', icon: Menu, label: 'Menu' },
     ];
 
     return (

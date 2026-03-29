@@ -40,7 +40,7 @@ export function useTransactions(viewDate: Date) {
         .from('transactions')
         .select('*')
         .is('deleted_at', null)
-        .or(`and(date.gte.${start},date.lte.${end}),and(is_recurring.eq.true,date.lte.${end}),invoice_month_year.eq.${viewDateStr}`);
+        .or(`and(is_recurring.eq.false,date.gte.${start},date.lte.${end}),and(is_recurring.eq.true,date.lte.${end}),invoice_month_year.eq.${viewDateStr}`);
 
       if (error) throw error;
 

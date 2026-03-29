@@ -41,10 +41,12 @@ const AppRoutes = () => {
 
   return (
     <FinanceProvider>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </div>
     </FinanceProvider>
   );
 };

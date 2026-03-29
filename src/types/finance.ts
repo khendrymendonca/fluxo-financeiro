@@ -71,7 +71,7 @@ export interface Account {
   balance: number;
   color: string;
   icon?: string;
-  accountType: string; // Alterado para string para aceitar tipos personalizados do form
+  accountType: AccountType;
   hasOverdraft?: boolean;
   overdraftLimit?: number;
   monthlyYieldRate?: number;
