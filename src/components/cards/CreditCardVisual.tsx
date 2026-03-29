@@ -26,7 +26,7 @@ export function CreditCardVisual({
             onClick={onClick}
             className={cn(
                 "relative rounded-2xl p-4 md:p-6 text-white overflow-hidden shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer group",
-                "w-[85vw] max-w-[320px] md:w-full md:max-w-none h-[45vw] max-h-[180px] md:h-52",
+                "w-full h-[45vw] max-h-[180px] md:h-52",
                 className
             )}
             style={{

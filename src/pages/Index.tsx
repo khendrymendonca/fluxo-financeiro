@@ -238,7 +238,7 @@ export default function Index() {
         return (
           <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto pb-24">
             {/* Header Estilo App Nativo (Safe Area + Alinhamento) */}
-            <div className="flex items-center justify-between pt-12 md:pt-6 px-1 py-4">
+            <div className="flex items-center justify-between pt-6 md:pt-4 px-1 py-4">
               <div className="flex items-center gap-4">
                 <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
                   <SheetTrigger asChild>
@@ -246,8 +246,8 @@ export default function Index() {
                       <Menu className="w-6 h-6" />
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="left" className="w-[300px] sm:w-[350px] bg-white dark:bg-zinc-950 border-r border-gray-100 dark:border-zinc-900 p-0 overflow-y-auto no-scrollbar">
-                    <SheetHeader className="p-6 text-left border-b border-gray-100 dark:border-zinc-900">
+                  <SheetContent side="left" className="w-[300px] sm:w-[350px] bg-white dark:bg-zinc-950 border-r border-gray-100 dark:border-zinc-900 p-0 overflow-y-auto no-scrollbar flex flex-col h-full">
+                    <SheetHeader className="p-6 text-left border-b border-gray-100 dark:border-zinc-900 shrink-0">
                       <div className="flex items-center gap-3">
                         <Avatar className="w-10 h-10">
                           <AvatarFallback className="bg-primary/10 text-primary font-bold">{userInitials}</AvatarFallback>
@@ -259,7 +259,7 @@ export default function Index() {
                       </div>
                     </SheetHeader>
 
-                    <div className="py-4 space-y-1">
+                    <div className="flex-1 overflow-y-auto py-4 space-y-1 no-scrollbar">
                       {navigationItems.map((item) => (
                         <button
                           key={item.id}
@@ -280,8 +280,8 @@ export default function Index() {
                       ))}
                     </div>
 
-                    <div className="absolute bottom-6 left-6 right-6 space-y-6">
-                      <div className="pt-6 border-t border-gray-100 dark:border-zinc-900">
+                    <div className="mt-auto border-t border-gray-100 dark:border-zinc-900 p-6 space-y-6 bg-white dark:bg-zinc-950">
+                      <div>
                         <p className="text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-4">Aparência</p>
                         <div className="grid grid-cols-3 gap-2">
                           {[
