@@ -12,8 +12,17 @@ import {
   CheckCircle2,
   PieChart as PieChartIcon,
   Filter,
-  ArrowRight
+  ArrowRight,
+  Download,
+  Wallet
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   BarChart,
   Bar,
@@ -37,7 +46,6 @@ import {
   subMonths,
   format,
   isSameMonth,
-  subDays,
   isWithinInterval,
   eachMonthOfInterval
 } from 'date-fns';
@@ -51,10 +59,16 @@ export default function ReportsDashboard() {
   const {
     transactions,
     categories,
+    accounts,
     viewDate
   } = useFinanceStore();
 
   const [period, setPeriod] = useState<Period>('month');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
+
+  const handleExportPDF = () => {
+    window.print();
+  };
 
   // Intervalos de tempo
   const intervals = useMemo(() => {
@@ -76,20 +90,26 @@ export default function ReportsDashboard() {
     return { start, end, prevStart, prevEnd };
   }, [viewDate, period]);
 
+  // Filtragem inicial por conta
+  const accountFilteredTransactions = useMemo(() => {
+    if (selectedAccountId === 'all') return transactions;
+    return transactions.filter(t => t.accountId === selectedAccountId);
+  }, [transactions, selectedAccountId]);
+
   // Filtragem de transações do período
   const periodTransactions = useMemo(() => {
-    return transactions.filter(t => {
+    return accountFilteredTransactions.filter(t => {
       const d = new Date(t.date);
       return t.isPaid && isWithinInterval(d, { start: intervals.start, end: intervals.end });
     });
-  }, [transactions, intervals]);
+  }, [accountFilteredTransactions, intervals]);
 
   const prevPeriodTransactions = useMemo(() => {
-    return transactions.filter(t => {
+    return accountFilteredTransactions.filter(t => {
       const d = new Date(t.date);
       return t.isPaid && isWithinInterval(d, { start: intervals.prevStart, end: intervals.prevEnd });
     });
-  }, [transactions, intervals]);
+  }, [accountFilteredTransactions, intervals]);
 
   // Métricas principais
   const metrics = useMemo(() => {
@@ -137,7 +157,7 @@ export default function ReportsDashboard() {
 
     return months.map(m => {
       const mStr = format(m, 'MMM', { locale: ptBR });
-      const total = transactions
+      const total = accountFilteredTransactions
         .filter(t => {
           const d = new Date(t.date);
           const cat = categories.find(c => c.id === t.categoryId);
@@ -151,7 +171,27 @@ export default function ReportsDashboard() {
 
       return { month: mStr, total };
     });
-  }, [transactions, categories, viewDate]);
+  }, [accountFilteredTransactions, categories, viewDate]);
+
+  // Insights Preditivos Reais (Run Rate)
+  const insightData = useMemo(() => {
+    const today = new Date();
+    const daysInMonth = endOfMonth(viewDate).getDate();
+    const isCurrentMonth = isSameMonth(viewDate, today);
+    const dayForCalculation = isCurrentMonth ? today.getDate() : daysInMonth;
+
+    const totalIncome = periodTransactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+
+    const dailyAverage = metrics.totalExpenses / (dayForCalculation || 1);
+    const projection = dailyAverage * daysInMonth;
+
+    const isOverBudget = projection > totalIncome && totalIncome > 0;
+    const variation = metrics.prevExpenses > 0 ? ((metrics.totalExpenses - metrics.prevExpenses) / metrics.prevExpenses) * 100 : 0;
+
+    return { projection, isOverBudget, totalIncome, variation, isCurrentMonth };
+  }, [metrics, periodTransactions, viewDate]);
 
   // Distribuição por Grupo de Orçamento (Pie Chart)
   const groupDistribution = useMemo(() => {
@@ -164,7 +204,6 @@ export default function ReportsDashboard() {
     periodTransactions.filter(t => t.type === 'expense' && !t.isInvoicePayment).forEach(t => {
       const cat = categories.find(c => c.id === t.categoryId);
       if (!cat || !cat.groupId) return;
-      // Mapeamento simples baseado nos grupos que conhecemos
       if (cat.groupId.includes('essent') || cat.groupId === '1') data[0].value += Number(t.amount);
       else if (cat.groupId.includes('life') || cat.groupId === '2') data[1].value += Number(t.amount);
       else data[2].value += Number(t.amount);
@@ -176,21 +215,38 @@ export default function ReportsDashboard() {
   return (
     <div className="space-y-6 animate-fade-in pb-24 max-w-5xl mx-auto px-4 md:px-0">
       <PageHeader title="Relatórios" icon={BarChart3}>
-        <div className="flex bg-muted/30 p-1 rounded-xl border border-border/50">
-          {(['month', 'semester', 'year'] as Period[]).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={cn(
-                "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
-                period === p
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {p === 'month' ? 'Mês' : p === 'semester' ? 'Semestre' : 'Ano'}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-3 no-print">
+          <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+            <SelectTrigger className="h-10 w-[180px] rounded-xl bg-card border-2 font-bold">
+              <Wallet className="w-4 h-4 mr-2 text-primary" />
+              <SelectValue placeholder="Filtrar Conta" />
+            </SelectTrigger>
+            <SelectContent className="rounded-2xl">
+              <SelectItem value="all" className="font-bold">Todas as Contas</SelectItem>
+              {accounts.map(acc => (
+                <SelectItem key={acc.id} value={acc.id} className="font-bold">
+                  {acc.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex bg-muted/30 p-1 rounded-xl border border-border/50">
+            {(['month', 'semester', 'year'] as Period[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={cn(
+                  "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                  period === p
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {p === 'month' ? 'Mês' : p === 'semester' ? 'Semestre' : 'Ano'}
+              </button>
+            ))}
+          </div>
         </div>
       </PageHeader>
 
@@ -251,7 +307,6 @@ export default function ReportsDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Top 3 Despesas */}
         <div className="card-elevated p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
@@ -295,7 +350,6 @@ export default function ReportsDashboard() {
           )}
         </div>
 
-        {/* Distribuição por Grupo */}
         <div className="card-elevated p-6 flex flex-col">
           <div className="flex items-center gap-2 mb-6">
             <PieChartIcon className="w-4 h-4 text-primary" />
@@ -343,7 +397,6 @@ export default function ReportsDashboard() {
         </div>
       </div>
 
-      {/* Evolução de Gastos Detalhada */}
       <div className="card-elevated p-6">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-2">
@@ -355,59 +408,57 @@ export default function ReportsDashboard() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={fixedEvolutionData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
-              <XAxis
-                dataKey="month"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 10, fontWeight: 700 }}
-                dy={10}
-              />
+              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700 }} dy={10} />
               <YAxis hide />
               <Tooltip
                 cursor={{ fill: 'var(--primary)', opacity: 0.05 }}
                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                 formatter={(val: number) => formatCurrency(val)}
               />
-              <Bar
-                dataKey="total"
-                fill="var(--primary)"
-                radius={[6, 6, 6, 6]}
-                barSize={32}
-              />
+              <Bar dataKey="total" fill="var(--primary)" radius={[6, 6, 6, 6]} barSize={32} />
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div className="mt-6 p-4 rounded-2xl bg-muted/20 border border-border/50 flex items-start gap-3">
-          <div className="p-2 rounded-xl bg-primary/20 text-primary">
-            <CheckCircle2 className="w-4 h-4" />
+        <div className={cn(
+          "mt-6 p-4 rounded-2xl border flex items-start gap-3 transition-colors",
+          insightData.isOverBudget ? "bg-danger/5 border-danger/20" : "bg-success/5 border-success/20"
+        )}>
+          <div className={cn(
+            "p-2 rounded-xl",
+            insightData.isOverBudget ? "bg-danger/20 text-danger" : "bg-success/20 text-success"
+          )}>
+            {insightData.isOverBudget ? <Zap className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
           </div>
           <div>
-            <p className="text-xs font-bold">Insight Preditivo</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              Com base nos últimos 6 meses, suas contas fixas têm se mantido estáveis com uma variação média de <span className="text-success font-bold">2.4%</span>.
-              Sua reserva de emergência atual cobre <span className="text-primary font-bold">4.2 meses</span> deste custo.
-            </p>
+            <p className="text-xs font-bold">Insight Preditivo: {insightData.isCurrentMonth ? "Projeção de Fechamento" : "Fechamento do Período"}</p>
+            <div className="text-[10px] text-muted-foreground mt-0.5">
+              {insightData.isOverBudget ? (
+                <>
+                  <span className="text-danger font-bold">Atenção:</span> No ritmo atual de gastos, você fechará o mês com uma despesa projetada de <span className="text-danger font-bold">{formatCurrency(insightData.projection)}</span>, o que supera sua receita atual de <span className="text-success font-bold">{formatCurrency(insightData.totalIncome)}</span>.
+                </>
+              ) : (
+                <>
+                  <span className="text-success font-bold">Parabéns!</span> Seu ritmo de gastos está saudável. Sua projeção de fechamento é de <span className="text-primary font-bold">{formatCurrency(insightData.projection)}</span>, mantendo um saldo positivo em relação às suas receitas.
+                </>
+              )}
+              {insightData.variation !== 0 && (
+                <span> Seus custos fixos variaram <span className="font-bold">{Math.abs(insightData.variation).toFixed(1)}%</span> em relação ao período anterior.</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Rodapé de Ações */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <button className="flex-1 card-elevated p-4 flex items-center justify-between group hover:border-primary/50 transition-all">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-info/10 text-info">
-              <Filter className="w-4 h-4" />
-            </div>
-            <span className="text-xs font-black uppercase tracking-widest">Filtrar por Conta</span>
-          </div>
-          <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-        </button>
-        <button className="flex-1 card-elevated p-4 flex items-center justify-between group hover:border-success/50 transition-all">
+      <div className="flex flex-col md:flex-row gap-4 no-print">
+        <button
+          onClick={handleExportPDF}
+          className="flex-1 card-elevated p-4 flex items-center justify-between group hover:border-success/50 transition-all font-black uppercase tracking-widest text-xs"
+        >
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-success/10 text-success">
-              <ArrowUpRight className="w-4 h-4" />
+              <Download className="w-4 h-4" />
             </div>
-            <span className="text-xs font-black uppercase tracking-widest">Exportar Relatório PDF</span>
+            Exportar Relatório PDF
           </div>
           <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-success transition-colors" />
         </button>
