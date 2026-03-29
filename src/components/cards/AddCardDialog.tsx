@@ -67,7 +67,7 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/20 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-card rounded-3xl shadow-xl w-full max-w-md flex flex-col p-6 animate-in zoom-in-95 duration-200">
+            <div className="bg-card rounded-3xl shadow-xl w-full max-w-md flex flex-col p-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-semibold">Novo Cartão</h2>
                     <button onClick={onClose} className="p-2 rounded-xl hover:bg-muted transition-colors">

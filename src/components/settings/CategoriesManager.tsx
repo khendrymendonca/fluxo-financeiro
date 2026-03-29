@@ -214,7 +214,7 @@ export function CategoriesManager() {
                             <Plus className="w-5 h-5" /> Nova Categoria
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="w-[92vw] max-w-md rounded-3xl p-0 overflow-hidden border-none shadow-2xl bg-background animate-in zoom-in-95">
+                    <DialogContent className="w-[92vw] max-w-md rounded-3xl p-0 overflow-y-auto max-h-[90vh] border-none shadow-2xl bg-background animate-in zoom-in-95">
                         <DialogHeader className="p-6 bg-primary/5 border-b border-primary/10">
                             <DialogTitle className="text-xl font-black uppercase tracking-tight text-primary flex items-center gap-2">
                                 <Settings2 className="w-5 h-5" /> Criar Categoria
