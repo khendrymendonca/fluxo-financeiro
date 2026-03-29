@@ -13,22 +13,29 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+    TrendingUp,
+    LayoutGrid,
     Plus,
     Trash2,
-    Edit2,
     Settings2,
-    FolderTree,
     Anchor,
     Pin,
     PinOff,
     Zap,
-    TrendingUp
+    FolderTree
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/use-toast';
 import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Switch } from '@/components/ui/switch';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 
 export function CategoriesManager() {
     // Queries
@@ -51,35 +58,37 @@ export function CategoriesManager() {
     const [newCatColor, setNewCatColor] = useState(APP_COLORS[0]);
     const [newCatIsFixed, setNewCatIsFixed] = useState(false);
 
+    // Modal State
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
     // New Subcategory State
     const [newSubName, setNewSubName] = useState('');
     const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 
 
     const handleAddCategory = () => {
-        if (!newCatName) return;
-
-        // Auto-assign group if income (or default)
-        let groupId = newCatGroup;
-        if (newCatType === 'income') {
-            groupId = categoryGroups.find(g => g.name === 'Essenciais')?.id || ''; // Income is typically mapped to root available group     
-        } else if (!groupId) {
-            toast({ title: 'Selecione um grupo para a despesa', variant: 'destructive' });
+        if (!newCatName) {
+            toast({ title: 'Digite o nome da categoria', variant: 'destructive' });
             return;
         }
 
         addCategory({
             name: newCatName,
             type: newCatType,
-            groupId: groupId,
+            groupId: categoryGroups[0]?.id || '', // Default to first group
             budgetGroup: newCatType === 'income' ? 'income' : newCatBudgetGroup,
             icon: 'Tag',
             color: newCatColor,
             isActive: true,
             isFixed: newCatIsFixed
+        }, {
+            onSuccess: () => {
+                setNewCatName('');
+                setNewCatIsFixed(false);
+                setIsModalOpen(false);
+                toast({ title: 'Categoria criada com sucesso!' });
+            }
         });
-        setNewCatName('');
-        setNewCatIsFixed(false);
     };
 
     const handleAddSubcategory = (catId: string, name: string) => {
@@ -185,86 +194,108 @@ export function CategoriesManager() {
     };
 
     return (
-        <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
-            <PageHeader title="Categorias e Orçamento" icon={Settings2} />
+        <div className="space-y-6 animate-fade-in max-w-4xl mx-auto pb-12">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+                <PageHeader title="Gestão de Categorias" icon={LayoutGrid} />
 
+                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                    <DialogTrigger asChild>
+                        <Button className="h-12 px-6 rounded-2xl font-bold uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-primary/20">
+                            <Plus className="w-5 h-5" /> Nova Categoria
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="w-[92vw] max-w-md rounded-3xl p-0 overflow-hidden border-none shadow-2xl bg-background animate-in zoom-in-95">
+                        <DialogHeader className="p-6 bg-primary/5 border-b border-primary/10">
+                            <DialogTitle className="text-xl font-black uppercase tracking-tight text-primary flex items-center gap-2">
+                                <Settings2 className="w-5 h-5" /> Criar Categoria
+                            </DialogTitle>
+                        </DialogHeader>
 
-            {/* Criar Nova Categoria */}
-            <div className="card-elevated p-6 space-y-6">
-                <div className="flex items-center gap-2 mb-4">
-                    <Plus className="w-5 h-5 text-primary" />
-                    <h3 className="text-lg font-bold">Nova Categoria</h3>
-                </div>
-
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                            <Label>Tipo</Label>
-                            <select className="w-full h-12 rounded-xl border-2 border-input bg-background px-4 text-sm font-bold" value={newCatType} onChange={e => setNewCatType(e.target.value as any)}>
-                                <option value="expense">Despesa</option>
-                                <option value="income">Receita</option>
-                            </select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Nome da Categoria</Label>
-                            <Input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Ex: Farmácia" className="h-12 rounded-xl border-2" />
-                        </div>
-
-                        {newCatType === 'expense' && (
-                            <div className="space-y-2">
-                                <Label>Macro-Grupo de Orçamento</Label>
-                                <select
-                                    className="w-full h-12 rounded-xl border-2 border-input bg-background px-4 text-sm font-bold focus:border-primary transition-colors"
-                                    value={newCatBudgetGroup}
-                                    onChange={e => setNewCatBudgetGroup(e.target.value as BudgetGroup)}
-                                    required
+                        <div className="p-6 space-y-6">
+                            <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-2xl">
+                                <button
+                                    onClick={() => setNewCatType('expense')}
+                                    className={cn(
+                                        "h-10 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                                        newCatType === 'expense' ? "bg-background text-danger shadow-sm" : "text-muted-foreground hover:text-foreground"
+                                    )}
                                 >
-                                    <option value="essential">Essenciais (Custos de Vida)</option>
-                                    <option value="lifestyle">Estilo de Vida (Desejos)</option>
-                                    <option value="financial">Objetivos Financeiros</option>
-                                </select>
+                                    Despesa
+                                </button>
+                                <button
+                                    onClick={() => setNewCatType('income')}
+                                    className={cn(
+                                        "h-10 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                                        newCatType === 'income' ? "bg-background text-success shadow-sm" : "text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    Receita
+                                </button>
                             </div>
-                        )}
 
-                        <div className="flex flex-col justify-end pb-1">
-                            <div className="flex items-center gap-3 p-3 rounded-xl border-2 bg-muted/20 h-12">
-                                <Switch checked={newCatIsFixed} onCheckedChange={setNewCatIsFixed} />
-                                <div className="flex flex-col">
-                                    <Label className="text-[10px] font-black uppercase leading-none">Conta Fixa</Label>
-                                    <span className="text-[8px] text-muted-foreground">Ex: Aluguel, Internet</span>
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Nome</Label>
+                                    <Input
+                                        value={newCatName}
+                                        onChange={e => setNewCatName(e.target.value)}
+                                        placeholder="Ex: Aluguel, Salário..."
+                                        className="h-12 rounded-xl border-2 bg-muted/20 focus:bg-background transition-all font-bold"
+                                    />
                                 </div>
+
+                                {newCatType === 'expense' && (
+                                    <div className="space-y-2 animate-in slide-in-from-top-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Grupo de Orçamento</Label>
+                                        <select
+                                            className="w-full h-12 rounded-xl border-2 border-input bg-muted/20 px-4 text-sm font-bold focus:border-primary transition-colors"
+                                            value={newCatBudgetGroup}
+                                            onChange={e => setNewCatBudgetGroup(e.target.value as BudgetGroup)}
+                                        >
+                                            <option value="essential">Essenciais (Custos)</option>
+                                            <option value="lifestyle">Estilo de Vida (Lazer)</option>
+                                            <option value="financial">Objetivos (Reserva/Dívida)</option>
+                                        </select>
+                                    </div>
+                                )}
+
+                                <div className="flex items-center justify-between p-4 rounded-2xl border-2 border-dashed bg-muted/10">
+                                    <div className="flex flex-col">
+                                        <Label className="text-[11px] font-black uppercase">Conta Fixa</Label>
+                                        <span className="text-[9px] text-muted-foreground">Repete todos os meses</span>
+                                    </div>
+                                    <Switch checked={newCatIsFixed} onCheckedChange={setNewCatIsFixed} />
+                                </div>
+
+                                <ColorSelector
+                                    label="Estética da Categoria"
+                                    selectedColor={newCatColor}
+                                    onSelect={setNewCatColor}
+                                />
                             </div>
+
+                            <Button
+                                onClick={handleAddCategory}
+                                className="w-full h-14 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/20 mt-4 active:scale-95 transition-transform"
+                            >
+                                Salvar Categoria
+                            </Button>
                         </div>
-                    </div>
-
-                    <ColorSelector
-                        label="Cor da Categoria"
-                        selectedColor={newCatColor}
-                        onSelect={setNewCatColor}
-                    />
-
-                    <Button onClick={handleAddCategory} className="w-full h-14 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-primary/20">
-                        Adicionar Categoria
-                    </Button>
-                </div>
+                    </DialogContent>
+                </Dialog>
             </div>
 
-            {/* Lista de Categorias Árvore */}
-            <div className="card-elevated p-6 space-y-6">
-                <div className="flex items-center gap-2 mb-4">
-                    <FolderTree className="w-5 h-5 text-primary" />
-                    <h3 className="text-lg font-bold">Painel de Categorias</h3>
-                </div>
-
+            {/* Listas de Categorias */}
+            <div className="space-y-6">
                 <div className="flex flex-col md:grid md:grid-cols-3 gap-6">
                     {/* 1. Essenciais */}
-                    <div className="card-elevated p-5 space-y-4 border-t-4 border-t-info bg-info/5 flex flex-col">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-info flex items-center gap-2 pb-2 border-b border-info/10">
+                    <div className="card-elevated p-5 space-y-4 border-t-4 border-t-info bg-info/5 flex flex-col min-h-[120px]">
+                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-info flex items-center gap-2 pb-2 border-b border-info/10">
                             <Zap className="w-4 h-4 fill-info/20" /> Essenciais
                         </h4>
-                        <div className="flex-1 overflow-y-auto max-h-[500px] md:max-h-none scrollbar-hide py-2">
+                        <div className="flex-1 space-y-1">
                             {categories.filter(c => c.type === 'expense' && c.budgetGroup === 'essential').length === 0 ? (
-                                <p className="text-[10px] text-muted-foreground italic text-center py-8">Nenhuma categoria essencial.</p>
+                                <p className="text-[10px] text-muted-foreground italic text-center py-6">Vazio.</p>
                             ) : (
                                 categories.filter(c => c.type === 'expense' && c.budgetGroup === 'essential').map(cat => (
                                     <CategoryItem key={cat.id} cat={cat} />
@@ -274,13 +305,13 @@ export function CategoriesManager() {
                     </div>
 
                     {/* 2. Estilo de Vida */}
-                    <div className="card-elevated p-5 space-y-4 border-t-4 border-t-amber-500 bg-amber-500/5 flex flex-col">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-amber-600 flex items-center gap-2 pb-2 border-b border-amber-500/10">
+                    <div className="card-elevated p-5 space-y-4 border-t-4 border-t-amber-500 bg-amber-500/5 flex flex-col min-h-[120px]">
+                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-600 flex items-center gap-2 pb-2 border-b border-amber-500/10">
                             <Anchor className="w-4 h-4 fill-amber-500/20" /> Estilo de Vida
                         </h4>
-                        <div className="flex-1 overflow-y-auto max-h-[500px] md:max-h-none scrollbar-hide py-2">
+                        <div className="flex-1 space-y-1">
                             {categories.filter(c => c.type === 'expense' && c.budgetGroup === 'lifestyle').length === 0 ? (
-                                <p className="text-[10px] text-muted-foreground italic text-center py-8">Nenhuma categoria de estilo de vida.</p>
+                                <p className="text-[10px] text-muted-foreground italic text-center py-6">Vazio.</p>
                             ) : (
                                 categories.filter(c => c.type === 'expense' && c.budgetGroup === 'lifestyle').map(cat => (
                                     <CategoryItem key={cat.id} cat={cat} />
@@ -289,14 +320,14 @@ export function CategoriesManager() {
                         </div>
                     </div>
 
-                    {/* 3. Objetivos Financeiros */}
-                    <div className="card-elevated p-5 space-y-4 border-t-4 border-t-success bg-success/5 flex flex-col">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-success flex items-center gap-2 pb-2 border-b border-success/10">
+                    {/* 3. Objetivos */}
+                    <div className="card-elevated p-5 space-y-4 border-t-4 border-t-success bg-success/5 flex flex-col min-h-[120px]">
+                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-success flex items-center gap-2 pb-2 border-b border-success/10">
                             <TrendingUp className="w-4 h-4 fill-success/20" /> Objetivos
                         </h4>
-                        <div className="flex-1 overflow-y-auto max-h-[500px] md:max-h-none scrollbar-hide py-2">
+                        <div className="flex-1 space-y-1">
                             {categories.filter(c => c.type === 'expense' && c.budgetGroup === 'financial').length === 0 ? (
-                                <p className="text-[10px] text-muted-foreground italic text-center py-8">Nenhum objetivo financeiro.</p>
+                                <p className="text-[10px] text-muted-foreground italic text-center py-6">Vazio.</p>
                             ) : (
                                 categories.filter(c => c.type === 'expense' && c.budgetGroup === 'financial').map(cat => (
                                     <CategoryItem key={cat.id} cat={cat} />
@@ -306,32 +337,19 @@ export function CategoriesManager() {
                     </div>
                 </div>
 
-                {/* Receitas - Bloco Separado */}
-                <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    <div className="card-elevated p-6 space-y-4 border-l-4 border-l-success bg-success/5">
-                        <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-sm font-black uppercase tracking-widest text-success flex items-center gap-2">
-                                <Plus className="w-5 h-5" /> Minhas Receitas
-                            </h4>
-                            <span className="text-[10px] font-bold text-muted-foreground px-2 py-1 rounded-full bg-muted/50">Fluxo de Entrada</span>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                            {categories.filter(c => c.type === 'income').length === 0 ? (
-                                <p className="col-span-full text-xs text-muted-foreground italic text-center py-4">Clique no botão superior para adicionar receitas.</p>
-                            ) : (
-                                categories.filter(c => c.type === 'income').map(cat => (
-                                    <div key={cat.id} className="flex items-center justify-between p-3 rounded-xl border-2 hover:border-success/30 transition-all group bg-background min-h-[52px] shadow-sm">
-                                        <span className="font-bold text-sm">{cat.name}</span>
-                                        <button onClick={() => deleteCategory(cat.id)} className="opacity-0 group-hover:opacity-100 p-2 text-danger hover:bg-danger/10 rounded-lg transition-all min-h-[40px] min-w-[40px] flex items-center justify-center">
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                ))
-                            )}
-                        </div>
+                {/* Receitas */}
+                <div className="card-elevated p-6 space-y-4 border-l-4 border-l-success bg-success/5 mt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        {categories.filter(c => c.type === 'income').map(cat => (
+                            <div key={cat.id} className="flex items-center justify-between p-3 rounded-2xl border-2 hover:border-success/30 transition-all group bg-background shadow-sm">
+                                <span className="font-bold text-sm ml-1">{cat.name}</span>
+                                <button onClick={() => deleteCategory(cat.id)} className="opacity-0 group-hover:opacity-100 p-2 text-danger hover:bg-danger/10 rounded-xl transition-all min-h-[44px] min-w-[44px] flex items-center justify-center">
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ))}
                     </div>
                 </div>
-
             </div>
         </div>
     );
