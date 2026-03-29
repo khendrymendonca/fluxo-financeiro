@@ -236,107 +236,6 @@ export default function Index() {
         // Dashboard Mobile (Nu-Style)
         return (
           <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto pb-24">
-            {/* Header Estilo App Nativo (Safe Area + Alinhamento) */}
-            <div className="flex items-center justify-between pt-2 md:pt-4 px-1 py-4">
-              <div className="flex items-center gap-4">
-                <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-                  <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-colors md:hidden">
-                      <Menu className="w-6 h-6" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="left" className="w-[300px] sm:w-[350px] bg-white dark:bg-zinc-950 border-r border-gray-100 dark:border-zinc-900 p-0 overflow-y-auto no-scrollbar flex flex-col h-full">
-                    <SheetHeader className="p-6 text-left border-b border-gray-100 dark:border-zinc-900 shrink-0">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="w-10 h-10">
-                          <AvatarFallback className="bg-primary/10 text-primary font-bold">{userInitials}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <SheetTitle className="text-sm font-bold">{userName}</SheetTitle>
-                          <SheetDescription className="text-[10px] uppercase font-black tracking-widest text-zinc-500">Menu Principal</SheetDescription>
-                        </div>
-                      </div>
-                    </SheetHeader>
-
-                    <div className="flex-1 overflow-y-auto py-4 space-y-1 no-scrollbar">
-                      {navigationItems.map((item) => (
-                        <button
-                          key={item.id}
-                          onClick={() => {
-                            setCurrentView(item.id as ViewType);
-                            setIsDrawerOpen(false);
-                          }}
-                          className={cn(
-                            "w-full flex items-center gap-4 px-6 py-4 text-sm font-bold transition-all",
-                            currentView === item.id
-                              ? "text-primary bg-primary/5 border-r-4 border-primary"
-                              : "text-gray-500 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-900"
-                          )}
-                        >
-                          <item.icon className="w-5 h-5" />
-                          <span>{item.label}</span>
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="mt-auto border-t border-gray-100 dark:border-zinc-900 p-6 space-y-6 bg-white dark:bg-zinc-950">
-                      <div>
-                        <p className="text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-4">Aparência</p>
-                        <div className="grid grid-cols-3 gap-2">
-                          {[
-                            { id: 'light', icon: Sun, label: 'Claro' },
-                            { id: 'dark', icon: Moon, label: 'Escuro' },
-                            { id: 'amoled', icon: Zap, label: 'AMOLED' },
-                          ].map((t) => (
-                            <button
-                              key={t.id}
-                              onClick={() => setTheme(t.id as any)}
-                              className={cn(
-                                "flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all",
-                                theme === t.id
-                                  ? "bg-primary/10 border-primary text-primary"
-                                  : "bg-gray-50 dark:bg-zinc-900 border-transparent text-zinc-500"
-                              )}
-                            >
-                              <t.icon className="w-4 h-4" />
-                              <span className="text-[9px] font-bold">{t.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          import('sonner').then(({ toast }) => toast('Logout em breve...'));
-                          setIsDrawerOpen(false);
-                        }}
-                        className="flex items-center gap-4 text-sm font-bold text-danger hover:opacity-80 transition-opacity"
-                      >
-                        <LogOut className="w-5 h-5" />
-                        <span>Sair do App</span>
-                      </button>
-                    </div>
-                  </SheetContent>
-                </Sheet>
-
-                <div className="flex items-center gap-3">
-                  <Avatar className="w-10 h-10 border-2 border-gray-100 dark:border-zinc-900 shadow-sm">
-                    <AvatarFallback className="bg-gray-100 dark:bg-zinc-900 text-gray-500 dark:text-zinc-400 font-bold">{userInitials}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-black uppercase tracking-widest leading-none">Olá,</p>
-                    <p className="font-bold text-base leading-tight">{userName}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-colors" onClick={() => setIsBalanceVisible(!isBalanceVisible)}>
-                  {isBalanceVisible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </Button>
-              </div>
-            </div>
-
             {/* Saldo Principal */}
             <div className="px-1 py-4">
               <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-black uppercase tracking-widest mb-1">Patrimônio Total</p>
@@ -511,7 +410,7 @@ export default function Index() {
         />
       }
       headerMobile={
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <>
           <div className="flex items-center gap-4">
             <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
               <SheetTrigger asChild>
@@ -586,7 +485,7 @@ export default function Index() {
           <Button variant="ghost" size="icon" onClick={() => setIsBalanceVisible(!isBalanceVisible)}>
             {isBalanceVisible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </Button>
-        </div>
+        </>
       }
       bottomNav={
         <BottomNavigation

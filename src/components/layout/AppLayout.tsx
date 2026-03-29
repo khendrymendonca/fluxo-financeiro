@@ -32,7 +32,7 @@ export function AppLayout({
             <main className="flex-1 overflow-y-auto relative no-scrollbar bg-inherit">
                 {/* Header Mobile (Apenas Mobile) */}
                 {isMobile && headerMobile && (
-                    <header className="md:hidden sticky top-0 z-40 bg-inherit/80 backdrop-blur-md">
+                    <header className="md:hidden sticky top-0 z-50 bg-inherit border-b border-transparent dark:border-zinc-900 flex items-center justify-between p-4">
                         {headerMobile}
                     </header>
                 )}
@@ -40,7 +40,7 @@ export function AppLayout({
                 {/* Container de Conteúdo */}
                 <div className={cn(
                     "max-w-7xl mx-auto p-4 md:p-8",
-                    isMobile ? "pb-24 pt-2" : "pb-8 pt-4"
+                    isMobile && "pb-24"
                 )}>
                     {children}
                 </div>
