@@ -40,7 +40,7 @@ export function AppLayout({
                 {/* Container de Conteúdo */}
                 <div className={cn(
                     "max-w-7xl mx-auto p-4 md:p-8",
-                    isMobile && "pb-24"
+                    isMobile && "pb-24 pt-0"
                 )}>
                     {children}
                 </div>

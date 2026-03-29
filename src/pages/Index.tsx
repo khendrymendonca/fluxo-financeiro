@@ -233,24 +233,19 @@ export default function Index() {
           );
         }
 
-        // Dashboard Mobile (Nu-Style)
+        // Dashboard Mobile Minimalista (No-Scroll)
         return (
-          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto pb-24">
-            {/* Saldo Principal */}
-            <div className="px-1 py-4">
-              <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-black uppercase tracking-widest mb-1">Patrimônio Total</p>
-              <h1 className="text-4xl font-black tracking-tighter transition-all duration-300 text-gray-900 dark:text-white">
+          <div className="h-[calc(100vh-160px)] flex flex-col gap-4 animate-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto overflow-hidden">
+            {/* Bloco Superior: Saudação e Saldo */}
+            <div className="flex flex-col gap-1">
+              <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-black uppercase tracking-widest px-1">Patrimônio Total</p>
+              <h1 className="text-4xl font-black tracking-tighter transition-all duration-300 text-gray-900 dark:text-white px-1">
                 {isBalanceVisible ? formatCurrency(totalNetWorth) : '••••••'}
               </h1>
-              <div className="flex items-center gap-2 mt-2 opacity-0">
-                <span className="flex items-center gap-1 text-emerald-500 text-[10px] font-black uppercase tracking-wider">
-                  <TrendingUp className="w-3 h-3" /> +0% <span className="text-gray-500 dark:text-zinc-500">este mês</span>
-                </span>
-              </div>
             </div>
 
             {/* Ações Rápidas */}
-            <div className="flex gap-4 overflow-x-auto no-scrollbar py-2 -mx-1 px-1 snap-x">
+            <div className="flex gap-4 overflow-x-auto no-scrollbar py-2 -mx-1 px-1 shrink-0">
               {[
                 { id: 'add', icon: Plus, label: 'Lançar', color: 'bg-primary/20 text-primary border-primary/30', action: () => { setEditingTransaction(undefined); setShowTransactionForm(true); } },
                 {
@@ -265,55 +260,81 @@ export default function Index() {
                 <button
                   key={action.id}
                   onClick={action.action}
-                  className="flex flex-col items-center gap-2 min-w-[70px] snap-start group active:scale-95 transition-transform"
+                  className="flex flex-col items-center gap-2 min-w-[70px] active:scale-95 transition-transform"
                 >
-                  <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center border transition-all group-hover:bg-gray-50 dark:group-hover:bg-zinc-800 shadow-sm dark:shadow-none", action.color)}>
+                  <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center border shadow-sm dark:shadow-none", action.color)}>
                     <action.icon className="w-6 h-6" />
                   </div>
-                  <span className="text-[10px] font-bold text-gray-500 dark:text-zinc-500 group-hover:text-gray-900 dark:group-hover:text-zinc-300">{action.label}</span>
+                  <span className="text-[10px] font-bold text-gray-500 dark:text-zinc-500">{action.label}</span>
                 </button>
               ))}
             </div>
 
-            {/* Métricas Principais */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-900 p-6 rounded-[2.5rem] shadow-sm dark:shadow-none">
-                <div className="flex items-center justify-between mb-2">
+            {/* Métricas Principais (Cards Lado a Lado ou Stacked conforme altura) */}
+            <div className="flex flex-col gap-3 shrink-0">
+              <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-900 p-5 rounded-[2rem] shadow-sm dark:shadow-none">
+                <div className="flex items-center justify-between mb-1">
                   <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest">Saldo Projetado</p>
                   <TooltipProvider>
                     <Tooltip>
-                      <TooltipTrigger><Info className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-700" /></TooltipTrigger>
-                      <TooltipContent className="bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-[10px] text-gray-900 dark:text-zinc-50">Saldo previsto considerando pendências</TooltipContent>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 p-0 hover:bg-transparent">
+                          <Info className="w-4 h-4 text-gray-400 dark:text-zinc-600" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-zinc-800 text-white border-none p-3 rounded-lg max-w-[200px] text-xs leading-relaxed z-[100]">
+                        O saldo projetado soma seu saldo atual com todas as receitas e despesas previstas para este mês.
+                      </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <h3 className="text-2xl font-bold tracking-tight">
+                <h3 className={cn("text-2xl font-bold tracking-tight", projectedBalance < 0 ? "text-danger" : "text-gray-900 dark:text-white")}>
                   {isBalanceVisible ? formatCurrency(projectedBalance) : '••••••'}
                 </h3>
               </div>
 
-              <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-900 p-6 rounded-[2.5rem] shadow-sm dark:shadow-none">
-                <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest mb-3">Fluxo do Mês</p>
+              <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-900 p-5 rounded-[2rem] shadow-sm dark:shadow-none">
+                <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest mb-2">Fluxo do Mês</p>
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[9px] text-emerald-500 font-black uppercase mb-0.5">Entradas</p>
-                    <p className="font-bold text-sm tracking-tight">{isBalanceVisible ? formatCurrency(cashflow.totalIncome) : '••••'}</p>
+                  <div className="flex flex-col">
+                    <p className="text-[9px] text-emerald-500 font-black uppercase">Entradas</p>
+                    <p className="font-bold text-sm">{isBalanceVisible ? formatCurrency(cashflow.totalIncome) : '••••'}</p>
                   </div>
                   <div className="w-[1px] h-6 bg-gray-100 dark:bg-zinc-800" />
-                  <div>
-                    <p className="text-[9px] text-gray-500 dark:text-zinc-500 font-black uppercase mb-0.5">Saídas</p>
-                    <p className="font-bold text-sm tracking-tight">{isBalanceVisible ? formatCurrency(cashflow.totalExpenses) : '••••'}</p>
+                  <div className="flex flex-col">
+                    <p className="text-[9px] text-danger font-black uppercase">Saídas</p>
+                    <p className="font-bold text-sm">{isBalanceVisible ? formatCurrency(cashflow.totalExpenses) : '••••'}</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Dashboards Extras Mobile */}
-            <div className="space-y-6 pt-2">
-              <EmergencyReserve
-                data={emergencyData as any}
-                onMonthsChange={setEmergencyMonths}
-              />
+            {/* Últimos Lançamentos (Lista compacta) */}
+            <div className="flex-1 min-h-0 flex flex-col">
+              <div className="flex items-center justify-between px-1 mb-2">
+                <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest">Últimos Lançamentos</p>
+                <button onClick={() => setCurrentView('transactions')} className="text-[10px] font-bold text-primary px-2">Ver tudo</button>
+              </div>
+              <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
+                {currentMonthTransactions.slice(0, 3).map(tx => (
+                  <div key={tx.id} className="bg-white dark:bg-zinc-900/40 border border-gray-50 dark:border-zinc-900 p-4 rounded-2xl flex items-center justify-between shadow-sm dark:shadow-none">
+                    <div className="flex items-center gap-3">
+                      <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center", tx.type === 'income' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-danger/10 text-danger')}>
+                        {tx.type === 'income' ? <Plus className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold leading-none mb-1">{tx.description}</p>
+                        <p className="text-[10px] text-gray-500 dark:text-zinc-500 uppercase font-black">
+                          {categories.find(c => c.id === tx.categoryId)?.name || 'Geral'}
+                        </p>
+                      </div>
+                    </div>
+                    <p className={cn("text-xs font-black", tx.type === 'income' ? 'text-emerald-500' : 'text-gray-900 dark:text-white')}>
+                      {tx.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(Number(tx.amount)))}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         );

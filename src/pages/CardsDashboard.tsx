@@ -151,17 +151,20 @@ export default function CardsDashboard() {
             ref={scrollRef}
             onScroll={handleScroll}
             className={cn(
-              "flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 no-scrollbar w-full px-[7.5vw]",
-              "md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:snap-none md:flex-wrap md:px-0"
+              "flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 no-scrollbar w-full px-[10vw] scroll-padding-x-[10vw] snap-always",
+              "md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:snap-none md:flex-wrap md:px-0 md:scroll-padding-0"
             )}
           >
+            {/* Buffer spacers para centralização absoluta */}
+            <div className="md:hidden shrink-0 w-[0.1px] snap-center" />
+
             {creditCards.map(card => {
               const cardStats = getCardStats(card.id);
               return (
                 <div
                   key={card.id}
                   className={cn(
-                    "snap-center shrink-0 transition-opacity duration-300 min-w-[85vw] max-w-[85vw]",
+                    "snap-center shrink-0 transition-opacity duration-300 min-w-[80vw] max-w-[80vw]",
                     "md:min-w-[350px] md:max-w-[350px] md:snap-align-none",
                     selectedCardId !== card.id && "opacity-50 md:opacity-100"
                   )}
@@ -183,7 +186,8 @@ export default function CardsDashboard() {
                 </div>
               );
             })}
-            <div className="snap-center shrink-0 w-[7.5vw] md:hidden" />
+
+            <div className="md:hidden shrink-0 w-[0.1px] snap-center" />
           </div>
 
           {selectedCard && (
