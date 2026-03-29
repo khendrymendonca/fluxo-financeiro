@@ -206,11 +206,14 @@ export default function Index() {
               </div>
 
               {/* Grid Principal - 3 Colunas no Desktop */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className={cn(
+                "animate-in fade-in duration-500",
+                !isMobile ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-6"
+              )}>
                 {/* Coluna 1: Saldo e Contas */}
                 <div className="space-y-6">
-                  <StatCard title="Saldo Total" value={totalNetWorth} icon={<Wallet />} variant="neutral" />
-                  <StatCard title="Projetado" value={projectedBalance} icon={<Calculator />} variant={projectedBalance < 0 ? 'negative' : 'neutral'} />
+                  {!isMobile && <StatCard title="Saldo Total" value={totalNetWorth} icon={<Wallet />} variant="neutral" />}
+                  {!isMobile && <StatCard title="Projetado" value={projectedBalance} icon={<Calculator />} variant={projectedBalance < 0 ? 'negative' : 'neutral'} />}
                   <PendingPayments transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
                 </div>
 
@@ -221,7 +224,7 @@ export default function Index() {
                     <StatCard title="Despesas" value={cashflow.totalExpenses} icon={<TrendingDown />} variant="negative" />
                   </div>
                   <ExpenseChart data={Object.fromEntries(categoryExpenses.map(c => [c.name, c.value]))} />
-                  <EmergencyReserve data={emergencyData as any} onMonthsChange={setEmergencyMonths} />
+                  {!isMobile && <EmergencyReserve data={emergencyData as any} onMonthsChange={setEmergencyMonths} />}
                 </div>
 
                 {/* Coluna 3: Transações e Metas */}
@@ -234,19 +237,19 @@ export default function Index() {
           );
         }
 
-        // Dashboard Mobile Minimalista (No-Scroll)
+        // Dashboard Mobile Minimalista (Zero-Scroll Estabilizado)
         return (
-          <div className="h-[calc(100vh-160px)] flex flex-col gap-4 animate-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto overflow-hidden">
-            {/* Bloco Superior: Saudação e Saldo */}
-            <div className="flex flex-col gap-1">
-              <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-black uppercase tracking-widest px-1">Patrimônio Total</p>
-              <h1 className="text-4xl font-black tracking-tighter transition-all duration-300 text-gray-900 dark:text-white px-1">
+          <div className="flex flex-col h-full animate-in slide-in-from-bottom-4 duration-500 overflow-hidden">
+            {/* Bloco Superior: Saldo */}
+            <div className="flex flex-col gap-1 shrink-0 mb-4">
+              <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-black uppercase tracking-widest">Patrimônio Total</p>
+              <h1 className="text-4xl font-black tracking-tighter text-gray-900 dark:text-white">
                 {isBalanceVisible ? formatCurrency(totalNetWorth) : '••••••'}
               </h1>
             </div>
 
-            {/* Ações Rápidas */}
-            <div className="flex gap-4 overflow-x-auto no-scrollbar py-2 -mx-1 px-1 shrink-0">
+            {/* Ações Rápidas - Oculto no Desktop */}
+            <div className="flex gap-4 overflow-x-auto no-scrollbar py-2 -mx-4 px-4 shrink-0 mb-4">
               {[
                 { id: 'add', icon: Plus, label: 'Lançar', color: 'bg-primary/20 text-primary border-primary/30', action: () => { setEditingTransaction(undefined); setShowTransactionForm(true); } },
                 {
@@ -271,70 +274,73 @@ export default function Index() {
               ))}
             </div>
 
-            {/* Métricas Principais (Cards Lado a Lado ou Stacked conforme altura) */}
-            <div className="flex flex-col gap-3 shrink-0">
-              <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-900 p-5 rounded-[2rem] shadow-sm dark:shadow-none">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest">Saldo Projetado</p>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 p-0 hover:bg-transparent">
-                          <Info className="w-4 h-4 text-gray-400 dark:text-zinc-600" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-zinc-800 text-white border-none p-3 rounded-lg max-w-[200px] text-xs leading-relaxed z-[100]">
-                        O saldo projetado soma seu saldo atual com todas as receitas e despesas previstas para este mês.
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <h3 className={cn("text-2xl font-bold tracking-tight", projectedBalance < 0 ? "text-danger" : "text-gray-900 dark:text-white")}>
-                  {isBalanceVisible ? formatCurrency(projectedBalance) : '••••••'}
-                </h3>
-              </div>
-
-              <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-900 p-5 rounded-[2rem] shadow-sm dark:shadow-none">
-                <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest mb-2">Fluxo do Mês</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <p className="text-[9px] text-emerald-500 font-black uppercase">Entradas</p>
-                    <p className="font-bold text-sm">{isBalanceVisible ? formatCurrency(cashflow.totalIncome) : '••••'}</p>
+            {/* Conteúdo Rolável Internamente */}
+            <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
+              {/* Métricas Principais */}
+              <div className="grid grid-cols-1 gap-3">
+                <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-900 p-5 rounded-[2rem] shadow-sm">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest">Saldo Projetado</p>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 p-0 hover:bg-transparent">
+                            <Info className="w-4 h-4 text-gray-400 dark:text-zinc-600" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-zinc-800 text-white border-none p-3 rounded-lg max-w-[200px] text-xs leading-relaxed z-[100]">
+                          O saldo projetado soma seu saldo atual com todas as receitas e despesas previstas para este mês.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
-                  <div className="w-[1px] h-6 bg-gray-100 dark:bg-zinc-800" />
-                  <div className="flex flex-col">
-                    <p className="text-[9px] text-danger font-black uppercase">Saídas</p>
-                    <p className="font-bold text-sm">{isBalanceVisible ? formatCurrency(cashflow.totalExpenses) : '••••'}</p>
-                  </div>
+                  <h3 className={cn("text-2xl font-bold tracking-tight", projectedBalance < 0 ? "text-danger" : "text-gray-900 dark:text-white")}>
+                    {isBalanceVisible ? formatCurrency(projectedBalance) : '••••••'}
+                  </h3>
                 </div>
-              </div>
-            </div>
 
-            {/* Últimos Lançamentos (Lista compacta) */}
-            <div className="flex-1 min-h-0 flex flex-col">
-              <div className="flex items-center justify-between px-1 mb-2">
-                <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest">Últimos Lançamentos</p>
-                <button onClick={() => setCurrentView('transactions')} className="text-[10px] font-bold text-primary px-2">Ver tudo</button>
-              </div>
-              <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
-                {currentMonthTransactions.slice(0, 3).map(tx => (
-                  <div key={tx.id} className="bg-white dark:bg-zinc-900/40 border border-gray-50 dark:border-zinc-900 p-4 rounded-2xl flex items-center justify-between shadow-sm dark:shadow-none">
-                    <div className="flex items-center gap-3">
-                      <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center", tx.type === 'income' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-danger/10 text-danger')}>
-                        {tx.type === 'income' ? <Plus className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold leading-none mb-1">{tx.description}</p>
-                        <p className="text-[10px] text-gray-500 dark:text-zinc-500 uppercase font-black">
-                          {categories.find(c => c.id === tx.categoryId)?.name || 'Geral'}
-                        </p>
-                      </div>
+                <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-900 p-5 rounded-[2rem] shadow-sm">
+                  <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest mb-2">Fluxo do Mês</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <p className="text-[9px] text-emerald-500 font-black uppercase">Entradas</p>
+                      <p className="font-bold text-sm">{isBalanceVisible ? formatCurrency(cashflow.totalIncome) : '••••'}</p>
                     </div>
-                    <p className={cn("text-xs font-black", tx.type === 'income' ? 'text-emerald-500' : 'text-gray-900 dark:text-white')}>
-                      {tx.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(Number(tx.amount)))}
-                    </p>
+                    <div className="w-[1px] h-6 bg-gray-100 dark:bg-zinc-800" />
+                    <div className="flex flex-col">
+                      <p className="text-[9px] text-danger font-black uppercase">Saídas</p>
+                      <p className="font-bold text-sm">{isBalanceVisible ? formatCurrency(cashflow.totalExpenses) : '••••'}</p>
+                    </div>
                   </div>
-                ))}
+                </div>
+              </div>
+
+              {/* Últimos Lançamentos */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest">Últimos Lançamentos</p>
+                  <button onClick={() => setCurrentView('transactions')} className="text-[10px] font-bold text-primary px-2">Ver tudo</button>
+                </div>
+                <div className="space-y-2">
+                  {currentMonthTransactions.slice(0, 3).map(tx => (
+                    <div key={tx.id} className="bg-white dark:bg-zinc-900/40 border border-gray-50 dark:border-zinc-900 p-4 rounded-2xl flex items-center justify-between shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center", tx.type === 'income' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-danger/10 text-danger')}>
+                          {tx.type === 'income' ? <Plus className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold leading-none mb-1">{tx.description}</p>
+                          <p className="text-[10px] text-gray-500 dark:text-zinc-500 uppercase font-black">
+                            {categories.find(c => c.id === tx.categoryId)?.name || 'Geral'}
+                          </p>
+                        </div>
+                      </div>
+                      <p className={cn("text-xs font-black", tx.type === 'income' ? 'text-emerald-500' : 'text-gray-900 dark:text-white')}>
+                        {tx.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(Number(tx.amount)))}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

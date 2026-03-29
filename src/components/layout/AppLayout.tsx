@@ -20,29 +20,32 @@ export function AppLayout({
     const isMobile = useIsMobile();
 
     return (
-        <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-zinc-950 transition-colors font-sans selection:bg-primary/30">
+        <div className="flex h-[100dvh] overflow-hidden bg-gray-50 dark:bg-zinc-950 transition-colors font-sans selection:bg-primary/30 text-gray-900 dark:text-zinc-50">
             {/* Sidebar Fixa (Apenas Desktop) */}
             {!isMobile && sidebar && (
-                <aside className="hidden md:flex flex-col flex-shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 z-50">
+                <aside className="hidden md:flex flex-col w-64 flex-shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 z-50">
                     {sidebar}
                 </aside>
             )}
 
-            {/* Área Principal e Rolagem */}
-            <main className="flex-1 overflow-y-auto relative no-scrollbar bg-inherit">
+            {/* Área Principal */}
+            <main className="flex-1 flex flex-col h-[100dvh] overflow-hidden relative bg-inherit">
                 {/* Header Mobile (Apenas Mobile) */}
                 {isMobile && headerMobile && (
-                    <header className="md:hidden sticky top-0 z-50 bg-inherit border-b border-transparent dark:border-zinc-900 flex items-center justify-between p-4">
+                    <header className="md:hidden flex-shrink-0 sticky top-0 z-50 bg-inherit border-b border-gray-100 dark:border-zinc-900 flex items-center justify-between p-4">
                         {headerMobile}
                     </header>
                 )}
 
                 {/* Container de Conteúdo */}
                 <div className={cn(
-                    "max-w-7xl mx-auto p-4 md:p-8",
-                    isMobile && "pb-24 pt-0"
+                    "flex-1 overflow-y-auto no-scrollbar pt-0",
+                    !isMobile && "p-8",
+                    isMobile && "p-4 pb-24"
                 )}>
-                    {children}
+                    <div className={cn(!isMobile && "max-w-7xl mx-auto")}>
+                        {children}
+                    </div>
                 </div>
 
                 {/* Floating Action Button (Mobile) */}
@@ -55,7 +58,7 @@ export function AppLayout({
 
             {/* Bottom Navigation (Apenas Mobile) */}
             {isMobile && bottomNav && (
-                <div className="md:hidden">
+                <div className="md:hidden flex-shrink-0">
                     {bottomNav}
                 </div>
             )}

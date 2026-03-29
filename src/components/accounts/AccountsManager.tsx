@@ -297,75 +297,104 @@ export function AccountsManager({
       </div>
 
       {/* Bank Accounts Grouped by Institution */}
-      <div className="space-y-4 animate-fade-in">
+      <div className="space-y-4 animate-fade-in pb-20 md:pb-0">
         {Object.entries(
           accounts.reduce((acc, account) => {
-            const inst = account.institution || account.bank || 'Outros';
+            const inst = account.institution || account.bank || 'Instituição não informada';
             if (!acc[inst]) acc[inst] = [];
             acc[inst].push(account);
             return acc;
           }, {} as Record<string, Account[]>)
-        ).map(([institution, instAccounts]) => {
-          const instTotal = instAccounts.reduce((sum, a) => sum + Number(a.balance), 0);
+        ).sort(([a], [b]) => a === 'Instituição não informada' ? 1 : b === 'Instituição não informada' ? -1 : a.localeCompare(b))
+          .map(([institution, instAccounts]) => {
+            const instTotal = instAccounts.reduce((sum, a) => sum + Number(a.balance), 0);
 
-          return (
-            <Accordion type="single" collapsible key={institution} className="w-full">
-              <AccordionItem value={institution} className="border-none bg-white dark:bg-zinc-900 rounded-3xl mb-4 overflow-hidden border border-gray-100 dark:border-zinc-800 shadow-sm transition-all hover:shadow-md">
-                <AccordionTrigger className="px-6 py-5 hover:no-underline group">
-                  <div className="flex items-center justify-between w-full pr-4 text-left">
-                    <div className="flex items-center gap-4">
-                      <Avatar className="w-10 h-10 border border-gray-100 dark:border-zinc-800">
-                        <AvatarFallback className="bg-primary/10 text-primary font-black uppercase text-xs">
-                          {institution.substring(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-900 dark:text-zinc-50">{institution}</h3>
-                        <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">{instAccounts.length} {instAccounts.length === 1 ? 'conta' : 'contas'}</p>
+            return (
+              <Accordion type="single" collapsible key={institution} className="w-full">
+                <AccordionItem value={institution} className="border-none bg-white dark:bg-zinc-900 rounded-3xl mb-4 overflow-hidden border border-gray-100 dark:border-zinc-800 shadow-sm transition-all hover:shadow-md">
+                  <AccordionTrigger className="px-6 py-5 hover:no-underline group">
+                    <div className="flex items-center justify-between w-full pr-4 text-left">
+                      <div className="flex items-center gap-4">
+                        <Avatar className="w-10 h-10 border border-gray-100 dark:border-zinc-800">
+                          <AvatarFallback className="bg-primary/10 text-primary font-black uppercase text-xs">
+                            {institution.substring(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="font-bold text-lg text-gray-900 dark:text-zinc-50">{institution}</h3>
+                          <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">{instAccounts.length} {instAccounts.length === 1 ? 'conta' : 'contas'}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground mb-1">Saldo Consolidado</p>
+                        <p className="font-black text-xl text-primary">{formatCurrency(instTotal)}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground mb-1">Saldo Consolidado</p>
-                      <p className="font-black text-xl text-primary">{formatCurrency(instTotal)}</p>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-6 pt-2">
+                    <Separator className="mb-6 opacity-50" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {instAccounts.map((account) => {
+                        const viewAccountBalance = getAccountViewBalance(account.id);
+                        const typeLabel = getAccountTypeLabel(account.accountType);
+
+                        return (
+                          <div
+                            key={account.id}
+                            className="p-5 rounded-2xl bg-gray-50/50 dark:bg-zinc-800/20 border border-gray-100 dark:border-zinc-800 hover:border-primary/40 transition-all cursor-pointer group flex flex-col justify-between"
+                            onClick={() => openEditForm(account)}
+                          >
+                            <div className="flex justify-between items-start mb-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className={cn(
+                                    "text-[8px] font-black uppercase px-2 py-0.5 rounded-full border",
+                                    account.accountType === 'corrente' ? "bg-blue-500/10 text-blue-500 border-blue-500/20" :
+                                      ['benefit_vr', 'benefit_va', 'benefit_flex'].includes(account.accountType) ? "bg-orange-500/10 text-orange-500 border-orange-500/20" :
+                                        "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                  )}>
+                                    {typeLabel}
+                                  </span>
+                                  {account.hasOverdraft && (
+                                    <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                                      Limite
+                                    </span>
+                                  )}
+                                </div>
+                                <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-50">{account.name}</h4>
+                              </div>
+                              <div className="flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity ml-2">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); openEditForm(account); }}
+                                  className="p-2 rounded-xl hover:bg-primary/10 text-primary transition-colors border border-transparent hover:border-primary/20"
+                                  title="Editar conta"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="flex items-end justify-between mt-auto">
+                              <div>
+                                <p className="text-[10px] uppercase font-black text-zinc-400 tracking-tighter">Saldo Disponível</p>
+                                <p className={cn(
+                                  "font-black text-xl tracking-tighter",
+                                  viewAccountBalance < 0 ? "text-danger" : "text-zinc-900 dark:text-zinc-50"
+                                )}>
+                                  {formatCurrency(viewAccountBalance)}
+                                </p>
+                              </div>
+                              <div className="w-8 h-8 rounded-full border-4 border-white dark:border-zinc-900 shadow-sm" style={{ backgroundColor: account.color }} />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-6 pt-2">
-                  <Separator className="mb-6 opacity-50" />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {instAccounts.map((account) => {
-                      const viewAccountBalance = getAccountViewBalance(account.id);
-                      return (
-                        <div
-                          key={account.id}
-                          className="p-5 rounded-2xl bg-gray-50/50 dark:bg-zinc-800/20 border border-gray-100 dark:border-zinc-800 hover:border-primary/30 transition-all cursor-pointer group"
-                          onClick={() => openEditForm(account)}
-                        >
-                          <div className="flex justify-between items-start mb-4">
-                            <div>
-                              <p className="text-[10px] font-black uppercase text-zinc-500 mb-1">{account.accountType}</p>
-                              <h4 className="font-bold text-zinc-900 dark:text-zinc-50">{account.name}</h4>
-                            </div>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={(e) => { e.stopPropagation(); openEditForm(account); }} className="p-1.5 rounded-lg hover:bg-primary/10 text-primary"><Pencil className="w-3.5 h-3.5" /></button>
-                              <button onClick={(e) => { e.stopPropagation(); onDeleteAccount(account.id); }} className="p-1.5 rounded-lg hover:bg-danger/10 text-danger"><Trash2 className="w-3.5 h-3.5" /></button>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-zinc-500">Saldo</span>
-                            <span className={cn("font-black text-lg", viewAccountBalance < 0 ? "text-danger" : "text-zinc-900 dark:text-zinc-50")}>
-                              {formatCurrency(viewAccountBalance)}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          );
-        })}
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            );
+          })}
 
         {accounts.length === 0 && !showAccountForm && (
           <div className="col-span-full py-20 text-center card-elevated border-dashed border-2 bg-muted/20">
