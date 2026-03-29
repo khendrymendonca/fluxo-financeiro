@@ -42,7 +42,8 @@ export function useAddTransaction() {
       const cleanTxs = txsWithUser.map(({
         categoryId, subcategoryId, accountId, cardId, isPaid, paymentDate,
         isRecurring, installmentGroupId, installmentNumber, installmentTotal,
-        invoiceMonthYear, isAutomatic, debtId, transactionType, cardClosingDay, cardDueDay, ...rest
+        invoiceMonthYear, isAutomatic, debtId, transactionType, cardClosingDay, cardDueDay,
+        userId, ...rest
       }) => rest);
 
       const { data: insertedData, error } = await supabase

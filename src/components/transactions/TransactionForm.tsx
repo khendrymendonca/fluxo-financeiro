@@ -274,8 +274,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       invoiceMonthYear: initialData ? (paymentMethod === 'card' ? invoiceReference : undefined) : invoiceMonthYear,
       isPaid,
       paymentDate: isPaid ? date : undefined,
-      installmentGroupId: initialData?.installmentGroupId,
-      userId: initialData?.userId || ''
+      installmentGroupId: initialData?.installmentGroupId
     } as any, undefined, applyScope);
 
     onClose();
