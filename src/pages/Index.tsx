@@ -115,6 +115,7 @@ export default function Index() {
     creditCards,
     debts,
     savingsGoals,
+    categories,
     currentMonthTransactions,
     setEmergencyMonths,
     addTransaction,
