@@ -51,8 +51,8 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
   return (
     <nav
       className={cn(
-        "hidden md:flex flex-col py-6 px-3 bg-white dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-800 h-screen transition-all duration-300 ease-in-out z-50",
-        "w-64 relative shrink-0"
+        "hidden md:flex flex-col py-6 px-4 bg-white dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-800 h-screen transition-all duration-300 ease-in-out z-50",
+        "w-80 relative shrink-0"
       )}
     >
       {/* Header with Logo */}
