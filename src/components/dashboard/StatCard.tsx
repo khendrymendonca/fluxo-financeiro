@@ -47,9 +47,9 @@ export function StatCard({
           <p
             className={cn(
               "text-xl lg:text-2xl font-bold tracking-tight whitespace-nowrap block w-full",
-              variant === 'positive' && 'text-emerald-600 dark:text-emerald-400',
-              variant === 'negative' && 'text-rose-600 dark:text-rose-400',
-              variant === 'neutral' && 'text-blue-600 dark:text-blue-400',
+              variant === 'positive' && 'text-green-500 dark:text-green-500 md:dark:text-emerald-400',
+              variant === 'negative' && 'text-red-500 dark:text-red-500 md:dark:text-rose-400',
+              variant === 'neutral' && 'text-blue-500 dark:text-blue-500 md:dark:text-blue-400',
             )}
             title={formatValue(value) as string}
           >
@@ -62,9 +62,9 @@ export function StatCard({
         <div className={cn(
           "rounded-full shrink-0 flex items-center justify-center transition-transform",
           isCompact ? "p-2 w-8 h-8" : "p-3 w-10 h-10 md:w-12 md:h-12",
-          variant === 'positive' && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-          variant === 'negative' && 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
-          variant === 'neutral' && 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+          variant === 'positive' && 'bg-green-500/20 text-green-600 dark:bg-green-500/20 dark:text-green-400 md:dark:bg-emerald-500/10 md:dark:text-emerald-400',
+          variant === 'negative' && 'bg-red-500/20 text-red-600 dark:bg-red-500/20 dark:text-red-400 md:dark:bg-rose-500/10 md:dark:text-rose-400',
+          variant === 'neutral' && 'bg-blue-500/20 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 md:dark:bg-blue-500/10 md:dark:text-blue-400',
           variant === 'default' && 'bg-muted/50 text-muted-foreground',
         )}>
           {icon}

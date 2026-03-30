@@ -79,8 +79,8 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
                 <div className={cn(
                   "p-2 rounded-lg transition-all group-hover:scale-110 shrink-0",
                   isIncome 
-                    ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" 
-                    : "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                    ? "bg-green-500/20 text-green-600 dark:bg-green-500/20 dark:text-green-400 md:dark:bg-emerald-500/10 md:dark:text-emerald-400" 
+                    : "bg-red-500/20 text-red-600 dark:bg-red-500/20 dark:text-red-400 md:dark:bg-rose-500/10 md:dark:text-rose-400"
                 )}>
                   {isIncome
                     ? <ArrowUpRight className="w-4 h-4" />
@@ -103,7 +103,9 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
               </div>
               <span className={cn(
                 "font-bold text-xs md:text-sm shrink-0 whitespace-nowrap tabular-nums",
-                isIncome ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
+                isIncome 
+                  ? "text-green-600 dark:text-green-500 md:dark:text-emerald-400" 
+                  : "text-red-600 dark:text-red-500 md:dark:text-rose-400"
               )}>
                 {isIncome ? '+' : '-'} {formatCurrency(Math.abs(Number(transaction.amount)))}
               </span>

@@ -102,10 +102,10 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
                             <div key={t.id} className="flex items-center justify-between p-2 md:p-3 rounded-xl hover:bg-muted/30 transition-all group border border-transparent hover:border-border/50">
                                 <div className="flex items-center gap-3">
                                     <div className={cn(
-                                        "flex flex-col items-center justify-center rounded-md py-1 px-2 min-w-[50px] border transition-colors",
+                                        "flex flex-col items-center justify-center rounded-md py-1 px-2 min-w-[50px] transition-colors border",
                                         isOverdue 
-                                            ? "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-500/20" 
-                                            : "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700/50"
+                                            ? "bg-red-500 text-white dark:bg-red-500 dark:text-white md:dark:bg-zinc-800 md:dark:text-rose-400 md:dark:border-zinc-700" 
+                                            : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 md:dark:bg-zinc-900 md:dark:border-zinc-800"
                                     )}>
                                         <span className="text-sm font-bold uppercase leading-none">
                                             {formatDate(t.date)}
