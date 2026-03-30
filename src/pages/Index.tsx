@@ -354,11 +354,14 @@ export default function Index() {
               transactions={currentMonthTransactions}
               onEdit={handleEditTransaction}
               onPayBill={async (tx) => {
-                await updateTransaction(tx.id, {
-                  isPaid: true,
-                  paymentDate: todayLocalString(),
-                  accountId: tx.accountId,
-                  cardId: tx.cardId
+                await updateTransaction({
+                  id: tx.id,
+                  updates: {
+                    isPaid: true,
+                    paymentDate: todayLocalString(),
+                    accountId: tx.accountId,
+                    cardId: tx.cardId
+                  }
                 });
               }}
             />
@@ -377,7 +380,10 @@ export default function Index() {
                   key={goal.id}
                   goal={goal}
                   accounts={accounts}
-                  onUpdate={updateSavingsGoal}
+                  onUpdate={(id, updates) => {
+                    console.log('Update Goal:', id, updates);
+                    updateSavingsGoal({ id, updates });
+                  }}
                   onDelete={deleteSavingsGoal}
                   onDeposit={depositToGoal}
                   onEdit={(goal) => {
@@ -395,7 +401,10 @@ export default function Index() {
             <DebtsManager
               debts={debts}
               onAddDebt={addDebt}
-              onUpdateDebt={updateDebt}
+              onUpdateDebt={(id, updates) => {
+                console.log('Update Debt:', id, updates);
+                updateDebt({ id, updates });
+              }}
               onDeleteDebt={deleteDebt}
             />
           </div>
@@ -422,7 +431,10 @@ export default function Index() {
             <AccountsManager
               accounts={accounts}
               onAddAccount={addAccount}
-              onUpdateAccount={updateAccount}
+              onUpdateAccount={(id, updates) => {
+                console.log('Disparando update para conta:', id, updates);
+                updateAccount({ id, updates });
+              }}
               onDeleteAccount={deleteAccount}
             />
           </div>
@@ -556,7 +568,14 @@ export default function Index() {
           initialTab={initialFormTab}
           onSubmit={async (tx, _customInstallments, applyScope) => {
             if (editingTransaction) {
-              await updateTransaction(editingTransaction.id, tx, tx.cardClosingDay, tx.cardDueDay, editingTransaction.cardId, applyScope);
+              await updateTransaction({
+                id: editingTransaction.id,
+                updates: tx,
+                cardClosingDay: tx.cardClosingDay,
+                cardDueDay: tx.cardDueDay,
+                currentCardId: editingTransaction.cardId,
+                applyScope
+              });
             } else {
               await addTransaction(tx as any);
             }
@@ -580,7 +599,7 @@ export default function Index() {
         <GoalForm
           initialData={editingGoal}
           onSubmit={async (goal) => {
-            if (editingGoal) await updateSavingsGoal(editingGoal.id, goal);
+            if (editingGoal) await updateSavingsGoal({ id: editingGoal.id, updates: goal });
             else await addSavingsGoal(goal);
             setShowGoalForm(false);
             setEditingGoal(undefined);

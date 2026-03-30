@@ -40,10 +40,19 @@ export function useUpdateAccount() {
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string, updates: Partial<Account> }) => {
-      const payload: any = { ...updates };
-      if (updates.accountType) payload.account_type = updates.accountType;
+      const payload: any = {};
+
+      if (updates.name !== undefined) payload.name = updates.name;
+      if (updates.institution !== undefined) {
+        payload.institution = updates.institution;
+        payload.bank = updates.institution;
+      }
+      if (updates.color !== undefined) payload.color = updates.color;
+      if (updates.accountType !== undefined) payload.account_type = updates.accountType;
       if (updates.hasOverdraft !== undefined) payload.has_overdraft = updates.hasOverdraft;
       if (updates.overdraftLimit !== undefined) payload.overdraft_limit = updates.overdraftLimit;
+      if (updates.monthlyYieldRate !== undefined) payload.monthly_yield_rate = updates.monthlyYieldRate;
+      if (updates.icon !== undefined) payload.icon = updates.icon;
 
       const { error } = await supabase.from('accounts').update(payload).eq('id', id);
       if (error) throw error;

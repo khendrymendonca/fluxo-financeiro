@@ -224,8 +224,8 @@ function useFinanceProvider() {
     selectAll,
 
     addTransaction: addTransactionMutation.mutateAsync,
-    updateTransaction: (id: string, updates: Partial<Transaction>, cardClosingDay?: number, cardDueDay?: number, currentCardId?: string | null, applyScope?: 'this' | 'future' | 'all') =>
-      updateTransactionMutation.mutateAsync({ id, updates, cardClosingDay, cardDueDay, currentCardId, applyScope } as any),
+    updateTransaction: (data: { id: string, updates: Partial<Transaction>, cardClosingDay?: number, cardDueDay?: number, currentCardId?: string | null, applyScope?: 'this' | 'future' | 'all' }) =>
+      updateTransactionMutation.mutateAsync(data as any),
     deleteTransaction: (transaction: Transaction, scope: 'this' | 'future' | 'all' = 'this') =>
       deleteTransactionMutation.mutateAsync({ transaction, applyScope: scope }),
     togglePaid: togglePaidMutation.mutateAsync,
@@ -247,22 +247,22 @@ function useFinanceProvider() {
     isDeletingDebt: deleteDebtMutation.isPending,
 
     addAccount: addAccountMutation.mutateAsync,
-    updateAccount: (id: string, updates: Partial<Account>) => updateAccountMutation.mutateAsync({ id, updates }),
+    updateAccount: (data: { id: string, updates: Partial<Account> }) => updateAccountMutation.mutateAsync(data),
     deleteAccount: deleteAccountMutation.mutateAsync,
     transferBetweenAccounts: (from: string, to: string, amount: number, desc: string, date: string, toType: 'account' | 'card' = 'account', invoiceMonthYear?: string) =>
       transferMutation.mutateAsync({ from, to, amount: Number(amount), description: desc, date, type: toType, invoiceMonthYear } as any),
 
     addCreditCard: addCardMutation.mutateAsync,
-    updateCreditCard: (id: string, updates: Partial<CreditCard>) => updateCardMutation.mutateAsync({ id, updates }),
+    updateCreditCard: (data: { id: string, updates: Partial<CreditCard> }) => updateCardMutation.mutateAsync(data),
     deleteCreditCard: deleteCardMutation.mutateAsync,
 
     addSavingsGoal: addGoalMutation.mutateAsync,
-    updateSavingsGoal: (id: string, updates: Partial<SavingsGoal>) => updateGoalMutation.mutateAsync({ id, updates }),
+    updateSavingsGoal: (data: { id: string, updates: Partial<SavingsGoal> }) => updateGoalMutation.mutateAsync(data),
     deleteSavingsGoal: deleteGoalMutation.mutateAsync,
     depositToGoal: (goalId: string, amount: number, accountId: string) => depositGoalMutation.mutateAsync({ id: goalId, amount, accountId, goalName: '' }),
 
     addDebt: addDebtMutation.mutateAsync,
-    updateDebt: (id: string, updates: Partial<Debt>) => updateDebtMutation.mutateAsync({ id, updates }),
+    updateDebt: (data: { id: string, updates: Partial<Debt> }) => updateDebtMutation.mutateAsync(data),
     deleteDebt: deleteDebtMutation.mutateAsync,
 
     fetchInitialData: async () => { },
