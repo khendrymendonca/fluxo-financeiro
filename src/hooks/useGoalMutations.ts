@@ -14,14 +14,18 @@ export function useAddGoal() {
     mutationFn: async (goal: Omit<SavingsGoal, 'id' | 'userId'>) => {
       if (!user) throw new Error('Utilizador não autenticado');
 
-      const payload = {
+      const payload: any = {
         user_id: user.id,
         name: goal.name,
         target_amount: goal.targetAmount,
         current_amount: goal.currentAmount || 0,
         deadline: goal.deadline,
         color: goal.color,
-        icon: goal.icon
+        icon: goal.icon,
+        project_type: goal.projectType || 'projeto',
+        purpose: goal.purpose,
+        dream_start_date: goal.dreamStartDate,
+        items: goal.items || []
       };
 
       const { data, error } = await supabase.from('savings_goals').insert(payload).select();
@@ -46,8 +50,29 @@ export function useUpdateGoal() {
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string, updates: Partial<SavingsGoal> }) => {
       const payload: any = { ...updates };
-      if (updates.targetAmount !== undefined) payload.target_amount = updates.targetAmount;
-      if (updates.currentAmount !== undefined) payload.current_amount = updates.currentAmount;
+      if (updates.targetAmount !== undefined) {
+        payload.target_amount = updates.targetAmount;
+        delete payload.targetAmount;
+      }
+      if (updates.currentAmount !== undefined) {
+        payload.current_amount = updates.currentAmount;
+        delete payload.currentAmount;
+      }
+      if (updates.projectType !== undefined) {
+        payload.project_type = updates.projectType;
+        delete payload.projectType;
+      }
+      if (updates.purpose !== undefined) {
+        payload.purpose = updates.purpose;
+        delete payload.purpose;
+      }
+      if (updates.dreamStartDate !== undefined) {
+        payload.dream_start_date = updates.dreamStartDate;
+        delete payload.dreamStartDate;
+      }
+      if (updates.items !== undefined) {
+        payload.items = updates.items;
+      }
 
       const { error } = await supabase.from('savings_goals').update(payload).eq('id', id);
       if (error) throw error;

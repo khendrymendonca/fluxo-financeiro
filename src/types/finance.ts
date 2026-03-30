@@ -125,6 +125,7 @@ export interface GoalItem {
   value: number;
   paymentMethod: GoalPaymentMethod;
   deadline?: string;
+  completed?: boolean;
 }
 
 export interface SavingsGoal {
@@ -139,6 +140,10 @@ export interface SavingsGoal {
   // ✅ ADICIONADO: vínculo com conta/caixinha real
   accountId?: string;
   items?: GoalItem[];
+  projectType?: 'sonho' | 'projeto';
+  purpose?: string;
+  dreamStartDate?: string;
+  created_at?: string;
 }
 
 export interface FinanceState {
