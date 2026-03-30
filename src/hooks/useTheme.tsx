@@ -23,8 +23,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         const root = window.document.documentElement;
 
         const applyTheme = () => {
-            root.classList.remove('dark', 'amoled');
-            
+            root.classList.remove('dark', 'amoled', 'theme-amoled');
+
             let effectiveTheme = theme;
             if (theme === 'system') {
                 effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -33,7 +33,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             if (effectiveTheme === 'dark') {
                 root.classList.add('dark');
             } else if (effectiveTheme === 'amoled') {
-                root.classList.add('dark', 'amoled');
+                root.classList.add('dark', 'theme-amoled');
             }
         };
 

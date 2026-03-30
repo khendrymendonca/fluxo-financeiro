@@ -56,7 +56,7 @@ export function MobileNav({ currentView, onNavigate }: MobileNavProps) {
             >
               <div className={cn(
                 "p-1.5 rounded-xl transition-colors",
-                isActive && "bg-primary-light"
+                isActive && "bg-primary/10"
               )}>
                 <Icon className="w-5 h-5" />
               </div>

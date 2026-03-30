@@ -20,7 +20,7 @@ export function BottomNavigation({ activeView, onViewChange }: BottomNavigationP
     ];
 
     return (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md border-t border-gray-100 dark:border-zinc-800 pb-safe shadow-lg dark:shadow-none">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-background/80 backdrop-blur-md border-t border-gray-100 dark:border-zinc-800 pb-safe shadow-lg dark:shadow-none">
             <div className="flex justify-around items-center h-16 px-2">
                 {items.map((item) => {
                     const isActive = activeView === item.id;
@@ -41,7 +41,7 @@ export function BottomNavigation({ activeView, onViewChange }: BottomNavigationP
                                 "p-1.5 rounded-full transition-colors",
                                 isActive ? "bg-primary/10" : "bg-transparent"
                             )}>
-                                <Icon className={cn("w-5 h-5", isActive ? "stroke-[2.5px]" : "stroke-[2px]")} />
+                                <Icon className={cn("w-5 h-5", isActive ? "text-primary stroke-[2.5px]" : "stroke-[2px]")} />
                             </div>
                             <span className={cn(
                                 "text-[10px] font-black uppercase tracking-widest",
