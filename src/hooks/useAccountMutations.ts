@@ -48,25 +48,30 @@ export function useUpdateAccount() {
     mutationFn: async ({ id, updates }: { id: string, updates: Partial<Account> }) => {
       const supabasePayload: any = { ...updates };
 
-      // Tradução para snake_case
-      if (updates.institution !== undefined) {
-        supabasePayload.institution = updates.institution;
-        supabasePayload.bank = updates.institution;
+      // 1. Conversão de camelCase para snake_case (Padrão do Postgres)
+      if (supabasePayload.accountType !== undefined) {
+        supabasePayload.account_type = supabasePayload.accountType;
       }
-      if (updates.accountType !== undefined) supabasePayload.account_type = updates.accountType;
-      if (updates.hasOverdraft !== undefined) supabasePayload.has_overdraft = updates.hasOverdraft;
-      if (updates.overdraftLimit !== undefined) supabasePayload.overdraft_limit = updates.overdraftLimit;
-      if ((updates as any).monthlyYieldRate !== undefined) supabasePayload.monthly_yield_rate = (updates as any).monthlyYieldRate;
+      if (supabasePayload.hasOverdraft !== undefined) {
+        supabasePayload.has_overdraft = supabasePayload.hasOverdraft;
+      }
+      if (supabasePayload.overdraftLimit !== undefined) {
+        supabasePayload.overdraft_limit = supabasePayload.overdraftLimit;
+      }
+      if (supabasePayload.monthlyYieldRate !== undefined) {
+        supabasePayload.monthly_yield_rate = supabasePayload.monthlyYieldRate;
+      }
 
-      // Limpeza do camelCase para evitar o Erro 400
+      // 2. Extermínio de colunas camelCase e colunas fantasmas que causam o Erro 400
       delete supabasePayload.accountType;
       delete supabasePayload.hasOverdraft;
       delete supabasePayload.overdraftLimit;
       delete supabasePayload.monthlyYieldRate;
-      delete supabasePayload.monthlyYieldRate; // Garantia extra
-      if ((supabasePayload as any).institution) {
-        // Mantemos institution e bank pois são snake_case ou simples, 
-        // mas o PostgREST pode ser chato. Se o banco tem institution e bank, ok.
+      delete supabasePayload.institution; // O Supabase usa apenas 'bank'
+
+      // 3. Trava anti-string vazia (Se o usuário apagar o apelido)
+      if (supabasePayload.name !== undefined && supabasePayload.name.trim() === '') {
+        supabasePayload.name = supabasePayload.bank || 'Conta Principal';
       }
 
       const { error } = await supabase.from('accounts').update(supabasePayload).eq('id', id);

@@ -176,8 +176,7 @@ export function AccountsManager({
       }
 
       const accountDataToUpdate = {
-        name: finalName,
-        institution: accountInstitution,
+        name: accountName, // Deixe o hook tratar se estiver vazio
         bank: accountInstitution,
         color: accountColor,
         accountType: accountType as AccountType,
