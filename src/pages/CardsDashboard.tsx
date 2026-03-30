@@ -239,17 +239,17 @@ export default function CardsDashboard() {
         </div>
       ) : (
         <>
-          {/* MOBILE LAYOUT: Carousel + Structured Details */}
-          <div className="block lg:hidden space-y-6 px-4">
-            {/* Snap Carousel Wrapper */}
-            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 w-full no-scrollbar -mx-4 px-4">
+          {/* MOBILE LAYOUT (ESTILO ITAÚ/NUBANK) */}
+          <div className="block lg:hidden space-y-2">
+            {/* 1. Carrossel de Cartões (Topo) */}
+            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 px-4 pb-6 w-full no-scrollbar">
               {creditCards.map(card => {
                 const cardUsed = getCardUsedLimit(card.id);
                 const cardAvailable = card.limit - cardUsed;
                 const isSelected = selectedCardId === card.id;
                 
                 return (
-                  <div key={card.id} className="snap-center min-w-[85vw] max-w-sm shrink-0">
+                  <div key={card.id} className="snap-center min-w-[85vw] max-w-[340px] shrink-0">
                     <CreditCardVisual
                       card={card}
                       usedLimit={cardUsed}
@@ -270,55 +270,104 @@ export default function CardsDashboard() {
               })}
             </div>
             
-            {/* Structured Info Card Mobile */}
+            {/* 2. Painel de Fatura e Limite (Card de Resumo) */}
             {selectedCard && (
-              <div className="bg-card border border-border/50 rounded-[2rem] p-6 shadow-sm space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Fatura Atual</p>
-                    <p className="text-2xl font-black tabular-nums">{formatCurrency(currentInvoiceTotal)}</p>
+              <div className="px-4 space-y-4">
+                <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm space-y-5">
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Fatura atual</p>
+                    <h2 className="text-3xl font-black text-primary tabular-nums">
+                      {formatCurrency(currentInvoiceTotal)}
+                    </h2>
+                    {dynamicStatus && (
+                      <span className={cn("text-[10px] font-black uppercase px-2 py-0.5 rounded bg-muted", dynamicStatus.color)}>
+                        {dynamicStatus.text}
+                      </span>
+                    )}
                   </div>
-                  {dynamicStatus && (
-                    <span className={cn("uppercase tracking-widest text-[9px] px-2 py-1 rounded-md font-bold", dynamicStatus.color)}>
-                      {dynamicStatus.text}
-                    </span>
-                  )}
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-end">
+                      <p className="text-xs text-muted-foreground font-medium">
+                        Limite disponível <span className="text-foreground font-bold">{formatCurrency(stats.available)}</span>
+                      </p>
+                      <span className="text-[10px] font-black text-muted-foreground">{stats.percentUsed.toFixed(0)}%</span>
+                    </div>
+                    <Progress value={stats.percentUsed} className="h-1.5" />
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2 border-t border-border/40 text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3 text-primary" />
+                      <span>Vence dia {selectedCard.dueDay}</span>
+                    </div>
+                    <span>Fechamento dia {selectedCard.closingDay}</span>
+                  </div>
                 </div>
 
-                <div className="space-y-3 pt-4 border-t border-border/40">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground font-medium">Vencimento</span>
-                    <span className="font-bold flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-primary" />
-                      Dia {selectedCard.dueDay}
-                    </span>
+                {/* 3. Botões de Ação Rápida (Quick Actions) */}
+                <div className="grid grid-cols-3 gap-3">
+                  <Button variant="outline" className="flex flex-col h-20 rounded-2xl gap-2 border-border/40 hover:bg-primary/5 hover:border-primary/30" onClick={() => setShowEditCard(true)}>
+                    <Pencil className="w-4 h-4 text-primary" />
+                    <span className="text-[10px] font-bold uppercase tracking-tighter">Ajustar</span>
+                  </Button>
+                  <Button variant="outline" className="flex flex-col h-20 rounded-2xl gap-2 border-border/40 hover:bg-primary/5 hover:border-primary/30">
+                    <Receipt className="w-4 h-4 text-primary" />
+                    <span className="text-[10px] font-bold uppercase tracking-tighter">Pagar</span>
+                  </Button>
+                  <Button variant="outline" className="flex flex-col h-20 rounded-2xl gap-2 border-border/40 hover:bg-primary/5 hover:border-primary/30" onClick={() => {
+                    const el = document.getElementById('transactions-list');
+                    el?.scrollIntoView({ behavior: 'smooth' });
+                  }}>
+                    <ArrowRight className="w-4 h-4 text-primary" />
+                    <span className="text-[10px] font-bold uppercase tracking-tighter">Extrato</span>
+                  </Button>
+                </div>
+
+                {/* 4. Lista de Lançamentos */}
+                <div id="transactions-list" className="pt-4 space-y-4">
+                  <div className="flex items-center justify-between px-1">
+                    <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Lançamentos recentes</h3>
+                    <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-xl">
+                      <Button variant="ghost" size="icon" onClick={() => setViewDate(prev => subMonths(prev, 1))} className="h-7 w-7 rounded-lg">{"<"}</Button>
+                      <p className="text-[9px] font-black uppercase w-20 text-center">{format(viewDate, 'MMM yy', { locale: ptBR })}</p>
+                      <Button variant="ghost" size="icon" onClick={() => setViewDate(prev => addMonths(prev, 1))} className="h-7 w-7 rounded-lg">{">"}</Button>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground font-medium">Uso do Limite</span>
-                    <span className="font-bold">{stats.percentUsed.toFixed(0)}%</span>
-                  </div>
-                  <Progress value={stats.percentUsed} className="h-1.5" />
-                  <div className="flex justify-between items-center text-[10px] pt-1">
-                    <span className="text-muted-foreground font-medium italic">Disponível: {formatCurrency(stats.available)}</span>
-                    <Button 
-                      variant="link" 
-                      className="h-auto p-0 text-primary font-bold uppercase tracking-tighter"
-                      onClick={() => setShowEditCard(true)}
-                    >
-                      Ajustar Limite
-                    </Button>
+
+                  <div className="space-y-2 pb-10">
+                    {currentInvoiceTransactions.length === 0 ? (
+                      <div className="text-center py-12 bg-muted/10 rounded-3xl border border-dashed border-border/40">
+                        <p className="text-muted-foreground italic text-xs">Nenhum lançamento.</p>
+                      </div>
+                    ) : (
+                      currentInvoiceTransactions.map(t => {
+                        const category = categories.find(c => c.id === t.categoryId);
+                        return (
+                          <div key={t.id} className="flex items-center justify-between p-4 rounded-2xl bg-card border border-border/30 active:scale-[0.98] transition-all">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground">
+                                <Receipt className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <p className="font-bold text-xs leading-tight">{t.description}</p>
+                                <p className="text-[10px] text-muted-foreground font-medium uppercase">{format(parseLocalDate(t.date), 'dd MMM')}</p>
+                              </div>
+                            </div>
+                            <p className={cn("font-black text-xs tabular-nums", t.type === 'income' ? 'text-emerald-500' : 'text-foreground')}>
+                              {t.type === 'income' ? '-' : ''}{formatCurrency(t.amount)}
+                            </p>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               </div>
             )}
-
-            {/* Transactions List Below */}
-            <div className="flex flex-col">
-              {renderCardDetails()}
-            </div>
           </div>
 
-          {/* DESKTOP LAYOUT: Master-Detail Grid */}
+          {/* DESKTOP LAYOUT (MASTER-DETAIL PRESERVADO) */}
           <div className="hidden lg:grid lg:grid-cols-12 gap-8 items-start px-8">
             {/* Master: Card List (Left Column) */}
             <div className="lg:col-span-4 flex flex-col gap-4">
