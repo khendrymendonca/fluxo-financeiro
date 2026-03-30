@@ -91,6 +91,119 @@ export default function CardsDashboard() {
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
+  const renderCardDetails = () => {
+    if (!selectedCard) return null;
+    return (
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 lg:slide-in-from-right-4 duration-500">
+        {/* Cabeçalho de Fatura */}
+        <div className="bg-card rounded-[2.5rem] p-8 border border-border/40 shadow-sm dark:shadow-none relative overflow-hidden">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="space-y-1">
+              <p className="text-[10px] md:text-xs uppercase font-black text-muted-foreground tracking-[0.2em]">Fatura Atual • {format(viewDate, 'MMMM yyyy', { locale: ptBR })}</p>
+              <h2 className="text-4xl md:text-6xl font-black tracking-tighter transition-all tabular-nums">
+                {formatCurrency(currentInvoiceTotal)}
+              </h2>
+              <div className="flex items-center gap-3 text-xs font-bold text-muted-foreground mt-2">
+                <Calendar className="w-4 h-4 text-primary" />
+                <span>Vence dia {selectedCard.dueDay}</span>
+                {dynamicStatus && (
+                  <span className={cn("uppercase tracking-widest text-[10px] px-2 py-0.5 rounded-md bg-muted", dynamicStatus.color)}>
+                    {dynamicStatus.text}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 min-w-[200px]">
+               <div className="space-y-1.5">
+                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                    <span className="text-muted-foreground">Uso do Limite</span>
+                    <span className="text-foreground">{stats.percentUsed.toFixed(0)}%</span>
+                  </div>
+                  <Progress value={stats.percentUsed} className="h-2" />
+                  <p className="text-[10px] text-muted-foreground font-medium text-right">
+                    {formatCurrency(stats.available)} disponíveis de {formatCurrency(stats.limit)}
+                  </p>
+               </div>
+               <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full rounded-xl font-bold gap-2 text-xs h-10"
+                  onClick={() => setShowEditCard(true)}
+                >
+                  <Pencil className="w-3.5 h-3.5" /> Ajustar Limite
+                </Button>
+            </div>
+          </div>
+          
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
+        </div>
+
+        {/* Lista de Gastos */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <h3 className="text-[10px] uppercase font-black text-muted-foreground tracking-[0.3em]">Lançamentos da Fatura</h3>
+            <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-xl border border-border/20">
+              <Button variant="ghost" size="icon" onClick={() => setViewDate(prev => subMonths(prev, 1))} className="h-8 w-8 rounded-lg hover:bg-background">{"<"}</Button>
+              <p className="text-[10px] font-black uppercase tracking-widest w-28 text-center">{format(viewDate, 'MMM yyyy', { locale: ptBR })}</p>
+              <Button variant="ghost" size="icon" onClick={() => setViewDate(prev => addMonths(prev, 1))} className="h-8 w-8 rounded-lg hover:bg-background">{">"}</Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2">
+            {currentInvoiceTransactions.length === 0 ? (
+              <div className="text-center py-20 bg-muted/10 rounded-[2.5rem] border border-dashed border-border/40">
+                <Receipt className="w-12 h-12 mx-auto mb-4 opacity-5 text-foreground" />
+                <p className="text-muted-foreground italic text-sm">Nenhum gasto nesta fatura.</p>
+              </div>
+            ) : (
+              currentInvoiceTransactions.map(t => {
+                const category = categories.find(c => c.id === t.categoryId);
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => {
+                      if (t.installmentTotal && t.installmentNumber && t.installmentGroupId) {
+                        setTransactionToAnticipate(t);
+                      }
+                    }}
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-2xl bg-card border border-border/30 hover:border-primary/30 transition-all group",
+                      t.installmentTotal && "cursor-pointer"
+                    )}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                        <Receipt className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm leading-tight mb-0.5 group-hover:text-primary transition-colors">{t.description}</p>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">
+                          <span>{format(parseLocalDate(t.date), 'dd MMM')}</span>
+                          {category && <span className="text-primary/50">• {category.name}</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={cn("font-black text-sm tabular-nums", t.type === 'income' ? 'text-emerald-500' : 'text-foreground')}>
+                        {t.type === 'income' ? '-' : ''}{formatCurrency(t.amount)}
+                      </p>
+                      {t.installmentTotal && (
+                        <p className="text-[8px] text-primary font-black uppercase flex items-center gap-1 justify-end mt-0.5">
+                          Parcela {t.installmentNumber}/{t.installmentTotal} <span className="bg-primary/10 px-1 rounded">Antecipar?</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 animate-fade-in pb-24 w-full pt-2 max-w-7xl mx-auto px-4 md:px-8">
       <PageHeader title="Meus Cartões" icon={CreditCard}>
@@ -113,150 +226,81 @@ export default function CardsDashboard() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Master: Lista de Cartões (Coluna Esquerda) */}
-          <div className="lg:col-span-4 flex flex-col gap-4 overflow-x-auto lg:overflow-x-visible no-scrollbar pb-4 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0 flex-row lg:flex-col snap-x snap-mandatory">
-            {creditCards.map(card => {
-              const cardUsed = getCardUsedLimit(card.id);
-              const cardAvailable = card.limit - cardUsed;
-              const isSelected = selectedCardId === card.id;
-              
-              return (
-                <div key={card.id} className="min-w-[85vw] lg:min-w-0 snap-center">
-                  <CreditCardVisual
-                    card={card}
-                    usedLimit={cardUsed}
-                    availableLimit={cardAvailable}
-                    isSelected={isSelected}
-                    onClick={() => setSelectedCardId(card.id)}
-                    className={cn(isSelected ? "ring-offset-4 ring-primary" : "opacity-80 grayscale-[30%] hover:grayscale-0 hover:opacity-100")}
-                    invoiceStatus={getInvoiceStatusDisplay(
-                      card,
-                      viewDate,
-                      transactions.some(t => t.cardId === card.id && t.isInvoicePayment && t.invoiceMonthYear === format(viewDate, 'yyyy-MM')),
-                      transactions.filter(t => t.cardId === card.id && !t.isVirtual && t.categoryId !== 'card-payment' && t.invoiceMonthYear === format(viewDate, 'yyyy-MM'))
-                        .reduce((sum, t) => sum + (t.type === 'income' ? -t.amount : t.amount), 0)
-                    )}
-                  />
-                </div>
-              );
-            })}
+        <>
+          {/* MOBILE LAYOUT: Carousel + Vertical Details */}
+          <div className="block lg:hidden space-y-8">
+            {/* Snap Carousel Wrapper */}
+            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-6 w-full no-scrollbar -mx-4 px-4">
+              {creditCards.map(card => {
+                const cardUsed = getCardUsedLimit(card.id);
+                const cardAvailable = card.limit - cardUsed;
+                const isSelected = selectedCardId === card.id;
+                
+                return (
+                  <div key={card.id} className="snap-center min-w-[85vw] max-w-sm shrink-0">
+                    <CreditCardVisual
+                      card={card}
+                      usedLimit={cardUsed}
+                      availableLimit={cardAvailable}
+                      isSelected={isSelected}
+                      onClick={() => setSelectedCardId(card.id)}
+                      className={cn(!isSelected && "opacity-80 grayscale-[30%]")}
+                      invoiceStatus={getInvoiceStatusDisplay(
+                        card,
+                        viewDate,
+                        transactions.some(t => t.cardId === card.id && t.isInvoicePayment && t.invoiceMonthYear === format(viewDate, 'yyyy-MM')),
+                        transactions.filter(t => t.cardId === card.id && !t.isVirtual && t.categoryId !== 'card-payment' && t.invoiceMonthYear === format(viewDate, 'yyyy-MM'))
+                          .reduce((sum, t) => sum + (t.type === 'income' ? -t.amount : t.amount), 0)
+                      )}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* Details below carousel */}
+            <div className="flex flex-col">
+              {renderCardDetails()}
+            </div>
           </div>
 
-          {/* Detail: Informações do Cartão Selecionado (Coluna Direita) */}
-          <div className="lg:col-span-8 space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-            {selectedCard && (
-              <>
-                {/* Cabeçalho de Fatura */}
-                <div className="bg-card rounded-[2.5rem] p-8 border border-border/40 shadow-sm dark:shadow-none relative overflow-hidden">
-                  <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-                    <div className="space-y-1">
-                      <p className="text-[10px] md:text-xs uppercase font-black text-muted-foreground tracking-[0.2em]">Fatura Atual • {format(viewDate, 'MMMM yyyy', { locale: ptBR })}</p>
-                      <h2 className="text-4xl md:text-6xl font-black tracking-tighter transition-all tabular-nums">
-                        {formatCurrency(currentInvoiceTotal)}
-                      </h2>
-                      <div className="flex items-center gap-3 text-xs font-bold text-muted-foreground mt-2">
-                        <Calendar className="w-4 h-4 text-primary" />
-                        <span>Vence dia {selectedCard.dueDay}</span>
-                        {dynamicStatus && (
-                          <span className={cn("uppercase tracking-widest text-[10px] px-2 py-0.5 rounded-md bg-muted", dynamicStatus.color)}>
-                            {dynamicStatus.text}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-3 min-w-[200px]">
-                       <div className="space-y-1.5">
-                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                            <span className="text-muted-foreground">Uso do Limite</span>
-                            <span className="text-foreground">{stats.percentUsed.toFixed(0)}%</span>
-                          </div>
-                          <Progress value={stats.percentUsed} className="h-2" />
-                          <p className="text-[10px] text-muted-foreground font-medium text-right">
-                            {formatCurrency(stats.available)} disponíveis de {formatCurrency(stats.limit)}
-                          </p>
-                       </div>
-                       <Button
-                          variant="secondary"
-                          size="sm"
-                          className="w-full rounded-xl font-bold gap-2 text-xs h-10"
-                          onClick={() => setShowEditCard(true)}
-                        >
-                          <Pencil className="w-3.5 h-3.5" /> Ajustar Limite
-                        </Button>
-                    </div>
+          {/* DESKTOP LAYOUT: Master-Detail Grid */}
+          <div className="hidden lg:grid lg:grid-cols-12 gap-8 items-start">
+            {/* Master: Card List (Left Column) */}
+            <div className="lg:col-span-4 flex flex-col gap-4">
+              {creditCards.map(card => {
+                const cardUsed = getCardUsedLimit(card.id);
+                const cardAvailable = card.limit - cardUsed;
+                const isSelected = selectedCardId === card.id;
+                
+                return (
+                  <div key={card.id} className="w-full">
+                    <CreditCardVisual
+                      card={card}
+                      usedLimit={cardUsed}
+                      availableLimit={cardAvailable}
+                      isSelected={isSelected}
+                      onClick={() => setSelectedCardId(card.id)}
+                      className={cn(isSelected ? "ring-offset-4 ring-primary" : "opacity-80 grayscale-[30%] hover:grayscale-0 hover:opacity-100")}
+                      invoiceStatus={getInvoiceStatusDisplay(
+                        card,
+                        viewDate,
+                        transactions.some(t => t.cardId === card.id && t.isInvoicePayment && t.invoiceMonthYear === format(viewDate, 'yyyy-MM')),
+                        transactions.filter(t => t.cardId === card.id && !t.isVirtual && t.categoryId !== 'card-payment' && t.invoiceMonthYear === format(viewDate, 'yyyy-MM'))
+                          .reduce((sum, t) => sum + (t.type === 'income' ? -t.amount : t.amount), 0)
+                      )}
+                    />
                   </div>
-                  
-                  {/* Glossy back pattern */}
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
-                </div>
+                );
+              })}
+            </div>
 
-                {/* Lista de Gastos */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between px-2">
-                    <h3 className="text-[10px] uppercase font-black text-muted-foreground tracking-[0.3em]">Lançamentos da Fatura</h3>
-                    <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-xl border border-border/20">
-                      <Button variant="ghost" size="icon" onClick={() => setViewDate(prev => subMonths(prev, 1))} className="h-8 w-8 rounded-lg hover:bg-background">{"<"}</Button>
-                      <p className="text-[10px] font-black uppercase tracking-widest w-28 text-center">{format(viewDate, 'MMM yyyy', { locale: ptBR })}</p>
-                      <Button variant="ghost" size="icon" onClick={() => setViewDate(prev => addMonths(prev, 1))} className="h-8 w-8 rounded-lg hover:bg-background">{">"}</Button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-2">
-                    {currentInvoiceTransactions.length === 0 ? (
-                      <div className="text-center py-20 bg-muted/10 rounded-[2.5rem] border border-dashed border-border/40">
-                        <Receipt className="w-12 h-12 mx-auto mb-4 opacity-5 text-foreground" />
-                        <p className="text-muted-foreground italic text-sm">Nenhum gasto nesta fatura.</p>
-                      </div>
-                    ) : (
-                      currentInvoiceTransactions.map(t => {
-                        const category = categories.find(c => c.id === t.categoryId);
-                        return (
-                          <div
-                            key={t.id}
-                            onClick={() => {
-                              if (t.installmentTotal && t.installmentNumber && t.installmentGroupId) {
-                                setTransactionToAnticipate(t);
-                              }
-                            }}
-                            className={cn(
-                              "flex items-center justify-between p-4 rounded-2xl bg-card border border-border/30 hover:border-primary/30 transition-all group",
-                              t.installmentTotal && "cursor-pointer"
-                            )}
-                          >
-                            <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                                <Receipt className="w-5 h-5" />
-                              </div>
-                              <div>
-                                <p className="font-bold text-sm leading-tight mb-0.5 group-hover:text-primary transition-colors">{t.description}</p>
-                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">
-                                  <span>{format(parseLocalDate(t.date), 'dd MMM')}</span>
-                                  {category && <span className="text-primary/50">• {category.name}</span>}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className={cn("font-black text-sm tabular-nums", t.type === 'income' ? 'text-emerald-500' : 'text-foreground')}>
-                                {t.type === 'income' ? '-' : ''}{formatCurrency(t.amount)}
-                              </p>
-                              {t.installmentTotal && (
-                                <p className="text-[8px] text-primary font-black uppercase flex items-center gap-1 justify-end mt-0.5">
-                                  Parcela {t.installmentNumber}/{t.installmentTotal} <span className="bg-primary/10 px-1 rounded">Antecipar?</span>
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
+            {/* Detail: Card Info (Right Column) */}
+            <div className="lg:col-span-8">
+              {renderCardDetails()}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {showAddCard && (
