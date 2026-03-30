@@ -1,10 +1,10 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CreditCard } from '@/types/finance';
-import { X, CalendarClock } from 'lucide-react';
+import { X, CalendarClock, Sparkles } from 'lucide-react';
 import { ColorSelector } from '@/components/ui/ColorSelector';
 
 interface EditCardDialogProps {
@@ -38,7 +38,6 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
         e.preventDefault();
         const newDue = parseInt(dueDay);
         const newClosing = parseInt(closingDay);
-        // âœ… FIX: let â†’ const (variável nunca é reatribuída)
         const updatedHistory = card.history ? [...card.history] : [];
 
         if (newDue !== card.dueDay || newClosing !== card.closingDay) {
@@ -71,66 +70,71 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/20 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-card rounded-3xl shadow-xl w-full max-w-md flex flex-col p-6 animate-in zoom-in-95 duration-200">
+            <div className="bg-card rounded-3xl shadow-xl w-full max-w-md md:max-w-lg flex flex-col p-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-semibold">Editar Cartão</h2>
+                    <h2 className="text-xl font-bold tracking-tight">Editar Cartão</h2>
                     <button onClick={onClose} className="p-2 rounded-xl hover:bg-muted transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Nome do Cartão</Label>
+                            <Input value={name} onChange={e => setName(e.target.value)} className="h-11 rounded-xl" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Banco</Label>
+                            <Input value={bank} onChange={e => setBank(e.target.value)} className="h-11 rounded-xl" />
+                        </div>
+                    </div>
+                    
                     <div className="space-y-2">
-                        <Label>Nome do Cartão</Label>
-                        <Input value={name} onChange={e => setName(e.target.value)} />
+                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Limite (R$)</Label>
+                        <Input type="number" value={limit} onChange={e => setLimit(e.target.value)} className="h-11 rounded-xl font-bold" />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>Banco</Label>
-                            <Input value={bank} onChange={e => setBank(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Limite (R$)</Label>
-                            <Input type="number" value={limit} onChange={e => setLimit(e.target.value)} />
-                        </div>
+
+                    <div className="bg-muted/20 p-4 rounded-2xl border border-dashed border-border">
+                        <ColorSelector
+                            label="Estética do Cartão"
+                            selectedColor={color}
+                            onSelect={setColor}
+                        />
                     </div>
-                    <ColorSelector
-                        label="Cor do Cartão"
-                        selectedColor={color}
-                        onSelect={setColor}
-                    />
-                    <div className="p-4 bg-muted/30 rounded-xl space-y-4 border border-border">
+
+                    <div className="p-5 bg-muted/30 rounded-2xl space-y-4 border border-border">
                         <div className="flex items-center gap-2 mb-2">
                             <CalendarClock className="w-4 h-4 text-primary" />
-                            <span className="font-medium text-sm">Configuração de Fatura</span>
+                            <span className="font-bold text-xs uppercase tracking-widest text-primary">Configuração de Fatura</span>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>Dia Fechamento</Label>
-                                <Input type="number" min="1" max="31" value={closingDay} onChange={e => setClosingDay(e.target.value)} />
-                                <p className="text-[10px] text-primary font-bold">
-                                    âœ¨ Melhor dia para compra: {(parseInt(closingDay) % 31) + 1}
+                                <Label className="text-xs font-bold opacity-70">Dia Fechamento</Label>
+                                <Input type="number" min="1" max="31" value={closingDay} onChange={e => setClosingDay(e.target.value)} className="h-11 rounded-xl bg-background" />
+                                <p className="text-[10px] text-primary font-bold flex items-center gap-1 mt-1">
+                                    <Sparkles className="w-3 h-3" /> Melhor dia: {(parseInt(closingDay) % 31) + 1}
                                 </p>
                             </div>
                             <div className="space-y-2">
-                                <Label>Dia Vencimento</Label>
-                                <Input type="number" min="1" max="31" value={dueDay} onChange={e => setDueDay(e.target.value)} />
+                                <Label className="text-xs font-bold opacity-70">Dia Vencimento</Label>
+                                <Input type="number" min="1" max="31" value={dueDay} onChange={e => setDueDay(e.target.value)} className="h-11 rounded-xl bg-background" />
                             </div>
                         </div>
                         {showEffectiveDate && (
-                            <div className="pt-2 border-t border-dashed border-border animate-in slide-in-from-top-2">
-                                <Label className="text-primary font-semibold">A partir de quando?</Label>
-                                <p className="text-xs text-muted-foreground mb-2">As faturas anteriores a esta data manterão os dias antigos.</p>
+                            <div className="pt-4 mt-2 border-t border-dashed border-border/50 animate-in slide-in-from-top-2">
+                                <Label className="text-primary font-bold text-xs uppercase">A partir de quando?</Label>
+                                <p className="text-[10px] text-muted-foreground mb-3 leading-tight">As faturas anteriores a esta data manterão os dias antigos.</p>
                                 <Input
                                     type="date"
                                     min={format(new Date(), 'yyyy-MM-dd')}
                                     value={effectiveDate?.split('T')[0] || ''}
                                     onChange={e => setEffectiveDate(e.target.value)}
-                                    className="bg-background"
+                                    className="h-11 rounded-xl bg-background"
                                 />
                             </div>
                         )}
                     </div>
-                    <Button type="submit" className="w-full rounded-xl py-6 font-semibold mt-4">
+                    <Button type="submit" className="w-full h-14 rounded-2xl font-bold text-base shadow-lg shadow-primary/20 mt-2 active:scale-95 transition-transform">
                         Salvar Alterações
                     </Button>
                 </form>
@@ -138,5 +142,3 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
         </div>
     );
 }
-
-

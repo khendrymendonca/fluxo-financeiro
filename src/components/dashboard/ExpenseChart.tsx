@@ -1,4 +1,4 @@
-﻿import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface ExpenseChartProps {
   data: Record<string, number>;
@@ -18,7 +18,6 @@ const COLORS = [
 ];
 
 export function ExpenseChart({ data }: ExpenseChartProps) {
-  // ... (rest of logic)
   const initialChartData = Object.entries(data)
     .filter(([_, value]) => value > 0)
     .map(([categoryName, value]) => ({
@@ -27,19 +26,24 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
     }))
     .sort((a, b) => b.value - a.value);
 
-  const top4 = initialChartData.slice(0, 4);
-  const rest = initialChartData.slice(4);
-  const othersValue = rest.reduce((sum, item) => sum + item.value, 0);
-
-  const chartData = [...top4];
-  if (othersValue > 0) {
-    chartData.push({ name: 'Outros', value: othersValue });
+  let finalChartData: any[] = [];
+  
+  if (initialChartData.length > 3) {
+    const top3 = initialChartData.slice(0, 3);
+    const othersValue = initialChartData.slice(3).reduce((sum, item) => sum + item.value, 0);
+    finalChartData = [
+      ...top3.map((item, index) => ({
+        ...item,
+        color: COLORS[index % COLORS.length]
+      })),
+      { name: 'Outros', value: othersValue, color: '#a1a1aa' } // zinc-400
+    ];
+  } else {
+    finalChartData = initialChartData.map((item, index) => ({
+      ...item,
+      color: COLORS[index % COLORS.length]
+    }));
   }
-
-  const finalChartData = chartData.map((item, index) => ({
-    ...item,
-    color: COLORS[index % COLORS.length],
-  }));
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -48,7 +52,7 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
     }).format(value);
   };
 
-  if (chartData.length === 0) {
+  if (finalChartData.length === 0) {
     return null;
   }
 
@@ -64,30 +68,30 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
     return null;
   };
 
-  const totalValue = chartData.reduce((sum, item) => sum + item.value, 0);
+  const totalValue = finalChartData.reduce((sum, item) => sum + item.value, 0);
 
   return (
     <div className="bg-card rounded-[2rem] p-4 md:p-5 border border-border/50 animate-fade-in h-full flex flex-col w-full transition-all hover:shadow-md hover:border-border">
-      <h3 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+      <h3 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
         <div className="w-1.5 h-4 bg-primary rounded-full shadow-sm shadow-primary/20" />
         Distribuição
       </h3>
 
-      <div className="flex flex-col lg:flex-row items-center gap-6 flex-1 min-h-0">
+      <div className="flex flex-col lg:flex-row items-center gap-4 flex-1 min-h-0">
         {/* Mini Pie */}
-        <div className="w-full lg:w-48 h-48 md:h-[240px] shrink-0">
+        <div className="w-full lg:w-40 h-[180px] shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={finalChartData}
                 cx="50%"
                 cy="50%"
-                innerRadius="65%"
-                outerRadius="90%"
+                innerRadius="72%"
+                outerRadius="95%"
                 paddingAngle={4}
                 dataKey="value"
                 stroke="none"
-                animationDuration={1200}
+                animationDuration={1000}
               >
                 {finalChartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} className="hover:opacity-80 transition-opacity cursor-pointer" />
@@ -102,7 +106,7 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
         <div className="flex-1 w-full space-y-1.5 min-w-0">
           {finalChartData.map((item, idx) => (
             <div key={idx} className="flex items-center gap-2 text-[10px] md:text-xs">
-              <div className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: item.color }} />
+              <div className="w-2 h-2 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: item.color }} />
               <span className="truncate text-muted-foreground font-semibold flex-1 tracking-tight">{item.name}</span>
               <span className="font-black text-foreground tabular-nums opacity-90">
                 {((item.value / totalValue) * 100).toFixed(0)}%
@@ -114,5 +118,3 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
     </div>
   );
 }
-
-
