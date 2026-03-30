@@ -13,16 +13,22 @@ export function useAddAccount() {
     mutationFn: async (account: Omit<Account, 'id' | 'userId'>) => {
       if (!user) throw new Error('Utilizador não autenticado');
 
-      const { data, error } = await supabase.from('accounts').insert({
+      const supabasePayload: any = {
         name: account.name,
         balance: account.balance,
-        account_type: account.accountType,
         color: account.color,
         icon: account.icon,
         user_id: user.id,
-        has_overdraft: account.hasOverdraft,
-        overdraft_limit: account.overdraftLimit
-      }).select();
+        institution: (account as any).institution || (account as any).bank,
+        bank: (account as any).institution || (account as any).bank,
+      };
+
+      if (account.accountType !== undefined) supabasePayload.account_type = account.accountType;
+      if (account.hasOverdraft !== undefined) supabasePayload.has_overdraft = account.hasOverdraft;
+      if (account.overdraftLimit !== undefined) supabasePayload.overdraft_limit = account.overdraftLimit;
+      if ((account as any).monthlyYieldRate !== undefined) supabasePayload.monthly_yield_rate = (account as any).monthlyYieldRate;
+
+      const { data, error } = await supabase.from('accounts').insert(supabasePayload).select();
 
       if (error) throw error;
       return data;
@@ -40,21 +46,30 @@ export function useUpdateAccount() {
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string, updates: Partial<Account> }) => {
-      const payload: any = {};
+      const supabasePayload: any = { ...updates };
 
-      if (updates.name !== undefined) payload.name = updates.name;
+      // Tradução para snake_case
       if (updates.institution !== undefined) {
-        payload.institution = updates.institution;
-        payload.bank = updates.institution;
+        supabasePayload.institution = updates.institution;
+        supabasePayload.bank = updates.institution;
       }
-      if (updates.color !== undefined) payload.color = updates.color;
-      if (updates.accountType !== undefined) payload.account_type = updates.accountType;
-      if (updates.hasOverdraft !== undefined) payload.has_overdraft = updates.hasOverdraft;
-      if (updates.overdraftLimit !== undefined) payload.overdraft_limit = updates.overdraftLimit;
-      if (updates.monthlyYieldRate !== undefined) payload.monthly_yield_rate = updates.monthlyYieldRate;
-      if (updates.icon !== undefined) payload.icon = updates.icon;
+      if (updates.accountType !== undefined) supabasePayload.account_type = updates.accountType;
+      if (updates.hasOverdraft !== undefined) supabasePayload.has_overdraft = updates.hasOverdraft;
+      if (updates.overdraftLimit !== undefined) supabasePayload.overdraft_limit = updates.overdraftLimit;
+      if ((updates as any).monthlyYieldRate !== undefined) supabasePayload.monthly_yield_rate = (updates as any).monthlyYieldRate;
 
-      const { error } = await supabase.from('accounts').update(payload).eq('id', id);
+      // Limpeza do camelCase para evitar o Erro 400
+      delete supabasePayload.accountType;
+      delete supabasePayload.hasOverdraft;
+      delete supabasePayload.overdraftLimit;
+      delete supabasePayload.monthlyYieldRate;
+      delete supabasePayload.monthlyYieldRate; // Garantia extra
+      if ((supabasePayload as any).institution) {
+        // Mantemos institution e bank pois são snake_case ou simples, 
+        // mas o PostgREST pode ser chato. Se o banco tem institution e bank, ok.
+      }
+
+      const { error } = await supabase.from('accounts').update(supabasePayload).eq('id', id);
       if (error) throw error;
       return id;
     },
