@@ -152,40 +152,53 @@ export function AccountsManager({
             type: diferenca > 0 ? 'income' : 'expense',
             transactionType: 'adjustment',
             isPaid: true,
-            date: new Date().toISOString().split('T')[0], // Data obrigatória
-            accountId: editingAccount.id, // Vínculo com a conta obrigatório
-            categoryId: categories.length > 0 ? categories[0].id : undefined // Fallback de categoria para evitar erro de null
+            date: new Date().toISOString().split('T')[0],
+            accountId: editingAccount.id,
+            categoryId: categories.length > 0 ? categories[0].id : undefined
           });
         } catch (error) {
           console.error('Erro ao criar ajuste:', error);
           toast({ title: 'Erro ao ajustar saldo', variant: 'destructive' });
-          return; // Interrompe se falhar
+          return;
         }
       }
 
-      // Remover o balance do payload de atualização da conta, 
-      // pois a Trigger do banco fará o cálculo usando a transação recém-criada
+      // Propagate color to all accounts of the same institution if color changed
+      if (accountColor !== editingAccount.color) {
+        const sameInstAccounts = accounts.filter(a =>
+          (a.institution || a.bank) === (editingAccount.institution || editingAccount.bank) &&
+          a.id !== editingAccount.id
+        );
+
+        for (const acc of sameInstAccounts) {
+          onUpdateAccount(acc.id, { color: accountColor });
+        }
+      }
+
       const accountDataToUpdate = {
         name: accountName,
         institution: accountInstitution,
-        bank: accountInstitution, // Fallback p/ legado
+        bank: accountInstitution,
         color: accountColor,
-        accountType: accountType,
+        accountType: accountType as AccountType,
         hasOverdraft: hasOverdraft,
         overdraftLimit: hasOverdraft ? parseFloat(overdraftLimit || '0') : 0,
         monthlyYieldRate: ['metas', 'caixinha', 'investment'].includes(accountType) ? parseFloat(monthlyYieldRate || '0') : 0,
-        // 'balance' foi intencionalmente omitido aqui
       };
 
       onUpdateAccount(editingAccount.id, accountDataToUpdate);
     } else {
+      // Check if institution already exists to inherit color if not explicitly changed
+      const existingInst = accounts.find(a => (a.institution || a.bank) === accountInstitution);
+      const finalColor = existingInst ? existingInst.color : accountColor;
+
       const accountData = {
         name: accountName,
         institution: accountInstitution,
-        bank: accountInstitution, // Fallback p/ legado
+        bank: accountInstitution,
         balance: parsedNewBalance,
-        color: accountColor,
-        accountType: accountType,
+        color: finalColor,
+        accountType: accountType as AccountType,
         hasOverdraft: hasOverdraft,
         overdraftLimit: hasOverdraft ? parseFloat(overdraftLimit || '0') : 0,
         monthlyYieldRate: ['metas', 'caixinha', 'investment'].includes(accountType) ? parseFloat(monthlyYieldRate || '0') : 0,
@@ -251,6 +264,7 @@ export function AccountsManager({
       benefit_vr: 'Vale Refeição',
       benefit_va: 'Vale Alimentação',
       benefit_flex: 'Benefício Flexível',
+      corrente: 'Conta Corrente',
     };
     return labels[type] || 'Outro';
   };
@@ -308,6 +322,7 @@ export function AccountsManager({
         ).sort(([a], [b]) => a === 'Instituição não informada' ? 1 : b === 'Instituição não informada' ? -1 : a.localeCompare(b))
           .map(([institution, instAccounts]) => {
             const instTotal = instAccounts.reduce((sum, a) => sum + Number(a.balance), 0);
+            const instColor = instAccounts[0]?.color || APP_COLORS[0];
 
             return (
               <Accordion type="single" collapsible key={institution} className="w-full">
@@ -315,8 +330,11 @@ export function AccountsManager({
                   <AccordionTrigger className="px-6 py-5 hover:no-underline group">
                     <div className="flex items-center justify-between w-full pr-4 text-left">
                       <div className="flex items-center gap-4">
-                        <Avatar className="w-10 h-10 border border-gray-100 dark:border-zinc-800">
-                          <AvatarFallback className="bg-primary/10 text-primary font-black uppercase text-xs">
+                        <Avatar className="w-10 h-10 border-2 border-white dark:border-zinc-800 shadow-sm">
+                          <AvatarFallback
+                            className="font-black uppercase text-xs text-white"
+                            style={{ backgroundColor: instColor }}
+                          >
                             {institution.substring(0, 2)}
                           </AvatarFallback>
                         </Avatar>

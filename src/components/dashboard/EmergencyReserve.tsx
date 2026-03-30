@@ -63,6 +63,7 @@ export function EmergencyReserve({ data, onMonthsChange, accounts = [], onTransf
         setDestinationAccount('');
     };
 
+    const progressValue = data.targetAmount > 0 ? (data.currentAmount / data.targetAmount) * 100 : 0;
     const remaining = Math.max(0, data.targetAmount - data.currentAmount);
 
     return (
@@ -101,7 +102,7 @@ export function EmergencyReserve({ data, onMonthsChange, accounts = [], onTransf
                 </div>
                 <div className="text-left sm:text-right">
                     <span className="text-2xl font-black text-primary">
-                        {data.progress.toFixed(1)}%
+                        {progressValue.toFixed(1)}%
                     </span>
                 </div>
             </div>
@@ -206,7 +207,7 @@ export function EmergencyReserve({ data, onMonthsChange, accounts = [], onTransf
                                         {transferMode === 'deposit' ? 'Aportar na Reserva' : 'Resgatar da Reserva'}
                                     </h2>
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                        {transferMode === 'deposit' ? 'Mova dinheiro para a caixinha' : 'Retire dinheiro se precisar'}
+                                        {transferMode === 'deposit' ? 'Mova dinheiro de uma conta corrente para a reserva' : 'Mova dinheiro da reserva para uma conta corrente'}
                                     </p>
                                 </div>
                                 <div className={cn(
@@ -219,44 +220,55 @@ export function EmergencyReserve({ data, onMonthsChange, accounts = [], onTransf
 
                             <div className="p-5 space-y-4">
                                 <div className="space-y-2">
-                                    <Label className="text-xs uppercase font-bold text-muted-foreground">Valor (R$)</Label>
-                                    <Input
-                                        type="number"
-                                        placeholder="0.00"
-                                        value={transferAmount}
-                                        onChange={(e) => setTransferAmount(e.target.value)}
-                                        className="h-12 text-lg font-bold"
-                                        autoFocus
-                                    />
+                                    <Label className="text-xs uppercase font-bold text-muted-foreground">Valor da Transferência</Label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">R$</span>
+                                        <Input
+                                            type="number"
+                                            placeholder="0.00"
+                                            value={transferAmount}
+                                            onChange={(e) => setTransferAmount(e.target.value)}
+                                            className="h-12 pl-10 text-lg font-bold"
+                                            autoFocus
+                                        />
+                                    </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">De (Origem)</Label>
+                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">
+                                            {transferMode === 'deposit' ? 'Conta de Origem (Sairá daqui)' : 'Conta de Origem (Reserva)'}
+                                        </Label>
                                         <select
-                                            className="w-full h-10 rounded-xl border border-input bg-background px-3 py-2 text-xs font-bold truncate"
+                                            className="w-full h-11 rounded-xl border border-input bg-background px-3 py-2 text-sm font-bold truncate focus:ring-2 focus:ring-primary outline-none transition-all"
                                             value={sourceAccount}
                                             onChange={(e) => setSourceAccount(e.target.value)}
                                         >
-                                            <option value="">Selecione...</option>
+                                            <option value="">Selecione a conta...</option>
                                             {accounts.map(acc => (
-                                                <option key={acc.id} value={acc.id}>{acc.name}</option>
+                                                <option key={acc.id} value={acc.id}>{acc.name} ({formatCurrency(acc.balance)})</option>
                                             ))}
                                         </select>
                                     </div>
-                                    <div className="flex items-center justify-center pt-6">
-                                        <ArrowRightLeft className="w-4 h-4 text-muted-foreground" />
+
+                                    <div className="flex items-center justify-center -my-2">
+                                        <div className="bg-muted p-1.5 rounded-full">
+                                            <ArrowRightLeft className="w-4 h-4 text-primary rotate-90" />
+                                        </div>
                                     </div>
+
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">Para (Destino)</Label>
+                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">
+                                            {transferMode === 'deposit' ? 'Conta de Destino (Reserva)' : 'Conta de Destino (Receberá)'}
+                                        </Label>
                                         <select
-                                            className="w-full h-10 rounded-xl border border-input bg-background px-3 py-2 text-xs font-bold truncate"
+                                            className="w-full h-11 rounded-xl border border-input bg-background px-3 py-2 text-sm font-bold truncate focus:ring-2 focus:ring-primary outline-none transition-all"
                                             value={destinationAccount}
                                             onChange={(e) => setDestinationAccount(e.target.value)}
                                         >
-                                            <option value="">Selecione...</option>
+                                            <option value="">Selecione a conta...</option>
                                             {accounts.map(acc => (
-                                                <option key={acc.id} value={acc.id}>{acc.name}</option>
+                                                <option key={acc.id} value={acc.id}>{acc.name} ({formatCurrency(acc.balance)})</option>
                                             ))}
                                         </select>
                                     </div>

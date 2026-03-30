@@ -235,80 +235,78 @@ export function BillsManager() {
                         return (
                             <div key={transaction.id} className="flex flex-col gap-1">
                                 <div className={cn(
-                                    "bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:translate-x-1 border-l-4",
+                                    "bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 transition-all hover:translate-x-1 border-l-4",
                                     transaction.isPaid ? "border-l-success opacity-80" :
                                         isLate ? "border-l-danger bg-danger/5 dark:bg-danger/5" : "border-l-info"
                                 )}>
-                                    <div className="flex items-center gap-4">
-                                        <div className={cn("p-3 rounded-2xl",
+                                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                                        <div className={cn("p-3 rounded-2xl shrink-0",
                                             transaction.isInvoicePayment ? "bg-primary/10 text-primary" :
                                                 (transaction.type === 'expense' ? "bg-danger/10 text-danger" : "bg-success/10 text-success"))}>
                                             {transaction.isInvoicePayment ? <CardIcon className="w-5 h-5" /> :
                                                 (transaction.type === 'expense' ? <ArrowDownCircle className="w-5 h-5" /> : <ArrowUpCircle className="w-5 h-5" />)}
                                         </div>
-                                        <div>
+                                        <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2">
-                                                <h4 className="font-bold">{transaction.description}</h4>
+                                                <h4 className="font-bold truncate">{transaction.description}</h4>
                                                 {transaction.categoryId === 'card-payment' && (
                                                     <button
                                                         onClick={e => { e.stopPropagation(); setExpandedTransactionId(expandedTransactionId === transaction.id ? null : transaction.id); }}
-                                                        className="px-2 py-0.5 bg-primary/10 hover:bg-primary/20 rounded-md text-[10px] font-black uppercase text-primary transition-all flex items-center gap-1">
-                                                        {expandedTransactionId === transaction.id ? 'Ocultar Detalhes' : 'Ver Detalhes'}
+                                                        className="shrink-0 px-2 py-0.5 bg-primary/10 hover:bg-primary/20 rounded-md text-[10px] font-black uppercase text-primary transition-all flex items-center gap-1">
+                                                        {expandedTransactionId === transaction.id ? 'Ocultar' : 'Detalhes'}
                                                         <Plus className={cn("w-3 h-3 transition-transform", expandedTransactionId === transaction.id && "rotate-45")} />
                                                     </button>
                                                 )}
                                             </div>
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                                                <Calendar className="w-3 h-3" />
-                                                {transaction.isPaid && (transaction.paymentDate || transaction.date) ? (
-                                                    <span className="text-success font-bold">
-                                                        Pago em {format(parseLocalDate(transaction.paymentDate || transaction.date), "dd 'de' MMMM", { locale: ptBR })}
-                                                    </span>
-                                                ) : (
-                                                    <>{format(parseLocalDate(transaction.date), "dd 'de' MMMM", { locale: ptBR })}</>
-                                                )}
+                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground mt-1">
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    <Calendar className="w-3 h-3" />
+                                                    {transaction.isPaid && (transaction.paymentDate || transaction.date) ? (
+                                                        <span className="text-success font-bold">
+                                                            {format(parseLocalDate(transaction.paymentDate || transaction.date), "dd 'de' MMM", { locale: ptBR })}
+                                                        </span>
+                                                    ) : (
+                                                        <>{format(parseLocalDate(transaction.date), "dd 'de' MMM", { locale: ptBR })}</>
+                                                    )}
+                                                </div>
                                                 {category && (
-                                                    <><span className="w-1 h-1 rounded-full bg-muted-foreground/30" /><span>{category.name}</span></>
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                                                        <span className="truncate max-w-[80px]">{category.name}</span>
+                                                    </div>
                                                 )}
                                                 {transaction.accountId && (
-                                                    <><span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
-                                                        <span className="flex items-center gap-1 font-bold">
-                                                            <ShieldAlert className="w-3 h-3" />
-                                                            {accounts.find(a => a.id === transaction.accountId)?.name}
-                                                        </span></>
+                                                    <div className="flex items-center gap-1 shrink-0 font-bold">
+                                                        <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                                                        <ShieldAlert className="w-3 h-3" />
+                                                        <span className="truncate max-w-[80px]">{accounts.find(a => a.id === transaction.accountId)?.name}</span>
+                                                    </div>
                                                 )}
                                                 {transaction.cardId && (
-                                                    <><span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
-                                                        <span className="flex items-center gap-1 font-bold">
-                                                            <CardIcon className="w-3 h-3" />
-                                                            {creditCards.find(c => c.id === transaction.cardId)?.name}
-                                                        </span></>
-                                                )}
-                                                {transaction.debtId && (
-                                                    <><span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
-                                                        <span className="flex items-center gap-1 font-bold">
-                                                            <ShieldAlert className="w-3 h-3 text-warning" />
-                                                            {debts.find(d => d.id === transaction.debtId)?.name}
-                                                        </span></>
+                                                    <div className="flex items-center gap-1 shrink-0 font-bold">
+                                                        <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                                                        <CardIcon className="w-3 h-3" />
+                                                        <span className="truncate max-w-[80px]">{creditCards.find(c => c.id === transaction.cardId)?.name}</span>
+                                                    </div>
                                                 )}
                                                 <span className={cn(
-                                                    "ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase",
+                                                    "px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase shrink-0",
                                                     (transaction.debtId || transaction.transactionType === 'installment')
                                                         ? "bg-info/10 text-info"
                                                         : "bg-primary/10 text-primary"
                                                 )}>
-                                                    {(transaction.debtId || transaction.transactionType === 'installment') ? 'Parcelamento' : 'Recorrente'}
+                                                    {(transaction.debtId || transaction.transactionType === 'installment') ? 'Parc.' : 'Rec.'}
                                                 </span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between md:justify-end gap-6">
-                                        <div className="text-right">
-                                            <p className={cn("text-lg font-black", transaction.type === 'expense' ? "text-danger" : "text-success")}>
+                                    <div className="flex items-center justify-between md:justify-end w-full md:w-auto mt-2 md:mt-0 gap-3 md:gap-4">
+                                        <div className="text-left md:text-right shrink-0">
+                                            <p className={cn("text-base md:text-lg font-black", transaction.type === 'expense' ? "text-danger" : "text-success")}>
                                                 {formatCurrency(transaction.amount)}
                                             </p>
-                                            <div className="flex items-center gap-1 justify-end">
+                                            <div className="flex items-center gap-1 justify-start md:justify-end">
                                                 {transaction.isPaid ? (
                                                     <span className="flex items-center gap-1 text-[10px] font-bold text-success uppercase">
                                                         <CheckCircle2 className="w-3 h-3" /> Pago
@@ -324,32 +322,34 @@ export function BillsManager() {
                                                 )}
                                             </div>
                                         </div>
-                                        {!transaction.isPaid ? (
-                                            <Button size="sm" variant="ghost"
-                                                onClick={() => {
-                                                    setIsPaying(transaction);
-                                                    setPaymentDate(transaction.date?.split('T')[0] || todayLocalString());
-                                                    setPaymentAmount(transaction.amount.toFixed(2));
-                                                    setPaymentMethod(transaction.cardId ? 'credit_card' : 'account');
-                                                }}
-                                                className="h-11 px-4 rounded-2xl bg-success/5 text-success hover:bg-success/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider">
-                                                <CheckCircle2 className="w-5 h-5" /> Baixar Conta
-                                            </Button>
-                                        ) : (
-                                            <Button size="sm" variant="ghost"
-                                                onClick={() => togglePaidMutation({ id: transaction.id, isPaid: false })}
-                                                className="h-11 px-4 rounded-2xl bg-amber-500/5 text-amber-600 hover:bg-amber-500/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider">
-                                                <RotateCcw className="w-5 h-5" /> Estornar
-                                            </Button>
-                                        )}
-                                        {!(transaction.debtId || transaction.transactionType === 'installment') && (
-                                            <Button size="sm" variant="ghost"
-                                                onClick={() => setItemToDelete(transaction)}
-                                                className="h-11 px-3 rounded-2xl hover:bg-danger/10 text-danger"
-                                                title="Excluir lançamento">
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                        )}
+                                        <div className="flex items-center gap-2">
+                                            {!transaction.isPaid ? (
+                                                <Button size="sm" variant="ghost"
+                                                    onClick={() => {
+                                                        setIsPaying(transaction);
+                                                        setPaymentDate(transaction.date?.split('T')[0] || todayLocalString());
+                                                        setPaymentAmount(transaction.amount.toFixed(2));
+                                                        setPaymentMethod(transaction.cardId ? 'credit_card' : 'account');
+                                                    }}
+                                                    className="h-10 px-3 md:px-4 rounded-xl bg-success/5 text-success hover:bg-success/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider">
+                                                    <CheckCircle2 className="w-4 h-4" /> <span className="hidden xs:inline">Baixar</span>
+                                                </Button>
+                                            ) : (
+                                                <Button size="sm" variant="ghost"
+                                                    onClick={() => togglePaidMutation({ id: transaction.id, isPaid: false })}
+                                                    className="h-10 px-3 md:px-4 rounded-xl bg-amber-500/5 text-amber-600 hover:bg-amber-500/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider">
+                                                    <RotateCcw className="w-4 h-4" /> <span className="hidden xs:inline">Estornar</span>
+                                                </Button>
+                                            )}
+                                            {!(transaction.debtId || transaction.transactionType === 'installment') && (
+                                                <Button size="sm" variant="ghost"
+                                                    onClick={() => setItemToDelete(transaction)}
+                                                    className="h-10 w-10 p-0 rounded-xl hover:bg-danger/10 text-danger shrink-0"
+                                                    title="Excluir lançamento">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 
