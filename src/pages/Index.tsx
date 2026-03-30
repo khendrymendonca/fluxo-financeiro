@@ -57,6 +57,7 @@ import CardsDashboard from './CardsDashboard';
 import { Button } from '@/components/ui/button';
 import { Transaction, SavingsGoal } from '@/types/finance';
 import { CategoriesManager } from '@/components/settings/CategoriesManager';
+import { ProfileSettings } from './ProfileSettings';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
@@ -84,7 +85,7 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 
-type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export' | 'emergency' | 'menu';
+type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export' | 'emergency' | 'menu' | 'profile';
 
 export default function Index() {
   const { user } = useAuth();
@@ -181,6 +182,7 @@ export default function Index() {
     { id: 'categories', icon: Settings2, label: 'Categorias' },
     { id: 'simulator', icon: Calculator, label: 'Simulador' },
     { id: 'export', icon: Database, label: 'Exportar' },
+    { id: 'profile', icon: Settings2, label: 'Ajustes de Perfil' },
   ];
 
   const renderView = () => {
@@ -441,6 +443,8 @@ export default function Index() {
         return <EmergencyFund />;
       case 'export':
         return <ExportManager />;
+      case 'profile':
+        return <ProfileSettings />;
       default:
         return <div className="text-center py-20 text-zinc-500 italic">Em breve...</div>;
     }

@@ -20,7 +20,8 @@
   ChevronLeft,
   ChevronRight,
   Shield,
-  Zap
+  Zap,
+  User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
@@ -38,6 +39,7 @@ const navItems = [
   { id: 'categories', icon: Settings2, label: 'Categorias' },
   { id: 'simulator', icon: Calculator, label: 'Simulador' },
   { id: 'export', icon: Database, label: 'Exportar' },
+  { id: 'profile', icon: User, label: 'Meu Perfil' },
 ];
 
 interface NavigationRailProps {

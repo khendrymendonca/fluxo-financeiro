@@ -9,7 +9,8 @@
   Settings2,
   Database,
   Wallet,
-  LineChart
+  LineChart,
+  User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +31,7 @@ const navItems = [
   { id: 'categories', icon: Settings2, label: 'Categorias' },
   { id: 'export', icon: Database, label: 'Dados' },
   { id: 'simulator', icon: Calculator, label: 'Simulador' },
+  { id: 'profile', icon: User, label: 'Perfil' },
 ];
 
 export function MobileNav({ currentView, onNavigate }: MobileNavProps) {
