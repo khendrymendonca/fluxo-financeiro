@@ -90,18 +90,20 @@ export function ProfileSettings() {
         try {
             const updates: any = {};
 
-            // Atualizar Nome
-            if (name !== user?.user_metadata?.full_name) {
-                const { error } = await supabase.auth.updateUser({
-                    data: { full_name: name }
-                });
-                if (error) throw error;
-            }
+            // Atualizar Perfil Completo (Nome, Tema, Cor)
+            const { error } = await supabase.auth.updateUser({
+                data: {
+                    full_name: name,
+                    theme: theme,
+                    accent_color: accentColor
+                }
+            });
+            if (error) throw error;
 
-            // Atualizar Email
+            // Se o email mudou
             if (email !== user?.email) {
-                const { error } = await supabase.auth.updateUser({ email });
-                if (error) throw error;
+                const { error: emailError } = await supabase.auth.updateUser({ email });
+                if (emailError) throw emailError;
                 toast.info('Confirmação enviada para o novo e-mail.');
             }
 

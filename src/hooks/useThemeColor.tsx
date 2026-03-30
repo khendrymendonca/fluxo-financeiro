@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const accentColors = [
     { id: 'blue', name: 'Azul Real', hsl: '221.2 83.2% 53.3%' },
@@ -15,10 +16,20 @@ export const accentColors = [
     { id: 'cyan', name: 'Ciano', hsl: '188.7 94.5% 42.7%' },
 ];
 
-export function useThemeColor() {
+interface ThemeColorContextType {
+    accentColor: string;
+    setAccentColor: (color: string) => void;
+    accentColors: typeof accentColors;
+}
+
+const ThemeColorContext = createContext<ThemeColorContextType | undefined>(undefined);
+
+export function ThemeColorProvider({ children }: { children: React.ReactNode }) {
     const [accentColor, setAccentColor] = useState(() => {
         return localStorage.getItem('accent-color') || 'blue';
     });
+
+    const { user } = useAuth();
 
     useEffect(() => {
         const color = accentColors.find(c => c.id === accentColor) || accentColors[0];
@@ -26,10 +37,28 @@ export function useThemeColor() {
 
         // Atualiza a variável --primary do Tailwind
         root.style.setProperty('--primary', color.hsl);
-
-        // Atualiza o ring e outras dependências se necessário (o primary do shadcn costuma seguir --primary)
         localStorage.setItem('accent-color', accentColor);
     }, [accentColor]);
 
-    return { accentColor, setAccentColor, accentColors };
+    // Restauração via Supabase Auth (v6.4)
+    useEffect(() => {
+        const savedColor = user?.user_metadata?.accent_color;
+        if (savedColor && savedColor !== accentColor) {
+            setAccentColor(savedColor);
+        }
+    }, [user]);
+
+    return (
+        <ThemeColorContext.Provider value={{ accentColor, setAccentColor, accentColors }}>
+            {children}
+        </ThemeColorContext.Provider>
+    );
+}
+
+export function useThemeColor() {
+    const context = useContext(ThemeColorContext);
+    if (context === undefined) {
+        throw new Error('useThemeColor must be used within a ThemeColorProvider');
+    }
+    return context;
 }

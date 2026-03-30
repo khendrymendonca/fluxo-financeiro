@@ -5,8 +5,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-// âœ… FIX: todos os imports no topo
 import { ThemeProvider } from "./hooks/useTheme";
+import { ThemeColorProvider } from "./hooks/useThemeColor";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { FinanceProvider } from "./hooks/useFinanceStore";
 import Index from "./pages/Index";
@@ -16,8 +16,8 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 30, // 30 minutes
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 30,
       retry: 1,
       refetchOnWindowFocus: true,
     },
@@ -51,24 +51,23 @@ const AppRoutes = () => {
   );
 };
 
-// âœ… FIX: BrowserRouter movido para fora â€” envolve tudo
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
-      <ThemeProvider>
-        <TooltipProvider>
-          <AuthProvider>
-            <Toaster />
-            <Sonner />
-            <AppRoutes />
-          </AuthProvider>
-        </TooltipProvider>
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <ThemeColorProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <AppRoutes />
+            </TooltipProvider>
+          </ThemeColorProvider>
+        </ThemeProvider>
+      </AuthProvider>
     </BrowserRouter>
     {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
   </QueryClientProvider>
 );
 
 export default App;
-
-

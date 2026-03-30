@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export type ThemeType = 'light' | 'dark' | 'amoled' | 'system';
 
@@ -46,6 +47,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             return () => mediaQuery.removeEventListener('change', handleChange);
         }
     }, [theme]);
+
+    // Restauração via Supabase Auth (v6.4)
+    const { user } = useAuth();
+    useEffect(() => {
+        const savedTheme = user?.user_metadata?.theme;
+        if (savedTheme && savedTheme !== theme) {
+            setTheme(savedTheme as ThemeType);
+        }
+    }, [user]);
 
     return (
         <ThemeContext.Provider value={{ theme, setTheme }}>
