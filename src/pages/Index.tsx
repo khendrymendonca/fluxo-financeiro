@@ -214,17 +214,17 @@ export default function Index() {
                 <StatCard title="Despesas" value={cashflow.totalExpenses} icon={<TrendingDown className="w-5 h-5" />} variant="negative" />
               </div>
 
-              {/* Grid Principal - 2 Colunas no Desktop */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-500">
-                {/* Coluna 1: Contas a pagar e Emergência */}
-                <div className="space-y-6">
+              {/* Grid Principal - Layout 2/1 para priorizar Lançamentos */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
+                {/* Coluna 1 & 2: Contas a pagar e Transações Recentes */}
+                <div className="lg:col-span-2 space-y-6">
                   <PendingPayments transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
+                  <RecentTransactions transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
                 </div>
 
-                {/* Coluna 2: Gráfico de gastos e Transações */}
-                <div className="space-y-6">
+                {/* Coluna 3: Gráfico de gastos (Distribuição) */}
+                <div className="lg:col-span-1">
                   <ExpenseChart data={Object.fromEntries(categoryExpenses.map(c => [c.name, c.value]))} />
-                  <RecentTransactions transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
                 </div>
               </div>
             </div>

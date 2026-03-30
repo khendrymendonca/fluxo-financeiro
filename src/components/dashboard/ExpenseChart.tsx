@@ -5,7 +5,7 @@ interface ExpenseChartProps {
 }
 
 const COLORS = [
-  '#0d9488', // teal-600
+  '#0d9488', // emerald-600
   '#7c3aed', // violet-600
   '#ea580c', // orange-600
   '#db2777', // pink-600
@@ -13,7 +13,7 @@ const COLORS = [
   '#059669', // emerald-600
   '#d97706', // amber-600
   '#4f46e5', // indigo-600
-  '#dc2626', // red-600
+  '#e11d48', // rose-600
   '#475569', // slate-600
 ];
 
@@ -59,7 +59,7 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-card shadow-lg rounded-xl p-2 border border-border text-xs">
+        <div className="bg-card shadow-lg rounded-xl p-2 border border-border/40 text-xs">
           <p className="font-medium">{payload[0].name}</p>
           <p className="text-primary font-bold">{formatCurrency(payload[0].value)}</p>
         </div>
@@ -71,23 +71,23 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
   const totalValue = finalChartData.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <div className="bg-card rounded-[2rem] p-4 md:p-5 border border-border/50 animate-fade-in h-full flex flex-col w-full transition-all hover:shadow-md hover:border-border">
+    <div className="bg-card rounded-[2rem] p-4 border border-border/40 animate-fade-in h-full flex flex-col w-full shadow-sm dark:shadow-none">
       <h3 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
-        <div className="w-1.5 h-4 bg-primary rounded-full shadow-sm shadow-primary/20" />
+        <div className="w-1.5 h-4 bg-primary rounded-full" />
         Distribuição
       </h3>
 
-      <div className="flex flex-col lg:flex-row items-center gap-4 flex-1 min-h-0">
-        {/* Mini Pie */}
-        <div className="w-full lg:w-40 h-[180px] shrink-0">
+      <div className="flex flex-col gap-4 flex-1 min-h-0">
+        {/* Mini Pie - Esmagado para LG:col-span-1 */}
+        <div className="w-full h-[180px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={finalChartData}
                 cx="50%"
                 cy="50%"
-                innerRadius="72%"
-                outerRadius="95%"
+                innerRadius={45}
+                outerRadius={65}
                 paddingAngle={4}
                 dataKey="value"
                 stroke="none"
@@ -102,8 +102,8 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
           </ResponsiveContainer>
         </div>
 
-        {/* Legend */}
-        <div className="flex-1 w-full space-y-1.5 min-w-0">
+        {/* Legend - Vertical space efficient */}
+        <div className="space-y-1.5 min-w-0 mt-auto">
           {finalChartData.map((item, idx) => (
             <div key={idx} className="flex items-center gap-2 text-[10px] md:text-xs">
               <div className="w-2 h-2 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: item.color }} />

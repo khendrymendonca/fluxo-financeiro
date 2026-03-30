@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { ArrowDownRight, CheckCircle2, Calendar, Filter, Clock } from 'lucide-react';
 import { Transaction, Account, CreditCard } from '@/types/finance';
 import { cn } from '@/lib/utils';
@@ -38,7 +38,6 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
         .filter(t => {
             if (t.isPaid || t.type !== 'expense') return false;
             const tDate = parseLocalDate(t.date);
-            // Mostrar se é antes do deadline ou se está atrasado (antes de hoje)
             return isBefore(tDate, deadline) || isBefore(tDate, today);
         })
         .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
@@ -66,7 +65,7 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
     };
 
     return (
-        <div className="bg-card rounded-[2rem] p-4 md:p-5 border border-border/50 space-y-4 h-full">
+        <div className="bg-card rounded-[2rem] p-4 border border-border/40 space-y-4 h-full shadow-sm dark:shadow-none">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h2 className="text-base md:text-lg font-bold flex items-center gap-2">
                     <Calendar className="w-4 h-4 md:w-5 md:h-5 text-primary" />
@@ -103,15 +102,15 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
                             <div key={t.id} className="flex items-center justify-between p-2 md:p-3 rounded-xl hover:bg-muted/30 transition-all group border border-transparent hover:border-border/50">
                                 <div className="flex items-center gap-3">
                                     <div className={cn(
-                                        "flex flex-col items-center justify-center rounded-lg py-1.5 px-2 min-w-[50px] transition-colors",
+                                        "flex flex-col items-center justify-center rounded-md py-1 px-2 min-w-[50px] border transition-colors",
                                         isOverdue 
-                                            ? "bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400" 
-                                            : "bg-muted text-muted-foreground"
+                                            ? "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-500/20" 
+                                            : "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700/50"
                                     )}>
-                                        <span className="text-sm font-bold uppercase">
+                                        <span className="text-sm font-bold uppercase leading-none">
                                             {formatDate(t.date)}
                                         </span>
-                                        {isOverdue && <span className="text-[8px] font-black uppercase tracking-tighter">Atrasado</span>}
+                                        {isOverdue && <span className="text-[8px] font-black uppercase tracking-tighter mt-0.5">Atrasado</span>}
                                     </div>
                                     <div className="flex flex-col">
                                         <p className="font-bold text-xs md:text-sm text-foreground leading-tight">{t.description}</p>
@@ -120,10 +119,10 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
                                 </div>
 
                                 <div className="flex flex-col items-end gap-0.5 shrink-0 ml-4">
-                                    <span className={cn("text-sm font-semibold tabular-nums tracking-tight", isOverdue ? "text-red-600 dark:text-red-400" : "text-foreground")}>
+                                    <span className={cn("text-sm font-semibold tabular-nums tracking-tight", isOverdue ? "text-rose-600 dark:text-rose-400" : "text-foreground")}>
                                         {formatCurrency(t.amount)}
                                     </span>
-                                    <div className="flex items-center gap-1 text-[8px] md:text-[9px] font-black text-red-500/60 dark:text-red-400/60 uppercase tracking-widest">
+                                    <div className="flex items-center gap-1 text-[8px] md:text-[9px] font-black text-rose-500/60 dark:text-rose-400/60 uppercase tracking-widest">
                                         <Clock className="w-2.5 h-2.5" /> Pendente
                                     </div>
                                 </div>
@@ -135,5 +134,3 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
         </div>
     );
 }
-
-

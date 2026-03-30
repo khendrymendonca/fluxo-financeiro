@@ -1,4 +1,4 @@
-﻿import { Transaction, Account, CreditCard as CreditCardType } from '@/types/finance';
+import { Transaction, Account, CreditCard as CreditCardType } from '@/types/finance';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { cn } from '@/lib/utils';
 import { ArrowUpRight, ArrowDownLeft } from 'lucide-react';
@@ -45,9 +45,12 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
 
   if (paidTransactions.length === 0) {
     return (
-      <div className="card-elevated p-6 animate-fade-in h-full">
-        <h3 className="text-lg font-semibold mb-4 text-primary">Últimas Transações</h3>
-        <p className="text-muted-foreground text-center py-8">
+      <div className="bg-card rounded-[2rem] p-4 border border-border/40 animate-fade-in h-full shadow-sm dark:shadow-none">
+        <h3 className="text-base md:text-lg font-bold mb-4 text-foreground flex items-center gap-2">
+          <div className="w-1.5 h-4 bg-primary rounded-full" />
+          Últimas Transações
+        </h3>
+        <p className="text-muted-foreground text-center py-8 text-xs italic">
           Nenhuma transação efetuada
         </p>
       </div>
@@ -55,7 +58,7 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
   }
 
   return (
-    <div className="bg-card rounded-[2rem] p-4 md:p-5 border border-border/50 animate-fade-in shadow-sm transition-all hover:shadow-md hover:border-border">
+    <div className="bg-card rounded-[2rem] p-4 border border-border/40 animate-fade-in shadow-sm dark:shadow-none transition-all">
       <h3 className="text-base md:text-lg font-bold mb-4 text-foreground flex items-center gap-2">
         <div className="w-1.5 h-4 bg-primary rounded-full" />
         Últimas Transações
@@ -75,7 +78,9 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className={cn(
                   "p-2 rounded-lg transition-all group-hover:scale-110 shrink-0",
-                  isIncome ? "bg-emerald-500/10 text-emerald-500 dark:bg-emerald-500/20" : "bg-danger/10 text-danger dark:bg-danger/20"
+                  isIncome 
+                    ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" 
+                    : "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400"
                 )}>
                   {isIncome
                     ? <ArrowUpRight className="w-4 h-4" />
@@ -98,7 +103,7 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
               </div>
               <span className={cn(
                 "font-bold text-xs md:text-sm shrink-0 whitespace-nowrap tabular-nums",
-                isIncome ? "text-emerald-500" : "text-foreground"
+                isIncome ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
               )}>
                 {isIncome ? '+' : '-'} {formatCurrency(Math.abs(Number(transaction.amount)))}
               </span>
@@ -109,5 +114,3 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
     </div>
   );
 }
-
-

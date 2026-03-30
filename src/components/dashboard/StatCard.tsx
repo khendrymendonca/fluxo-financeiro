@@ -1,4 +1,4 @@
-﻿import { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 interface StatCardProps {
@@ -32,8 +32,8 @@ export function StatCard({
 
   return (
     <div className={cn(
-      "bg-card rounded-[1.5rem] border border-gray-200 dark:border-zinc-800 animate-fade-in overflow-hidden h-full w-full min-w-0 transition-all hover:shadow-md",
-      isCompact ? "p-3" : "p-4 md:p-5",
+      "bg-card rounded-[1.5rem] border border-border/40 animate-fade-in overflow-hidden h-full w-full min-w-0 transition-all shadow-sm dark:shadow-none",
+      isCompact ? "p-3" : "p-4",
       className
     )}>
       <div className={cn("flex justify-between gap-3", isCompact ? "items-center" : "items-start")}>
@@ -46,9 +46,9 @@ export function StatCard({
           </p>
           <p
             className={cn(
-              "text-2xl font-bold tracking-tight truncate block w-full",
+              "text-xl lg:text-2xl font-bold tracking-tight whitespace-nowrap block w-full",
               variant === 'positive' && 'text-emerald-600 dark:text-emerald-400',
-              variant === 'negative' && 'text-red-600 dark:text-red-400',
+              variant === 'negative' && 'text-rose-600 dark:text-rose-400',
               variant === 'neutral' && 'text-blue-600 dark:text-blue-400',
             )}
             title={formatValue(value) as string}
@@ -63,7 +63,7 @@ export function StatCard({
           "rounded-full shrink-0 flex items-center justify-center transition-transform",
           isCompact ? "p-2 w-8 h-8" : "p-3 w-10 h-10 md:w-12 md:h-12",
           variant === 'positive' && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-          variant === 'negative' && 'bg-red-500/10 text-red-600 dark:text-red-400',
+          variant === 'negative' && 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
           variant === 'neutral' && 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
           variant === 'default' && 'bg-muted/50 text-muted-foreground',
         )}>
