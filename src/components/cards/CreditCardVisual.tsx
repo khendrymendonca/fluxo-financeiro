@@ -76,10 +76,10 @@ export function CreditCardVisual({
                             </p>
                         </div>
 
-                        <div className="text-right min-w-0">
+                        <div className="text-right min-w-0 flex-shrink max-w-[55%]">
                             <p className="text-[10px] md:text-xs opacity-75 mb-0.5 md:mb-1 whitespace-nowrap">Limite Disponível</p>
                             <p
-                                className="font-black text-[clamp(0.875rem,1.5vw,1.125rem)] truncate block max-w-full"
+                                className="font-black text-[clamp(1rem,1.5vw,1.125rem)] truncate block w-full"
                                 title={formatCurrency(availableLimit)}
                             >
                                 {formatCurrency(availableLimit)}

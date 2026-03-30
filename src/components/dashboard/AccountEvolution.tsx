@@ -98,18 +98,6 @@ export function ExpenseEvolution() {
                                     'Gastos'
                                 ]}
                             />
-                            <ReferenceLine
-                                y={target}
-                                stroke="#f59e0b"
-                                strokeDasharray="5 5"
-                                label={{
-                                    position: 'right',
-                                    value: 'Meta',
-                                    fill: '#f59e0b',
-                                    fontSize: 10,
-                                    fontWeight: 'bold'
-                                }}
-                            />
                             <Line
                                 type="monotone"
                                 dataKey="valor"

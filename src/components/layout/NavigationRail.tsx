@@ -55,8 +55,10 @@ export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }
   return (
     <nav
       className={cn(
-        "hidden md:flex flex-col py-6 px-3 bg-white dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-800 h-screen transition-all duration-300 ease-in-out shrink-0 sticky top-0 left-0 z-50",
-        isExpanded ? "w-64" : "w-20"
+        "hidden md:flex flex-col py-6 px-3 bg-white dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-800 h-screen transition-all duration-300 ease-in-out z-50",
+        isExpanded
+          ? "w-64 absolute top-0 left-0 shadow-2xl"
+          : "w-20 relative shrink-0"
       )}
     >
       {/* Header with Logo and Toggle */}
