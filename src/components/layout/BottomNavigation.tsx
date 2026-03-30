@@ -15,8 +15,8 @@ interface BottomNavigationProps {
 export function BottomNavigation({ activeView, onViewChange }: BottomNavigationProps) {
     const items: NavItem[] = [
         { id: 'dashboard', icon: LayoutDashboard, label: 'Início' },
-        { id: 'transactions', icon: ArrowUpDown, label: 'Extrato' },
-        { id: 'bills', icon: Receipt, label: 'Lançamentos' },
+        { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos' },
+        { id: 'bills', icon: Receipt, label: 'Fixas' },
     ];
 
     return (

@@ -173,7 +173,7 @@ export default function Index() {
 
   const navigationItems = [
     { id: 'dashboard', icon: Home, label: 'Início' },
-    { id: 'transactions', icon: List, label: 'Extrato' },
+    { id: 'transactions', icon: List, label: 'Lançamentos' },
     { id: 'bills', icon: Receipt, label: 'Gestão de Contas' },
     { id: 'accounts', icon: Wallet, label: 'Minhas Contas (Carteira)' },
     { id: 'emergency', icon: Shield, label: 'Reserva de Emergência' },
@@ -346,8 +346,19 @@ export default function Index() {
         return (
           <div className="space-y-4 pt-2">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <PageHeader title="Extrato de Lançamentos" icon={List} />
-              <MonthSelector />
+              <PageHeader title="Lançamentos" icon={List} />
+              <div className="flex items-center gap-3">
+                <Button 
+                  onClick={() => {
+                    setEditingTransaction(undefined);
+                    setShowTransactionForm(true);
+                  }}
+                  className="bg-primary hover:bg-primary/90 text-white shadow-md hidden md:flex rounded-xl font-bold"
+                >
+                  <Plus className="w-4 h-4 mr-2" /> Novo Lançamento
+                </Button>
+                <MonthSelector />
+              </div>
             </div>
             <TransactionList
               transactions={currentMonthTransactions}
@@ -550,7 +561,7 @@ export default function Index() {
               setEditingTransaction(undefined);
               setShowTransactionForm(true);
             }}
-            className="fixed bottom-24 right-4 w-14 h-14 rounded-full shadow-2xl bg-primary text-primary-foreground z-40"
+            className="fixed bottom-24 right-4 w-14 h-14 rounded-full shadow-2xl bg-primary text-primary-foreground z-40 md:hidden"
           >
             <Plus className="w-7 h-7" />
           </Button>
