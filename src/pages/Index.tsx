@@ -56,7 +56,6 @@ import ReportsDashboard from './ReportsDashboard';
 import CardsDashboard from './CardsDashboard';
 import { Button } from '@/components/ui/button';
 import { Transaction, SavingsGoal } from '@/types/finance';
-import { EmergencyReserve } from '@/components/dashboard/EmergencyReserve';
 import { CategoriesManager } from '@/components/settings/CategoriesManager';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -68,6 +67,7 @@ import { ExpenseChart } from '@/components/dashboard/ExpenseChart';
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { PendingPayments } from '@/components/dashboard/PendingPayments';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
+import { ExportManager } from '@/components/dashboard/ExportManager';
 import {
   Tooltip,
   TooltipContent,
@@ -217,7 +217,6 @@ export default function Index() {
                 {/* Coluna 1: Contas a pagar e Emergência */}
                 <div className="space-y-6">
                   <PendingPayments transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
-                  <EmergencyReserve data={emergencyData as any} onMonthsChange={setEmergencyMonths} />
                 </div>
 
                 {/* Coluna 2: Gráfico de gastos e Transações */}
@@ -234,9 +233,12 @@ export default function Index() {
         return (
           <div className="flex flex-col h-full animate-in slide-in-from-bottom-4 duration-500 overflow-hidden">
             {/* Bloco Superior: Saldo */}
-            <div className="flex flex-col gap-1 shrink-0 mb-4">
+            <div className="flex flex-col gap-1 shrink-0 mb-4 min-w-0 flex-1 overflow-hidden">
               <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-black uppercase tracking-widest">Patrimônio Total</p>
-              <h1 className="text-4xl font-black tracking-tighter text-gray-900 dark:text-white">
+              <h1
+                className="text-[clamp(1.5rem,4vw,3rem)] font-black tracking-tighter truncate block w-full max-w-[90vw] md:max-w-md text-gray-900 dark:text-white"
+                title={formatCurrency(totalNetWorth)}
+              >
                 {isBalanceVisible ? formatCurrency(totalNetWorth) : '••••••'}
               </h1>
             </div>
@@ -287,7 +289,10 @@ export default function Index() {
                       </Tooltip>
                     </TooltipProvider>
                   </div>
-                  <h3 className={cn("text-2xl font-bold tracking-tight", projectedBalance < 0 ? "text-danger" : "text-gray-900 dark:text-white")}>
+                  <h3
+                    className={cn("text-2xl font-bold tracking-tight truncate block w-full max-w-full", projectedBalance < 0 ? "text-danger" : "text-gray-900 dark:text-white")}
+                    title={isBalanceVisible ? formatCurrency(projectedBalance) : '••••••'}
+                  >
                     {isBalanceVisible ? formatCurrency(projectedBalance) : '••••••'}
                   </h3>
                 </div>
@@ -411,10 +416,23 @@ export default function Index() {
         return <ReportsDashboard />;
       case 'cards':
         return <div className="w-full"><CardsDashboard /></div>;
+      case 'accounts':
+        return (
+          <div className="w-full max-w-5xl mx-auto">
+            <AccountsManager
+              accounts={accounts}
+              onAddAccount={addAccount}
+              onUpdateAccount={updateAccount}
+              onDeleteAccount={deleteAccount}
+            />
+          </div>
+        );
       case 'bills':
         return <BillsManager />;
       case 'emergency':
         return <EmergencyFund />;
+      case 'export':
+        return <ExportManager />;
       default:
         return <div className="text-center py-20 text-zinc-500 italic">Em breve...</div>;
     }

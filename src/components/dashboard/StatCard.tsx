@@ -49,7 +49,7 @@ export function StatCard({
           </p>
           <p
             className={cn(
-              "font-black tracking-tighter leading-tight text-[clamp(1.2rem,2.5vw,2rem)] truncate block w-full",
+              "text-[clamp(1.2rem,2.5vw,1.8rem)] font-black truncate block w-full",
               variant === 'positive' && 'text-success',
               variant === 'negative' && 'text-danger',
               variant === 'neutral' && 'text-info',
