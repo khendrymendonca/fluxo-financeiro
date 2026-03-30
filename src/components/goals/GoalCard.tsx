@@ -4,7 +4,8 @@
   Briefcase,
   TrendingUp,
   CreditCard,
-  ChevronRight
+  ChevronRight,
+  CheckCircle2
 } from 'lucide-react';
 import { SavingsGoal, Account } from '@/types/finance';
 import { cn } from '@/lib/utils';
@@ -27,12 +28,24 @@ interface GoalCardProps {
 export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit, onEdit }: GoalCardProps) {
   const [showDetails, setShowDetails] = useState(false);
 
-  const progress = goal.targetAmount > 0
-    ? Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)
-    : 0;
+  // Lógica de Progresso Híbrido (v6.1)
+  const calculateProgress = () => {
+    if (goal.targetAmount > 0) {
+      return Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
+    }
 
-  const isCompleted = goal.currentAmount >= goal.targetAmount;
+    // Se não tem custo financeiro, baseia-se nas tarefas concluídas
+    const totalItems = goal.items?.length || 0;
+    if (totalItems === 0) return 0;
+
+    const completedItems = goal.items?.filter(item => item.completed).length || 0;
+    return (completedItems / totalItems) * 100;
+  };
+
+  const progress = calculateProgress();
+  const isCompleted = progress >= 100;
   const isSonho = goal.projectType === 'sonho';
+  const hasFinance = goal.targetAmount > 0;
 
   const creditLimitNeeded = (goal.items || [])
     .filter(item => item.paymentMethod === 'credit' && !item.completed)
@@ -59,7 +72,7 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit, onEdit
 
               <div className={cn(
                 "absolute -top-2 -right-2 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest shadow-sm",
-                isSonho ? "bg-sky-500 text-white" : "bg-amber-500 text-white"
+                isSonho ? "bg-sky-500 text-white" : "bg-primary text-white"
               )}>
                 {isSonho ? 'Sonho' : 'Projeto'}
               </div>
@@ -71,9 +84,11 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit, onEdit
               {(goal.deadline || goal.dreamStartDate) && (
                 <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1 mt-1">
                   <Calendar className="w-3 h-3" />
-                  {isSonho
-                    ? `Desde ${format(parseLocalDate(goal.dreamStartDate!), "MMM/yy", { locale: ptBR })}`
-                    : `Até ${format(parseLocalDate(goal.deadline!), "dd MMM yyyy", { locale: ptBR })}`
+                  {isSonho && goal.dreamStartDate
+                    ? `Cultiva desde ${format(parseLocalDate(goal.dreamStartDate), "MMM/yy", { locale: ptBR })}`
+                    : goal.deadline
+                      ? `Conclusão em ${format(parseLocalDate(goal.deadline), "dd MMM yyyy", { locale: ptBR })}`
+                      : 'Sem prazo físico'
                   }
                 </p>
               )}
@@ -88,14 +103,28 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit, onEdit
         <div className="space-y-3">
           <div className="flex justify-between items-end">
             <div className="space-y-1">
-              <span className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.2em] block">Status de Realização</span>
+              <span className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.2em] block">
+                {hasFinance ? 'Status Financeiro' : 'Marcos de Execução'}
+              </span>
               <span className="font-black text-2xl text-gray-900 dark:text-zinc-100 flex items-baseline gap-1">
-                {formatCurrency(goal.currentAmount)}
-                <span className="text-[10px] text-zinc-400 font-bold lowercase tracking-normal">de {formatCurrency(goal.targetAmount)}</span>
+                {hasFinance ? (
+                  <>
+                    {formatCurrency(goal.currentAmount)}
+                    <span className="text-[10px] text-zinc-400 font-bold lowercase tracking-normal">de {formatCurrency(goal.targetAmount)}</span>
+                  </>
+                ) : (
+                  <>
+                    {goal.items?.filter(i => i.completed).length || 0}
+                    <span className="text-[10px] text-zinc-400 font-bold lowercase tracking-normal">de {goal.items?.length || 0} tarefas</span>
+                  </>
+                )}
               </span>
             </div>
             <div className="text-right">
-              <span className="font-black text-2xl" style={{ color: goal.color }}>
+              <span className={cn(
+                "font-black text-2xl",
+                isCompleted && !hasFinance ? "text-emerald-500" : ""
+              )} style={{ color: !isCompleted || hasFinance ? goal.color : undefined }}>
                 {progress.toFixed(0)}%
               </span>
             </div>
@@ -103,10 +132,15 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit, onEdit
 
           <div className="h-3 rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden border-2 border-white dark:border-zinc-900 shadow-sm p-0.5">
             <div
-              className="h-full rounded-full transition-all duration-1000 ease-out"
+              className={cn(
+                "h-full rounded-full transition-all duration-1000 ease-out",
+                isCompleted && "animate-pulse"
+              )}
               style={{
                 width: `${progress}%`,
-                background: `linear-gradient(90deg, ${goal.color} 0%, ${goal.color}aa 100%)`,
+                background: isCompleted && !hasFinance
+                  ? 'linear-gradient(90deg, #10b981 0%, #34d399 100%)'
+                  : `linear-gradient(90deg, ${goal.color} 0%, ${goal.color}aa 100%)`,
               }}
             />
           </div>
@@ -116,11 +150,11 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit, onEdit
         <div className="grid grid-cols-2 gap-4 pt-2">
           <div className="p-3 rounded-2xl bg-muted/20 border border-muted/10 space-y-1">
             <div className="flex items-center gap-1.5 mb-1">
-              <TrendingUp className="w-3 h-3 text-emerald-500" />
-              <span className="text-[9px] font-black uppercase text-zinc-400">Progresso</span>
+              {hasFinance ? <TrendingUp className="w-3 h-3 text-emerald-500" /> : <CheckCircle2 className="w-3 h-3 text-sky-500" />}
+              <span className="text-[9px] font-black uppercase text-zinc-400">Objetivo</span>
             </div>
             <p className="text-xs font-black text-gray-700 dark:text-zinc-300">
-              {isCompleted ? 'Finalizado' : `Faltam ${formatCurrency(goal.targetAmount - goal.currentAmount)}`}
+              {isCompleted ? 'Alcançado! 🎉' : hasFinance ? `Faltam ${formatCurrency(goal.targetAmount - goal.currentAmount)}` : 'Em execução'}
             </p>
           </div>
 

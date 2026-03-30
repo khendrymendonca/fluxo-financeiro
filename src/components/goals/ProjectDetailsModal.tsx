@@ -11,14 +11,17 @@ import {
     Trash2,
     TrendingUp,
     MapPin,
-    Rocket
+    Rocket,
+    Sparkles,
+    Cloud,
+    Briefcase
 } from 'lucide-react';
 import { SavingsGoal, Account, GoalItem } from '@/types/finance';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/utils/formatters';
 import { parseLocalDate } from '@/utils/dateUtils';
-import { format } from 'date-fns';
+import { format, differenceInDays, startOfToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { GoalAportModal } from './GoalAportModal';
 import { useState } from 'react';
@@ -45,7 +48,43 @@ export function ProjectDetailsModal({
     const [showAportModal, setShowAportModal] = useState(false);
 
     const isSonho = goal.projectType === 'sonho';
-    const progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
+    const hasFinance = goal.targetAmount > 0;
+
+    // Lógica de Progresso Híbrido (v6.1)
+    const calculateProgress = () => {
+        if (hasFinance) {
+            return Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
+        }
+        const totalItems = goal.items?.length || 0;
+        if (totalItems === 0) return 0;
+        const completedItems = goal.items?.filter(item => item.completed).length || 0;
+        return (completedItems / totalItems) * 100;
+    };
+
+    const progress = calculateProgress();
+    const isCompleted = progress >= 100;
+
+    // Cálculo para Frase Motivacional (v6.1)
+    const getMotivationalPhrase = () => {
+        if (!isSonho || !goal.dreamStartDate || !goal.deadline) return null;
+
+        const today = startOfToday();
+        const deadlineDate = parseLocalDate(goal.deadline);
+        const startDate = parseLocalDate(goal.dreamStartDate);
+        const daysRemaining = differenceInDays(deadlineDate, today);
+
+        if (daysRemaining < 0) return null;
+
+        return (
+            <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center gap-3 animate-pulse-subtle">
+                <Sparkles className="w-5 h-5 text-primary shrink-0" />
+                <p className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 leading-tight">
+                    Você sonha com isso desde <span className="text-primary">{format(startDate, "dd/MM/yyyy")}</span>,
+                    faltam <span className="text-primary">{daysRemaining} dias</span> para a conclusão, não desista!
+                </p>
+            </div>
+        );
+    };
 
     const handleToggleItem = (itemId: string) => {
         const updatedItems = (goal.items || []).map(item =>
@@ -66,18 +105,18 @@ export function ProjectDetailsModal({
                                 className="w-20 h-20 rounded-[2rem] flex items-center justify-center shadow-lg transform -rotate-3"
                                 style={{ backgroundColor: goal.color }}
                             >
-                                <Rocket className="w-10 h-10 text-white" />
+                                {isSonho ? <Cloud className="w-10 h-10 text-white" /> : <Briefcase className="w-10 h-10 text-white" />}
                             </div>
                             <div className="space-y-1">
                                 <div className="flex items-center gap-2">
                                     <span className={cn(
                                         "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                                        isSonho ? "bg-sky-500 text-white" : "bg-amber-500 text-white"
+                                        isSonho ? "bg-sky-500 text-white" : "bg-primary text-white"
                                     )}>
-                                        {isSonho ? 'Sonho' : 'Projeto Executivo'}
+                                        {isSonho ? 'Sonho' : 'Projeto'}
                                     </span>
                                     {goal.created_at && (
-                                        <span className="text-[10px] font-bold text-zinc-400">Desde {format(new Date(goal.created_at), 'MM/yyyy')}</span>
+                                        <span className="text-[10px] font-bold text-zinc-400">Registrado em {format(new Date(goal.created_at), 'MM/yyyy')}</span>
                                     )}
                                 </div>
                                 <h2 className="text-3xl font-black tracking-tight text-gray-900 dark:text-zinc-50">{goal.name}</h2>
@@ -89,15 +128,18 @@ export function ProjectDetailsModal({
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto no-scrollbar p-8 space-y-10">
+                <div className="flex-1 overflow-y-auto no-scrollbar p-8 space-y-8">
+
+                    {/* Frase Motivacional (v6.1) */}
+                    {getMotivationalPhrase()}
 
                     {/* Propósito / Finalidade */}
                     {goal.purpose && (
-                        <div className="p-6 bg-primary/5 rounded-[2.5rem] border border-primary/10 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <div className="p-6 bg-zinc-50 dark:bg-zinc-900/50 rounded-[2.5rem] border border-border relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-4 opacity-5">
                                 <TrendingUp className="w-20 h-20" />
                             </div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-2">Finalidade do {isSonho ? 'Sonho' : 'Projeto'}</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-2">Finalidade do Objetivo</p>
                             <p className="text-lg font-bold text-zinc-700 dark:text-zinc-300 leading-relaxed italic">
                                 "{goal.purpose}"
                             </p>
@@ -108,17 +150,27 @@ export function ProjectDetailsModal({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-4">
                             <div className="flex justify-between items-end">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Progresso Financeiro</p>
-                                <span className="text-lg font-black text-primary" style={{ color: goal.color }}>{progress.toFixed(0)}%</span>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                    {hasFinance ? 'Progresso Financeiro' : 'Marcos de Execução'}
+                                </p>
+                                <span className="text-lg font-black text-primary" style={{ color: !isCompleted ? goal.color : '#10b981' }}>
+                                    {progress.toFixed(0)}%
+                                </span>
                             </div>
                             <div className="h-4 rounded-full bg-muted overflow-hidden p-1 border border-border">
                                 <div
                                     className="h-full rounded-full transition-all duration-1000"
-                                    style={{ width: `${progress}%`, backgroundColor: goal.color }}
+                                    style={{
+                                        width: `${progress}%`,
+                                        backgroundColor: isCompleted ? '#10b981' : goal.color
+                                    }}
                                 />
                             </div>
                             <p className="text-xs font-black text-gray-500 uppercase tracking-wider text-center">
-                                {formatCurrency(goal.currentAmount)} acumulados <span className="text-zinc-300 mx-2">|</span> meta {formatCurrency(goal.targetAmount)}
+                                {hasFinance
+                                    ? `${formatCurrency(goal.currentAmount)} acumulados | meta ${formatCurrency(goal.targetAmount)}`
+                                    : `${(goal.items || []).filter(i => i.completed).length} tarefas concluídas`
+                                }
                             </p>
                         </div>
 
@@ -144,7 +196,7 @@ export function ProjectDetailsModal({
                                 <CheckCircle2 className="w-5 h-5 text-primary" />
                                 <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400">Lista de Execução</h3>
                             </div>
-                            <span className="text-[10px] font-black bg-muted px-3 py-1 rounded-full">
+                            <span className="text-[10px] font-black bg-muted px-3 py-1 rounded-full text-zinc-500">
                                 {(goal.items || []).filter(i => i.completed).length} de {(goal.items || []).length} Concluídos
                             </span>
                         </div>
@@ -157,7 +209,7 @@ export function ProjectDetailsModal({
                                     className={cn(
                                         "flex items-center justify-between p-5 rounded-[2rem] border-2 transition-all cursor-pointer group",
                                         item.completed
-                                            ? "bg-emerald-500/10 border-emerald-500/20 opacity-70"
+                                            ? "bg-emerald-500/5 border-emerald-500/20 opacity-70"
                                             : "bg-white dark:bg-zinc-950 border-muted hover:border-primary"
                                     )}
                                 >
@@ -174,10 +226,14 @@ export function ProjectDetailsModal({
                                                 {item.description}
                                             </p>
                                             <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-[9px] font-black uppercase text-zinc-400 flex items-center gap-1">
-                                                    {item.paymentMethod === 'credit' ? <CreditCard className="w-3 h-3" /> : <Banknote className="w-3 h-3" />}
-                                                    {item.paymentMethod === 'credit' ? 'Cartão' : 'À Vista'}
-                                                </span>
+                                                {item.value > 0 ? (
+                                                    <span className="text-[9px] font-black uppercase text-zinc-400 flex items-center gap-1">
+                                                        {item.paymentMethod === 'credit' ? <CreditCard className="w-3 h-3" /> : <Banknote className="w-3 h-3" />}
+                                                        {item.paymentMethod === 'credit' ? 'Cartão' : 'À Vista'}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[9px] font-black uppercase text-zinc-400 italic">Tarefa Administrativa</span>
+                                                )}
                                                 {item.deadline && (
                                                     <span className="text-[9px] font-black uppercase text-zinc-400 flex items-center gap-1">
                                                         <Calendar className="w-3 h-3" /> {format(parseLocalDate(item.deadline), 'dd/MM/yy')}
@@ -186,9 +242,11 @@ export function ProjectDetailsModal({
                                             </div>
                                         </div>
                                     </div>
-                                    <p className={cn("font-black text-sm", item.completed ? "text-emerald-600" : "text-primary")}>
-                                        {formatCurrency(item.value)}
-                                    </p>
+                                    {item.value > 0 && (
+                                        <p className={cn("font-black text-sm", item.completed ? "text-emerald-600" : "text-primary")}>
+                                            {formatCurrency(item.value)}
+                                        </p>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -198,18 +256,18 @@ export function ProjectDetailsModal({
                     <div className="flex flex-col md:flex-row gap-2 pt-6">
                         <Button
                             onClick={() => setShowAportModal(true)}
-                            className="flex-1 h-14 rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl shadow-primary/20"
+                            className="flex-1 h-16 rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90"
                         >
                             <PiggyBank className="w-5 h-5 mr-3" /> Guardar Dinheiro (Caixinha)
                         </Button>
 
                         <div className="flex gap-2">
                             {onEdit && (
-                                <Button onClick={() => onEdit(goal)} variant="outline" className="h-14 w-14 rounded-[1.5rem] border-2">
+                                <Button onClick={() => onEdit(goal)} variant="outline" className="h-16 w-16 rounded-[1.5rem] border-2">
                                     <Pencil className="w-5 h-5" />
                                 </Button>
                             )}
-                            <Button onClick={() => onDelete(goal.id)} variant="outline" className="h-14 w-14 rounded-[1.5rem] border-2 border-red-100 text-red-500 hover:bg-red-50">
+                            <Button onClick={() => onDelete(goal.id)} variant="outline" className="h-16 w-16 rounded-[1.5rem] border-2 border-red-100 text-red-500 hover:bg-red-50">
                                 <Trash2 className="w-5 h-5" />
                             </Button>
                         </div>

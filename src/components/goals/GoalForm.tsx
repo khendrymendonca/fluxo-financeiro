@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
   X,
   Target,
@@ -59,10 +59,26 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
   const [purpose, setPurpose] = useState(initialData?.purpose || '');
   const [dreamStartDate, setDreamStartDate] = useState(initialData?.dreamStartDate || '');
   const [items, setItems] = useState<GoalItem[]>(initialData?.items || []);
-  const [currentAmount] = useState(initialData?.currentAmount?.toString() || '0');
+  const [currentAmount, setCurrentAmount] = useState(initialData?.currentAmount?.toString() || '0');
   const [deadline, setDeadline] = useState(initialData?.deadline || '');
   const [selectedIcon, setSelectedIcon] = useState(initialData?.icon || 'Rocket');
   const [selectedColor, setSelectedColor] = useState(initialData?.color || APP_COLORS[0]);
+
+  // Garantir população de dados no modo edição
+  useEffect(() => {
+    if (initialData) {
+      setName(initialData.name || '');
+      setPurpose(initialData.purpose || '');
+      setDreamStartDate(initialData.dreamStartDate || '');
+      setItems(initialData.items || []);
+      setCurrentAmount(initialData.currentAmount?.toString() || '0');
+      setDeadline(initialData.deadline || '');
+      setSelectedIcon(initialData.icon || 'Rocket');
+      setSelectedColor(initialData.color || APP_COLORS[0]);
+      setProjectType(initialData.projectType || 'projeto');
+      setStep(2);
+    }
+  }, [initialData]);
 
   const targetAmount = items.reduce((acc, item) => acc + item.value, 0);
   const creditLimitNeeded = items
@@ -277,33 +293,41 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
                           <Label className="text-[9px] font-black text-zinc-400 ml-1">VALOR (R$)</Label>
                           <Input
                             type="number"
-                            value={item.value || ''}
+                            value={item.value === 0 ? '' : item.value}
                             onChange={(e) => updateItem(item.id, { value: parseFloat(e.target.value) || 0 })}
                             className="h-10 rounded-xl font-black text-primary bg-white dark:bg-zinc-950 px-4"
+                            placeholder="Tarefa (R$ 0)"
                           />
                         </div>
-                        <div className="flex gap-1 pt-4">
-                          <button
-                            type="button"
-                            onClick={() => updateItem(item.id, { paymentMethod: 'cash' })}
-                            className={cn(
-                              "flex-1 h-10 rounded-xl text-[9px] font-black uppercase border-2 transition-all",
-                              item.paymentMethod === 'cash' ? "bg-primary/10 border-primary text-primary" : "border-transparent text-zinc-400"
-                            )}
-                          >
-                            <Banknote className="w-3 h-3 mx-auto" title="Dinheiro" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => updateItem(item.id, { paymentMethod: 'credit' })}
-                            className={cn(
-                              "flex-1 h-10 rounded-xl text-[9px] font-black uppercase border-2 transition-all",
-                              item.paymentMethod === 'credit' ? "bg-amber-500/10 border-amber-500 text-amber-500" : "border-transparent text-zinc-400"
-                            )}
-                          >
-                            <CreditCard className="w-3 h-3 mx-auto" title="Cartão" />
-                          </button>
-                        </div>
+
+                        {item.value > 0 ? (
+                          <div className="flex gap-1 pt-4">
+                            <button
+                              type="button"
+                              onClick={() => updateItem(item.id, { paymentMethod: 'cash' })}
+                              className={cn(
+                                "flex-1 h-10 rounded-xl text-[9px] font-black uppercase border-2 transition-all",
+                                item.paymentMethod === 'cash' ? "bg-primary/10 border-primary text-primary" : "border-transparent text-zinc-400"
+                              )}
+                            >
+                              <Banknote className="w-3 h-3 mx-auto" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateItem(item.id, { paymentMethod: 'credit' })}
+                              className={cn(
+                                "flex-1 h-10 rounded-xl text-[9px] font-black uppercase border-2 transition-all",
+                                item.paymentMethod === 'credit' ? "bg-amber-500/10 border-amber-500 text-amber-500" : "border-transparent text-zinc-400"
+                              )}
+                            >
+                              <CreditCard className="w-3 h-3 mx-auto" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center pt-4">
+                            <span className="text-[9px] font-black uppercase text-zinc-400 italic">Tarefa Adm.</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

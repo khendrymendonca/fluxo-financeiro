@@ -34,7 +34,7 @@ export function useAddGoal() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savings-goals'] });
-      toast({ title: 'Meta criada com sucesso!' });
+      toast({ title: 'Sonho/Projeto lançado com sucesso!' });
     },
     onError: (err) => {
       console.error('Erro ao adicionar meta:', err);
@@ -80,7 +80,7 @@ export function useUpdateGoal() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savings-goals'] });
-      toast({ title: 'Meta atualizada!' });
+      toast({ title: 'Sonho/Projeto atualizado!' });
     },
     onError: (err) => {
       console.error('Erro ao atualizar meta:', err);
@@ -101,7 +101,7 @@ export function useDeleteGoal() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savings-goals'] });
-      toast({ title: 'Meta removida.' });
+      toast({ title: 'Sonho/Projeto removido com sucesso!' });
     },
     onError: (err) => {
       console.error('Erro ao remover meta:', err);
