@@ -197,7 +197,13 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     }
 
     const parsedAmount = parseFloat(amount);
-    const isPayingNow = initialData ? isPaidLocally : isDateTodayOrPast(date);
+
+    let isPayingNow = false;
+    if (initialData) {
+      isPayingNow = isPaidLocally;
+    } else if (activeTab === 'pontual') {
+      isPayingNow = isDateTodayOrPast(date);
+    }
 
     if (type === 'expense' && paymentMethod === 'account' && accountId && isPayingNow) {
       const acc = accounts.find(a => a.id === accountId);
@@ -223,7 +229,12 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   };
 
   const executeSubmit = (parsedAmount: number, finalCategoryId?: string) => {
-    const isPaid = initialData ? isPaidLocally : isDateTodayOrPast(date);
+    let isPaid = false;
+    if (initialData) {
+      isPaid = isPaidLocally;
+    } else if (activeTab === 'pontual') {
+      isPaid = isDateTodayOrPast(date);
+    }
     const selectedCard = creditCards.find(c => c.id === (paymentMethod === 'card' ? cardId : ''));
 
     // --- LÓGICA DE PARCELAMENTO (BULK) ---

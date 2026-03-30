@@ -124,7 +124,6 @@ export function AccountsManager({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: string[] = [];
-    if (!accountName) errors.push('Nome da Conta');
     if (!accountInstitution) errors.push('Instituição');
     if (!accountBalance || parseFloat(accountBalance) < 0) errors.push('Saldo');
 
@@ -138,6 +137,7 @@ export function AccountsManager({
     }
 
     const parsedNewBalance = parseFloat(accountBalance);
+    const finalName = accountName.trim() ? accountName : accountInstitution;
 
     if (editingAccount) {
       const currentRealBalance = Number(editingAccount.balance);
@@ -176,7 +176,7 @@ export function AccountsManager({
       }
 
       const accountDataToUpdate = {
-        name: accountName,
+        name: finalName,
         institution: accountInstitution,
         bank: accountInstitution,
         color: accountColor,
@@ -194,7 +194,7 @@ export function AccountsManager({
       const finalColor = existingInst ? existingInst.color : accountColor;
 
       const accountData = {
-        name: accountName,
+        name: finalName,
         institution: accountInstitution,
         bank: accountInstitution,
         balance: parsedNewBalance,
@@ -438,8 +438,8 @@ export function AccountsManager({
               <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5 col-span-2 md:col-span-1">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nome da Conta</Label>
-                    <Input value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="Ex: Conta Corrente" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4" required />
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Apelido da Conta (Opcional)</Label>
+                    <Input value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="Ex: Principal" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4" />
                   </div>
                   <div className="space-y-1.5 col-span-2 md:col-span-1">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Instituição (Banco)</Label>

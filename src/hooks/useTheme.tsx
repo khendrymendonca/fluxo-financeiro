@@ -1,6 +1,6 @@
-﻿import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
-export type ThemeType = 'light' | 'dark' | 'amoled';
+export type ThemeType = 'light' | 'dark' | 'amoled' | 'system';
 
 interface ThemeContextType {
     theme: ThemeType;
@@ -11,7 +11,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setThemeState] = useState<ThemeType>(() => {
-        return (localStorage.getItem('app-theme') as ThemeType) || 'dark';
+        return (localStorage.getItem('app-theme') as ThemeType) || 'system';
     });
 
     const setTheme = (newTheme: ThemeType) => {
@@ -22,15 +22,29 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const root = window.document.documentElement;
 
-        // Reset classes
-        root.classList.remove('dark', 'amoled');
+        const applyTheme = () => {
+            root.classList.remove('dark', 'amoled');
+            
+            let effectiveTheme = theme;
+            if (theme === 'system') {
+                effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
 
-        if (theme === 'dark') {
-            root.classList.add('dark');
-        } else if (theme === 'amoled') {
-            root.classList.add('dark', 'amoled');
+            if (effectiveTheme === 'dark') {
+                root.classList.add('dark');
+            } else if (effectiveTheme === 'amoled') {
+                root.classList.add('dark', 'amoled');
+            }
+        };
+
+        applyTheme();
+
+        if (theme === 'system') {
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            const handleChange = () => applyTheme();
+            mediaQuery.addEventListener('change', handleChange);
+            return () => mediaQuery.removeEventListener('change', handleChange);
         }
-
     }, [theme]);
 
     return (

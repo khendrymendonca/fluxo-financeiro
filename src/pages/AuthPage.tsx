@@ -3,14 +3,17 @@ import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sun, Moon, Monitor, Laptop } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { useTheme } from '@/hooks/useTheme';
+import { cn } from '@/lib/utils';
 
 export default function AuthPage() {
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSignUp, setIsSignUp] = useState(false);
+    const { theme, setTheme } = useTheme();
     const { toast } = useToast();
 
     const handleAuth = async (e: React.FormEvent) => {
@@ -99,6 +102,33 @@ export default function AuthPage() {
                     >
                         {isSignUp ? 'Já tem uma conta? Entrar' : 'Não tem conta? Criar agora'}
                     </button>
+                </div>
+
+                <div className="mt-8 pt-6 border-t border-border/50">
+                    <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground text-center mb-4">Aparência do Sistema</p>
+                    <div className="flex items-center justify-center gap-2">
+                        {[
+                            { id: 'light', icon: Sun, label: 'Claro' },
+                            { id: 'dark', icon: Moon, label: 'Escuro' },
+                            { id: 'amoled', icon: Laptop, label: 'OLED' },
+                            { id: 'system', icon: Monitor, label: 'Sistema' }
+                        ].map((t) => (
+                            <button
+                                key={t.id}
+                                onClick={() => setTheme(t.id as any)}
+                                className={cn(
+                                    "flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all border-2",
+                                    theme === t.id
+                                        ? "bg-primary/10 border-primary text-primary"
+                                        : "bg-transparent border-transparent text-muted-foreground hover:bg-muted/50"
+                                )}
+                                title={t.label}
+                            >
+                                <t.icon className="w-5 h-5" />
+                                <span className="text-[8px] font-black uppercase tracking-tighter">{t.label}</span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>
