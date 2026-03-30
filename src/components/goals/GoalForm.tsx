@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { X, Target, Plane, Shield, PiggyBank, Home, Car, GraduationCap, RotateCw, Plus, Trash2, Rocket, Map } from 'lucide-react';
+import { X, Target, Plane, Shield, PiggyBank, Home, Car, GraduationCap, RotateCw, Plus, Trash2, Rocket, Map, CreditCard, Banknote, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { Input } from '@/components/ui/input';
@@ -44,9 +44,17 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
   const [selectedColor, setSelectedColor] = useState(initialData?.color || APP_COLORS[0]);
 
   const targetAmount = items.reduce((acc, item) => acc + item.value, 0);
+  const creditLimitNeeded = items
+    .filter(item => item.paymentMethod === 'credit')
+    .reduce((acc, item) => acc + item.value, 0);
 
   const addItem = () => {
-    setItems([...items, { id: crypto.randomUUID(), description: '', value: 0 }]);
+    setItems([...items, {
+      id: crypto.randomUUID(),
+      description: '',
+      value: 0,
+      paymentMethod: 'cash'
+    }]);
   };
 
   const removeItem = (id: string) => {
@@ -130,48 +138,101 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
               </Button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               {items.map((item) => (
-                <div key={item.id} className="flex gap-2 items-start group">
-                  <Input
-                    placeholder="Descrição do item"
-                    value={item.description}
-                    onChange={(e) => updateItem(item.id, { description: e.target.value })}
-                    className="rounded-xl h-10 bg-muted/20"
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Valor"
-                    value={item.value || ''}
-                    onChange={(e) => updateItem(item.id, { value: parseFloat(e.target.value) || 0 })}
-                    className="rounded-xl h-10 w-24 bg-muted/20 text-right font-bold"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeItem(item.id)}
-                    className="h-10 w-10 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                <div key={item.id} className="p-4 rounded-2xl bg-muted/20 border border-muted/30 space-y-3 relative group">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="O que reservar? (ex: Passagens)"
+                      value={item.description}
+                      onChange={(e) => updateItem(item.id, { description: e.target.value })}
+                      className="rounded-xl h-11 bg-white dark:bg-zinc-950 font-bold flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeItem(item.id)}
+                      className="h-11 w-11 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl shrink-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[9px] uppercase font-black text-zinc-500 ml-1">Valor Estimado</Label>
+                      <Input
+                        type="number"
+                        placeholder="R$ 0,00"
+                        value={item.value || ''}
+                        onChange={(e) => updateItem(item.id, { value: parseFloat(e.target.value) || 0 })}
+                        className="rounded-xl h-10 bg-white dark:bg-zinc-950 font-black text-primary"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[9px] uppercase font-black text-zinc-500 ml-1">Prazo Reserva</Label>
+                      <Input
+                        type="date"
+                        value={item.deadline || ''}
+                        onChange={(e) => updateItem(item.id, { deadline: e.target.value })}
+                        className="rounded-xl h-10 bg-white dark:bg-zinc-950 font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => updateItem(item.id, { paymentMethod: 'cash' })}
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-2 h-9 rounded-xl text-[10px] font-black uppercase transition-all border-2",
+                        item.paymentMethod === 'cash'
+                          ? "bg-primary/10 border-primary text-primary"
+                          : "bg-white dark:bg-zinc-950 border-transparent text-zinc-400"
+                      )}
+                    >
+                      <Banknote className="w-3 h-3" /> Dinheiro/Débito
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateItem(item.id, { paymentMethod: 'credit' })}
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-2 h-9 rounded-xl text-[10px] font-black uppercase transition-all border-2",
+                        item.paymentMethod === 'credit'
+                          ? "bg-amber-500/10 border-amber-500 text-amber-500"
+                          : "bg-white dark:bg-zinc-950 border-transparent text-zinc-400"
+                      )}
+                    >
+                      <CreditCard className="w-3 h-3" /> Cartão Crédito
+                    </button>
+                  </div>
                 </div>
               ))}
 
               {items.length === 0 && (
-                <div className="text-center py-6 border-2 border-dashed border-muted rounded-2xl">
-                  <p className="text-xs text-muted-foreground font-medium">Nenhum item adicionado ao checklist.</p>
+                <div className="text-center py-8 border-2 border-dashed border-muted rounded-[2rem]">
+                  <Rocket className="w-8 h-8 text-muted mx-auto mb-2 opacity-20" />
+                  <p className="text-xs text-muted-foreground font-bold">Liste os passos para realizar este sonho.</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Target Amount Display */}
-          <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex justify-between items-center">
-            <Label className="text-xs font-black uppercase tracking-widest text-primary">Custo Total Previsto</Label>
-            <span className="text-xl font-black text-primary">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(targetAmount)}
-            </span>
+          {/* Resumo Financeiro do Projeto */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 space-y-1">
+              <Label className="text-[10px] font-black uppercase text-primary">Custo Total</Label>
+              <p className="text-xl font-black text-primary truncate">
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(targetAmount)}
+              </p>
+            </div>
+            <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/10 space-y-1">
+              <Label className="text-[10px] font-black uppercase text-amber-600">Limite Cartão</Label>
+              <p className="text-xl font-black text-amber-600 truncate">
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(creditLimitNeeded)}
+              </p>
+            </div>
           </div>
 
           {/* Current Amount */}

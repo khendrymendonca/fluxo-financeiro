@@ -117,10 +117,14 @@ export interface Debt {
   totalInstallments?: number;
 }
 
+export type GoalPaymentMethod = 'cash' | 'credit';
+
 export interface GoalItem {
   id: string;
   description: string;
   value: number;
+  paymentMethod: GoalPaymentMethod;
+  deadline?: string;
 }
 
 export interface SavingsGoal {

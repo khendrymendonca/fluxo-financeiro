@@ -34,7 +34,8 @@ import {
   Sun,
   Moon,
   Zap,
-  Rocket
+  Rocket,
+  Shield
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFinanceStore } from '@/hooks/useFinanceStore';

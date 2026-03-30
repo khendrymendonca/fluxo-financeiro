@@ -235,7 +235,7 @@ export function ProfileSettings() {
                         <div className="flex flex-col gap-1">
                             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
                                 <span className="text-zinc-400 dark:text-zinc-600">Versão</span>
-                                <span className="text-zinc-600 dark:text-zinc-400">{appVersion}</span>
+                                <span className="text-zinc-600 dark:text-zinc-400">{appVersion} | Estável</span>
                             </div>
                             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
                                 <span className="text-zinc-400 dark:text-zinc-600">Última Atualização</span>
