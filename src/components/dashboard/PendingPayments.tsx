@@ -66,20 +66,20 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
     };
 
     return (
-        <div className="card-elevated p-6 space-y-4 h-full">
+        <div className="bg-card rounded-[2rem] p-4 md:p-5 border border-border/50 space-y-4 h-full">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-primary" />
+                <h2 className="text-base md:text-lg font-bold flex items-center gap-2">
+                    <Calendar className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                     Contas a Pagar
                 </h2>
 
-                <div className="flex bg-muted p-1 rounded-xl">
+                <div className="flex bg-muted p-0.5 rounded-lg">
                     {(['semana', 'quinzena', 'mes', 'ano'] as FilterPeriod[]).map((p) => (
                         <button
                             key={p}
                             onClick={() => setPeriod(p)}
                             className={cn(
-                                "px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all",
+                                "px-2 py-1 text-[9px] font-black uppercase tracking-wider rounded-md transition-all",
                                 period === p
                                     ? "bg-background text-primary shadow-sm"
                                     : "text-muted-foreground hover:text-foreground"
@@ -92,34 +92,37 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
             </div>
 
             {pending.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8 text-sm italic">
+                <p className="text-muted-foreground text-center py-8 text-xs italic">
                     Nenhuma conta pendente para este período.
                 </p>
             ) : (
-                <div className="space-y-3">
+                <div className="space-y-1">
                     {pending.map((t) => {
                         const isOverdue = isBefore(parseLocalDate(t.date), today);
                         return (
-                            <div key={t.id} className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-transparent hover:border-primary/20 transition-all group">
+                            <div key={t.id} className="flex items-center justify-between p-2 md:p-3 rounded-xl hover:bg-muted/30 transition-all group border border-transparent hover:border-border/50">
                                 <div className="flex items-center gap-3">
-                                    <div className={cn(
-                                        "p-2 rounded-xl text-xs font-semibold",
-                                        isOverdue ? "bg-danger text-white shadow-lg shadow-danger/20" : "bg-danger/10 text-danger"
-                                    )}>
-                                        {formatDate(t.date)}
+                                    <div className="flex flex-col items-center min-w-[40px]">
+                                        <span className={cn(
+                                            "text-[10px] md:text-xs font-bold uppercase",
+                                            isOverdue ? "text-danger" : "text-amber-600 dark:text-amber-500"
+                                        )}>
+                                            {formatDate(t.date)}
+                                        </span>
+                                        {isOverdue && <span className="text-[8px] font-black text-danger uppercase animate-pulse">Atrasado</span>}
                                     </div>
-                                    <div>
-                                        <p className="font-semibold text-sm">{t.description}</p>
-                                        <p className="text-xs text-muted-foreground">{getSourceLabel(t)}</p>
+                                    <div className="flex flex-col">
+                                        <p className="font-bold text-xs md:text-sm text-foreground leading-tight">{t.description}</p>
+                                        <p className="text-[10px] md:text-xs text-muted-foreground font-medium uppercase tracking-tight">{getSourceLabel(t)}</p>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-3">
-                                    <span className={cn("font-bold text-sm", isOverdue ? "text-danger" : "text-muted-foreground")}>
+                                <div className="flex flex-col items-end gap-0.5 shrink-0 ml-4">
+                                    <span className={cn("font-bold text-sm md:text-base tracking-tight", isOverdue ? "text-danger" : "text-foreground")}>
                                         {formatCurrency(t.amount)}
                                     </span>
-                                    <div className="flex items-center gap-1 text-[10px] font-bold text-danger uppercase opacity-50">
-                                        <Clock className="w-3 h-3" /> Pendente
+                                    <div className="flex items-center gap-1 text-[8px] md:text-[9px] font-black text-danger/60 uppercase tracking-widest">
+                                        <Clock className="w-2.5 h-2.5" /> Pendente
                                     </div>
                                 </div>
                             </div>

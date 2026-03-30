@@ -32,25 +32,22 @@ export function StatCard({
 
   return (
     <div className={cn(
-      "card-elevated animate-fade-in overflow-hidden h-full w-full min-w-0",
-      isCompact ? "p-3" : "p-4 sm:p-6",
-      variant === 'positive' && 'border-l-4 border-l-success',
-      variant === 'negative' && 'border-l-4 border-l-danger',
-      variant === 'neutral' && 'border-l-4 border-l-info',
+      "bg-card rounded-[1.5rem] border border-border/50 animate-fade-in overflow-hidden h-full w-full min-w-0 transition-all hover:shadow-md hover:border-border",
+      isCompact ? "p-3" : "p-4 md:p-5",
       className
     )}>
-      <div className={cn("flex justify-between gap-2", isCompact ? "items-center" : "items-start")}>
-        <div className={cn("min-w-0 flex-1 overflow-hidden", isCompact ? "space-y-0" : "space-y-1.5")}>
+      <div className={cn("flex justify-between gap-3", isCompact ? "items-center" : "items-start")}>
+        <div className={cn("min-w-0 flex-1 overflow-hidden", isCompact ? "space-y-0" : "space-y-1")}>
           <p className={cn(
-            "font-bold text-muted-foreground uppercase tracking-widest truncate",
-            isCompact ? "text-[8px]" : "text-[10px] sm:text-xs"
+            "font-semibold text-muted-foreground uppercase tracking-wider truncate",
+            isCompact ? "text-[8px]" : "text-[10px] md:text-xs"
           )}>
             {title}
           </p>
           <p
             className={cn(
-              "text-[clamp(1.2rem,2.5vw,1.8rem)] font-black truncate block w-full",
-              variant === 'positive' && 'text-success',
+              "text-xl md:text-lg lg:text-2xl font-bold tracking-tight truncate block w-full",
+              variant === 'positive' && 'text-emerald-500 dark:text-emerald-400',
               variant === 'negative' && 'text-danger',
               variant === 'neutral' && 'text-info',
             )}
@@ -59,15 +56,15 @@ export function StatCard({
             {formatValue(value)}
           </p>
           {subtitle && !isCompact && (
-            <p className="text-[10px] sm:text-xs text-muted-foreground line-clamp-2 mt-1 opacity-80">{subtitle}</p>
+            <p className="text-[10px] md:text-xs text-muted-foreground line-clamp-1 mt-0.5 opacity-70 italic">{subtitle}</p>
           )}
         </div>
         <div className={cn(
-          "rounded-2xl shrink-0 shadow-sm",
-          isCompact ? "p-2" : "p-3",
-          variant === 'positive' && 'bg-success/10 text-success',
-          variant === 'negative' && 'bg-danger/10 text-danger',
-          variant === 'neutral' && 'bg-info/10 text-info',
+          "rounded-full shrink-0 flex items-center justify-center transition-transform group-hover:scale-110",
+          isCompact ? "p-2 w-8 h-8" : "p-3 w-10 h-10 md:w-12 md:h-12",
+          variant === 'positive' && 'bg-emerald-500/10 text-emerald-500 dark:bg-emerald-500/20',
+          variant === 'negative' && 'bg-danger/10 text-danger dark:bg-danger/20',
+          variant === 'neutral' && 'bg-info/10 text-info dark:bg-info/20',
           variant === 'default' && 'bg-muted/50 text-muted-foreground',
         )}>
           {icon}

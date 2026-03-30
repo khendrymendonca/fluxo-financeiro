@@ -191,14 +191,16 @@ export default function Index() {
       case 'dashboard':
         if (!isMobile) {
           return (
-            <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto p-2 md:p-8">
+            <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto p-4 md:p-8">
               {/* Header Desktop com Saudação */}
-              <div className="mb-8">
-                <p className="text-[10px] text-gray-400 dark:text-zinc-500 font-black uppercase tracking-[0.2em] mb-1">Visão Geral</p>
-                <div className="flex items-center justify-between">
-                  <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
-                    Olá, <span className="text-primary">{userName}</span>
-                  </h1>
+              <div className="mb-4">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-1">Visão Geral</p>
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                      Olá, <span className="text-primary">{userName}</span>
+                    </h1>
+                  </div>
                   <MonthSelector />
                 </div>
               </div>

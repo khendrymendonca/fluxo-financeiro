@@ -55,9 +55,12 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
   }
 
   return (
-    <div className="card-elevated p-6 animate-fade-in">
-      <h3 className="text-lg font-semibold mb-4 text-primary">Últimas Transações</h3>
-      <div className="space-y-3">
+    <div className="bg-card rounded-[2rem] p-4 md:p-5 border border-border/50 animate-fade-in shadow-sm transition-all hover:shadow-md hover:border-border">
+      <h3 className="text-base md:text-lg font-bold mb-4 text-foreground flex items-center gap-2">
+        <div className="w-1.5 h-4 bg-primary rounded-full" />
+        Últimas Transações
+      </h3>
+      <div className="space-y-1">
         {paidTransactions.map((transaction, index) => {
           const category = getCategory(transaction);
           const isIncome = transaction.type === 'income';
@@ -66,13 +69,13 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
           return (
             <div
               key={transaction.id}
-              className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors animate-fade-in group gap-3"
-              style={{ animationDelay: `${index * 50}ms` }}
+              className="flex items-center justify-between p-2 md:p-2.5 rounded-xl hover:bg-muted/30 transition-all animate-fade-in group gap-3 border border-transparent hover:border-border/50"
+              style={{ animationDelay: `${index * 30}ms` }}
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className={cn(
-                  "p-2 rounded-xl transition-all group-hover:scale-110 shrink-0",
-                  isIncome ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+                  "p-2 rounded-lg transition-all group-hover:scale-110 shrink-0",
+                  isIncome ? "bg-emerald-500/10 text-emerald-500 dark:bg-emerald-500/20" : "bg-danger/10 text-danger dark:bg-danger/20"
                 )}>
                   {isIncome
                     ? <ArrowUpRight className="w-4 h-4" />
@@ -81,23 +84,23 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-sm truncate">{transaction.description}</p>
+                    <p className="font-bold text-xs md:text-sm truncate text-foreground tracking-tight">{transaction.description}</p>
                     {sourceLabel && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground shrink-0 max-w-[80px] truncate">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground/70 font-black uppercase tracking-tighter shrink-0 max-w-[80px] truncate border border-border/30">
                         {sourceLabel}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">
+                  <p className="text-[10px] md:text-xs text-muted-foreground truncate font-medium">
                     {category?.label} • {formatDate(transaction.date)}
                   </p>
                 </div>
               </div>
               <span className={cn(
-                "font-bold text-sm shrink-0 whitespace-nowrap",
-                isIncome ? "text-success" : "text-danger"
+                "font-bold text-xs md:text-sm shrink-0 whitespace-nowrap tabular-nums",
+                isIncome ? "text-emerald-500" : "text-foreground"
               )}>
-                {isIncome ? '+' : '-'} {formatCurrency(transaction.amount)}
+                {isIncome ? '+' : '-'} {formatCurrency(Math.abs(Number(transaction.amount)))}
               </span>
             </div>
           );

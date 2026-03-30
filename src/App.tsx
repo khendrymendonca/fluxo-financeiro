@@ -59,7 +59,7 @@ const App = () => (
           <ThemeColorProvider>
             <TooltipProvider>
               <Toaster />
-              <Sonner />
+              <Sonner position="bottom-right" closeButton richColors expand={false} />
               <AppRoutes />
             </TooltipProvider>
           </ThemeColorProvider>
