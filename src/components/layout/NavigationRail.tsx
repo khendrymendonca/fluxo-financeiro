@@ -43,42 +43,26 @@ const navItems = [
 interface NavigationRailProps {
   currentView: string;
   onNavigate: (view: string) => void;
-  isExpanded: boolean;
-  onToggle: (expanded: boolean) => void;
 }
 
-export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }: NavigationRailProps) {
+export function NavigationRail({ currentView, onNavigate }: NavigationRailProps) {
   const { theme, setTheme } = useTheme();
-
-  const toggleSidebar = () => onToggle(!isExpanded);
 
   return (
     <nav
       className={cn(
         "hidden md:flex flex-col py-6 px-3 bg-white dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-800 h-screen transition-all duration-300 ease-in-out z-50",
-        isExpanded
-          ? "w-64 absolute top-0 left-0 shadow-2xl"
-          : "w-20 relative shrink-0"
+        "w-64 relative shrink-0"
       )}
     >
-      {/* Header with Logo and Toggle */}
-      <div className={cn(
-        "flex items-center mb-8 px-2",
-        isExpanded ? "justify-between" : "justify-center"
-      )}>
+      {/* Header with Logo */}
+      <div className="flex items-center mb-8 px-2 justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
             <span className="text-primary-foreground font-bold text-lg">F</span>
           </div>
-          {isExpanded && <span className="font-bold text-xl tracking-tight text-primary font-mono lowercase">Fluxo</span>}
+          <span className="font-bold text-xl tracking-tight text-primary font-mono lowercase">Fluxo</span>
         </div>
-
-        <button
-          onClick={toggleSidebar}
-          className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-900 text-gray-400 dark:text-zinc-500 transition-colors"
-        >
-          {isExpanded ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-        </button>
       </div>
 
       {/* Navigation Items */}
@@ -92,8 +76,7 @@ export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }
               key={item.id}
               onClick={() => onNavigate(item.id)}
               className={cn(
-                "flex items-center rounded-2xl transition-all duration-200 group relative",
-                isExpanded ? "px-4 py-3 gap-3 w-full" : "w-14 h-14 justify-center mx-auto",
+                "flex items-center rounded-2xl transition-all duration-200 group relative px-4 py-3 gap-3 w-full",
                 isActive
                   ? "bg-primary/10 text-primary shadow-sm"
                   : "text-gray-500 hover:bg-gray-100 dark:text-zinc-500 dark:hover:bg-zinc-900 hover:text-gray-900 dark:hover:text-zinc-50"
@@ -101,64 +84,42 @@ export function NavigationRail({ currentView, onNavigate, isExpanded, onToggle }
             >
               <Icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
 
-              {isExpanded && (
-                <span className={cn(
-                  "font-medium whitespace-nowrap overflow-hidden transition-all duration-300",
-                  isActive ? "text-primary opacity-100" : "opacity-80 group-hover:opacity-100"
-                )}>
-                  {item.label}
-                </span>
-              )}
-
-              {/* Tooltip on hover (only when collapsed) */}
-              {!isExpanded && (
-                <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-semibold rounded-xl opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100 pointer-events-none whitespace-nowrap z-50 shadow-xl border border-border/10">
-                  {item.label}
-                </div>
-              )}
+              <span className={cn(
+                "font-medium whitespace-nowrap overflow-hidden transition-all duration-300",
+                isActive ? "text-primary opacity-100" : "opacity-80 group-hover:opacity-100"
+              )}>
+                {item.label}
+              </span>
             </button>
           );
         })}
       </div>
 
       <div className="mt-auto pt-6 border-t border-gray-100 dark:border-zinc-800 flex flex-col gap-4">
-        {isExpanded ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-[10px] uppercase font-black tracking-widest text-gray-400 dark:text-zinc-500 mb-2 px-2">Aparência</p>
-            <div className="grid grid-cols-3 gap-1">
-              {[
-                { id: 'light', icon: Sun, label: 'Claro' },
-                { id: 'dark', icon: Moon, label: 'Escuro' },
-                { id: 'amoled', icon: Zap, label: 'AMOLED' },
-              ].map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setTheme(t.id as any)}
-                  className={cn(
-                    "flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all",
-                    theme === t.id
-                      ? "bg-primary/10 border-primary text-primary"
-                      : "bg-gray-50 dark:bg-zinc-900 border-transparent text-gray-400 dark:text-zinc-500 hover:text-gray-900 dark:hover:text-zinc-300"
-                  )}
-                >
-                  <t.icon className="w-4 h-4" />
-                  <span className="text-[8px] font-bold">{t.label}</span>
-                </button>
-              ))}
-            </div>
+        <div className="flex flex-col gap-2">
+          <p className="text-[10px] uppercase font-black tracking-widest text-gray-400 dark:text-zinc-500 mb-2 px-2">Aparência</p>
+          <div className="grid grid-cols-3 gap-1">
+            {[
+              { id: 'light', icon: Sun, label: 'Claro' },
+              { id: 'dark', icon: Moon, label: 'Escuro' },
+              { id: 'amoled', icon: Zap, label: 'AMOLED' },
+            ].map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTheme(t.id as any)}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all",
+                  theme === t.id
+                    ? "bg-primary/10 border-primary text-primary"
+                    : "bg-gray-50 dark:bg-zinc-900 border-transparent text-gray-400 dark:text-zinc-500 hover:text-gray-900 dark:hover:text-zinc-300"
+                )}
+              >
+                <t.icon className="w-4 h-4" />
+                <span className="text-[8px] font-bold">{t.label}</span>
+              </button>
+            ))}
           </div>
-        ) : (
-          <button
-            onClick={() => {
-              const modes: any[] = ['light', 'dark', 'amoled'];
-              const nextIndex = (modes.indexOf(theme) + 1) % modes.length;
-              setTheme(modes[nextIndex]);
-            }}
-            className="w-14 h-14 flex items-center justify-center mx-auto rounded-2xl bg-gray-100 dark:bg-zinc-900 text-gray-400 dark:text-zinc-400 hover:text-primary transition-all"
-          >
-            {theme === 'light' ? <Sun className="w-5 h-5" /> : theme === 'dark' ? <Moon className="w-5 h-5" /> : <Zap className="w-5 h-5 text-primary" />}
-          </button>
-        )}
+        </div>
       </div>
     </nav>
   );

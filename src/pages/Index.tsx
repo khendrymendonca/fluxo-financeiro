@@ -99,10 +99,7 @@ export default function Index() {
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
 
-  const [isExpanded, setIsExpanded] = useState(() => {
-    const saved = localStorage.getItem('sidebar-expanded');
-    return saved !== null ? JSON.parse(saved) : false;
-  });
+  const [isExpanded, setIsExpanded] = useState(true);
 
   const { theme, setTheme } = useTheme();
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>(undefined);
@@ -161,8 +158,7 @@ export default function Index() {
   }, []);
 
   const handleToggleSidebar = useCallback((expanded: boolean) => {
-    setIsExpanded(expanded);
-    localStorage.setItem('sidebar-expanded', JSON.stringify(expanded));
+    // No longer toggleable in Web
   }, []);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -454,8 +450,6 @@ export default function Index() {
     <AppLayout
       sidebar={
         <NavigationRail
-          isExpanded={isExpanded}
-          onToggle={handleToggleSidebar}
           currentView={currentView}
           onNavigate={setCurrentView}
         />
