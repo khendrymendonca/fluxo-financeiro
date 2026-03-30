@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/hooks/useTheme';
+import { useThemeColor } from '@/hooks/useThemeColor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,6 +25,7 @@ import { cn } from '@/lib/utils';
 export function ProfileSettings() {
     const { user } = useAuth();
     const { theme, setTheme } = useTheme();
+    const { accentColor, setAccentColor, accentColors } = useThemeColor();
 
     // Lógica de Versão Dinâmica
     const lastUpdateDate = new Date('2026-03-30');
@@ -181,6 +183,32 @@ export function ProfileSettings() {
                                 <span className="text-[10px] font-black uppercase tracking-widest">{t.label}</span>
                             </button>
                         ))}
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-zinc-800">
+                        <Label className="text-xs font-black uppercase tracking-widest text-zinc-500 ml-1">Cor de Destaque</Label>
+                        <div className="grid grid-cols-6 gap-3">
+                            {accentColors.map((color) => (
+                                <button
+                                    key={color.id}
+                                    onClick={() => setAccentColor(color.id)}
+                                    className={cn(
+                                        "relative w-full aspect-square rounded-full transition-all duration-300 flex items-center justify-center overflow-hidden border-4",
+                                        accentColor === color.id
+                                            ? "scale-110 shadow-lg border-white dark:border-zinc-800"
+                                            : "hover:scale-105 border-transparent opacity-80 hover:opacity-100"
+                                    )}
+                                    style={{ backgroundColor: `hsl(${color.hsl})` }}
+                                    title={color.name}
+                                >
+                                    {accentColor === color.id && (
+                                        <div className="bg-white/30 backdrop-blur-sm w-full h-full flex items-center justify-center">
+                                            <CheckCircle2 className="w-5 h-5 text-white drop-shadow-md" />
+                                        </div>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 

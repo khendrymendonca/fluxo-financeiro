@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { Target, Plane, Shield, PiggyBank, Plus, X, Trash2, Wallet, Minus } from 'lucide-react';
+import { Target, Plane, Shield, PiggyBank, Plus, X, Trash2, Wallet, Minus, Rocket, Map, Calendar } from 'lucide-react';
 import { SavingsGoal, Account } from '@/types/finance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,8 @@ interface GoalCardProps {
 }
 
 const iconMap: Record<string, any> = {
+  Rocket,
+  Map,
   Target,
   Plane,
   Shield,
@@ -36,7 +38,27 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit, onEdit
 
   const remaining = Math.max(goal.targetAmount - goal.currentAmount, 0);
   const isCompleted = goal.currentAmount >= goal.targetAmount;
-  const Icon = iconMap[goal.icon || 'Target'] || Target;
+  const Icon = iconMap[goal.icon || 'Rocket'] || Rocket;
+
+  // Cálculo de Planejamento Mensal
+  const getMonthlyPace = () => {
+    if (!goal.deadline || isCompleted) return null;
+
+    const now = new Date();
+    const target = parseLocalDate(goal.deadline);
+
+    const diffMonths = (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth());
+    const monthsRemaining = diffMonths > 0 ? diffMonths : 0;
+
+    if (monthsRemaining === 0) return { months: 0, amount: remaining };
+
+    return {
+      months: monthsRemaining,
+      amount: remaining / monthsRemaining
+    };
+  };
+
+  const planning = getMonthlyPace();
 
   const handleAddFunds = () => {
     const amount = parseFloat(fundAmount);
@@ -70,10 +92,11 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit, onEdit
             <Icon className="w-6 h-6" style={{ color: goal.color }} />
           </div>
           <div>
-            <h3 className="font-semibold text-lg text-gray-900 dark:text-zinc-50">{goal.name}</h3>
+            <h3 className="font-black text-xl text-gray-900 dark:text-zinc-50 tracking-tight">{goal.name}</h3>
             {goal.deadline && (
-              <p className="text-sm text-muted-foreground capitalize">
-                Meta: {format(parseLocalDate(goal.deadline), "MMMM 'de' yyyy", { locale: ptBR })}
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                Prazo: {format(parseLocalDate(goal.deadline), "MMMM 'de' yyyy", { locale: ptBR })}
               </p>
             )}
           </div>
@@ -116,13 +139,30 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit, onEdit
           />
         </div>
         {!isCompleted ? (
-          <p className="text-sm text-muted-foreground">
-            Faltam {formatCurrency(remaining)} para atingir a meta
-          </p>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground font-medium">
+              Faltam <span className="font-bold text-gray-900 dark:text-zinc-200">{formatCurrency(remaining)}</span> para realizar este sonho
+            </p>
+
+            {planning && (
+              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-950/50 border border-gray-100 dark:border-zinc-800 animate-in fade-in slide-in-from-right-2 duration-500">
+                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">Planejamento Rápido</p>
+                <p className="text-sm font-bold text-gray-700 dark:text-zinc-300">
+                  {planning.months > 0 ? (
+                    <>Faltam <span className="text-primary">{planning.months} meses</span>. Guarde <span className="text-primary">{formatCurrency(planning.amount)}/mês</span>.</>
+                  ) : (
+                    <>Falta <span className="text-primary">menos de 1 mês</span>. Guarde <span className="text-primary">{formatCurrency(planning.amount)}</span> agora.</>
+                  )}
+                </p>
+              </div>
+            )}
+          </div>
         ) : (
-          <p className="text-sm text-success font-bold flex items-center gap-1">
-            Meta atingida! Parabéns! ðŸŽ‰
-          </p>
+          <div className="py-4 px-6 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl animate-bounce">
+            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-black text-center flex items-center justify-center gap-2">
+              <Plus className="w-4 h-4" /> Sonho Realizado! Parabéns! 🎉
+            </p>
+          </div>
         )}
       </div>
 

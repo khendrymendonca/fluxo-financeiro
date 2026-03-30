@@ -10,18 +10,17 @@
   Receipt,
   Settings2,
   Sun,
-  Target,
-  TrendingDown,
+  Shield,
+  Zap,
+  User,
+  Rocket,
   Wallet,
   Home,
   CreditCard as CardIcon,
   BarChart3,
   History,
-  ChevronLeft,
-  ChevronRight,
-  Shield,
-  Zap,
-  User
+  TrendingDown,
+  Target
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
@@ -33,7 +32,7 @@ const navItems = [
   { id: 'cards', icon: CardIcon, label: 'Cartões' },
   { id: 'accounts', icon: Wallet, label: 'Minhas Contas (Carteira)' },
   { id: 'emergency', icon: Shield, label: 'Reserva de Emergência' },
-  { id: 'goals', icon: Target, label: 'Metas' },
+  { id: 'goals', icon: Rocket, label: 'Sonhos & Projetos' },
   { id: 'debts', icon: History, label: 'Acordos' },
   { id: 'reports', icon: BarChart3, label: 'Relatórios' },
   { id: 'categories', icon: Settings2, label: 'Categorias' },

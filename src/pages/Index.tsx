@@ -31,10 +31,10 @@ import {
   ArrowRightLeft,
   Info,
   LogOut,
-  Shield,
   Sun,
   Moon,
-  Zap
+  Zap,
+  Rocket
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
@@ -176,7 +176,7 @@ export default function Index() {
     { id: 'bills', icon: Receipt, label: 'Gestão de Contas' },
     { id: 'accounts', icon: Wallet, label: 'Minhas Contas (Carteira)' },
     { id: 'emergency', icon: Shield, label: 'Reserva de Emergência' },
-    { id: 'goals', icon: Target, label: 'Metas' },
+    { id: 'goals', icon: Rocket, label: 'Sonhos & Projetos' },
     { id: 'debts', icon: History, label: 'Acordos' },
     { id: 'reports', icon: BarChart3, label: 'Relatórios' },
     { id: 'categories', icon: Settings2, label: 'Categorias' },
@@ -369,8 +369,8 @@ export default function Index() {
         return (
           <div className="space-y-6 pt-2">
             <div className="flex items-center justify-between px-2">
-              <h2 className="text-2xl font-bold tracking-tight">Metas</h2>
-              <Button size="sm" className="rounded-xl font-bold" onClick={() => setShowGoalForm(true)}>Criar Meta</Button>
+              <h2 className="text-3xl font-black tracking-tight">Sonhos & Projetos</h2>
+              <Button size="sm" className="rounded-xl font-bold bg-primary text-white" onClick={() => setShowGoalForm(true)}>Lançar Novo Projeto</Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {savingsGoals.map(goal => (

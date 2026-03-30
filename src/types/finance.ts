@@ -117,6 +117,12 @@ export interface Debt {
   totalInstallments?: number;
 }
 
+export interface GoalItem {
+  id: string;
+  description: string;
+  value: number;
+}
+
 export interface SavingsGoal {
   id: string;
   userId: string;
@@ -128,6 +134,7 @@ export interface SavingsGoal {
   icon?: string;
   // ✅ ADICIONADO: vínculo com conta/caixinha real
   accountId?: string;
+  items?: GoalItem[];
 }
 
 export interface FinanceState {

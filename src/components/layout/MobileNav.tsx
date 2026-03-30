@@ -10,7 +10,8 @@
   Database,
   Wallet,
   LineChart,
-  User
+  User,
+  Rocket
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,7 +26,7 @@ const navItems = [
   { id: 'bills', icon: Receipt, label: 'Fixas' },
   { id: 'cards', icon: CreditCard, label: 'Cartões' },
   { id: 'accounts', icon: Wallet, label: 'Bancos' },
-  { id: 'goals', icon: Target, label: 'Metas' },
+  { id: 'goals', icon: Rocket, label: 'Projetos' },
   { id: 'debts', icon: TrendingDown, label: 'Dívidas' },
   { id: 'reports', icon: LineChart, label: 'Gráficos' },
   { id: 'categories', icon: Settings2, label: 'Categorias' },
@@ -67,5 +68,3 @@ export function MobileNav({ currentView, onNavigate }: MobileNavProps) {
     </nav>
   );
 }
-
-

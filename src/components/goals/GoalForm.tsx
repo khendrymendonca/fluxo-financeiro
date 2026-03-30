@@ -1,10 +1,10 @@
 ﻿import { useState } from 'react';
-import { X, Target, Plane, Shield, PiggyBank, Home, Car, GraduationCap, RotateCw } from 'lucide-react';
+import { X, Target, Plane, Shield, PiggyBank, Home, Car, GraduationCap, RotateCw, Plus, Trash2, Rocket, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SavingsGoal } from '@/types/finance';
+import { SavingsGoal, GoalItem } from '@/types/finance';
 import { cn } from '@/lib/utils';
 import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
 import { format } from 'date-fns';
@@ -17,6 +17,8 @@ interface GoalFormProps {
 }
 
 const icons = [
+  { name: 'Rocket', icon: Rocket },
+  { name: 'Map', icon: Map },
   { name: 'Target', icon: Target },
   { name: 'Plane', icon: Plane },
   { name: 'Shield', icon: Shield },
@@ -35,26 +37,39 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
   const isPending = isAddingGoal || isUpdatingGoal;
 
   const [name, setName] = useState(initialData?.name || '');
-  const [targetAmount, setTargetAmount] = useState(initialData?.targetAmount.toString() || '');
+  const [items, setItems] = useState<GoalItem[]>(initialData?.items || []);
   const [currentAmount, setCurrentAmount] = useState(initialData?.currentAmount.toString() || '0');
   const [deadline, setDeadline] = useState(initialData?.deadline || '');
-  const [selectedIcon, setSelectedIcon] = useState(initialData?.icon || 'Target');
+  const [selectedIcon, setSelectedIcon] = useState(initialData?.icon || 'Rocket');
   const [selectedColor, setSelectedColor] = useState(initialData?.color || APP_COLORS[0]);
+
+  const targetAmount = items.reduce((acc, item) => acc + item.value, 0);
+
+  const addItem = () => {
+    setItems([...items, { id: crypto.randomUUID(), description: '', value: 0 }]);
+  };
+
+  const removeItem = (id: string) => {
+    setItems(items.filter(item => item.id !== id));
+  };
+
+  const updateItem = (id: string, updates: Partial<GoalItem>) => {
+    setItems(items.map(item => item.id === id ? { ...item, ...updates } : item));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const parsedTarget = parseFloat(targetAmount);
     const parsedCurrent = parseFloat(currentAmount) || 0;
 
     const errors: string[] = [];
-    if (!name) errors.push('Nome da Meta');
-    if (isNaN(parsedTarget) || parsedTarget <= 0) errors.push('Valor Alvo');
+    if (!name) errors.push('Título do Projeto');
+    if (targetAmount <= 0) errors.push('Adicione pelo menos um item com valor');
 
     if (errors.length > 0) {
       toast({
-        title: 'Campos obrigatórios',
-        description: `Preencha: ${errors.join(', ')}`,
+        title: 'Dados incompletos',
+        description: `Corrija: ${errors.join(', ')}`,
         variant: 'destructive'
       });
       return;
@@ -62,11 +77,12 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
 
     onSubmit({
       name,
-      targetAmount: parsedTarget,
+      targetAmount,
       currentAmount: parsedCurrent,
       deadline: deadline || undefined,
       icon: selectedIcon,
       color: selectedColor,
+      items
     });
 
     onClose();
@@ -76,43 +92,86 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/20 backdrop-blur-sm">
       <div className="bg-card rounded-3xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto animate-scale-in">
         <div className="flex items-center justify-between p-6 border-b border-border">
-          <h2 className="text-xl font-semibold">{initialData ? 'Editar Meta' : 'Nova Meta'}</h2>
+          <h2 className="text-xl font-bold italic">{initialData ? 'Editar Projeto' : 'Novo Projeto'}</h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-muted transition-colors"
+            className="p-2 rounded-xl hover:bg-muted transition-colors text-zinc-400"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Name */}
           <div className="space-y-2">
-            <Label htmlFor="name">Nome da Meta</Label>
+            <Label htmlFor="name" className="text-xs font-black uppercase tracking-widest text-zinc-500">Título do Projeto</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Reserva de Emergência"
-              className="rounded-xl"
+              placeholder="Ex: Viagem para o Japão"
+              className="rounded-2xl h-12 font-bold bg-muted/30"
               required
             />
           </div>
 
-          {/* Target Amount */}
-          <div className="space-y-2">
-            <Label htmlFor="targetAmount">Valor Alvo (R$)</Label>
-            <Input
-              id="targetAmount"
-              type="number"
-              step="0.01"
-              min="0"
-              value={targetAmount}
-              onChange={(e) => setTargetAmount(e.target.value)}
-              placeholder="10000.00"
-              className="rounded-xl text-lg font-semibold"
-              required
-            />
+          {/* Checklist de Itens */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-black uppercase tracking-widest text-zinc-500">Checklist do Projeto</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addItem}
+                className="rounded-xl h-8 text-[10px] uppercase font-black"
+              >
+                <Plus className="w-3 h-3 mr-1" /> Add Item
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {items.map((item) => (
+                <div key={item.id} className="flex gap-2 items-start group">
+                  <Input
+                    placeholder="Descrição do item"
+                    value={item.description}
+                    onChange={(e) => updateItem(item.id, { description: e.target.value })}
+                    className="rounded-xl h-10 bg-muted/20"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Valor"
+                    value={item.value || ''}
+                    onChange={(e) => updateItem(item.id, { value: parseFloat(e.target.value) || 0 })}
+                    className="rounded-xl h-10 w-24 bg-muted/20 text-right font-bold"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeItem(item.id)}
+                    className="h-10 w-10 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+
+              {items.length === 0 && (
+                <div className="text-center py-6 border-2 border-dashed border-muted rounded-2xl">
+                  <p className="text-xs text-muted-foreground font-medium">Nenhum item adicionado ao checklist.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Target Amount Display */}
+          <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex justify-between items-center">
+            <Label className="text-xs font-black uppercase tracking-widest text-primary">Custo Total Previsto</Label>
+            <span className="text-xl font-black text-primary">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(targetAmount)}
+            </span>
           </div>
 
           {/* Current Amount */}
@@ -180,7 +239,7 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
                 <span>Salvando...</span>
               </div>
             ) : (
-              initialData ? 'Salvar Alterações' : 'Criar Meta'
+              initialData ? 'Salvar Projeto' : 'Lançar Projeto'
             )}
           </Button>
         </form>
