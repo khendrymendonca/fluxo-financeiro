@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { formatCompactCurrency } from '@/utils/formatters';
 
 interface StatCardProps {
   title: string;
@@ -20,20 +21,12 @@ export function StatCard({
   className,
   isCompact
 }: StatCardProps) {
-  const formatValue = (val: string | number) => {
-    if (typeof val === 'number') {
-      return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      }).format(val);
-    }
-    return val;
-  };
+  const displayValue = typeof value === 'number' ? formatCompactCurrency(value) : value;
 
   return (
     <div className={cn(
       "bg-card rounded-[1.5rem] border border-border/40 animate-fade-in overflow-hidden h-full w-full min-w-0 transition-all shadow-sm dark:shadow-none",
-      isCompact ? "p-3" : "p-4",
+      isCompact ? "p-3" : "p-4 md:p-5",
       className
     )}>
       <div className={cn("flex justify-between gap-3", isCompact ? "items-center" : "items-start")}>
@@ -46,14 +39,14 @@ export function StatCard({
           </p>
           <p
             className={cn(
-              "text-xl lg:text-2xl font-bold tracking-tight whitespace-nowrap block w-full",
+              "text-xl md:text-2xl font-bold tracking-tight whitespace-nowrap overflow-hidden text-ellipsis block w-full",
               variant === 'positive' && 'text-green-500 dark:text-green-500 md:dark:text-emerald-400',
               variant === 'negative' && 'text-red-500 dark:text-red-500 md:dark:text-rose-400',
               variant === 'neutral' && 'text-blue-500 dark:text-blue-500 md:dark:text-blue-400',
             )}
-            title={formatValue(value) as string}
+            title={displayValue}
           >
-            {formatValue(value)}
+            {displayValue}
           </p>
           {subtitle && !isCompact && (
             <p className="text-[10px] md:text-xs text-muted-foreground line-clamp-1 mt-0.5 opacity-70 italic">{subtitle}</p>

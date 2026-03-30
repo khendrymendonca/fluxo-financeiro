@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { CreditCardVisual } from '@/components/cards/CreditCardVisual';
 import { AddCardDialog } from '@/components/cards/AddCardDialog';
@@ -35,40 +35,28 @@ export default function CardsDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [transactionToAnticipate, setTransactionToAnticipate] = useState<Transaction | null>(null);
 
-  // Carousel Logic
-  const scrollRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     if (creditCards.length > 0 && !selectedCardId) {
       setSelectedCardId(creditCards[0].id);
     }
   }, [creditCards, selectedCardId]);
 
-  const handleScroll = () => {
-    if (!scrollRef.current) return;
-    const container = scrollRef.current;
-    const scrollLeft = container.scrollLeft;
-    const cardWidth = container.offsetWidth * 0.8;
-    const index = Math.round(scrollLeft / (cardWidth + 16));
-    if (creditCards[index] && creditCards[index].id !== selectedCardId) {
-      setSelectedCardId(creditCards[index].id);
-    }
-  };
-
   const selectedCard = creditCards.find(c => c.id === selectedCardId);
 
-  const getCardStats = (cardId: string) => {
-    const card = creditCards.find(c => c.id === cardId);
+  const stats = useMemo(() => {
+    if (!selectedCardId) return { used: 0, available: 0, limit: 0, percentUsed: 0, isOverLimit: false };
+    const card = creditCards.find(c => c.id === selectedCardId);
     const limit = Number(card?.limit || 0);
-    const used = getCardUsedLimit(cardId);
+    const used = getCardUsedLimit(selectedCardId);
     const available = limit - used;
     const percentUsed = limit > 0 ? (used / limit) * 100 : 0;
     const isOverLimit = used > limit;
     return { used, available, limit, percentUsed, isOverLimit };
-  };
+  }, [selectedCardId, creditCards, getCardUsedLimit]);
 
-  const getInvoiceTransactions = (cardId: string) => {
-    const card = creditCards.find(c => c.id === cardId);
+  const currentInvoiceTransactions = useMemo(() => {
+    if (!selectedCardId) return [];
+    const card = creditCards.find(c => c.id === selectedCardId);
     if (!card) return [];
     const viewDateStr = format(viewDate, 'yyyy-MM');
     const { closingDay } = getCardSettingsForDate(card, viewDate);
@@ -77,62 +65,42 @@ export default function CardsDashboard() {
     const endInv = new Date(viewYear, viewMonth, closingDay, 23, 59, 59);
     const startInv = new Date(viewYear, viewMonth - 1, closingDay + 1, 0, 0, 0);
 
-    const allInvoiceTransactions = transactions
+    return transactions
       .filter(t => {
-        if (t.cardId !== cardId || t.isInvoicePayment) return false;
+        if (t.cardId !== selectedCardId || t.isInvoicePayment) return false;
         if (t.isVirtual) return false;
-        if (t.invoiceMonthYear) {
-          return t.invoiceMonthYear === viewDateStr;
-        }
+        if (t.invoiceMonthYear) return t.invoiceMonthYear === viewDateStr;
         const tDate = parseLocalDate(t.date);
         return tDate >= startInv && tDate <= endInv;
-      });
+      })
+      .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
+  }, [selectedCardId, creditCards, viewDate, transactions]);
 
-    const filteredInvoiceTransactions = allInvoiceTransactions.filter(t => {
-      if (searchQuery.trim() === '') return true;
-      const query = searchQuery.toLowerCase();
-      const matchesDescription = t.description.toLowerCase().includes(query);
-      const matchesCategory = categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(query);
-      return matchesDescription || matchesCategory;
-    });
-
-    return filteredInvoiceTransactions.sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
-  };
-
-  const getInvoiceStatus = (cardId: string): 'paga' | 'aberta' => {
-    const viewDateStr = format(viewDate, 'yyyy-MM');
-    const hasPaid = transactions.some(
-      t => t.cardId === cardId && t.isInvoicePayment && t.invoiceMonthYear === viewDateStr
-    );
-    return hasPaid ? 'paga' : 'aberta';
-  };
-
-  const currentInvoiceTransactions = selectedCardId ? getInvoiceTransactions(selectedCardId) : [];
-  const currentInvoiceTotal = currentInvoiceTransactions.reduce(
-    (sum, t) => sum + (t.type === 'income' ? -t.amount : t.amount),
-    0
+  const currentInvoiceTotal = useMemo(() => 
+    currentInvoiceTransactions.reduce((sum, t) => sum + (t.type === 'income' ? -t.amount : t.amount), 0),
+    [currentInvoiceTransactions]
   );
-  const stats = selectedCardId
-    ? getCardStats(selectedCardId)
-    : { used: 0, available: 0, limit: 0, percentUsed: 0, isOverLimit: false };
-  const invoiceStatus = selectedCardId ? getInvoiceStatus(selectedCardId) : 'aberta';
-  const dynamicStatus = selectedCard && selectedCardId
-    ? getInvoiceStatusDisplay(selectedCard, viewDate, invoiceStatus === 'paga', currentInvoiceTotal)
-    : null;
+
+  const dynamicStatus = useMemo(() => {
+    if (!selectedCard || !selectedCardId) return null;
+    const viewDateStr = format(viewDate, 'yyyy-MM');
+    const isPaid = transactions.some(t => t.cardId === selectedCardId && t.isInvoicePayment && t.invoiceMonthYear === viewDateStr);
+    return getInvoiceStatusDisplay(selectedCard, viewDate, isPaid, currentInvoiceTotal);
+  }, [selectedCard, selectedCardId, viewDate, transactions, currentInvoiceTotal]);
 
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   return (
-    <div className="space-y-4 animate-fade-in pb-24 w-full pt-2">
+    <div className="space-y-6 animate-fade-in pb-24 w-full pt-2 max-w-7xl mx-auto px-4 md:px-8">
       <PageHeader title="Meus Cartões" icon={CreditCard}>
         <Button
           variant="outline"
-          size="icon"
-          className="rounded-full h-10 w-10 border-primary/20"
+          size="sm"
+          className="rounded-xl border-primary/20 gap-2 font-bold uppercase text-[10px] tracking-widest h-10 px-4"
           onClick={() => setShowAddCard(true)}
         >
-          <Plus className="w-5 h-5 text-primary" />
+          <Plus className="w-4 h-4 text-primary" /> Novo Cartão
         </Button>
       </PageHeader>
 
@@ -145,28 +113,23 @@ export default function CardsDashboard() {
           </Button>
         </div>
       ) : (
-        <>
-          {/* Carousel Dynamic - Breakout Container Technique */}
-          <div
-            ref={scrollRef}
-            onScroll={handleScroll}
-            className={cn(
-              "flex w-screen relative left-1/2 -translate-x-1/2 overflow-x-auto snap-x snap-mandatory no-scrollbar gap-4 px-[7.5vw] py-4 md:w-full md:relative md:left-auto md:translate-x-0 md:px-0 md:justify-center md:gap-6"
-            )}
-          >
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Master: Lista de Cartões (Coluna Esquerda) */}
+          <div className="lg:col-span-4 flex flex-col gap-4 overflow-x-auto lg:overflow-x-visible no-scrollbar pb-4 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0 flex-row lg:flex-col snap-x snap-mandatory">
             {creditCards.map(card => {
-              const cardStats = getCardStats(card.id);
+              const cardUsed = getCardUsedLimit(card.id);
+              const cardAvailable = card.limit - cardUsed;
+              const isSelected = selectedCardId === card.id;
+              
               return (
-                <div
-                  key={card.id}
-                  className="w-[85vw] md:w-[380px] shrink-0 snap-center transition-transform"
-                >
+                <div key={card.id} className="min-w-[85vw] lg:min-w-0 snap-center">
                   <CreditCardVisual
                     card={card}
-                    usedLimit={cardStats.used}
-                    availableLimit={cardStats.available}
-                    className={cn(selectedCardId === card.id && "md:ring-2 md:ring-primary md:ring-offset-2")}
+                    usedLimit={cardUsed}
+                    availableLimit={cardAvailable}
+                    isSelected={isSelected}
                     onClick={() => setSelectedCardId(card.id)}
+                    className={cn(isSelected ? "ring-offset-4 ring-primary" : "opacity-80 grayscale-[30%] hover:grayscale-0 hover:opacity-100")}
                     invoiceStatus={getInvoiceStatusDisplay(
                       card,
                       viewDate,
@@ -178,92 +141,73 @@ export default function CardsDashboard() {
                 </div>
               );
             })}
-
-            {/* Elemento Espaçador (Fallback Safari) */}
-            <div className="w-[1vw] shrink-0 md:hidden" aria-hidden="true" />
           </div>
 
-          {selectedCard && (
-            <div className="md:grid md:grid-cols-[1fr_350px] md:gap-8 items-start">
-              <div className="space-y-8 mt-4 animate-slide-up">
-                {/* Info Panel */}
-                <div className="text-center md:text-left space-y-1">
-                  <p className="text-xs uppercase font-black text-muted-foreground tracking-[0.2em]">Fatura Atual</p>
-                  <h2 className="text-5xl font-black tracking-tighter transition-all">
-                    {formatCurrency(currentInvoiceTotal)}
-                  </h2>
-                  <div className="flex items-center justify-center md:justify-start gap-2 text-xs font-bold text-muted-foreground mt-2">
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>Vence {selectedCard.dueDay} {format(viewDate, 'MMM', { locale: ptBR })}</span>
-                    <span className="w-1 h-1 rounded-full bg-border" />
-                    {dynamicStatus && (
-                      <span className={cn(
-                        "uppercase tracking-wider flex items-center gap-1",
-                        dynamicStatus.color
-                      )}>
-                        {dynamicStatus.icon} {dynamicStatus.text}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Progress Panel Mobile */}
-                <div className="card-elevated p-6 rounded-[2.5rem] shadow-sm border-none bg-muted/30 md:hidden">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-end">
-                      <div className="space-y-1">
-                        <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Limite Disponível</p>
-                        <p className="text-2xl font-black text-foreground">{formatCurrency(stats.available)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] text-muted-foreground font-bold">Total: {formatCurrency(stats.limit)}</p>
+          {/* Detail: Informações do Cartão Selecionado (Coluna Direita) */}
+          <div className="lg:col-span-8 space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+            {selectedCard && (
+              <>
+                {/* Cabeçalho de Fatura */}
+                <div className="bg-card rounded-[2.5rem] p-8 border border-border/40 shadow-sm dark:shadow-none relative overflow-hidden">
+                  <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div className="space-y-1">
+                      <p className="text-[10px] md:text-xs uppercase font-black text-muted-foreground tracking-[0.2em]">Fatura Atual • {format(viewDate, 'MMMM yyyy', { locale: ptBR })}</p>
+                      <h2 className="text-4xl md:text-6xl font-black tracking-tighter transition-all tabular-nums">
+                        {formatCurrency(currentInvoiceTotal)}
+                      </h2>
+                      <div className="flex items-center gap-3 text-xs font-bold text-muted-foreground mt-2">
+                        <Calendar className="w-4 h-4 text-primary" />
+                        <span>Vence dia {selectedCard.dueDay}</span>
+                        {dynamicStatus && (
+                          <span className={cn("uppercase tracking-widest text-[10px] px-2 py-0.5 rounded-md bg-muted", dynamicStatus.color)}>
+                            {dynamicStatus.text}
+                          </span>
+                        )}
                       </div>
                     </div>
 
-                    <Progress value={stats.percentUsed} className="h-2.5 bg-background" />
-
-                    <div className="flex justify-between items-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs font-bold p-0 h-auto hover:bg-transparent text-primary gap-1"
-                        onClick={() => setShowEditCard(true)}
-                      >
-                        Ajustar Limite <Pencil className="w-3 h-3" />
-                      </Button>
-                      <p className="text-[10px] font-black text-muted-foreground">
-                        {stats.percentUsed.toFixed(0)}% USADO
-                      </p>
+                    <div className="flex flex-col gap-3 min-w-[200px]">
+                       <div className="space-y-1.5">
+                          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                            <span className="text-muted-foreground">Uso do Limite</span>
+                            <span className="text-foreground">{stats.percentUsed.toFixed(0)}%</span>
+                          </div>
+                          <Progress value={stats.percentUsed} className="h-2" />
+                          <p className="text-[10px] text-muted-foreground font-medium text-right">
+                            {formatCurrency(stats.available)} disponíveis de {formatCurrency(stats.limit)}
+                          </p>
+                       </div>
+                       <Button
+                          variant="secondary"
+                          size="sm"
+                          className="w-full rounded-xl font-bold gap-2 text-xs h-10"
+                          onClick={() => setShowEditCard(true)}
+                        >
+                          <Pencil className="w-3.5 h-3.5" /> Ajustar Limite
+                        </Button>
                     </div>
                   </div>
-
-                  <div className="mt-8 pt-6 border-t border-border/50">
-                    <div className="px-6 py-4 rounded-2xl bg-primary/5 border border-primary/10 text-center">
-                      <p className="text-xs font-bold text-primary flex items-center justify-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" /> Pagamento Centralizado
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mt-1">
-                        Para pagar esta fatura, utilize a aba de <span className="font-bold">Gestão de Contas</span>.
-                      </p>
-                    </div>
-                  </div>
+                  
+                  {/* Glossy back pattern */}
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
                 </div>
 
-                {/* Transaction List */}
+                {/* Lista de Gastos */}
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs uppercase font-black text-muted-foreground tracking-widest ml-1">Lançamentos</h3>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="icon" onClick={() => setViewDate(prev => subMonths(prev, 1))} className="h-8 w-8 rounded-xl">{"<"}</Button>
-                      <p className="text-xs font-black capitalize w-24 text-center">{format(viewDate, 'MMMM yyyy', { locale: ptBR })}</p>
-                      <Button variant="outline" size="icon" onClick={() => setViewDate(prev => addMonths(prev, 1))} className="h-8 w-8 rounded-xl">{">"}</Button>
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="text-[10px] uppercase font-black text-muted-foreground tracking-[0.3em]">Lançamentos da Fatura</h3>
+                    <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-xl border border-border/20">
+                      <Button variant="ghost" size="icon" onClick={() => setViewDate(prev => subMonths(prev, 1))} className="h-8 w-8 rounded-lg hover:bg-background">{"<"}</Button>
+                      <p className="text-[10px] font-black uppercase tracking-widest w-28 text-center">{format(viewDate, 'MMM yyyy', { locale: ptBR })}</p>
+                      <Button variant="ghost" size="icon" onClick={() => setViewDate(prev => addMonths(prev, 1))} className="h-8 w-8 rounded-lg hover:bg-background">{">"}</Button>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-1 gap-2">
                     {currentInvoiceTransactions.length === 0 ? (
-                      <div className="text-center py-12 text-muted-foreground opacity-30 italic font-medium">
-                        Nenhum gasto nesta fatura.
+                      <div className="text-center py-20 bg-muted/10 rounded-[2.5rem] border border-dashed border-border/40">
+                        <Receipt className="w-12 h-12 mx-auto mb-4 opacity-5 text-foreground" />
+                        <p className="text-muted-foreground italic text-sm">Nenhum gasto nesta fatura.</p>
                       </div>
                     ) : (
                       currentInvoiceTransactions.map(t => {
@@ -277,29 +221,29 @@ export default function CardsDashboard() {
                               }
                             }}
                             className={cn(
-                              "flex items-center justify-between p-4 rounded-[2rem] bg-muted/10 hover:bg-muted/30 transition-all border border-border/20",
-                              t.installmentTotal && "cursor-pointer group"
+                              "flex items-center justify-between p-4 rounded-2xl bg-card border border-border/30 hover:border-primary/30 transition-all group",
+                              t.installmentTotal && "cursor-pointer"
                             )}
                           >
                             <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary transition-colors">
+                              <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                                 <Receipt className="w-5 h-5" />
                               </div>
                               <div>
-                                <p className="font-bold text-sm leading-tight mb-0.5">{t.description}</p>
-                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold">
+                                <p className="font-bold text-sm leading-tight mb-0.5 group-hover:text-primary transition-colors">{t.description}</p>
+                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">
                                   <span>{format(parseLocalDate(t.date), 'dd MMM')}</span>
-                                  {category && <span className="text-primary/70">{category.name}</span>}
+                                  {category && <span className="text-primary/50">• {category.name}</span>}
                                 </div>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className={cn("font-black text-sm", t.type === 'income' ? 'text-success' : 'text-foreground')}>
+                              <p className={cn("font-black text-sm tabular-nums", t.type === 'income' ? 'text-emerald-500' : 'text-foreground')}>
                                 {t.type === 'income' ? '-' : ''}{formatCurrency(t.amount)}
                               </p>
                               {t.installmentTotal && (
-                                <p className="text-[8px] text-primary font-black uppercase flex items-center gap-1 justify-end animate-in fade-in slide-in-from-right-1">
-                                  P {t.installmentNumber}/{t.installmentTotal} <span className="text-[7px] bg-primary/10 px-1 rounded">Antecipar?</span>
+                                <p className="text-[8px] text-primary font-black uppercase flex items-center gap-1 justify-end mt-0.5">
+                                  Parcela {t.installmentNumber}/{t.installmentTotal} <span className="bg-primary/10 px-1 rounded">Antecipar?</span>
                                 </p>
                               )}
                             </div>
@@ -309,47 +253,10 @@ export default function CardsDashboard() {
                     )}
                   </div>
                 </div>
-              </div>
-
-              {/* Sidebar Panel for Desktop */}
-              <div className="hidden md:block space-y-6 mt-4">
-                <div className="card-elevated p-6 rounded-[2.5rem] shadow-sm border-none bg-muted/30 sticky top-24">
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest text-center">Limite Disponível</p>
-                      <p className="text-3xl font-black text-foreground text-center">{formatCurrency(stats.available)}</p>
-                      <Progress value={stats.percentUsed} className="h-2 bg-background" />
-                      <div className="flex justify-between items-center text-[10px] font-black text-muted-foreground">
-                        <span>{stats.percentUsed.toFixed(0)}% USADO</span>
-                        <span>{formatCurrency(stats.limit)} TOTAL</span>
-                      </div>
-                    </div>
-
-                    <div className="pt-4 border-t border-border/50 space-y-4">
-                      <div className="px-4 py-3 rounded-xl bg-primary/5 border border-primary/10 text-center">
-                        <p className="text-[10px] font-bold text-primary flex items-center justify-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Pagamento Centralizado
-                        </p>
-                        <p className="text-[9px] text-muted-foreground mt-1">
-                          Utilize a aba de <span className="font-bold">Gestão de Contas</span> para liqüidar esta fatura.
-                        </p>
-                      </div>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full text-xs font-bold text-primary gap-1"
-                        onClick={() => setShowEditCard(true)}
-                      >
-                        Ajustar Limite <Pencil className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
+              </>
+            )}
+          </div>
+        </div>
       )}
 
       {showAddCard && (

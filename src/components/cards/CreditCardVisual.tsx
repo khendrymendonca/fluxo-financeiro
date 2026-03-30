@@ -1,6 +1,5 @@
-﻿import { CreditCard as CardType } from '@/types/finance';
+import { CreditCard as CardType } from '@/types/finance';
 import { cn } from '@/lib/utils';
-import { Wifi, CreditCard as CreditCardIcon } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatters';
 
 interface CreditCardVisualProps {
@@ -10,10 +9,11 @@ interface CreditCardVisualProps {
     onClick?: () => void;
     className?: string;
     invoiceStatus?: { text: string; color: string; icon: string } | null;
+    isSelected?: boolean;
 }
 
 export function CreditCardVisual({
-    card, usedLimit, availableLimit, onClick, className, invoiceStatus
+    card, usedLimit, availableLimit, onClick, className, invoiceStatus, isSelected
 }: CreditCardVisualProps) {
     const cardColor = card.color || '#3b82f6';
     const cardBank = (card.bank || 'Banco').toUpperCase();
@@ -26,7 +26,8 @@ export function CreditCardVisual({
             onClick={onClick}
             className={cn(
                 "relative rounded-2xl p-5 md:p-6 text-white overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl cursor-pointer group border border-white/10",
-                "w-full h-48 md:h-52 max-w-sm mx-auto",
+                "w-full aspect-video min-h-[180px] flex flex-col justify-between",
+                isSelected && "ring-4 ring-primary ring-offset-2 dark:ring-offset-background",
                 className
             )}
             style={{
@@ -34,14 +35,12 @@ export function CreditCardVisual({
             }}
         >
             <div className="relative z-10 flex flex-col justify-between h-full">
+                {/* Topo: Instituição */}
                 <div className="flex justify-between items-start">
                     <div className="flex flex-col">
                         <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] opacity-70 mb-1">
                             {cardBank}
                         </span>
-                        <h3 className="font-bold text-base md:text-lg tracking-tight truncate max-w-[150px]">
-                            {cardName}
-                        </h3>
                     </div>
                     
                     {invoiceStatus && (
@@ -54,24 +53,20 @@ export function CreditCardVisual({
                     )}
                 </div>
 
-                <div className="space-y-4">
-                    <div className="flex items-center gap-4 opacity-80">
-                         <div className="flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-white/40" />
-                            <div className="w-1.5 h-1.5 rounded-full bg-white/40" />
-                            <div className="w-1.5 h-1.5 rounded-full bg-white/40" />
-                            <div className="w-1.5 h-1.5 rounded-full bg-white/40" />
-                         </div>
-                         <span className="text-sm md:text-base font-medium tracking-[0.25em]">
-                            {card.lastDigits || '0000'}
-                         </span>
-                    </div>
+                {/* Centro: Apelido do Cartão */}
+                <div className="flex-1 flex items-center justify-center">
+                    <h3 className="font-bold text-xl md:text-2xl tracking-wide text-white drop-shadow-md text-center px-4">
+                        {cardName}
+                    </h3>
+                </div>
 
-                    <div className="space-y-2">
+                {/* Rodapé: Informações Financeiras */}
+                <div className="space-y-3">
+                    <div className="space-y-1">
                         <div className="flex justify-between items-end">
                             <div className="flex flex-col">
                                 <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider opacity-60">Limite Disponível</span>
-                                <span className="font-bold text-sm md:text-lg tabular-nums">
+                                <span className="font-bold text-sm md:text-base tabular-nums">
                                     {formatCurrency(availableLimit)}
                                 </span>
                             </div>
@@ -106,5 +101,3 @@ function adjustColor(color: string = '#3b82f6', amount: number) {
         return '#1e40af';
     }
 }
-
-
