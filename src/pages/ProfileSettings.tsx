@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useMobileShortcuts, ShortcutId } from '@/hooks/useMobileShortcuts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,8 +19,14 @@ import {
     Zap,
     Monitor,
     CheckCircle2,
-    AlertCircle,
-    Bell
+    Bell,
+    LayoutDashboard,
+    ArrowUpDown,
+    Receipt,
+    CreditCard,
+    Wallet,
+    Rocket,
+    Smartphone
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
@@ -28,6 +35,7 @@ export function ProfileSettings() {
     const { user } = useAuth();
     const { theme, setTheme } = useTheme();
     const { accentColor, setAccentColor, accentColors } = useThemeColor();
+    const { shortcuts, saveShortcuts } = useMobileShortcuts();
 
     // Lógica de Versão Dinâmica
     const lastUpdateDate = new Date('2026-03-30');
@@ -83,16 +91,29 @@ export function ProfileSettings() {
         localStorage.setItem('push_projects', String(checked));
     };
 
+    const toggleShortcut = async (id: ShortcutId) => {
+        let newShortcuts: ShortcutId[];
+        if (shortcuts.includes(id)) {
+            newShortcuts = shortcuts.filter(s => s !== id);
+        } else {
+            if (shortcuts.length >= 5) {
+                toast.error('Máximo de 5 atalhos permitidos');
+                return;
+            }
+            newShortcuts = [...shortcuts, id];
+        }
+        await saveShortcuts(newShortcuts);
+    };
+
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
         try {
-            const updates: any = {};
-
             // Atualizar Perfil Completo (Nome, Tema, Cor)
             const { error } = await supabase.auth.updateUser({
                 data: {
+                    ...user?.user_metadata,
                     full_name: name,
                     theme: theme,
                     accent_color: accentColor
@@ -109,8 +130,8 @@ export function ProfileSettings() {
 
             // Atualizar Senha
             if (password) {
-                const { error } = await supabase.auth.updateUser({ password });
-                if (error) throw error;
+                const { error: errorPass } = await supabase.auth.updateUser({ password });
+                if (errorPass) throw errorPass;
                 setPassword('');
             }
 
@@ -122,15 +143,24 @@ export function ProfileSettings() {
         }
     };
 
+    const availableShortcuts: { id: ShortcutId; label: string; icon: any }[] = [
+        { id: 'dashboard', label: 'Início', icon: LayoutDashboard },
+        { id: 'transactions', label: 'Lançamentos', icon: ArrowUpDown },
+        { id: 'cards', label: 'Cartões', icon: CreditCard },
+        { id: 'bills', label: 'Fixas', icon: Receipt },
+        { id: 'accounts', label: 'Contas', icon: Wallet },
+        { id: 'goals', label: 'Projetos', icon: Rocket },
+    ];
+
     return (
         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 md:pb-10">
             {/* Header */}
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1 px-4 md:px-0">
                 <h1 className="text-3xl font-black tracking-tight">Ajustes e Perfil</h1>
                 <p className="text-zinc-500 dark:text-zinc-400 font-medium">Gerencie sua conta e as preferências do seu Fluxo.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-4 md:px-0">
                 {/* Card 1: Meus Dados */}
                 <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm space-y-6 md:col-span-2">
                     <div className="flex items-center gap-3 mb-2">
@@ -198,6 +228,52 @@ export function ProfileSettings() {
                     </form>
                 </div>
 
+                {/* Card Premium: Atalhos Mobile */}
+                <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm space-y-6 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                                <Smartphone className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold">Menu Inferior (Mobile)</h2>
+                                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Escolha até 5 atalhos para sua barra de navegação</p>
+                            </div>
+                        </div>
+                        <div className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase">
+                            {shortcuts.length}/5
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {availableShortcuts.map((item) => (
+                            <div 
+                                key={item.id} 
+                                className={cn(
+                                    "flex items-center justify-between p-4 rounded-3xl border transition-all duration-300",
+                                    shortcuts.includes(item.id) 
+                                        ? "bg-primary/5 border-primary/20 shadow-sm" 
+                                        : "bg-gray-50/50 dark:bg-zinc-950/50 border-gray-100 dark:border-zinc-800 opacity-60"
+                                )}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className={cn(
+                                        "w-10 h-10 rounded-2xl flex items-center justify-center transition-colors",
+                                        shortcuts.includes(item.id) ? "bg-primary text-white" : "bg-muted text-zinc-400"
+                                    )}>
+                                        <item.icon className="w-5 h-5" />
+                                    </div>
+                                    <span className="font-bold text-sm">{item.label}</span>
+                                </div>
+                                <Switch
+                                    checked={shortcuts.includes(item.id)}
+                                    onCheckedChange={() => toggleShortcut(item.id)}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
                 {/* Card 2: Aparência */}
                 <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm space-y-6">
                     <div className="flex items-center gap-3 mb-2">
@@ -257,7 +333,7 @@ export function ProfileSettings() {
                     </div>
                 </div>
 
-                {/* Card 3: Notificações (v6.3) */}
+                {/* Card 3: Notificações */}
                 <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm space-y-6">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
@@ -314,7 +390,7 @@ export function ProfileSettings() {
                 </div>
 
                 {/* Card 4: Sobre */}
-                <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+                <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm flex flex-col justify-between md:col-span-2">
                     <div className="space-y-6">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">

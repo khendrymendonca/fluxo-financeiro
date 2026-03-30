@@ -174,6 +174,7 @@ export default function Index() {
   const navigationItems = [
     { id: 'dashboard', icon: Home, label: 'Início' },
     { id: 'transactions', icon: List, label: 'Lançamentos' },
+    { id: 'cards', icon: CardIcon, label: 'Cartões' },
     { id: 'bills', icon: Receipt, label: 'Gestão de Contas' },
     { id: 'accounts', icon: Wallet, label: 'Minhas Contas (Carteira)' },
     { id: 'emergency', icon: Shield, label: 'Reserva de Emergência' },

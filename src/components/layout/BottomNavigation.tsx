@@ -1,11 +1,42 @@
-import { LayoutDashboard, ArrowUpDown, Receipt } from 'lucide-react';
+import { 
+    LayoutDashboard, 
+    ArrowUpDown, 
+    Receipt, 
+    CreditCard, 
+    Wallet, 
+    Rocket, 
+    TrendingDown, 
+    LineChart, 
+    Settings2, 
+    Database, 
+    Calculator, 
+    User,
+    Shield
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useMobileShortcuts, ShortcutId } from '@/hooks/useMobileShortcuts';
 
 interface NavItem {
-    id: string;
+    id: ShortcutId;
     icon: any;
     label: string;
 }
+
+const ALL_NAV_ITEMS: Record<ShortcutId, NavItem> = {
+    dashboard: { id: 'dashboard', icon: LayoutDashboard, label: 'Início' },
+    transactions: { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos' },
+    cards: { id: 'cards', icon: CreditCard, label: 'Cartões' },
+    bills: { id: 'bills', icon: Receipt, label: 'Fixas' },
+    accounts: { id: 'accounts', icon: Wallet, label: 'Bancos' },
+    goals: { id: 'goals', icon: Rocket, label: 'Projetos' },
+    debts: { id: 'debts', icon: TrendingDown, label: 'Dívidas' },
+    reports: { id: 'reports', icon: LineChart, label: 'Gráficos' },
+    categories: { id: 'categories', icon: Settings2, label: 'Categorias' },
+    export: { id: 'export', icon: Database, label: 'Dados' },
+    simulator: { id: 'simulator', icon: Calculator, label: 'Simulador' },
+    emergency: { id: 'emergency', icon: Shield, label: 'Reserva' },
+    profile: { id: 'profile', icon: User, label: 'Perfil' },
+};
 
 interface BottomNavigationProps {
     activeView: string;
@@ -13,11 +44,13 @@ interface BottomNavigationProps {
 }
 
 export function BottomNavigation({ activeView, onViewChange }: BottomNavigationProps) {
-    const items: NavItem[] = [
-        { id: 'dashboard', icon: LayoutDashboard, label: 'Início' },
-        { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos' },
-        { id: 'bills', icon: Receipt, label: 'Fixas' },
-    ];
+    const { shortcuts } = useMobileShortcuts();
+
+    if (!shortcuts || shortcuts.length === 0) {
+        return null;
+    }
+
+    const items = shortcuts.map(id => ALL_NAV_ITEMS[id]).filter(Boolean);
 
     return (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-background/80 backdrop-blur-md border-t border-gray-100 dark:border-zinc-800 pb-safe shadow-lg dark:shadow-none">
