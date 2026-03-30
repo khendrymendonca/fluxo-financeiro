@@ -146,28 +146,20 @@ export default function CardsDashboard() {
         </div>
       ) : (
         <>
-          {/* Carousel Dynamic */}
+          {/* Carousel Dynamic - Breakout Container Technique */}
           <div
             ref={scrollRef}
             onScroll={handleScroll}
             className={cn(
-              "flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 no-scrollbar w-full px-[10vw] scroll-padding-x-[10vw] snap-always",
-              "md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible md:snap-none md:flex-wrap md:px-0 md:scroll-padding-0"
+              "flex w-screen relative left-1/2 -translate-x-1/2 overflow-x-auto snap-x snap-mandatory no-scrollbar gap-4 px-[7.5vw] py-4 md:w-full md:relative md:left-auto md:translate-x-0 md:px-0 md:justify-center md:gap-6"
             )}
           >
-            {/* Buffer spacers para centralização absoluta */}
-            <div className="md:hidden shrink-0 w-[0.1px] snap-center" />
-
             {creditCards.map(card => {
               const cardStats = getCardStats(card.id);
               return (
                 <div
                   key={card.id}
-                  className={cn(
-                    "snap-center shrink-0 transition-opacity duration-300 min-w-[80vw] max-w-[80vw]",
-                    "md:min-w-[350px] md:max-w-[350px] md:snap-align-none",
-                    selectedCardId !== card.id && "opacity-50 md:opacity-100"
-                  )}
+                  className="w-[85vw] md:w-[380px] shrink-0 snap-center transition-transform"
                 >
                   <CreditCardVisual
                     card={card}
@@ -187,7 +179,8 @@ export default function CardsDashboard() {
               );
             })}
 
-            <div className="md:hidden shrink-0 w-[0.1px] snap-center" />
+            {/* Elemento Espaçador (Fallback Safari) */}
+            <div className="w-[1vw] shrink-0 md:hidden" aria-hidden="true" />
           </div>
 
           {selectedCard && (
