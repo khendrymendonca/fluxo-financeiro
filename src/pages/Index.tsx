@@ -197,7 +197,7 @@ export default function Index() {
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-1">Visão Geral</p>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
                       Olá, <span className="text-primary">{userName}</span>
                     </h1>
                   </div>

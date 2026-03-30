@@ -102,14 +102,16 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
                         return (
                             <div key={t.id} className="flex items-center justify-between p-2 md:p-3 rounded-xl hover:bg-muted/30 transition-all group border border-transparent hover:border-border/50">
                                 <div className="flex items-center gap-3">
-                                    <div className="flex flex-col items-center min-w-[40px]">
-                                        <span className={cn(
-                                            "text-[10px] md:text-xs font-bold uppercase",
-                                            isOverdue ? "text-danger" : "text-amber-600 dark:text-amber-500"
-                                        )}>
+                                    <div className={cn(
+                                        "flex flex-col items-center justify-center rounded-lg py-1.5 px-2 min-w-[50px] transition-colors",
+                                        isOverdue 
+                                            ? "bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400" 
+                                            : "bg-muted text-muted-foreground"
+                                    )}>
+                                        <span className="text-sm font-bold uppercase">
                                             {formatDate(t.date)}
                                         </span>
-                                        {isOverdue && <span className="text-[8px] font-black text-danger uppercase animate-pulse">Atrasado</span>}
+                                        {isOverdue && <span className="text-[8px] font-black uppercase tracking-tighter">Atrasado</span>}
                                     </div>
                                     <div className="flex flex-col">
                                         <p className="font-bold text-xs md:text-sm text-foreground leading-tight">{t.description}</p>
@@ -118,10 +120,10 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
                                 </div>
 
                                 <div className="flex flex-col items-end gap-0.5 shrink-0 ml-4">
-                                    <span className={cn("font-bold text-sm md:text-base tracking-tight", isOverdue ? "text-danger" : "text-foreground")}>
+                                    <span className={cn("text-sm font-semibold tabular-nums tracking-tight", isOverdue ? "text-red-600 dark:text-red-400" : "text-foreground")}>
                                         {formatCurrency(t.amount)}
                                     </span>
-                                    <div className="flex items-center gap-1 text-[8px] md:text-[9px] font-black text-danger/60 uppercase tracking-widest">
+                                    <div className="flex items-center gap-1 text-[8px] md:text-[9px] font-black text-red-500/60 dark:text-red-400/60 uppercase tracking-widest">
                                         <Clock className="w-2.5 h-2.5" /> Pendente
                                     </div>
                                 </div>

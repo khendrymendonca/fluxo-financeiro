@@ -32,7 +32,7 @@ export function StatCard({
 
   return (
     <div className={cn(
-      "bg-card rounded-[1.5rem] border border-border/50 animate-fade-in overflow-hidden h-full w-full min-w-0 transition-all hover:shadow-md hover:border-border",
+      "bg-card rounded-[1.5rem] border border-gray-200 dark:border-zinc-800 animate-fade-in overflow-hidden h-full w-full min-w-0 transition-all hover:shadow-md",
       isCompact ? "p-3" : "p-4 md:p-5",
       className
     )}>
@@ -46,10 +46,10 @@ export function StatCard({
           </p>
           <p
             className={cn(
-              "text-xl md:text-lg lg:text-2xl font-bold tracking-tight truncate block w-full",
-              variant === 'positive' && 'text-emerald-500 dark:text-emerald-400',
-              variant === 'negative' && 'text-danger',
-              variant === 'neutral' && 'text-info',
+              "text-2xl font-bold tracking-tight truncate block w-full",
+              variant === 'positive' && 'text-emerald-600 dark:text-emerald-400',
+              variant === 'negative' && 'text-red-600 dark:text-red-400',
+              variant === 'neutral' && 'text-blue-600 dark:text-blue-400',
             )}
             title={formatValue(value) as string}
           >
@@ -60,11 +60,11 @@ export function StatCard({
           )}
         </div>
         <div className={cn(
-          "rounded-full shrink-0 flex items-center justify-center transition-transform group-hover:scale-110",
+          "rounded-full shrink-0 flex items-center justify-center transition-transform",
           isCompact ? "p-2 w-8 h-8" : "p-3 w-10 h-10 md:w-12 md:h-12",
-          variant === 'positive' && 'bg-emerald-500/10 text-emerald-500 dark:bg-emerald-500/20',
-          variant === 'negative' && 'bg-danger/10 text-danger dark:bg-danger/20',
-          variant === 'neutral' && 'bg-info/10 text-info dark:bg-info/20',
+          variant === 'positive' && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+          variant === 'negative' && 'bg-red-500/10 text-red-600 dark:text-red-400',
+          variant === 'neutral' && 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
           variant === 'default' && 'bg-muted/50 text-muted-foreground',
         )}>
           {icon}

@@ -5,19 +5,20 @@ interface ExpenseChartProps {
 }
 
 const COLORS = [
-  '#14B8A6', // teal
-  '#8B5CF6', // purple
-  '#F97316', // orange
-  '#EC4899', // pink
-  '#3B82F6', // blue
-  '#10B981', // green
-  '#F59E0B', // amber
-  '#6366F1', // indigo
-  '#EF4444', // red
-  '#64748B', // slate
+  '#0d9488', // teal-600
+  '#7c3aed', // violet-600
+  '#ea580c', // orange-600
+  '#db2777', // pink-600
+  '#2563eb', // blue-600
+  '#059669', // emerald-600
+  '#d97706', // amber-600
+  '#4f46e5', // indigo-600
+  '#dc2626', // red-600
+  '#475569', // slate-600
 ];
 
 export function ExpenseChart({ data }: ExpenseChartProps) {
+  // ... (rest of logic)
   const initialChartData = Object.entries(data)
     .filter(([_, value]) => value > 0)
     .map(([categoryName, value]) => ({
@@ -74,7 +75,7 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
 
       <div className="flex flex-col lg:flex-row items-center gap-6 flex-1 min-h-0">
         {/* Mini Pie */}
-        <div className="w-full lg:w-48 h-48 md:h-52 lg:h-56 shrink-0">
+        <div className="w-full lg:w-48 h-48 md:h-[240px] shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
