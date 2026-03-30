@@ -28,8 +28,8 @@ export function CreditCardVisual({
         <div
             onClick={onClick}
             className={cn(
-                "relative rounded-2xl p-5 md:p-6 text-white overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl cursor-pointer group border border-white/10",
-                "w-full aspect-video min-h-[180px] flex flex-col justify-between",
+                "relative rounded-2xl p-5 text-white overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl cursor-pointer group border border-white/10",
+                "w-full max-w-[340px] mx-auto aspect-[1.58/1] flex flex-col justify-between",
                 isSelected && "ring-4 ring-primary ring-offset-2 dark:ring-offset-background",
                 textureKey === 'black' ? "bg-zinc-950" : "",
                 className
@@ -51,14 +51,14 @@ export function CreditCardVisual({
                 {/* Topo: Instituição */}
                 <div className="flex justify-between items-start">
                     <div className="flex flex-col">
-                        <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] opacity-70 mb-1 drop-shadow-sm">
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70 mb-1 drop-shadow-sm">
                             {cardBank}
                         </span>
                     </div>
                     
                     {invoiceStatus && (
                         <div className={cn(
-                            "text-[9px] md:text-[10px] font-black uppercase px-2.5 py-1 rounded-lg bg-white/10 backdrop-blur-md border border-white/10 transition-colors shadow-sm",
+                            "text-[9px] font-black uppercase px-2.5 py-1 rounded-lg bg-white/10 backdrop-blur-md border border-white/10 transition-colors shadow-sm",
                             invoiceStatus.text === 'Vencida' ? "bg-red-500/30 text-white animate-pulse" : "text-white/90"
                         )}>
                             {invoiceStatus.text}
@@ -66,24 +66,24 @@ export function CreditCardVisual({
                     )}
                 </div>
 
-                {/* Centro: Apelido do Cartão */}
+                {/* Centro: Apelido do Cartão - FLEX-1 E CENTERED */}
                 <div className="flex-1 flex items-center justify-center">
-                    <h3 className="font-bold text-xl md:text-2xl tracking-wide text-white drop-shadow-md text-center px-4 uppercase">
+                    <h3 className="font-bold text-lg md:text-xl tracking-wide text-white drop-shadow-md text-center px-2 uppercase line-clamp-2">
                         {cardName}
                     </h3>
                 </div>
 
                 {/* Rodapé: Informações Financeiras */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                     <div className="space-y-1">
                         <div className="flex justify-between items-end">
                             <div className="flex flex-col">
-                                <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider opacity-60 drop-shadow-sm">Limite Disponível</span>
-                                <span className="font-bold text-sm md:text-base tabular-nums drop-shadow-md">
+                                <span className="text-[8px] font-bold uppercase tracking-wider opacity-60 drop-shadow-sm">Limite Disponível</span>
+                                <span className="font-bold text-sm tabular-nums drop-shadow-md">
                                     {formatCurrency(availableLimit)}
                                 </span>
                             </div>
-                            <span className="text-[10px] md:text-xs font-black opacity-60 tabular-nums">
+                            <span className="text-[9px] font-black opacity-60 tabular-nums">
                                 {Math.min(percentageUsed, 100).toFixed(0)}%
                             </span>
                         </div>

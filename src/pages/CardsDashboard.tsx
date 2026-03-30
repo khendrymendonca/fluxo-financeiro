@@ -205,20 +205,32 @@ export default function CardsDashboard() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in pb-24 w-full pt-2 max-w-7xl mx-auto px-4 md:px-8">
-      <PageHeader title="Meus Cartões" icon={CreditCard}>
+    <div className="space-y-6 animate-fade-in pb-24 w-full pt-2 max-w-7xl mx-auto">
+      {/* Header com botão responsivo */}
+      <div className="px-4 md:px-8">
+        <PageHeader title="Meus Cartões" icon={CreditCard}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="hidden md:flex rounded-xl border-primary/20 gap-2 font-bold uppercase text-[10px] tracking-widest h-10 px-4"
+            onClick={() => setShowAddCard(true)}
+          >
+            <Plus className="w-4 h-4 text-primary" /> Novo Cartão
+          </Button>
+        </PageHeader>
+        
+        {/* Botão Mobile Full Width */}
         <Button
           variant="outline"
-          size="sm"
-          className="rounded-xl border-primary/20 gap-2 font-bold uppercase text-[10px] tracking-widest h-10 px-4"
+          className="md:hidden w-full rounded-xl border-primary/20 gap-2 font-bold uppercase text-[10px] tracking-widest h-12 mt-2 mb-4"
           onClick={() => setShowAddCard(true)}
         >
           <Plus className="w-4 h-4 text-primary" /> Novo Cartão
         </Button>
-      </PageHeader>
+      </div>
 
       {creditCards.length === 0 ? (
-        <div className="card-elevated p-12 text-center text-muted-foreground bg-muted/20 border-dashed border-2 rounded-3xl">
+        <div className="mx-4 card-elevated p-12 text-center text-muted-foreground bg-muted/20 border-dashed border-2 rounded-3xl">
           <CreditCard className="w-16 h-16 mx-auto mb-4 opacity-10" />
           <p className="text-xl font-bold">Nenhum cartão ativo.</p>
           <Button variant="ghost" className="mt-4" onClick={() => setShowAddCard(true)}>
@@ -227,10 +239,10 @@ export default function CardsDashboard() {
         </div>
       ) : (
         <>
-          {/* MOBILE LAYOUT: Carousel + Vertical Details */}
-          <div className="block lg:hidden space-y-8">
+          {/* MOBILE LAYOUT: Carousel + Structured Details */}
+          <div className="block lg:hidden space-y-6 px-4">
             {/* Snap Carousel Wrapper */}
-            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-6 w-full no-scrollbar -mx-4 px-4">
+            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 w-full no-scrollbar -mx-4 px-4">
               {creditCards.map(card => {
                 const cardUsed = getCardUsedLimit(card.id);
                 const cardAvailable = card.limit - cardUsed;
@@ -258,14 +270,56 @@ export default function CardsDashboard() {
               })}
             </div>
             
-            {/* Details below carousel */}
+            {/* Structured Info Card Mobile */}
+            {selectedCard && (
+              <div className="bg-card border border-border/50 rounded-[2rem] p-6 shadow-sm space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Fatura Atual</p>
+                    <p className="text-2xl font-black tabular-nums">{formatCurrency(currentInvoiceTotal)}</p>
+                  </div>
+                  {dynamicStatus && (
+                    <span className={cn("uppercase tracking-widest text-[9px] px-2 py-1 rounded-md font-bold", dynamicStatus.color)}>
+                      {dynamicStatus.text}
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-3 pt-4 border-t border-border/40">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground font-medium">Vencimento</span>
+                    <span className="font-bold flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-primary" />
+                      Dia {selectedCard.dueDay}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground font-medium">Uso do Limite</span>
+                    <span className="font-bold">{stats.percentUsed.toFixed(0)}%</span>
+                  </div>
+                  <Progress value={stats.percentUsed} className="h-1.5" />
+                  <div className="flex justify-between items-center text-[10px] pt-1">
+                    <span className="text-muted-foreground font-medium italic">Disponível: {formatCurrency(stats.available)}</span>
+                    <Button 
+                      variant="link" 
+                      className="h-auto p-0 text-primary font-bold uppercase tracking-tighter"
+                      onClick={() => setShowEditCard(true)}
+                    >
+                      Ajustar Limite
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Transactions List Below */}
             <div className="flex flex-col">
               {renderCardDetails()}
             </div>
           </div>
 
           {/* DESKTOP LAYOUT: Master-Detail Grid */}
-          <div className="hidden lg:grid lg:grid-cols-12 gap-8 items-start">
+          <div className="hidden lg:grid lg:grid-cols-12 gap-8 items-start px-8">
             {/* Master: Card List (Left Column) */}
             <div className="lg:col-span-4 flex flex-col gap-4">
               {creditCards.map(card => {
