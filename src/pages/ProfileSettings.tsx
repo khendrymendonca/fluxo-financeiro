@@ -25,6 +25,13 @@ export function ProfileSettings() {
     const { user } = useAuth();
     const { theme, setTheme } = useTheme();
 
+    // Lógica de Versão Dinâmica
+    const lastUpdateDate = new Date('2026-03-30');
+    const dayVersion = String(lastUpdateDate.getUTCDate()).padStart(2, '0');
+    const monthVersion = String(lastUpdateDate.getUTCMonth() + 1).padStart(2, '0');
+    const yearVersion = String(lastUpdateDate.getUTCFullYear()).slice(-2);
+    const appVersion = `${dayVersion}07${monthVersion}08${yearVersion}12`;
+
     // Estados para o formulário
     const [name, setName] = useState(user?.user_metadata?.full_name || '');
     const [email, setEmail] = useState(user?.email || '');
@@ -88,7 +95,7 @@ export function ProfileSettings() {
 
                     <form onSubmit={handleUpdateProfile} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="name" className="text-xs font-black uppercase tracking-widest text-zinc-500 ml-1">Como quer ser chamado?</Label>
+                            <Label htmlFor="name" className="text-xs font-black uppercase tracking-widest text-zinc-500 ml-1">Apelido</Label>
                             <div className="relative">
                                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                                 <Input
@@ -96,7 +103,7 @@ export function ProfileSettings() {
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     className="pl-11 h-12 rounded-2xl border-gray-100 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-950/50 font-bold"
-                                    placeholder="Seu Nome Completo"
+                                    placeholder="Como quer ser chamado?"
                                 />
                             </div>
                         </div>
@@ -196,14 +203,16 @@ export function ProfileSettings() {
                         </div>
                     </div>
 
-                    <div className="mt-8 pt-6 border-t border-gray-100 dark:border-zinc-800 space-y-2">
-                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                            <span className="text-zinc-400 dark:text-zinc-600">Versão</span>
-                            <span className="text-zinc-600 dark:text-zinc-400">1.0.0</span>
-                        </div>
-                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                            <span className="text-zinc-400 dark:text-zinc-600">Última Atualização</span>
-                            <span className="text-zinc-600 dark:text-zinc-400">Abril de 2026</span>
+                    <div className="mt-8 pt-6 border-t border-gray-100 dark:border-zinc-800 space-y-3">
+                        <div className="flex flex-col gap-1">
+                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                                <span className="text-zinc-400 dark:text-zinc-600">Versão</span>
+                                <span className="text-zinc-600 dark:text-zinc-400">{appVersion}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                                <span className="text-zinc-400 dark:text-zinc-600">Última Atualização</span>
+                                <span className="text-zinc-600 dark:text-zinc-400">{lastUpdateDate.toLocaleDateString('pt-BR')}</span>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -12,6 +12,7 @@ export default function AuthPage() {
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [nickname, setNickname] = useState('');
     const [isSignUp, setIsSignUp] = useState(false);
     const { theme, setTheme } = useTheme();
     const { toast } = useToast();
@@ -25,6 +26,11 @@ export default function AuthPage() {
                 const { error } = await supabase.auth.signUp({
                     email,
                     password,
+                    options: {
+                        data: {
+                            full_name: nickname
+                        }
+                    }
                 });
                 if (error) throw error;
                 toast({
@@ -75,6 +81,20 @@ export default function AuthPage() {
                             className="rounded-xl"
                         />
                     </div>
+                    {isSignUp && (
+                        <div className="space-y-2">
+                            <Label htmlFor="nickname">Apelido</Label>
+                            <Input
+                                id="nickname"
+                                type="text"
+                                placeholder="Como quer ser chamado?"
+                                value={nickname}
+                                onChange={(e) => setNickname(e.target.value)}
+                                required
+                                className="rounded-xl"
+                            />
+                        </div>
+                    )}
                     <div className="space-y-2">
                         <Label htmlFor="password">Senha</Label>
                         <Input
