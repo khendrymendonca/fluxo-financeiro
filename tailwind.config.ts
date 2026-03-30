@@ -14,6 +14,9 @@ export default {
       },
     },
     extend: {
+      screens: {
+        "md": "1024px",
+      },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },

@@ -4,7 +4,7 @@ export function useIsMobile() {
     const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
-        const mediaQuery = window.matchMedia('(max-width: 768px)');
+        const mediaQuery = window.matchMedia('(max-width: 1023px)');
 
         // Define o valor inicial
         setIsMobile(mediaQuery.matches);
