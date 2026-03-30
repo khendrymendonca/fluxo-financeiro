@@ -3,9 +3,11 @@ import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CreditCard } from '@/types/finance';
-import { X, CalendarClock, Sparkles } from 'lucide-react';
+import { CreditCard, CardTexture } from '@/types/finance';
+import { X, CalendarClock, Sparkles, Layers } from 'lucide-react';
 import { ColorSelector } from '@/components/ui/ColorSelector';
+import { CARD_TEXTURES } from '@/utils/cardTextures';
+import { cn } from '@/lib/utils';
 
 interface EditCardDialogProps {
     card: CreditCard;
@@ -19,6 +21,7 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
     const [bank, setBank] = useState(card.bank);
     const [limit, setLimit] = useState(card.limit.toString());
     const [color, setColor] = useState(card.color);
+    const [texture, setTexture] = useState<CardTexture>(card.texture || 'solid');
     const [dueDay, setDueDay] = useState(card.dueDay.toString());
     const [closingDay, setClosingDay] = useState(card.closingDay.toString());
     const [showEffectiveDate, setShowEffectiveDate] = useState(false);
@@ -61,6 +64,7 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
             bank,
             limit: parseFloat(limit),
             color,
+            texture,
             dueDay: newDue,
             closingDay: newClosing,
             history: updatedHistory
@@ -94,9 +98,38 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
                         <Input type="number" value={limit} onChange={e => setLimit(e.target.value)} className="h-11 rounded-xl font-bold" />
                     </div>
 
+                    <div className="space-y-3">
+                        <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2 ml-1">
+                            <Layers className="w-3.5 h-3.5" /> Acabamento Premium
+                        </Label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {(Object.keys(CARD_TEXTURES) as CardTexture[]).map((t) => (
+                                <button
+                                    key={t}
+                                    type="button"
+                                    onClick={() => setTexture(t)}
+                                    className={cn(
+                                        "flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 transition-all",
+                                        texture === t 
+                                            ? "border-primary bg-primary/5 text-primary shadow-sm" 
+                                            : "border-transparent bg-muted/50 text-muted-foreground hover:bg-muted"
+                                    )}
+                                >
+                                    <div 
+                                        className={cn("w-full h-8 rounded-lg relative overflow-hidden border border-white/10", t === 'black' ? "bg-zinc-950" : "bg-primary")}
+                                        style={{ backgroundColor: t === 'black' ? '#09090b' : color }}
+                                    >
+                                        <div className={cn("absolute inset-0", CARD_TEXTURES[t].className)} style={CARD_TEXTURES[t].style} />
+                                    </div>
+                                    <span className="text-[9px] font-bold uppercase truncate">{CARD_TEXTURES[t].label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     <div className="bg-muted/20 p-4 rounded-2xl border border-dashed border-border">
                         <ColorSelector
-                            label="Estética do Cartão"
+                            label="Cor Base"
                             selectedColor={color}
                             onSelect={setColor}
                         />

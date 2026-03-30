@@ -1,10 +1,10 @@
-﻿import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { CreditCard } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 
-// --- 1. ADICIONAR CARTÃO DE CRÃ‰DITO ---
+// --- 1. ADICIONAR CARTÃO DE CRÉDITO ---
 export function useAddCreditCard() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -18,6 +18,8 @@ export function useAddCreditCard() {
         name: card.name,
         bank: card.bank,
         limit: card.limit,
+        color: card.color,
+        texture: card.texture || 'solid',
         due_day: card.dueDay,
         closing_day: card.closingDay,
         history: card.history || []
@@ -56,6 +58,7 @@ export function useUpdateCreditCard() {
       if (updates.bank !== undefined) dbPayload.bank = updates.bank;
       if (updates.limit !== undefined) dbPayload.limit = updates.limit;
       if (updates.color !== undefined) dbPayload.color = updates.color;
+      if (updates.texture !== undefined) dbPayload.texture = updates.texture;
       if (updates.dueDay !== undefined) dbPayload.due_day = updates.dueDay;
       if (updates.closingDay !== undefined) dbPayload.closing_day = updates.closingDay;
       if (updates.isClosingDateFixed !== undefined) dbPayload.isClosingDateFixed = updates.isClosingDateFixed;
@@ -81,7 +84,7 @@ export function useUpdateCreditCard() {
   });
 }
 
-// --- 3. DELETAR CARTÃO DE CRÃ‰DITO ---
+// --- 3. DELETAR CARTÃO DE CRÉDITO ---
 export function useDeleteCreditCard() {
   const queryClient = useQueryClient();
 
@@ -103,5 +106,3 @@ export function useDeleteCreditCard() {
     }
   });
 }
-
-

@@ -77,6 +77,8 @@ export interface Account {
   monthlyYieldRate?: number;
 }
 
+export type CardTexture = 'solid' | 'metallic' | 'carbon' | 'holographic' | 'black' | 'comic';
+
 export interface CreditCard {
   id: string;
   userId: string;
@@ -86,6 +88,7 @@ export interface CreditCard {
   closingDay: number;
   dueDay: number;
   color: string;
+  texture?: CardTexture;
   isClosingDateFixed: boolean;
   isActive: boolean;
   history?: InvoiceConfig[];
