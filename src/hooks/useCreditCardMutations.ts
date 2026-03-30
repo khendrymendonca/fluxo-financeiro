@@ -39,18 +39,30 @@ export function useAddCreditCard() {
   });
 }
 
-// --- 2. ATUALIZAR CARTÃO DE CRÃ‰DITO ---
+// --- 2. ATUALIZAR CARTÃO DE CRÉDITO ---
 export function useUpdateCreditCard() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string, updates: Partial<CreditCard> }) => {
-      const payload: any = { ...updates };
+    mutationFn: async (payload: { id: string, updates: Partial<CreditCard> }) => {
+      if (!payload || !payload.id || !payload.updates) {
+        throw new Error('Payload de atualização inválido');
+      }
 
-      if (updates.dueDay !== undefined) payload.due_day = updates.dueDay;
-      if (updates.closingDay !== undefined) payload.closing_day = updates.closingDay;
+      const { id, updates } = payload;
+      const dbPayload: any = {};
 
-      const { error } = await supabase.from('credit_cards').update(payload).eq('id', id);
+      if (updates.name !== undefined) dbPayload.name = updates.name;
+      if (updates.bank !== undefined) dbPayload.bank = updates.bank;
+      if (updates.limit !== undefined) dbPayload.limit = updates.limit;
+      if (updates.color !== undefined) dbPayload.color = updates.color;
+      if (updates.dueDay !== undefined) dbPayload.due_day = updates.dueDay;
+      if (updates.closingDay !== undefined) dbPayload.closing_day = updates.closingDay;
+      if (updates.isClosingDateFixed !== undefined) dbPayload.isClosingDateFixed = updates.isClosingDateFixed;
+      if (updates.history !== undefined) dbPayload.history = updates.history;
+      if (updates.isActive !== undefined) dbPayload.isActive = updates.isActive;
+
+      const { error } = await supabase.from('credit_cards').update(dbPayload).eq('id', id);
 
       if (error) throw error;
       return id;

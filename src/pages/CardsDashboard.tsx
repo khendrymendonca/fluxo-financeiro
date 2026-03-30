@@ -275,7 +275,7 @@ export default function CardsDashboard() {
             card={selectedCard}
             isOpen={showEditCard}
             onClose={() => setShowEditCard(false)}
-            onSave={(updated) => updateCreditCard(updated.id, updated)}
+            onSave={(updated) => updateCreditCard({ id: updated.id, updates: updated })}
           />
         </Portal>
       )}
