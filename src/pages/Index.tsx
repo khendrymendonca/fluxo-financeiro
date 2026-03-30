@@ -533,7 +533,7 @@ export default function Index() {
         />
       }
       fab={
-        !['bills', 'emergency'].includes(currentView) && (
+        ['dashboard', 'transactions'].includes(currentView) && (
           <Button
             onClick={() => {
               setEditingTransaction(undefined);

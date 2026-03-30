@@ -187,6 +187,7 @@ export function AccountsManager({
       };
 
       onUpdateAccount(editingAccount.id, accountDataToUpdate);
+      toast({ title: 'Conta atualizada com sucesso!' });
     } else {
       // Check if institution already exists to inherit color if not explicitly changed
       const existingInst = accounts.find(a => (a.institution || a.bank) === accountInstitution);
