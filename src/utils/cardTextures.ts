@@ -1,42 +1,52 @@
 import { CSSProperties } from 'react';
 import { CardTexture } from '@/types/finance';
 
-export const CARD_TEXTURES: Record<CardTexture, {
+interface TextureOption {
   label: string;
   className: string;
   style?: CSSProperties;
   overrideColor?: boolean;
-}> = {
+}
+
+export const CARD_TEXTURES: Record<string, TextureOption> = {
+  // SÓLIDO — sem textura adicional, usa `backgroundColor` no inline style
   solid: {
     label: 'Sólido',
     className: '',
+    style: {},
   },
 
-  // CARBONO — só a trama, sem alterar a cor base
-  carbon: {
-    label: 'Carbono',
-    className: 'opacity-30',
+  // HOLOGRÁFICO — gradiente animado contínuo via CSS
+  holographic: {
+    label: 'Holográfico',
+    className: 'mix-blend-overlay',
     style: {
-      backgroundImage: `url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000000' fill-opacity='1' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 6V5zM6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E")`,
-      backgroundSize: '6px 6px',
-      mixBlendMode: 'overlay' as const,
+      background: `
+        linear-gradient(
+          125deg,
+          rgba(255,0,128,0.55)   0%,
+          rgba(255,140,0,0.50)  18%,
+          rgba(255,220,0,0.50)  32%,
+          rgba(0,230,120,0.50)  46%,
+          rgba(0,180,255,0.52)  60%,
+          rgba(100,80,255,0.55) 76%,
+          rgba(255,0,200,0.55)  90%,
+          rgba(255,0,128,0.55) 100%
+        )
+      `,
+      backgroundSize: '300% 300%',
+      animation: 'holographicShift 4s ease infinite',
     },
     overrideColor: false,
   },
 
-  // BLACK EDITION — fosco premium com vinheta sutil, sem brilho
+  // PRETO FOSCO — ignora `cardColor` e fica pretão/dark
   black: {
-    label: 'Black Edition',
-    className: 'mix-blend-multiply',
+    label: 'Black',
+    className: 'mix-blend-multiply opacity-50',
     style: {
-      background: `
-        radial-gradient(
-          ellipse at 60% 40%,
-          rgba(60, 60, 60, 0.25) 0%,
-          rgba(0,   0,  0, 0.65) 60%,
-          rgba(0,   0,  0, 0.85) 100%
-        )
-      `,
+      backgroundImage: 'radial-gradient(circle at top right, rgba(255,255,255,0.1), transparent 50%)',
     },
+    overrideColor: true,
   },
 };

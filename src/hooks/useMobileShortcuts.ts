@@ -10,15 +10,23 @@ export const DEFAULT_SHORTCUTS: ShortcutId[] = ['dashboard', 'transactions', 'ca
 export function useMobileShortcuts() {
   const { user } = useAuth();
   const [shortcuts, setShortcuts] = useState<ShortcutId[]>(() => {
-    const saved = localStorage.getItem('mobile_shortcuts');
-    return saved ? JSON.parse(saved) : DEFAULT_SHORTCUTS;
+    try {
+      const saved = localStorage.getItem('mobile_shortcuts');
+      return saved ? JSON.parse(saved) : DEFAULT_SHORTCUTS;
+    } catch {
+      return DEFAULT_SHORTCUTS;
+    }
   });
 
   useEffect(() => {
     if (user?.user_metadata?.mobile_shortcuts) {
       const metadataShortcuts = user.user_metadata.mobile_shortcuts;
       setShortcuts(metadataShortcuts);
-      localStorage.setItem('mobile_shortcuts', JSON.stringify(metadataShortcuts));
+      try {
+        localStorage.setItem('mobile_shortcuts', JSON.stringify(metadataShortcuts));
+      } catch (e) {
+        console.warn('LocalStorage indisponível');
+      }
     }
   }, [user]);
 
@@ -29,7 +37,11 @@ export function useMobileShortcuts() {
     }
 
     setShortcuts(newShortcuts);
-    localStorage.setItem('mobile_shortcuts', JSON.stringify(newShortcuts));
+    try {
+      localStorage.setItem('mobile_shortcuts', JSON.stringify(newShortcuts));
+    } catch (e) {
+      console.warn('LocalStorage indisponível');
+    }
 
     if (user) {
       try {
