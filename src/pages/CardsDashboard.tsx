@@ -204,6 +204,18 @@ export default function CardsDashboard() {
     );
   };
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const scrollLeft = container.scrollLeft;
+    // Largura do cartão (300px) + Gap (16px)
+    const cardWidth = 316; 
+    const index = Math.round(scrollLeft / cardWidth);
+    
+    if (creditCards[index] && creditCards[index].id !== selectedCardId) {
+      setSelectedCardId(creditCards[index].id);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in pb-24 w-full pt-2 max-w-7xl mx-auto">
       {/* Header com botão responsivo */}
@@ -239,10 +251,13 @@ export default function CardsDashboard() {
         </div>
       ) : (
         <>
-          {/* MOBILE LAYOUT (ESTILO ORIGINAL - CARTÃO REDUZIDO) */}
+          {/* MOBILE LAYOUT (ESTILO ORIGINAL ESTRITO) */}
           <div className="block lg:hidden space-y-4">
-            {/* 1. Carrossel de Cartões (Tamanho Reduzido e Centralizado) */}
-            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 px-10 pb-6 w-full no-scrollbar">
+            {/* 1. Carrossel de Cartões (Swipe to Update) */}
+            <div 
+              className="flex overflow-x-auto snap-x snap-mandatory gap-4 px-10 pb-6 w-full no-scrollbar"
+              onScroll={handleScroll}
+            >
               {creditCards.map(card => {
                 const cardUsed = getCardUsedLimit(card.id);
                 const cardAvailable = card.limit - cardUsed;
@@ -273,52 +288,31 @@ export default function CardsDashboard() {
               })}
             </div>
             
-            {/* 2. Painel de Fatura e Limite (Fiel ao Print) */}
+            {/* 2. Painel de Fatura e Limite (Estilo estrito baseado no print) */}
             {selectedCard && (
               <div className="px-4 space-y-6">
                 <div className="bg-card border border-border/50 rounded-2xl p-5 shadow-sm space-y-1">
                   <p className="text-sm text-muted-foreground font-medium">Fatura atual</p>
-                  <h2 className="text-3xl font-bold text-primary mt-1 mb-4 tabular-nums">
+                  <h2 className="text-3xl md:text-4xl font-bold text-white dark:text-zinc-50 mt-1 mb-4 tabular-nums">
                     {formatCurrency(currentInvoiceTotal)}
                   </h2>
                   
                   <div className="space-y-3">
-                    <p className="text-xs text-muted-foreground">
-                      Limite disponível <span className="text-foreground font-bold">{formatCurrency(stats.available)}</span>
+                    <p className="text-sm">
+                      <span className="text-muted-foreground">Limite disponível</span>{" "}
+                      <span className="font-semibold text-white">{formatCurrency(stats.available)}</span>
                     </p>
                     <Progress value={stats.percentUsed} className="h-1.5" />
                   </div>
 
                   <div className="flex justify-between text-xs text-muted-foreground mt-4 pt-4 border-t border-border/40">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5" />
-                      <span>Vencimento {selectedCard.dueDay}</span>
-                    </div>
-                    <span>Fechamento {selectedCard.closingDay}</span>
+                    <span>Fechamento {selectedCard.closingDay}/{format(viewDate, 'MMM', { locale: ptBR })}</span>
+                    <span>Vencimento {selectedCard.dueDay}/{format(viewDate, 'MMM', { locale: ptBR })}</span>
                   </div>
                 </div>
 
-                {/* 3. Botões de Ação Rápida */}
-                <div className="grid grid-cols-3 gap-3">
-                  <Button variant="outline" className="flex flex-col h-20 rounded-2xl gap-2 border-border/40" onClick={() => setShowEditCard(true)}>
-                    <Pencil className="w-4 h-4 text-primary" />
-                    <span className="text-[10px] font-bold uppercase">Ajustar</span>
-                  </Button>
-                  <Button variant="outline" className="flex flex-col h-20 rounded-2xl gap-2 border-border/40">
-                    <Receipt className="w-4 h-4 text-primary" />
-                    <span className="text-[10px] font-bold uppercase">Pagar</span>
-                  </Button>
-                  <Button variant="outline" className="flex flex-col h-20 rounded-2xl gap-2 border-border/40" onClick={() => {
-                    const el = document.getElementById('transactions-list');
-                    el?.scrollIntoView({ behavior: 'smooth' });
-                  }}>
-                    <ArrowRight className="w-4 h-4 text-primary" />
-                    <span className="text-[10px] font-bold uppercase">Extrato</span>
-                  </Button>
-                </div>
-
-                {/* 4. Lista de Lançamentos */}
-                <div id="transactions-list" className="pt-2 space-y-4">
+                {/* 3. Seção de Lançamentos com Busca */}
+                <div className="pt-2 space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Lançamentos do cartão</h3>
                     <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl">
@@ -328,13 +322,28 @@ export default function CardsDashboard() {
                     </div>
                   </div>
 
+                  {/* Input de Busca */}
+                  <div className="relative">
+                    <input 
+                      type="text"
+                      placeholder="Buscar lançamentos ou categorias..."
+                      className="w-full bg-muted/30 border border-border/40 rounded-xl py-3 px-4 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+
                   <div className="space-y-2 pb-10">
-                    {currentInvoiceTransactions.length === 0 ? (
+                    {currentInvoiceTransactions
+                      .filter(t => t.description.toLowerCase().includes(searchQuery.toLowerCase()))
+                      .length === 0 ? (
                       <div className="text-center py-10 bg-muted/5 rounded-2xl border border-dashed border-border/40">
                         <p className="text-muted-foreground text-xs">Nenhum gasto nesta fatura.</p>
                       </div>
                     ) : (
-                      currentInvoiceTransactions.map(t => (
+                      currentInvoiceTransactions
+                        .filter(t => t.description.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .map(t => (
                         <div key={t.id} className="flex items-center justify-between p-4 rounded-2xl bg-card border border-border/30">
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center">
@@ -356,6 +365,7 @@ export default function CardsDashboard() {
               </div>
             )}
           </div>
+
 
           {/* DESKTOP LAYOUT (MASTER-DETAIL PRESERVADO) */}
           <div className="hidden lg:grid lg:grid-cols-12 gap-8 items-start px-8">
