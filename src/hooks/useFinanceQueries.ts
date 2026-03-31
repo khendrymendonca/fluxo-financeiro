@@ -40,8 +40,11 @@ export function useTransactions(viewDate: Date) {
         .from('transactions')
         .select('*')
         .is('deleted_at', null)
-        .or(`date.gte.${start},is_recurring.eq.true,installment_group_id.not.is.null`)
-        .filter('date', 'lte', end);
+        .or(
+          `and(date.gte.${start},date.lte.${end}),` +         // Pontuais do mês
+          `is_recurring.eq.true,` +                            // Fixas: SEM teto de data
+          `installment_group_id.not.is.null`                   // Parceladas: SEM teto de data
+        );
 
       if (error) throw error;
 
