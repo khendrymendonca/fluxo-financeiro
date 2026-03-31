@@ -55,7 +55,7 @@ export function BillsManager() {
         try {
             if (isPaying.isVirtual) {
                 const isCardInvoice = isPaying.categoryId === 'card-payment';
-                
+
                 // 1. Criar transação física de pagamento
                 await addTransactionMutation({
                     description: isPaying.description,
@@ -281,11 +281,11 @@ export function BillsManager() {
                                                         <span className="truncate max-w-[80px]">{category.name}</span>
                                                     </div>
                                                 )}
-                                                {transaction.accountId && (
+                                                {transaction.accountId && !category && (
                                                     <div className="flex items-center gap-1 shrink-0 font-bold">
                                                         <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
                                                         <ShieldAlert className="w-3 h-3" />
-                                                        <span className="truncate max-w-[80px]">{accounts.find(a => a.id === transaction.accountId)?.name}</span>
+                                                        <span className="truncate max-w-[80px]">{categories.find(c => c.id === transaction.categoryId)?.name ?? '—'}</span>
                                                     </div>
                                                 )}
                                                 {transaction.cardId && (
