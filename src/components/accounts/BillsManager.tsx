@@ -285,7 +285,11 @@ export function BillsManager() {
                                                     <div className="flex items-center gap-1 shrink-0 font-bold">
                                                         <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
                                                         <ShieldAlert className="w-3 h-3" />
-                                                        <span className="truncate max-w-[80px]">{categories.find(c => c.id === transaction.categoryId)?.name ?? '—'}</span>
+                                                        <span className="truncate max-w-[100px]">{(() => {
+                                                            const acc = accounts.find(a => a.id === transaction.accountId);
+                                                            if (!acc) return categories.find(c => c.id === transaction.categoryId)?.name ?? '—';
+                                                            return acc.name ? `${(acc as any).institution ?? (acc as any).bank ?? ''} - ${acc.name}`.trim().replace(/^- /, '') : ((acc as any).institution ?? (acc as any).bank ?? acc.name);
+                                                        })()}</span>
                                                     </div>
                                                 )}
                                                 {transaction.cardId && (

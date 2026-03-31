@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 export const accentColors = [
     { id: 'blue', name: 'Azul Real', hsl: '221.2 83.2% 53.3%' },
@@ -25,11 +26,20 @@ interface ThemeColorContextType {
 const ThemeColorContext = createContext<ThemeColorContextType | undefined>(undefined);
 
 export function ThemeColorProvider({ children }: { children: React.ReactNode }) {
-    const [accentColor, setAccentColor] = useState(() => {
+    const [accentColor, setAccentColorState] = useState(() => {
         return localStorage.getItem('accent-color') || 'blue';
     });
 
     const { user } = useAuth();
+
+    const setAccentColor = async (color: string) => {
+        setAccentColorState(color);
+        if (user) {
+            await supabase.auth.updateUser({
+                data: { ...user.user_metadata, accent_color: color }
+            });
+        }
+    };
 
     useEffect(() => {
         const color = accentColors.find(c => c.id === accentColor) || accentColors[0];

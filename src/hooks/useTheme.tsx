@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 export type ThemeType = 'light' | 'dark' | 'amoled' | 'system';
 
@@ -15,9 +16,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         return (localStorage.getItem('app-theme') as ThemeType) || 'system';
     });
 
-    const setTheme = (newTheme: ThemeType) => {
+    const { user } = useAuth();
+
+    const setTheme = async (newTheme: ThemeType) => {
         setThemeState(newTheme);
         localStorage.setItem('app-theme', newTheme);
+        if (user) {
+            await supabase.auth.updateUser({
+                data: { ...user.user_metadata, theme: newTheme }
+            });
+        }
     };
 
     useEffect(() => {
@@ -49,7 +57,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }, [theme]);
 
     // Restauração via Supabase Auth (v6.4)
-    const { user } = useAuth();
     useEffect(() => {
         const savedTheme = user?.user_metadata?.theme;
         if (savedTheme && savedTheme !== theme) {
