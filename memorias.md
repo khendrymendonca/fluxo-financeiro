@@ -40,15 +40,18 @@ const hasRealEquivalent = realTransactions.some(real =>
 
 // ❌ PROIBIDO — causa falsos positivos
 // real.description === tx.description && Math.abs(real.amount) === Math.abs(tx.amount)
-Query de Transações — Filtro de Soft Delete: A query de transações deve conter .is('deleted_at', null) antes do .or(). O filtro de user_id não é necessário no front-end pois é gerenciado pelo RLS do Supabase.
+Query de Transações — Filtro de Data nas Recorrentes: O `.filter('date', 'lte', end)` não deve ser aplicado globalmente. Transações com `is_recurring = true` e parcelamentos (`installment_group_id`) não têm teto de data — o filtro de período se aplica apenas a transações pontuais via `and(date.gte.${start},date.lte.${end})` dentro do `.or()`. Aplicar o `.filter` globalmente corta os dados históricos que o `useProjectedTransactions` precisa para gerar projeções de meses futuros.
 
 ts
 supabase
   .from('transactions')
   .select('*')
-  .is('deleted_at', null)                                                         // ✅ Linha obrigatória
-  .or(`date.gte.${start},is_recurring.eq.true,installment_group_id.not.is.null`) // ✅ Projeção cíclica
-  .filter('date', 'lte', end);
+  .is('deleted_at', null)
+  .or(
+    `and(date.gte.${start},date.lte.${end}),` +          // pontuais do mês
+    `is_recurring.eq.true,` +                             // fixas: SEM filtro de data
+    `installment_group_id.not.is.null`                    // parceladas: sem filtro de data
+  )
 Exclusão de Transações — Soft Delete Obrigatório: Transações nunca devem ser deletadas com .delete() direto. O padrão é soft delete via .update({ deleted_at: now }). O escopo da exclusão (this / future / all) determina o filtro adicional:
 
 'this' → .eq('id', id)
@@ -83,4 +86,5 @@ Data	Arquivo	Mudança
 31/03/2026	TransactionForm.tsx	Padronização rigorosa do DTO (is_recurring, subcategory_id: null, toISOString). Remoção de chave isRecurring duplicada. Blindagem contra edição estrutural de projeções virtuais.
 31/03/2026	useProjectedTransactions.ts	Deduplicação refatorada para usar apenas vínculos explícitos de ID (originalId / id). Removida comparação por description + amount que causava falsos positivos.
 31/03/2026	useDeleteTransaction.ts	onMutate refatorado para ser escopo-aware. Cache local agora reflete corretamente applyScope: 'this' / 'all' / 'future' de forma instantânea.
+31/03/2026	useFinanceQueries.ts	Removido .filter('date', 'lte', end) global. Filtro de data movido para dentro do .or() afetando apenas transações pontuais. Raiz do bug de projeções em branco em meses futuros.
 Nota do Tech Lead: Este documento deve ser usado como contexto base em todos os prompts futuros que envolvam UI ou regras de negócio.
