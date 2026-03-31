@@ -23,6 +23,8 @@ export function useAddCreditCard() {
         progresscolor: card.progressColor ?? null,
         due_day: card.dueDay,
         closing_day: card.closingDay,
+        is_closing_date_fixed: card.isClosingDateFixed ?? false,
+        is_active: card.isActive ?? true,
         history: card.history || []
       };
 
@@ -63,9 +65,9 @@ export function useUpdateCreditCard() {
       if (updates.progressColor !== undefined) dbPayload.progresscolor = updates.progressColor;
       if (updates.dueDay !== undefined) dbPayload.due_day = updates.dueDay;
       if (updates.closingDay !== undefined) dbPayload.closing_day = updates.closingDay;
-      if (updates.isClosingDateFixed !== undefined) dbPayload.isClosingDateFixed = updates.isClosingDateFixed;
+      if (updates.isClosingDateFixed !== undefined) dbPayload.is_closing_date_fixed = updates.isClosingDateFixed;
       if (updates.history !== undefined) dbPayload.history = updates.history;
-      if (updates.isActive !== undefined) dbPayload.isActive = updates.isActive;
+      if (updates.isActive !== undefined) dbPayload.is_active = updates.isActive;
 
       const { error } = await supabase.from('credit_cards').update(dbPayload).eq('id', id);
 
