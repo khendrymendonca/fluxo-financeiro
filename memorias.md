@@ -80,6 +80,13 @@ isRecurring deve ser sempre um booleano derivado da activeTab, nunca de estado i
 
 Nunca incluir chaves duplicadas no objeto payload — TypeScript ignora duplicatas silenciosamente, mas é fonte de confusão e bugs.
 
+Regra do Extrato vs Gestão de Contas:
+Transações Recorrentes (Fixas) e Parcelamentos só devem ser visíveis na tela de 'Lançamentos' (Extrato) após serem marcadas como pagas (`isPaid: true`). Enquanto pendentes, elas residem exclusivamente na 'Gestão de Contas'. Isso evita poluição visual no extrato com itens que ainda não afetaram o saldo real.
+
+Gestão de Contas — Inclusão de Atrasados:
+A tela de 'Gestão de Contas' deve obrigatoriamente incluir todos os lançamentos pendentes de meses anteriores (`isBefore(date, startOfMonth(viewDate)) && !isPaid`). Isso garante que o usuário visualize dívidas acumuladas que ainda precisam de atenção.
+
+
 5. Histórico de Mudanças Críticas
 Data	Arquivo	Mudança
 31/03/2026	useProjectedTransactions.ts	Refatoração do motor de projeções. Query .or() encadeada para suporte a projeções cíclicas sem duplicidade.
@@ -87,4 +94,8 @@ Data	Arquivo	Mudança
 31/03/2026	useProjectedTransactions.ts	Deduplicação refatorada para usar apenas vínculos explícitos de ID (originalId / id). Removida comparação por description + amount que causava falsos positivos.
 31/03/2026	useDeleteTransaction.ts	onMutate refatorado para ser escopo-aware. Cache local agora reflete corretamente applyScope: 'this' / 'all' / 'future' de forma instantânea.
 31/03/2026	useFinanceQueries.ts	Removido .filter('date', 'lte', end) global. Filtro de data movido para dentro do .or() afetando apenas transações pontuais. Raiz do bug de projeções em branco em meses futuros.
+31/03/2026	TransactionList.tsx	Implementada regra de visibilidade: recorrentes e parcelamentos pendentes são ocultados do extrato até que o pagamento seja confirmado.
+31/03/2026	BillsManager.tsx    Refatorado filtro principal para incluir lançamentos atrasados (meses anteriores não pagos) de forma automática.
+31/03/2026	CardsDashboard.tsx  Reconstrução total da página de cartões com layout Master-Detail (Desktop) e Snap-Carousel (Mobile). Integração com Recharts para visualização de evolução de gastos.
+31/03/2026	tailwind.config.ts  Adicionado plugin utilitário `.no-scrollbar` para refinamento estético de containers roláveis.
 Nota do Tech Lead: Este documento deve ser usado como contexto base em todos os prompts futuros que envolvam UI ou regras de negócio.
