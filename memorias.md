@@ -100,4 +100,6 @@ Data	Arquivo	Mudança
 31/03/2026	tailwind.config.ts  Adicionado plugin utilitário `.no-scrollbar` para refinamento estético de containers roláveis.
 31/03/2026	CardsDashboard.tsx	Refinamento estético das barras de limite (progressColor dinâmica suportada no banco de dados), agrupamento no Hero da fatura e atenuamento da escala de foco (uso de shadow-lg em vez de box rings) alinhado ao princípio do Luxo Silencioso.
 31/03/2026	CategoriesManager.tsx	Refatoração estrutural (CSS Grid responsivo de 3 colunas separando Receitas/Objetivos) e limpa visual completa extirpando excessos de cores (bordas grossas e ícones saturados), optando por superfícies neutras em tons de zinco.
+31/03/2026	CardsDashboard.tsx	Tema Claro suportado dinamicamente no Dashboard (substituição de fundos AMOLED hardcoded #111118) e substituição de ring lines pelo Efeito Apple no foco (shadow-2xl, scale).
+31/03/2026	EditCardDialog.tsx	Corrigido Exception de banco de dados (HTTP 400) via expurgo de chave não tabulada 'history' do payload.
 Nota do Tech Lead: Este documento deve ser usado como contexto base em todos os prompts futuros que envolvam UI ou regras de negócio.

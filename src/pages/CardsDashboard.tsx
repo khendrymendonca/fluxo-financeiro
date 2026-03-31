@@ -247,10 +247,10 @@ export default function CardsDashboard() {
                   key={card.id}
                   onClick={() => setSelectedCardId(card.id)}
                   className={cn(
-                    "transition-all duration-300 cursor-pointer rounded-2xl",
+                    "transition-all duration-500 ease-out cursor-pointer rounded-2xl",
                     isSelected
-                      ? "ring-1 ring-primary/40 shadow-lg shadow-primary/10"
-                      : "opacity-60 hover:opacity-90"
+                      ? "opacity-100 scale-100 shadow-2xl"
+                      : "opacity-50 scale-[0.97] hover:opacity-75 hover:scale-[0.98]"
                   )}
                 >
                   <CreditCardVisual
@@ -303,29 +303,29 @@ export default function CardsDashboard() {
                 </div>
 
                 {/* Hero da fatura */}
-                <div className="bg-[#111118] border border-white/8 rounded-2xl p-6 relative overflow-hidden">
+                <div className="bg-card border border-border rounded-2xl p-6 relative overflow-hidden">
                   <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full opacity-[0.06] blur-3xl pointer-events-none" style={{ background: selectedCard.color ?? '#00d4aa' }} />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4">
-                      <p className="text-[10px] uppercase font-black text-zinc-500 tracking-[0.2em]">
+                      <p className="text-[10px] uppercase font-black text-muted-foreground tracking-[0.2em]">
                         Fatura · {format(viewDate, 'MMMM yyyy', { locale: ptBR })}
                       </p>
                       <StatusBadge status={dynamicStatus} />
                     </div>
-                    <h2 className="text-5xl lg:text-6xl font-black tracking-tighter tabular-nums text-white mb-4">
+                    <h2 className="text-5xl lg:text-6xl font-black tracking-tighter tabular-nums text-foreground mb-4">
                       {fmtBRL(currentInvoiceTotal)}
                     </h2>
-                    <div className="flex items-center gap-6 text-[11px] font-semibold text-zinc-500">
-                      <span>Fecha <strong className="text-zinc-300">dia {selectedCard.closingDay}</strong></span>
-                      <span>Vence <strong className="text-zinc-300">dia {selectedCard.dueDay}</strong></span>
-                      <span>Limite <strong className="text-zinc-300">{fmtBRL(stats.limit)}</strong></span>
+                    <div className="flex items-center gap-6 text-[11px] font-semibold text-muted-foreground">
+                      <span>Fecha <strong className="text-foreground">dia {selectedCard.closingDay}</strong></span>
+                      <span>Vence <strong className="text-foreground">dia {selectedCard.dueDay}</strong></span>
+                      <span>Limite <strong className="text-foreground">{fmtBRL(stats.limit)}</strong></span>
                     </div>
                     <div className="mt-4">
-                      <div className="flex justify-between text-[10px] text-zinc-600 mb-1.5">
+                      <div className="flex justify-between text-[10px] text-muted-foreground mb-1.5">
                         <span>{stats.percentUsed.toFixed(0)}% usado</span>
                         <span>{fmtBRL(stats.available)} disponível</span>
                       </div>
-                      <div className="w-full h-1.5 bg-white/8 rounded-full overflow-hidden">
+                      <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                         <div className={cn("h-full rounded-full transition-all duration-700",
                           stats.percentUsed > 90 ? "bg-rose-400" :
                             stats.percentUsed > 70 ? "bg-amber-400" : "bg-emerald-400"
@@ -337,22 +337,22 @@ export default function CardsDashboard() {
 
                 {/* Stats — 2 cards (sem Cashback) */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-[#111118] border border-white/8 rounded-2xl p-5">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-rose-400/70 mb-1">Gastos</p>
-                    <p className="text-2xl font-black tabular-nums text-white">{fmtBRL(currentInvoiceTotal)}</p>
+                  <div className="bg-card border border-border rounded-2xl p-5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Gastos</p>
+                    <p className="text-2xl font-black tabular-nums text-foreground">{fmtBRL(currentInvoiceTotal)}</p>
                   </div>
-                  <div className="bg-[#111118] border border-white/8 rounded-2xl p-5">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Disponível</p>
-                    <p className="text-2xl font-black tabular-nums text-white">{fmtBRL(stats.available)}</p>
+                  <div className="bg-card border border-border rounded-2xl p-5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Disponível</p>
+                    <p className="text-2xl font-black tabular-nums text-foreground">{fmtBRL(stats.available)}</p>
                   </div>
                 </div>
 
                 {/* Gráfico de evolução */}
-                <div className="bg-[#111118] border border-white/8 rounded-2xl p-5">
+                <div className="bg-card border border-border rounded-2xl p-5">
                   <div className="flex items-center justify-between mb-5">
                     <div>
-                      <p className="text-sm font-black text-zinc-100">Evolução de Gastos</p>
-                      <p className="text-[10px] text-zinc-500 mt-0.5">
+                      <p className="text-sm font-black text-foreground">Evolução de Gastos</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
                         Últimos {chartPeriod === "mensal" ? MONTHS_CHART : 12} meses
                       </p>
                     </div>
@@ -410,29 +410,29 @@ export default function CardsDashboard() {
                 </div>
 
                 {/* Extrato da fatura */}
-                <div className="bg-[#111118] border border-white/8 rounded-2xl p-5 space-y-4">
+                <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-black text-zinc-100">Lançamentos da Fatura</p>
-                    <span className="text-[10px] text-zinc-500 font-bold">
+                    <p className="text-sm font-black text-foreground">Lançamentos da Fatura</p>
+                    <span className="text-[10px] text-muted-foreground font-bold">
                       {filteredTransactions.length} {filteredTransactions.length === 1 ? "item" : "itens"}
                     </span>
                   </div>
 
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                     <input
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Buscar por descrição..."
-                      className="w-full bg-white/5 border border-white/8 rounded-xl pl-9 pr-4 py-2.5 text-sm placeholder:text-zinc-600 text-zinc-200 outline-none focus:border-primary/40 transition-colors"
+                      className="w-full bg-muted/30 border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm placeholder:text-muted-foreground text-foreground outline-none focus:border-primary/40 transition-colors"
                     />
                   </div>
 
                   <div className="space-y-2">
                     {filteredTransactions.length === 0 ? (
-                      <div className="text-center py-12 rounded-xl border border-dashed border-white/8">
-                        <Receipt className="w-10 h-10 mx-auto mb-3 opacity-10 text-zinc-100" />
-                        <p className="text-zinc-500 text-sm italic">Nenhum gasto nesta fatura.</p>
+                      <div className="text-center py-12 rounded-xl border border-dashed border-border/50">
+                        <Receipt className="w-10 h-10 mx-auto mb-3 opacity-20 text-muted-foreground" />
+                        <p className="text-muted-foreground text-sm italic">Nenhum gasto nesta fatura.</p>
                       </div>
                     ) : (
                       filteredTransactions.map((t) => {
@@ -447,7 +447,7 @@ export default function CardsDashboard() {
                             }}
                             className={cn(
                               "flex items-center justify-between p-3.5 rounded-xl",
-                              "bg-white/[0.02] hover:bg-white/[0.05] border border-white/6 transition-all group",
+                              "bg-muted/10 hover:bg-muted/30 border border-border/50 transition-all group",
                               t.installmentTotal ? "cursor-pointer" : ""
                             )}
                           >
@@ -457,19 +457,19 @@ export default function CardsDashboard() {
                                 style={{
                                   background: category?.color
                                     ? `${category.color}20`
-                                    : "rgba(255,255,255,0.06)"
+                                    : "hsl(var(--muted))"
                                 }}
                               >
                                 {isIncome
-                                  ? <TrendingUp className="w-4 h-4 text-emerald-400" />
+                                  ? <TrendingUp className="w-4 h-4 text-emerald-500" />
                                   : <TrendingDown className="w-4 h-4" style={{ color: category?.color ?? "#71717a" }} />
                                 }
                               </div>
                               <div className="min-w-0">
-                                <p className="text-sm font-bold text-zinc-100 leading-tight group-hover:text-white truncate">
+                                <p className="text-sm font-bold text-foreground leading-tight group-hover:text-primary truncate">
                                   {t.description}
                                 </p>
-                                <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-tighter mt-0.5">
+                                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter mt-0.5">
                                   {category?.name ?? "Sem categoria"}
                                   {t.installmentNumber && t.installmentTotal
                                     ? ` · ${t.installmentNumber}/${t.installmentTotal}`
@@ -480,7 +480,7 @@ export default function CardsDashboard() {
                             </div>
                             <p className={cn(
                               "text-sm font-black tabular-nums shrink-0 ml-4",
-                              isIncome ? "text-emerald-400" : "text-zinc-100"
+                              isIncome ? "text-emerald-500" : "text-foreground"
                             )}>
                               {isIncome ? "+" : "−"}{fmtBRL(t.amount)}
                             </p>
@@ -518,8 +518,8 @@ export default function CardsDashboard() {
                   key={card.id}
                   onClick={() => setSelectedCardId(card.id)}
                   className={cn(
-                    "snap-center w-[300px] shrink-0 transition-all duration-300 ease-out cursor-pointer rounded-2xl",
-                    isSelected ? "ring-1 ring-primary/40 shadow-lg shadow-primary/10 opacity-100" : "opacity-60"
+                    "snap-center w-[300px] shrink-0 transition-all duration-500 ease-out cursor-pointer rounded-2xl",
+                    isSelected ? "opacity-100 scale-100 shadow-2xl" : "opacity-50 scale-[0.97] hover:opacity-75 hover:scale-[0.98]"
                   )}
                 >
                   <CreditCardVisual
@@ -561,30 +561,30 @@ export default function CardsDashboard() {
               </div>
 
               {/* Fatura mobile */}
-              <div className="bg-[#111118] border border-white/8 rounded-2xl p-5 relative overflow-hidden">
+              <div className="bg-card border border-border rounded-2xl p-5 relative overflow-hidden">
                 <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full opacity-[0.06] blur-3xl pointer-events-none" style={{ background: selectedCard.color ?? '#00d4aa' }} />
 
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
-                    <p className="text-[10px] uppercase font-black text-zinc-500 tracking-[0.2em]">Fatura atual</p>
+                    <p className="text-[10px] uppercase font-black text-muted-foreground tracking-[0.2em]">Fatura atual</p>
                     <StatusBadge status={dynamicStatus} />
                   </div>
 
-                  <h2 className="text-4xl font-black tracking-tighter tabular-nums text-white mb-3">
+                  <h2 className="text-4xl font-black tracking-tighter tabular-nums text-foreground mb-3">
                     {fmtBRL(currentInvoiceTotal)}
                   </h2>
 
-                  <div className="flex items-center gap-4 text-[10px] font-semibold text-zinc-500">
-                    <span>Fecha <strong className="text-zinc-300">dia {selectedCard.closingDay}</strong></span>
-                    <span>Vence <strong className="text-zinc-300">dia {selectedCard.dueDay}</strong></span>
+                  <div className="flex items-center gap-4 text-[10px] font-semibold text-muted-foreground">
+                    <span>Fecha <strong className="text-foreground">dia {selectedCard.closingDay}</strong></span>
+                    <span>Vence <strong className="text-foreground">dia {selectedCard.dueDay}</strong></span>
                   </div>
 
-                  <div className="mt-4 pt-4 border-t border-white/5">
-                    <div className="flex justify-between text-[10px] text-zinc-600 mb-1.5">
+                  <div className="mt-4 pt-4 border-t border-border/50">
+                    <div className="flex justify-between text-[10px] text-muted-foreground mb-1.5">
                       <span>{stats.percentUsed.toFixed(0)}% usado</span>
                       <span>{fmtBRL(stats.available)} disponível</span>
                     </div>
-                    <div className="w-full h-1.5 bg-white/8 rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                       <div className={cn("h-full rounded-full transition-all duration-700",
                         stats.percentUsed > 90 ? "bg-rose-400" :
                           stats.percentUsed > 70 ? "bg-amber-400" : "bg-emerald-400"
@@ -596,19 +596,19 @@ export default function CardsDashboard() {
 
               {/* Stats mobile */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#111118] border border-white/8 rounded-2xl p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-rose-400/70 mb-1">Gastos</p>
-                  <p className="text-xl font-black tabular-nums text-white">{fmtBRL(currentInvoiceTotal)}</p>
+                <div className="bg-card border border-border rounded-2xl p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Gastos</p>
+                  <p className="text-xl font-black tabular-nums text-foreground">{fmtBRL(currentInvoiceTotal)}</p>
                 </div>
-                <div className="bg-[#111118] border border-white/8 rounded-2xl p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Disponível</p>
-                  <p className="text-xl font-black tabular-nums text-white">{fmtBRL(stats.available)}</p>
+                <div className="bg-card border border-border rounded-2xl p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Disponível</p>
+                  <p className="text-xl font-black tabular-nums text-foreground">{fmtBRL(stats.available)}</p>
                 </div>
               </div>
 
               {/* Gráfico mobile */}
-              <div className="bg-[#111118] border border-white/8 rounded-2xl p-4">
-                <p className="text-xs font-black text-zinc-100 mb-4">Evolução de Gastos</p>
+              <div className="bg-card border border-border rounded-2xl p-4">
+                <p className="text-xs font-black text-foreground mb-4">Evolução de Gastos</p>
                 <div className="h-40">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
@@ -618,11 +618,11 @@ export default function CardsDashboard() {
                           <stop offset="100%" stopColor="#00d4aa" stopOpacity={0.02} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
-                      <XAxis dataKey="label" tick={{ fill: "#71717a", fontSize: 9, fontWeight: 700 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: "#52525b", fontSize: 8 }} axisLine={false} tickLine={false}
+                      <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
+                      <XAxis dataKey="label" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 9, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 8 }} axisLine={false} tickLine={false}
                         tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
-                      <RechartsTooltip content={<ChartTooltip />} cursor={{ stroke: "rgba(255,255,255,0.08)", strokeWidth: 1 }} />
+                      <RechartsTooltip content={<ChartTooltip />} cursor={{ stroke: "hsl(var(--border))", strokeWidth: 1 }} />
                       <Area type="monotone" dataKey="total" stroke="#00d4aa" strokeWidth={2}
                         fill="url(#gradTealM)"
                         dot={{ r: 3, fill: "#00d4aa", strokeWidth: 0 }}
@@ -633,20 +633,20 @@ export default function CardsDashboard() {
               </div>
 
               {/* Extrato mobile */}
-              <div className="bg-[#111118] border border-white/8 rounded-2xl p-4 space-y-3">
-                <p className="text-xs font-black text-zinc-100">Lançamentos</p>
+              <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+                <p className="text-xs font-black text-foreground">Lançamentos</p>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                   <input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Buscar..."
-                    className="w-full bg-white/5 border border-white/8 rounded-xl pl-9 pr-4 py-2 text-sm placeholder:text-zinc-600 text-zinc-200 outline-none focus:border-primary/40 transition-colors"
+                    className="w-full bg-muted/30 border border-border rounded-xl pl-9 pr-4 py-2 text-sm placeholder:text-muted-foreground text-foreground outline-none focus:border-primary/40 transition-colors"
                   />
                 </div>
                 <div className="space-y-2">
                   {filteredTransactions.length === 0 ? (
-                    <p className="text-center text-zinc-500 text-xs py-8 italic">Nenhum gasto nesta fatura.</p>
+                    <p className="text-center text-muted-foreground text-xs py-8 italic">Nenhum gasto nesta fatura.</p>
                   ) : (
                     filteredTransactions.map((t) => {
                       const category = categories.find((c) => c.id === t.categoryId);
@@ -654,25 +654,25 @@ export default function CardsDashboard() {
                         <div
                           key={t.id}
                           onClick={() => { if (t.installmentTotal && t.installmentGroupId) setTransactionToAnticipate(t); }}
-                          className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/5"
+                          className="flex items-center justify-between p-3 rounded-xl bg-muted/10 border border-border/50"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <div
                               className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center"
-                              style={{ background: category?.color ? `${category.color}20` : "rgba(255,255,255,0.06)" }}
+                              style={{ background: category?.color ? `${category.color}20` : "hsl(var(--muted))" }}
                             >
-                              <Receipt className="w-3.5 h-3.5 text-zinc-400" />
+                              <Receipt className="w-3.5 h-3.5 text-muted-foreground" />
                             </div>
                             <div className="min-w-0">
-                              <p className="text-xs font-bold text-zinc-100 truncate">{t.description}</p>
-                              <p className="text-[9px] text-zinc-500 uppercase font-bold">
+                              <p className="text-xs font-bold text-foreground truncate">{t.description}</p>
+                              <p className="text-[9px] text-muted-foreground uppercase font-bold">
                                 {format(parseLocalDate(t.date), "dd MMM", { locale: ptBR })}
                               </p>
                             </div>
                           </div>
                           <p className={cn(
                             "text-xs font-black tabular-nums shrink-0 ml-2",
-                            t.type === "income" ? "text-emerald-400" : "text-zinc-100"
+                            t.type === "income" ? "text-emerald-500" : "text-foreground"
                           )}>
                             {t.type === "income" ? "+" : "−"}{fmtBRL(t.amount)}
                           </p>

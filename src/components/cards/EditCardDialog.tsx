@@ -59,7 +59,7 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
             });
         }
 
-        onSave({
+        const { history, ...cardWithoutHistory } = {
             ...card,
             name,
             bank,
@@ -70,7 +70,9 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
             dueDay: newDue,
             closingDay: newClosing,
             history: updatedHistory
-        });
+        };
+
+        onSave(cardWithoutHistory as CreditCard);
         onClose();
     };
 
