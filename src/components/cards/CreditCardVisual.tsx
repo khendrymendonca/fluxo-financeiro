@@ -28,9 +28,9 @@ export function CreditCardVisual({
         <div
             onClick={onClick}
             className={cn(
-                "relative rounded-2xl p-5 text-white overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl cursor-pointer group border border-white/10",
+                "relative rounded-2xl p-5 text-white overflow-hidden transition-all duration-500 cursor-pointer group border border-white/10",
                 "w-full max-w-[340px] mx-auto aspect-[1.58/1] flex flex-col justify-between",
-                isSelected && "ring-4 ring-primary ring-offset-2 dark:ring-offset-background",
+                isSelected ? "drop-shadow-[0_25px_25px_rgba(0,0,0,0.5)] z-20" : "drop-shadow-none z-10",
                 textureKey === 'black' ? "bg-zinc-950" : "",
                 className
             )}

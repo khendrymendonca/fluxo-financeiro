@@ -253,7 +253,7 @@ export default function CardsDashboard() {
         <>
           {/* MOBILE LAYOUT (ESTILO ORIGINAL ESTRITO) */}
           <div className="block lg:hidden space-y-4">
-            {/* 1. Carrossel de Cartões (Swipe to Update) */}
+            {/* 1. Carrossel de Cartões (Deluxe Floating Effect) */}
             <div 
               className="flex overflow-x-auto snap-x snap-mandatory gap-4 px-10 pb-6 w-full no-scrollbar"
               onScroll={handleScroll}
@@ -272,8 +272,10 @@ export default function CardsDashboard() {
                       isSelected={isSelected}
                       onClick={() => setSelectedCardId(card.id)}
                       className={cn(
-                        "transition-transform duration-300",
-                        !isSelected && "opacity-40 grayscale scale-90"
+                        "transition-all duration-500 ease-out",
+                        isSelected 
+                          ? "opacity-100 scale-100" 
+                          : "opacity-50 scale-95"
                       )}
                       invoiceStatus={getInvoiceStatusDisplay(
                         card,
