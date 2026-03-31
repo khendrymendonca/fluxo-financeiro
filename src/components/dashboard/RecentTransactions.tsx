@@ -30,10 +30,14 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
 
   const getSourceLabel = (transaction: Transaction) => {
     if (transaction.accountId) {
-      return accounts.find(a => a.id === transaction.accountId)?.name || 'Conta';
+      const acc = accounts.find(a => a.id === transaction.accountId);
+      if (!acc) return 'Conta';
+      return acc.name ? `${acc.bank} - ${acc.name}` : acc.bank;
     }
     if (transaction.cardId) {
-      return creditCards.find(c => c.id === transaction.cardId)?.name || 'Cartão';
+      const card = creditCards.find(c => c.id === transaction.cardId);
+      if (!card) return 'Cartão';
+      return card.name ? `${card.bank} - ${card.name}` : card.bank;
     }
     return '';
   };
@@ -78,8 +82,8 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className={cn(
                   "p-2 rounded-lg transition-all group-hover:scale-110 shrink-0",
-                  isIncome 
-                    ? "bg-green-500/20 text-green-600 dark:bg-green-500/20 dark:text-green-400 md:dark:bg-emerald-500/10 md:dark:text-emerald-400" 
+                  isIncome
+                    ? "bg-green-500/20 text-green-600 dark:bg-green-500/20 dark:text-green-400 md:dark:bg-emerald-500/10 md:dark:text-emerald-400"
                     : "bg-red-500/20 text-red-600 dark:bg-red-500/20 dark:text-red-400 md:dark:bg-rose-500/10 md:dark:text-rose-400"
                 )}>
                   {isIncome
@@ -103,8 +107,8 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
               </div>
               <span className={cn(
                 "font-bold text-xs md:text-sm shrink-0 whitespace-nowrap tabular-nums",
-                isIncome 
-                  ? "text-green-600 dark:text-green-500 md:dark:text-emerald-400" 
+                isIncome
+                  ? "text-green-600 dark:text-green-500 md:dark:text-emerald-400"
                   : "text-red-600 dark:text-red-500 md:dark:text-rose-400"
               )}>
                 {isIncome ? '+' : '-'} {formatCurrency(Math.abs(Number(transaction.amount)))}

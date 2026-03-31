@@ -56,10 +56,14 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
 
     const getSourceLabel = (transaction: Transaction) => {
         if (transaction.accountId) {
-            return accounts.find(a => a.id === transaction.accountId)?.name || 'Conta';
+            const acc = accounts.find(a => a.id === transaction.accountId);
+            if (!acc) return 'Conta';
+            return acc.name ? `${acc.bank} - ${acc.name}` : acc.bank;
         }
         if (transaction.cardId) {
-            return creditCards.find(c => c.id === transaction.cardId)?.name || 'Cartão';
+            const card = creditCards.find(c => c.id === transaction.cardId);
+            if (!card) return 'Cartão';
+            return card.name ? `${card.bank} - ${card.name}` : card.bank;
         }
         return '';
     };
@@ -103,8 +107,8 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
                                 <div className="flex items-center gap-3">
                                     <div className={cn(
                                         "flex flex-col items-center justify-center rounded-md py-1 px-2 min-w-[50px] transition-colors border",
-                                        isOverdue 
-                                            ? "bg-red-500 text-white dark:bg-red-500 dark:text-white md:dark:bg-zinc-800 md:dark:text-rose-400 md:dark:border-zinc-700" 
+                                        isOverdue
+                                            ? "bg-red-500 text-white dark:bg-red-500 dark:text-white md:dark:bg-zinc-800 md:dark:text-rose-400 md:dark:border-zinc-700"
                                             : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 md:dark:bg-zinc-900 md:dark:border-zinc-800"
                                     )}>
                                         <span className="text-sm font-bold uppercase leading-none">
