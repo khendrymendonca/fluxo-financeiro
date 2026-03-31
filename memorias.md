@@ -104,4 +104,5 @@ Data	Arquivo	Mudança
 31/03/2026	EditCardDialog.tsx	Corrigido Exception de banco de dados (HTTP 400) via expurgo de chave não tabulada 'history' do payload.
 31/03/2026	CardsDashboard.tsx	Correção de Shadow Clipping no Master-Detail alterando para overflow-x-visible + margens laterais. Seletor de meses convertido para background reativo do tema (bg-card).
 31/03/2026	App.tsx	Otimização radical de tráfego de API desabilitando o refetchOnWindowFocus do ReactQuery, impedindo Loop Infinito e Exception 429 via Supabase de usuários ociosos.
+31/03/2026	cardTextures.ts	Refinamento material de Blend Modes e Texturas Premium (migração de color-dodge para composições balanceadas overlay, soft-light e multiply) + adição global de Animação Holográfica contínua.
 Nota do Tech Lead: Este documento deve ser usado como contexto base em todos os prompts futuros que envolvam UI ou regras de negócio.
