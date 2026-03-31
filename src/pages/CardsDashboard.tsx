@@ -236,7 +236,7 @@ export default function CardsDashboard() {
         <div className="hidden lg:grid lg:grid-cols-12 gap-0 items-start">
 
           {/* Coluna esquerda — lista de cartões */}
-          <div className="lg:col-span-4 flex flex-col gap-3 px-4 pr-4 border-r border-white/[0.04] max-h-[calc(100vh-120px)] overflow-y-auto no-scrollbar">
+          <div className="lg:col-span-4 flex flex-col gap-3 px-2 border-r border-border max-h-[calc(100vh-120px)] overflow-y-auto overflow-x-visible no-scrollbar">
             {creditCards.map((card) => {
               const usedLimit = getCardUsedLimit(card.id);
               const availableLimit = Number(card.limit ?? 0) - usedLimit;
@@ -247,7 +247,7 @@ export default function CardsDashboard() {
                   key={card.id}
                   onClick={() => setSelectedCardId(card.id)}
                   className={cn(
-                    "transition-all duration-500 ease-out cursor-pointer rounded-2xl",
+                    "px-2 py-1 transition-all duration-500 ease-out cursor-pointer rounded-2xl",
                     isSelected
                       ? "opacity-100 scale-100 shadow-2xl"
                       : "opacity-50 scale-[0.97] hover:opacity-75 hover:scale-[0.98]"
@@ -271,16 +271,16 @@ export default function CardsDashboard() {
               <div className="animate-in fade-in slide-in-from-right-4 duration-400 space-y-4">
 
                 {/* Nav de mês + botões */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1 bg-[#18181f] border border-white/8 rounded-xl px-2 py-1">
-                    <button className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex items-center justify-center w-8 h-8" onClick={() => setViewDate((d) => subMonths(d, 1))}>
-                      <ChevronLeft className="w-4 h-4 text-zinc-300" />
+                <div className="flex items-center justify-between z-20 relative">
+                  <div className="flex items-center gap-1 bg-card border border-border rounded-xl px-2 py-1">
+                    <button className="p-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground transition-all flex items-center justify-center w-8 h-8" onClick={() => setViewDate((d) => subMonths(d, 1))}>
+                      <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <span className="text-sm font-black tracking-tight min-w-[118px] text-center capitalize text-zinc-200">
+                    <span className="text-sm font-black tracking-tight min-w-[118px] text-center capitalize text-foreground">
                       {format(viewDate, "MMMM yyyy", { locale: ptBR })}
                     </span>
-                    <button className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex items-center justify-center w-8 h-8" onClick={() => setViewDate((d) => addMonths(d, 1))}>
-                      <ChevronRight className="w-4 h-4 text-zinc-300" />
+                    <button className="p-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground transition-all flex items-center justify-center w-8 h-8" onClick={() => setViewDate((d) => addMonths(d, 1))}>
+                      <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
 
@@ -518,7 +518,7 @@ export default function CardsDashboard() {
                   key={card.id}
                   onClick={() => setSelectedCardId(card.id)}
                   className={cn(
-                    "snap-center w-[300px] shrink-0 transition-all duration-500 ease-out cursor-pointer rounded-2xl",
+                    "px-2 py-1 snap-center w-[300px] shrink-0 transition-all duration-500 ease-out cursor-pointer rounded-2xl",
                     isSelected ? "opacity-100 scale-100 shadow-2xl" : "opacity-50 scale-[0.97] hover:opacity-75 hover:scale-[0.98]"
                   )}
                 >
@@ -538,16 +538,16 @@ export default function CardsDashboard() {
             <div className="px-4 space-y-4">
 
               {/* Nav mês mobile */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 bg-[#18181f] border border-white/8 rounded-xl px-2 py-1">
-                  <button className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex items-center justify-center w-8 h-8" onClick={() => setViewDate((d) => subMonths(d, 1))}>
-                    <ChevronLeft className="w-4 h-4 text-zinc-300" />
+              <div className="flex items-center justify-between z-20 relative">
+                <div className="flex items-center gap-1 bg-card border border-border rounded-xl px-2 py-1">
+                  <button className="p-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground transition-all flex items-center justify-center w-8 h-8" onClick={() => setViewDate((d) => subMonths(d, 1))}>
+                    <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <span className="text-xs font-black tracking-tight min-w-[100px] text-center capitalize text-zinc-200">
+                  <span className="text-xs font-black tracking-tight min-w-[100px] text-center capitalize text-foreground">
                     {format(viewDate, "MMMM yyyy", { locale: ptBR })}
                   </span>
-                  <button className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex items-center justify-center w-8 h-8" onClick={() => setViewDate((d) => addMonths(d, 1))}>
-                    <ChevronRight className="w-4 h-4 text-zinc-300" />
+                  <button className="p-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground transition-all flex items-center justify-center w-8 h-8" onClick={() => setViewDate((d) => addMonths(d, 1))}>
+                    <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="flex gap-2">

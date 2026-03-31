@@ -102,4 +102,6 @@ Data	Arquivo	Mudança
 31/03/2026	CategoriesManager.tsx	Refatoração estrutural (CSS Grid responsivo de 3 colunas separando Receitas/Objetivos) e limpa visual completa extirpando excessos de cores (bordas grossas e ícones saturados), optando por superfícies neutras em tons de zinco.
 31/03/2026	CardsDashboard.tsx	Tema Claro suportado dinamicamente no Dashboard (substituição de fundos AMOLED hardcoded #111118) e substituição de ring lines pelo Efeito Apple no foco (shadow-2xl, scale).
 31/03/2026	EditCardDialog.tsx	Corrigido Exception de banco de dados (HTTP 400) via expurgo de chave não tabulada 'history' do payload.
+31/03/2026	CardsDashboard.tsx	Correção de Shadow Clipping no Master-Detail alterando para overflow-x-visible + margens laterais. Seletor de meses convertido para background reativo do tema (bg-card).
+31/03/2026	App.tsx	Otimização radical de tráfego de API desabilitando o refetchOnWindowFocus do ReactQuery, impedindo Loop Infinito e Exception 429 via Supabase de usuários ociosos.
 Nota do Tech Lead: Este documento deve ser usado como contexto base em todos os prompts futuros que envolvam UI ou regras de negócio.
