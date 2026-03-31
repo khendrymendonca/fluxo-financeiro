@@ -32,15 +32,16 @@ export function useTransactions(viewDate: Date) {
       const viewDateStr = format(viewDate, 'yyyy-MM');
 
       // Trazemos:
-      // 1. Transações NORMAIS deste mês
-      // 2. Transações RECORRENTES que começaram antes/durante este mês
-      // 3. Transações que pertencem Ã  FATURA deste mês (mesmo que a data seja do mês anterior)
-      // 🛡️ Performance: Filtros rigorosos no Supabase para baixar apenas o necessário
+      // 1. Transações a partir do início do mês selecionado
+      // 2. Transações RECORRENTES (independente da data)
+      // 3. Transações PARCELADAS (independente da data)
+      // 🛡️ Filtramos depois pela data final para não trazer pontuais do futuro
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
         .is('deleted_at', null)
-        .or(`and(is_recurring.eq.false,date.gte.${start},date.lte.${end}),and(is_recurring.eq.true,date.lte.${end}),invoice_month_year.eq.${viewDateStr}`);
+        .or(`date.gte.${start},is_recurring.eq.true,installment_group_id.not.is.null,invoice_month_year.eq.${viewDateStr}`)
+        .lte('date', end);
 
       if (error) throw error;
 
