@@ -28,7 +28,7 @@ export function CreditCardVisual({
         <div
             onClick={onClick}
             className={cn(
-                "relative rounded-2xl p-5 text-white overflow-hidden transition-all duration-500 cursor-pointer group border border-white/10",
+                "relative rounded-2xl p-5 text-white overflow-hidden transition-all duration-500 cursor-pointer group border border-white/5",
                 "w-full max-w-[340px] mx-auto aspect-[1.58/1] flex flex-col justify-between",
                 isSelected ? "z-20" : "z-10",
                 textureKey === 'black' ? "bg-zinc-950" : "",
@@ -36,18 +36,13 @@ export function CreditCardVisual({
             )}
             style={{
                 boxShadow: isSelected
-                    ? '0 20px 40px rgba(0, 0, 0, 0.35), 0 8px 16px rgba(0, 0, 0, 0.20)'
+                    ? '0 20px 40px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.20)'
                     : 'none',
                 transition: 'box-shadow 300ms ease, transform 300ms ease',
-                ...(texture.overrideColor && texture.style?.background
-                    ? { background: texture.style.background as string }
-                    : {
-                        backgroundColor: textureKey === 'black' ? '#09090b' : cardColor,
-                        background: textureKey === 'solid'
-                            ? `linear-gradient(135deg, ${cardColor} 0%, ${adjustColor(cardColor, -30)} 100%)`
-                            : undefined,
-                    }
-                ),
+                background: textureKey === 'black'
+                    ? '#09090b'
+                    : `linear-gradient(135deg, ${cardColor}18 0%, ${cardColor}08 60%, transparent 100%)`,
+                backgroundColor: textureKey === 'black' ? '#09090b' : 'var(--color-card, #18181b)',
             }}
         >
             {/* Camada de Textura - Processo Condicional via Spread Omissível */}
@@ -114,8 +109,6 @@ export function CreditCardVisual({
                 </div>
             </div>
 
-            {/* Subtle gloss effect (more evident on dark/textures) */}
-            <div className="absolute -top-24 -left-24 w-48 h-48 bg-white/5 rounded-full blur-3xl pointer-events-none" />
         </div>
     );
 }

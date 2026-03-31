@@ -77,7 +77,7 @@ export interface Account {
   monthlyYieldRate?: number;
 }
 
-export type CardTexture = 'solid' | 'metallic' | 'carbon' | 'holographic' | 'black' | 'comic';
+export type CardTexture = 'solid' | 'carbon' | 'black';
 
 export interface CreditCard {
   id: string;

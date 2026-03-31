@@ -125,7 +125,7 @@ export function CategoriesManager() {
                         <div className="flex flex-col">
                             <span className="font-bold text-base md:text-lg">{cat.name}</span>
                             {cat.isFixed && (
-                                <div className="mt-1 w-fit px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+                                <div className="mt-1 w-fit text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex items-center gap-1">
                                     <Pin className="w-3 h-3" /> Conta Fixa
                                 </div>
                             )}
@@ -137,21 +137,21 @@ export function CategoriesManager() {
                             <button
                                 onClick={() => updateCategory({ id: cat.id, updates: { isFixed: !cat.isFixed } })}
                                 className={cn(
-                                    "p-2.5 rounded-xl transition-all min-h-[48px] min-w-[48px] flex items-center justify-center border border-transparent hover:border-zinc-700",
-                                    cat.isFixed ? "text-primary bg-primary/10" : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/60"
+                                    "p-2 rounded-xl transition-all min-h-[40px] min-w-[40px] flex items-center justify-center",
+                                    cat.isFixed ? "text-primary bg-muted/50" : "text-muted-foreground hover:text-foreground"
                                 )}
                                 title={cat.isFixed ? "Remover de Contas Fixas" : "Marcar como Conta Fixa"}
                             >
-                                {cat.isFixed ? <Pin className="w-5 h-5 md:w-6 md:h-6" /> : <PinOff className="w-5 h-5 md:w-6 md:h-6" />}
+                                {cat.isFixed ? <Pin className="w-3.5 h-3.5" /> : <PinOff className="w-3.5 h-3.5" />}
                             </button>
 
                             <Dialog open={isSubModalOpen} onOpenChange={setIsSubModalOpen}>
                                 <DialogTrigger asChild>
                                     <button
-                                        className="p-2.5 rounded-xl min-h-[48px] min-w-[48px] flex items-center justify-center border border-transparent transition-all text-zinc-400 hover:text-zinc-100 hover:bg-zinc-700/60 hover:border-zinc-700"
+                                        className="p-2 transition-all min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground"
                                         title="Adicionar Subcategoria"
                                     >
-                                        <Plus className="w-5 h-5 md:w-6 md:h-6" />
+                                        <Plus className="w-3.5 h-3.5" />
                                     </button>
                                 </DialogTrigger>
                                 <DialogContent className="max-w-md rounded-3xl p-6">
@@ -188,8 +188,8 @@ export function CategoriesManager() {
                         </div>
 
                         {['Renegociação', 'Fatura de Cartão de Crédito', 'Outros'].includes(cat.name) ? (
-                            <div className="p-3 text-muted-foreground/20 cursor-not-allowed" title="Categoria do Sistema (Não pode ser excluída)">
-                                <Trash2 className="w-5 h-5 md:w-6 md:h-6" />
+                            <div className="p-2 text-muted-foreground/20 cursor-not-allowed min-h-[40px] min-w-[40px] flex items-center justify-center" title="Categoria do Sistema (Não pode ser excluída)">
+                                <Trash2 className="w-3.5 h-3.5" />
                             </div>
                         ) : (
                             <button
@@ -198,10 +198,10 @@ export function CategoriesManager() {
                                         deleteCategory(cat.id);
                                     }
                                 }}
-                                className="p-2.5 rounded-xl min-h-[48px] min-w-[48px] flex items-center justify-center border border-transparent transition-all text-zinc-400 hover:text-red-400 hover:bg-zinc-700/60 hover:border-zinc-700"
+                                className="p-2 rounded-xl min-h-[40px] min-w-[40px] flex items-center justify-center transition-all text-muted-foreground hover:text-foreground"
                                 title="Excluir Categoria"
                             >
-                                <Trash2 className="w-5 h-5 md:w-6 md:h-6" />
+                                <Trash2 className="w-3.5 h-3.5" />
                             </button>
                         )}
                     </div>
@@ -216,10 +216,10 @@ export function CategoriesManager() {
                             </div>
                             <button
                                 onClick={() => deleteSubcategory(sub.id)}
-                                className="opacity-0 group-hover/sub:opacity-100 p-2 rounded-lg min-h-[40px] min-w-[40px] flex items-center justify-center transition-all text-zinc-400 hover:text-red-400 hover:bg-zinc-700/60"
+                                className="opacity-0 group-hover/sub:opacity-100 p-2 rounded-lg min-h-[40px] min-w-[40px] flex items-center justify-center transition-all text-muted-foreground hover:text-foreground"
                                 title="Excluir Subcategoria"
                             >
-                                <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
+                                <Trash2 className="w-3.5 h-3.5" />
                             </button>
                         </div>
                     ))}
@@ -322,10 +322,9 @@ export function CategoriesManager() {
 
             {/* Listas de Categorias - Modo Grid 3 cols */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* 1. Essenciais */}
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-zinc-200 dark:border-zinc-800 flex flex-col min-h-[120px]">
-                    <h4 className="text-[11px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400 flex items-center gap-2 pb-3 border-b border-zinc-100 dark:border-zinc-800 mb-2">
-                        <span className="w-2 h-2 rounded-full bg-zinc-400 dark:bg-zinc-600 inline-block" />
+                <div className="bg-card rounded-2xl p-6 shadow-sm dark:shadow-none border border-border flex flex-col min-h-[120px]">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 pb-3 border-b border-border/50 mb-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 inline-block" />
                         Despesas Essenciais
                     </h4>
                     <div className="flex-1 space-y-2">
@@ -339,10 +338,9 @@ export function CategoriesManager() {
                     </div>
                 </div>
 
-                {/* 2. Estilo de Vida */}
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-zinc-200 dark:border-zinc-800 flex flex-col min-h-[120px]">
-                    <h4 className="text-[11px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400 flex items-center gap-2 pb-3 border-b border-zinc-100 dark:border-zinc-800 mb-2">
-                        <span className="w-2 h-2 rounded-full bg-zinc-400 dark:bg-zinc-600 inline-block" />
+                <div className="bg-card rounded-2xl p-6 shadow-sm dark:shadow-none border border-border flex flex-col min-h-[120px]">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 pb-3 border-b border-border/50 mb-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 inline-block" />
                         Estilo de Vida & Lazer
                     </h4>
                     <div className="flex-1 space-y-2">
@@ -358,10 +356,9 @@ export function CategoriesManager() {
 
                 {/* 3. Coluna Direita: Objetivos + Receitas */}
                 <div className="flex flex-col gap-6">
-                    {/* 3A. Objetivos */}
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-zinc-200 dark:border-zinc-800 flex flex-col min-h-[120px]">
-                        <h4 className="text-[11px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400 flex items-center gap-2 pb-3 border-b border-zinc-100 dark:border-zinc-800 mb-2">
-                            <span className="w-2 h-2 rounded-full bg-zinc-400 dark:bg-zinc-600 inline-block" />
+                    <div className="bg-card rounded-2xl p-6 shadow-sm dark:shadow-none border border-border flex flex-col min-h-[120px]">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 pb-3 border-b border-border/50 mb-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 inline-block" />
                             Objetivos Financeiros
                         </h4>
                         <div className="flex-1 space-y-2">
@@ -375,10 +372,9 @@ export function CategoriesManager() {
                         </div>
                     </div>
 
-                    {/* 3B. Receitas */}
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm dark:shadow-none border border-zinc-200 dark:border-zinc-800 flex flex-col min-h-[120px]">
-                        <h4 className="text-[11px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400 flex items-center gap-2 pb-3 border-b border-zinc-100 dark:border-zinc-800 mb-2">
-                            <span className="w-2 h-2 rounded-full bg-zinc-400 dark:bg-zinc-600 inline-block" />
+                    <div className="bg-card rounded-2xl p-6 shadow-sm dark:shadow-none border border-border flex flex-col min-h-[120px]">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 pb-3 border-b border-border/50 mb-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 inline-block" />
                             Fontes de Receita
                         </h4>
                         <div className="flex flex-col gap-2">
