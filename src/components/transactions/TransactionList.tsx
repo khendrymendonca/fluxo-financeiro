@@ -76,9 +76,9 @@ export function TransactionList({
     parseLocalDate(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' });
 
   const displayItems = transactions.map(t => {
-    // ✅ REGRA DE BOM SENSO: Compras no cartão (cardId presente e não é pagamento de fatura) 
-    // NUNCA são pendentes, elas já estão na fatura.
-    const isPending = (t.cardId && !t.isInvoicePayment) ? false : !t.isPaid;
+    // ✅ REGRA DE BOM SENSO: Compras pontuais no cartão não são pendentes no extrato.
+    // Mas parcelamentos e recorrentes seguem a regra nativa de !isPaid
+    const isPending = (t.cardId && !t.isInvoicePayment && !t.installmentGroupId && !t.isRecurring && t.transactionType !== 'recurring') ? false : !t.isPaid;
     return { ...t, isPending };
   });
 

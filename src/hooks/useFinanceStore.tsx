@@ -64,8 +64,14 @@ function useFinanceProvider() {
   // --- UI State ---
   const [viewDate, setViewDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<FilterMode>('month');
-  const [emergencyMonths, setEmergencyMonthsLocal] = useState(Number(localStorage.getItem('emergencyMonths')) || 12);
-
+  const [emergencyMonths, setEmergencyMonthsLocal] = useState(() => {
+    try {
+      const saved = localStorage.getItem('emergencyMonths');
+      return saved ? Number(saved) : 12;
+    } catch {
+      return 12;
+    }
+  });
   // Selection State
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -167,7 +173,11 @@ function useFinanceProvider() {
   }, [currentMonthTransactions]);
 
   const setEmergencyMonths = useCallback((m: number) => {
-    localStorage.setItem('emergencyMonths', String(m));
+    try {
+      localStorage.setItem('emergencyMonths', String(m));
+    } catch {
+      // Bloqueio nativo do browser mitigado
+    }
     setEmergencyMonthsLocal(m);
   }, []);
 
@@ -288,12 +298,12 @@ function useFinanceProvider() {
       return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     },
     getCardUsedLimit: (id: string) => {
+      const currentInvoiceMonthYear = format(viewDate, 'yyyy-MM');
       return transactions
         .filter(t =>
           t.cardId === id &&
           t.type === 'expense' &&
-          !t.isInvoicePayment &&
-          !t.isPaid && // âœ… Apenas transações não pagas consomem limite
+          t.invoiceMonthYear === currentInvoiceMonthYear &&
           !t.deleted_at
         )
         .reduce((acc, t) => acc + Number(t.amount), 0);

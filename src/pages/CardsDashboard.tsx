@@ -179,9 +179,23 @@ export default function CardsDashboard() {
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
-    const index = Math.round(container.scrollLeft / 316);
-    if (sortedCards[index] && sortedCards[index].id !== selectedCardId) {
-      setSelectedCardId(sortedCards[index].id);
+    const containerCenter = container.scrollLeft + container.clientWidth / 2;
+    let closestIndex = 0;
+    let minDistance = Infinity;
+
+    Array.from(container.children).forEach((child, index) => {
+      const el = child as HTMLElement;
+      // offsetLeft relativo ao container scrollable
+      const childCenter = el.offsetLeft + el.offsetWidth / 2 - container.offsetLeft;
+      const distance = Math.abs(container.scrollLeft + container.clientWidth / 2 - (el.offsetLeft + el.offsetWidth / 2));
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestIndex = index;
+      }
+    });
+
+    if (sortedCards[closestIndex] && sortedCards[closestIndex].id !== selectedCardId) {
+      setSelectedCardId(sortedCards[closestIndex].id);
     }
   };
 

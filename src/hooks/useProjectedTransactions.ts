@@ -54,6 +54,47 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
         }
       }
 
+      // 3. Projeção de Parcelamentos (Installments)
+      if (!isRecurring && tx.installmentGroupId && tx.installmentNumber && tx.installmentTotal && tx.installmentNumber < tx.installmentTotal) {
+        if (isBefore(txDate, startOfMonth(viewDate))) {
+          // Deduplicar: só a parcela real mais recente (antes do mês alvo) projeta
+          const hasMoreRecentInPast = transactions.some(other =>
+            !other.isVirtual &&
+            other.installmentGroupId === tx.installmentGroupId &&
+            parseLocalDate(other.date.slice(0, 10)).getTime() > txDate.getTime() &&
+            isBefore(parseLocalDate(other.date.slice(0, 10)), startOfMonth(viewDate))
+          );
+
+          if (!hasMoreRecentInPast) {
+            const hasGroupInTargetMonth = realTransactions.some(real => real.installmentGroupId === tx.installmentGroupId);
+            const hasRealEquivalent = realTransactions.some(real => real.originalId === tx.id || real.id === tx.id);
+
+            if (!hasGroupInTargetMonth && !hasRealEquivalent) {
+              const originalDay = txDate.getDate();
+              const daysInTarget = getDaysInMonth(new Date(targetYear, targetMonth));
+              const safeDay = Math.min(originalDay, daysInTarget);
+              const virtualDate = new Date(targetYear, targetMonth, safeDay);
+
+              const monthDiff = (targetYear - txDate.getFullYear()) * 12 + (targetMonth - txDate.getMonth());
+              const projectedInstallmentNumber = tx.installmentNumber + monthDiff;
+
+              if (projectedInstallmentNumber <= tx.installmentTotal) {
+                projected.push({
+                  ...tx,
+                  id: `${tx.id}-virtual-inst-${targetYear}-${targetMonth}`,
+                  originalId: tx.id,
+                  date: format(virtualDate, 'yyyy-MM-dd'),
+                  isVirtual: true,
+                  isPaid: false,
+                  installmentNumber: projectedInstallmentNumber,
+                  description: tx.description.replace(/\b\d+\s*\/\s*\d+\b/, `${projectedInstallmentNumber}/${tx.installmentTotal}`)
+                } as any);
+              }
+            }
+          }
+        }
+      }
+
       // Sempre incluímos a própria transação se ela for do mês alvo e REAL
       if (!tx.isVirtual && isSameMonth(txDate, viewDate)) {
         if (!projected.some(p => p.id === tx.id)) {

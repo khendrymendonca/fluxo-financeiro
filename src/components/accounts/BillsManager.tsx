@@ -38,6 +38,8 @@ export function BillsManager() {
     const { mutateAsync: addTransactionMutation } = useAddTransaction();
     const { mutateAsync: togglePaidMutation } = useToggleTransactionPaid();
 
+    const viewDateStr = format(viewDate, 'yyyy-MM');
+
     const [filter, setFilter] = useState<'all' | 'expense' | 'income'>('all');
     const [isPaying, setIsPaying] = useState<Transaction | null>(null);
     const [paymentDate, setPaymentDate] = useState<string>(todayLocalString());
@@ -154,6 +156,11 @@ export function BillsManager() {
 
     // 2. Filtrar transações recorrentes e injetar as virtuais
     const recurringTransactions = [...currentMonthTransactions, ...virtualInvoices].filter(t => {
+        // Bloqueio de Isolamento: O Gerenciador de Contas não deve vazar lançamentos "pontuais".
+        if (!t.isVirtual && !t.isRecurring && t.transactionType !== 'recurring' && t.transactionType !== 'installment' && t.categoryId !== 'card-payment') {
+            return false;
+        }
+
         // Esconder compras individuais feitas no cartão de crédito (estas são liquidadas via fatura)
         if (t.cardId && t.categoryId !== 'card-payment') return false;
 
@@ -383,8 +390,7 @@ export function BillsManager() {
                                                     !t.isPaid &&
                                                     t.categoryId !== 'card-payment' &&
                                                     (t.isRecurring || t.transactionType === 'recurring') &&
-                                                    parseLocalDate(t.date).getMonth() === viewDate.getMonth() &&
-                                                    parseLocalDate(t.date).getFullYear() === viewDate.getFullYear()
+                                                    t.invoiceMonthYear === viewDateStr
                                                 )
                                                 .map(b => (
                                                     <div key={b.id} className="flex items-center justify-between p-2 rounded-lg bg-background/50 border border-border/50">
@@ -407,8 +413,7 @@ export function BillsManager() {
                                                 !t.isPaid &&
                                                 t.categoryId !== 'card-payment' &&
                                                 (t.isRecurring || t.transactionType === 'recurring') &&
-                                                parseLocalDate(t.date).getMonth() === viewDate.getMonth() &&
-                                                parseLocalDate(t.date).getFullYear() === viewDate.getFullYear()
+                                                t.invoiceMonthYear === viewDateStr
                                             ).length === 0 && (
                                                     <p className="text-[10px] text-muted-foreground text-center py-2 italic">Nenhuma compra listada para esta fatura.</p>
                                                 )}

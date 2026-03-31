@@ -26,7 +26,8 @@ import {
     CreditCard,
     Wallet,
     Rocket,
-    Smartphone
+    Smartphone,
+    AlertCircle
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
@@ -245,14 +246,24 @@ export function ProfileSettings() {
                         </div>
                     </div>
 
+                    {shortcuts.length === 0 && (
+                        <div className="bg-amber-500/10 text-amber-600 dark:text-amber-500 p-4 rounded-2xl flex items-start gap-3 border border-amber-500/20 animate-in fade-in slide-in-from-top-2">
+                            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                            <div>
+                                <p className="text-sm font-bold">Barra de navegação inativa</p>
+                                <p className="text-xs mt-0.5 opacity-80">Como não há atalhos selecionados, o menu inferior ficará oculto no celular para maximizar o espaço da tela.</p>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {availableShortcuts.map((item) => (
-                            <div 
-                                key={item.id} 
+                            <div
+                                key={item.id}
                                 className={cn(
                                     "flex items-center justify-between p-4 rounded-3xl border transition-all duration-300",
-                                    shortcuts.includes(item.id) 
-                                        ? "bg-primary/5 border-primary/20 shadow-sm" 
+                                    shortcuts.includes(item.id)
+                                        ? "bg-primary/5 border-primary/20 shadow-sm"
                                         : "bg-gray-50/50 dark:bg-zinc-950/50 border-gray-100 dark:border-zinc-800 opacity-60"
                                 )}
                             >

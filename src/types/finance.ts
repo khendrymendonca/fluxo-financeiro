@@ -1,6 +1,6 @@
 ﻿export type TransactionType = 'income' | 'expense';
 export type TransactionStatus = 'punctual' | 'installment' | 'recurring' | 'adjustment';
-export type AccountType = 'corrente' | 'poupanca' | 'caixinha' | 'investment' | 'benefit_vr' | 'benefit_va' | 'benefit_flex';
+export type AccountType = 'corrente' | 'poupanca' | 'caixinha' | 'investment' | 'benefit_vr' | 'benefit_va' | 'benefit_flex' | 'metas';
 export type BillStatus = 'pending' | 'paid' | 'late' | 'cancelled';
 export type BudgetGroup = 'essential' | 'lifestyle' | 'financial' | 'income';
 export type CategoryGroupName = 'Essenciais' | 'Estilo de Vida' | 'Metas/Acordos' | 'essencial' | 'lazer' | 'metas';

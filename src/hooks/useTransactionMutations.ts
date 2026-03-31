@@ -32,7 +32,7 @@ export function useAddTransaction() {
         is_recurring: tx.isRecurring !== undefined ? tx.isRecurring : (tx.is_recurring || false),
         recurrence: tx.recurrence || 'none',
         installment_group_id: tx.installmentGroupId !== undefined ? tx.installmentGroupId : tx.installment_group_id,
-        installment_number: tx.installmentNumber !== undefined ? tx.installment_number : tx.installment_number,
+        installment_number: tx.installmentNumber !== undefined ? tx.installmentNumber : undefined,
         installment_total: tx.installmentTotal !== undefined ? tx.installmentTotal : tx.installment_total,
         invoice_month_year: tx.invoiceMonthYear !== undefined ? tx.invoiceMonthYear : tx.invoice_month_year,
         is_automatic: tx.isAutomatic !== undefined ? tx.isAutomatic : (tx.is_automatic || false),
@@ -282,6 +282,34 @@ export function useUpdateTransaction() {
       const { data, error } = await query.select();
       if (error) throw error;
       return data;
+    },
+    onMutate: async ({ id, updates, applyScope = 'this' }) => {
+      await queryClient.cancelQueries({ queryKey: ['transactions'] });
+      const previousTransactions = queryClient.getQueryData(['transactions']);
+
+      queryClient.setQueryData(['transactions'], (oldData: any[]) => {
+        if (!oldData) return [];
+
+        const targetTx = oldData.find((t: any) => t.id === id);
+        if (!targetTx) return oldData;
+
+        return oldData.map((tx: any) => {
+          if (applyScope === 'this' || !targetTx.installmentGroupId) {
+            return tx.id === id ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid } : tx;
+          }
+          if (applyScope === 'all') {
+            return tx.installmentGroupId === targetTx.installmentGroupId ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid } : tx;
+          }
+          if (applyScope === 'future') {
+            return (tx.installmentGroupId === targetTx.installmentGroupId && tx.date >= targetTx.date)
+              ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid }
+              : tx;
+          }
+          return tx;
+        });
+      });
+
+      return { previousTransactions };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
