@@ -37,9 +37,8 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
           // Deduplicação: Não projetamos se já houver uma transação REAL neste mês 
           // que seja filha desta recorrente
           const hasRealEquivalent = realTransactions.some(real =>
-            (real.originalId === tx.id) ||
-            (real.id === tx.id) ||
-            (real.description === tx.description && Math.abs(Number(real.amount) - Number(tx.amount)) < 0.01)
+            real.originalId === tx.id ||
+            real.id === tx.id
           );
 
           if (!hasRealEquivalent) {

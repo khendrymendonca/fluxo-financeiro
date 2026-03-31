@@ -304,12 +304,11 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       date: parseLocalDate(date).toISOString(), // Evita bugs de timezone
 
       // Mantendo legacy para evitar quebras em outros locais
-      subcategoryId: subcategoryId || undefined,
-      isRecurring: activeTab === 'fixo' || activeTab === 'renda_fixa',
+      subcategoryId: subcategoryId || null,
+      isRecurring: Boolean(activeTab === 'fixo' || activeTab === 'renda_fixa'),
       accountId: paymentMethod === 'account' ? accountId : undefined,
       cardId: paymentMethod === 'card' ? cardId : undefined,
       installmentTotal: undefined, // Não é parcelado nesse bloco
-      isRecurring: activeTab === 'fixo' || activeTab === 'renda_fixa',
       recurrence: (activeTab === 'fixo' || activeTab === 'renda_fixa') ? recurrence : undefined,
       isAutomatic: activeTab === 'renda_fixa' ? true : isAutomatic,
       debtId: selectedDebtId || undefined,
