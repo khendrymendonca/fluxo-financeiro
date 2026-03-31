@@ -23,12 +23,14 @@ export function useAddTransaction() {
         ...tx,
         user_id: user.id,
         // Garante mapeamento de nomes de campos para o Supabase (Snake Case)
-        category_id: tx.categoryId !== undefined ? tx.categoryId : tx.category_id,
-        account_id: tx.accountId !== undefined ? tx.accountId : tx.account_id,
-        card_id: tx.cardId !== undefined ? tx.cardId : tx.card_id,
-        is_paid: tx.isPaid !== undefined ? tx.isPaid : tx.is_paid,
-        payment_date: tx.paymentDate !== undefined ? tx.paymentDate : tx.payment_date,
-        is_recurring: tx.isRecurring !== undefined ? tx.isRecurring : tx.is_recurring,
+        category_id: tx.categoryId || tx.category_id,
+        subcategory_id: tx.subcategoryId || tx.subcategory_id,
+        account_id: tx.accountId || tx.account_id,
+        card_id: tx.cardId || tx.card_id,
+        is_paid: tx.isPaid !== undefined ? tx.isPaid : tx.is_paid || false,
+        payment_date: tx.paymentDate || tx.payment_date,
+        is_recurring: tx.isRecurring !== undefined ? tx.isRecurring : tx.is_recurring || false,
+        recurrence: tx.recurrence || 'none',
         installment_group_id: tx.installmentGroupId !== undefined ? tx.installmentGroupId : tx.installment_group_id,
         installment_number: tx.installmentNumber !== undefined ? tx.installmentNumber : tx.installment_number,
         installment_total: tx.installmentTotal !== undefined ? tx.installmentTotal : tx.installment_total,
@@ -36,14 +38,17 @@ export function useAddTransaction() {
         is_automatic: tx.isAutomatic !== undefined ? tx.isAutomatic : tx.is_automatic,
         debt_id: tx.debtId !== undefined ? tx.debtId : tx.debt_id,
         transaction_type: tx.transactionType !== undefined ? tx.transactionType : tx.transaction_type,
+        original_id: tx.originalId || tx.original_id,
+        original_bill_id: tx.originalBillId || tx.original_bill_id,
+        is_invoice_payment: tx.isInvoicePayment !== undefined ? tx.isInvoicePayment : tx.is_invoice_payment,
       }));
 
-      // Remover campos que não existem no banco (Campos CamelCase que foram mapeados acima)
+      // Remover campos que não existem no banco (Campos CamelCase que foram mapeados acima + Campos Virtuais)
       const cleanTxs = txsWithUser.map(({
         categoryId, subcategoryId, accountId, cardId, isPaid, paymentDate,
         isRecurring, installmentGroupId, installmentNumber, installmentTotal,
         invoiceMonthYear, isAutomatic, debtId, transactionType, cardClosingDay, cardDueDay,
-        userId, ...rest
+        userId, isVirtual, originalId, originalBillId, isInvoicePayment, deleted_at, ...rest
       }) => rest);
 
       const { data: insertedData, error } = await supabase
@@ -205,11 +210,13 @@ export function useUpdateTransaction() {
       if (updates.date !== undefined) dbUpdates.date = updates.date;
       if (updates.type !== undefined) dbUpdates.type = updates.type;
       if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
+      if (updates.subcategoryId !== undefined) dbUpdates.subcategory_id = updates.subcategoryId;
       if (updates.accountId !== undefined) dbUpdates.account_id = updates.accountId;
       if (updates.cardId !== undefined) dbUpdates.card_id = updates.cardId;
       if (updates.isPaid !== undefined) dbUpdates.is_paid = updates.isPaid;
       if (updates.paymentDate !== undefined) dbUpdates.payment_date = updates.paymentDate;
       if (updates.isRecurring !== undefined) dbUpdates.is_recurring = updates.isRecurring;
+      if (updates.recurrence !== undefined) dbUpdates.recurrence = updates.recurrence;
       if (updates.transactionType !== undefined) dbUpdates.transaction_type = updates.transactionType;
 
       const effectiveCardId = updates.cardId !== undefined ? updates.cardId : currentCardId;

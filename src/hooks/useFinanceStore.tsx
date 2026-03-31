@@ -145,7 +145,7 @@ function useFinanceProvider() {
   const currentMonthTransactions = useMemo(() => {
     if (viewMode === 'all') return transactions;
     return transactions.filter(t => {
-      const tDate = new Date(t.date);
+      const tDate = parseLocalDate(t.date);
       if (viewMode === 'day') {
         return tDate.getDate() === viewDate.getDate() && tDate.getMonth() === viewDate.getMonth() && tDate.getFullYear() === viewDate.getFullYear();
       }

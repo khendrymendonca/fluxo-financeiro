@@ -1,5 +1,5 @@
 ﻿import { useMemo } from 'react';
-import { isBefore, isSameMonth, getDaysInMonth, format } from 'date-fns';
+import { isBefore, isSameMonth, getDaysInMonth, format, startOfMonth } from 'date-fns';
 import { Transaction } from '@/types/finance';
 import { parseLocalDate } from '@/utils/dateUtils';
 
@@ -26,7 +26,7 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
 
       if (isRecurring) {
         // Se a transação original começou antes ou no mês alvo
-        if (isBefore(txDate, viewDate) || isSameMonth(txDate, viewDate)) {
+        if (isBefore(txDate, startOfMonth(viewDate)) || isSameMonth(txDate, viewDate)) {
 
           // Cálculo da data segura no mês alvo
           const originalDay = txDate.getDate();
@@ -37,8 +37,9 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
           // Deduplicação: Não projetamos se já houver uma transação REAL neste mês 
           // que seja filha desta recorrente
           const hasRealEquivalent = realTransactions.some(real =>
-            real.originalId === tx.id ||
-            real.description === tx.description && Math.abs(Number(real.amount) - Number(tx.amount)) < 0.01
+            (real.originalId === tx.id) ||
+            (real.id === tx.id) ||
+            (real.description === tx.description && Math.abs(Number(real.amount) - Number(tx.amount)) < 0.01)
           );
 
           if (!hasRealEquivalent) {

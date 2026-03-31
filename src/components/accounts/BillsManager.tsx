@@ -54,32 +54,38 @@ export function BillsManager() {
 
         try {
             if (isPaying.isVirtual) {
+                const isCardInvoice = isPaying.categoryId === 'card-payment';
+                
                 // 1. Criar transação física de pagamento
                 await addTransactionMutation({
                     description: isPaying.description,
                     amount: amountValue,
-                    type: 'expense',
+                    type: isPaying.type,
                     transactionType: 'punctual',
-                    date: new Date().toISOString(),
+                    date: todayLocalString(), // Bug 5: Data local
                     isPaid: true,
                     paymentDate: paymentDate,
                     accountId: isCard ? undefined : targetId,
                     cardId: isCard ? targetId : isPaying.cardId,
-                    isInvoicePayment: true,
+                    isInvoicePayment: isCardInvoice, // Bug 4: Apenas se for fatura
                     invoiceMonthYear: isPaying.invoiceMonthYear,
-                    categoryId: 'card-payment'
+                    categoryId: isCardInvoice ? 'card-payment' : isPaying.categoryId,
+                    subcategoryId: isCardInvoice ? undefined : isPaying.subcategoryId,
+                    originalId: isPaying.originalId // Bug 1: Elo com a recorrente
                 });
 
-                // 2. Marcar transações individuais da fatura como pagas
-                const txsToMarkAsPaid = transactions.filter(t =>
-                    t.cardId === isPaying.cardId &&
-                    !t.isPaid &&
-                    t.categoryId !== 'card-payment' &&
-                    t.invoiceMonthYear === isPaying.invoiceMonthYear
-                );
+                if (isCardInvoice) {
+                    // 2. Marcar transações individuais da fatura como pagas
+                    const txsToMarkAsPaid = transactions.filter(t =>
+                        t.cardId === isPaying.cardId &&
+                        !t.isPaid &&
+                        t.categoryId !== 'card-payment' &&
+                        t.invoiceMonthYear === isPaying.invoiceMonthYear
+                    );
 
-                for (const tx of txsToMarkAsPaid) {
-                    await togglePaidMutation({ id: tx.id, isPaid: true });
+                    for (const tx of txsToMarkAsPaid) {
+                        await togglePaidMutation({ id: tx.id, isPaid: true });
+                    }
                 }
             } else {
                 await updateTransactionMutation({

@@ -60,7 +60,9 @@ export function useTransactions(viewDate: Date) {
         installmentNumber: t.installment_number,
         installmentTotal: t.installment_total,
         invoiceMonthYear: t.invoice_month_year,
-        debtId: t.debt_id
+        debtId: t.debt_id,
+        originalId: t.original_id,
+        originalBillId: t.original_bill_id
       })) as Transaction[];
     }
   });
