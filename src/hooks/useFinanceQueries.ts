@@ -84,6 +84,7 @@ export function useCreditCards() {
         userId: c.user_id,
         dueDay: c.due_day,
         closingDay: c.closing_day,
+        progressColor: c.progresscolor,
         limit: Number(c.limit || 0)
       })) as CreditCard[];
     }

@@ -89,6 +89,8 @@ export interface CreditCard {
   dueDay: number;
   color: string;
   texture?: CardTexture;
+  progressColor?: string;
+  accentColor?: string;
   isClosingDateFixed: boolean;
   isActive: boolean;
   history?: InvoiceConfig[];

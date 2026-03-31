@@ -236,7 +236,7 @@ export default function CardsDashboard() {
         <div className="hidden lg:grid lg:grid-cols-12 gap-0 items-start">
 
           {/* Coluna esquerda — lista de cartões */}
-          <div className="lg:col-span-4 flex flex-col gap-3 px-4 pr-2 max-h-[calc(100vh-120px)] overflow-y-auto no-scrollbar">
+          <div className="lg:col-span-4 flex flex-col gap-3 px-4 pr-4 border-r border-white/[0.04] max-h-[calc(100vh-120px)] overflow-y-auto no-scrollbar">
             {creditCards.map((card) => {
               const usedLimit = getCardUsedLimit(card.id);
               const availableLimit = Number(card.limit ?? 0) - usedLimit;
@@ -249,8 +249,8 @@ export default function CardsDashboard() {
                   className={cn(
                     "transition-all duration-300 cursor-pointer rounded-2xl",
                     isSelected
-                      ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-100 opacity-100"
-                      : "opacity-55 hover:opacity-85 scale-95 hover:scale-[0.97]"
+                      ? "ring-1 ring-primary/40 shadow-lg shadow-primary/10"
+                      : "opacity-60 hover:opacity-90"
                   )}
                 >
                   <CreditCardVisual
@@ -273,23 +273,15 @@ export default function CardsDashboard() {
                 {/* Nav de mês + botões */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1 bg-[#18181f] border border-white/8 rounded-xl px-2 py-1">
-                    <Button
-                      variant="ghost" size="icon"
-                      className="w-7 h-7 rounded-lg hover:bg-white/10"
-                      onClick={() => setViewDate((d) => subMonths(d, 1))}
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </Button>
-                    <span className="text-sm font-black tracking-tight min-w-[118px] text-center capitalize">
+                    <button className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex items-center justify-center w-8 h-8" onClick={() => setViewDate((d) => subMonths(d, 1))}>
+                      <ChevronLeft className="w-4 h-4 text-zinc-300" />
+                    </button>
+                    <span className="text-sm font-black tracking-tight min-w-[118px] text-center capitalize text-zinc-200">
                       {format(viewDate, "MMMM yyyy", { locale: ptBR })}
                     </span>
-                    <Button
-                      variant="ghost" size="icon"
-                      className="w-7 h-7 rounded-lg hover:bg-white/10"
-                      onClick={() => setViewDate((d) => addMonths(d, 1))}
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
+                    <button className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex items-center justify-center w-8 h-8" onClick={() => setViewDate((d) => addMonths(d, 1))}>
+                      <ChevronRight className="w-4 h-4 text-zinc-300" />
+                    </button>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -312,25 +304,32 @@ export default function CardsDashboard() {
 
                 {/* Hero da fatura */}
                 <div className="bg-[#111118] border border-white/8 rounded-2xl p-6 relative overflow-hidden">
-                  <div
-                    className="absolute -top-24 -right-24 w-72 h-72 rounded-full opacity-[0.08] blur-3xl pointer-events-none"
-                    style={{ background: selectedCard.color ?? "#00d4aa" }}
-                  />
-                  <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
-                    <div>
-                      <p className="text-[10px] uppercase font-black text-zinc-500 tracking-[0.2em] mb-2">
-                        Fatura · {format(viewDate, "MMMM yyyy", { locale: ptBR })}
+                  <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full opacity-[0.06] blur-3xl pointer-events-none" style={{ background: selectedCard.color ?? '#00d4aa' }} />
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-[10px] uppercase font-black text-zinc-500 tracking-[0.2em]">
+                        Fatura · {format(viewDate, 'MMMM yyyy', { locale: ptBR })}
                       </p>
-                      <h2 className="text-5xl lg:text-6xl font-black tracking-tighter tabular-nums text-white">
-                        {fmtBRL(currentInvoiceTotal)}
-                      </h2>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
                       <StatusBadge status={dynamicStatus} />
-                      <div className="flex gap-4 text-[10px] font-bold text-zinc-500">
-                        <span>Fecha dia <strong className="text-zinc-300">{selectedCard.closingDay}</strong></span>
-                        <span>Vence dia <strong className="text-zinc-300">{selectedCard.dueDay}</strong></span>
-                        <span>Limite <strong className="text-zinc-300">{fmtBRL(stats.limit)}</strong></span>
+                    </div>
+                    <h2 className="text-5xl lg:text-6xl font-black tracking-tighter tabular-nums text-white mb-4">
+                      {fmtBRL(currentInvoiceTotal)}
+                    </h2>
+                    <div className="flex items-center gap-6 text-[11px] font-semibold text-zinc-500">
+                      <span>Fecha <strong className="text-zinc-300">dia {selectedCard.closingDay}</strong></span>
+                      <span>Vence <strong className="text-zinc-300">dia {selectedCard.dueDay}</strong></span>
+                      <span>Limite <strong className="text-zinc-300">{fmtBRL(stats.limit)}</strong></span>
+                    </div>
+                    <div className="mt-4">
+                      <div className="flex justify-between text-[10px] text-zinc-600 mb-1.5">
+                        <span>{stats.percentUsed.toFixed(0)}% usado</span>
+                        <span>{fmtBRL(stats.available)} disponível</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-white/8 rounded-full overflow-hidden">
+                        <div className={cn("h-full rounded-full transition-all duration-700",
+                          stats.percentUsed > 90 ? "bg-rose-400" :
+                            stats.percentUsed > 70 ? "bg-amber-400" : "bg-emerald-400"
+                        )} style={{ width: `${stats.percentUsed}%` }} />
                       </div>
                     </div>
                   </div>
@@ -339,13 +338,12 @@ export default function CardsDashboard() {
                 {/* Stats — 2 cards (sem Cashback) */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-[#111118] border border-white/8 rounded-2xl p-5">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Gastos</p>
-                    <p className="text-2xl font-black tabular-nums text-rose-400">{fmtBRL(currentInvoiceTotal)}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-rose-400/70 mb-1">Gastos</p>
+                    <p className="text-2xl font-black tabular-nums text-white">{fmtBRL(currentInvoiceTotal)}</p>
                   </div>
                   <div className="bg-[#111118] border border-white/8 rounded-2xl p-5">
                     <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Disponível</p>
-                    <p className="text-2xl font-black tabular-nums text-amber-400">{fmtBRL(stats.available)}</p>
-                    <Progress value={stats.percentUsed} className="h-1 mt-3 bg-white/8" />
+                    <p className="text-2xl font-black tabular-nums text-white">{fmtBRL(stats.available)}</p>
                   </div>
                 </div>
 
@@ -520,8 +518,8 @@ export default function CardsDashboard() {
                   key={card.id}
                   onClick={() => setSelectedCardId(card.id)}
                   className={cn(
-                    "snap-center w-[300px] shrink-0 transition-all duration-500 ease-out cursor-pointer",
-                    isSelected ? "opacity-100 scale-100" : "opacity-50 scale-95"
+                    "snap-center w-[300px] shrink-0 transition-all duration-300 ease-out cursor-pointer rounded-2xl",
+                    isSelected ? "ring-1 ring-primary/40 shadow-lg shadow-primary/10 opacity-100" : "opacity-60"
                   )}
                 >
                   <CreditCardVisual
@@ -542,15 +540,15 @@ export default function CardsDashboard() {
               {/* Nav mês mobile */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1 bg-[#18181f] border border-white/8 rounded-xl px-2 py-1">
-                  <Button variant="ghost" size="icon" className="w-7 h-7 rounded-lg" onClick={() => setViewDate((d) => subMonths(d, 1))}>
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <span className="text-xs font-black tracking-tight min-w-[100px] text-center capitalize">
+                  <button className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex items-center justify-center w-8 h-8" onClick={() => setViewDate((d) => subMonths(d, 1))}>
+                    <ChevronLeft className="w-4 h-4 text-zinc-300" />
+                  </button>
+                  <span className="text-xs font-black tracking-tight min-w-[100px] text-center capitalize text-zinc-200">
                     {format(viewDate, "MMMM yyyy", { locale: ptBR })}
                   </span>
-                  <Button variant="ghost" size="icon" className="w-7 h-7 rounded-lg" onClick={() => setViewDate((d) => addMonths(d, 1))}>
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
+                  <button className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex items-center justify-center w-8 h-8" onClick={() => setViewDate((d) => addMonths(d, 1))}>
+                    <ChevronRight className="w-4 h-4 text-zinc-300" />
+                  </button>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="rounded-xl gap-1.5 text-[10px] font-black uppercase h-9 px-3 border-white/10" onClick={handleExport}>
@@ -564,16 +562,34 @@ export default function CardsDashboard() {
 
               {/* Fatura mobile */}
               <div className="bg-[#111118] border border-white/8 rounded-2xl p-5 relative overflow-hidden">
-                <div
-                  className="absolute -top-16 -right-16 w-48 h-48 rounded-full opacity-[0.07] blur-3xl pointer-events-none"
-                  style={{ background: selectedCard.color ?? "#00d4aa" }}
-                />
+                <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full opacity-[0.06] blur-3xl pointer-events-none" style={{ background: selectedCard.color ?? '#00d4aa' }} />
+
                 <div className="relative z-10">
-                  <p className="text-[10px] uppercase font-black text-zinc-500 tracking-[0.2em] mb-2">Fatura atual</p>
-                  <h2 className="text-4xl font-black tabular-nums text-white">{fmtBRL(currentInvoiceTotal)}</h2>
-                  <div className="flex items-center gap-3 mt-3">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-[10px] uppercase font-black text-zinc-500 tracking-[0.2em]">Fatura atual</p>
                     <StatusBadge status={dynamicStatus} />
-                    <span className="text-[10px] text-zinc-500 font-bold">Vence dia {selectedCard.dueDay}</span>
+                  </div>
+
+                  <h2 className="text-4xl font-black tracking-tighter tabular-nums text-white mb-3">
+                    {fmtBRL(currentInvoiceTotal)}
+                  </h2>
+
+                  <div className="flex items-center gap-4 text-[10px] font-semibold text-zinc-500">
+                    <span>Fecha <strong className="text-zinc-300">dia {selectedCard.closingDay}</strong></span>
+                    <span>Vence <strong className="text-zinc-300">dia {selectedCard.dueDay}</strong></span>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-white/5">
+                    <div className="flex justify-between text-[10px] text-zinc-600 mb-1.5">
+                      <span>{stats.percentUsed.toFixed(0)}% usado</span>
+                      <span>{fmtBRL(stats.available)} disponível</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-white/8 rounded-full overflow-hidden">
+                      <div className={cn("h-full rounded-full transition-all duration-700",
+                        stats.percentUsed > 90 ? "bg-rose-400" :
+                          stats.percentUsed > 70 ? "bg-amber-400" : "bg-emerald-400"
+                      )} style={{ width: `${stats.percentUsed}%` }} />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -581,13 +597,12 @@ export default function CardsDashboard() {
               {/* Stats mobile */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-[#111118] border border-white/8 rounded-2xl p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Gastos</p>
-                  <p className="text-xl font-black tabular-nums text-rose-400">{fmtBRL(currentInvoiceTotal)}</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-rose-400/70 mb-1">Gastos</p>
+                  <p className="text-xl font-black tabular-nums text-white">{fmtBRL(currentInvoiceTotal)}</p>
                 </div>
                 <div className="bg-[#111118] border border-white/8 rounded-2xl p-4">
                   <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Disponível</p>
-                  <p className="text-xl font-black tabular-nums text-amber-400">{fmtBRL(stats.available)}</p>
-                  <Progress value={stats.percentUsed} className="h-1 mt-2 bg-white/8" />
+                  <p className="text-xl font-black tabular-nums text-white">{fmtBRL(stats.available)}</p>
                 </div>
               </div>
 
@@ -685,7 +700,7 @@ export default function CardsDashboard() {
             card={selectedCard}
             isOpen={showEditCard}
             onClose={() => setShowEditCard(false)}
-            onSave={(updated) => updateCreditCard(updated.id, updated)}
+            onSave={(updated) => { const { id, ...updates } = updated; updateCreditCard({ id, updates }); }}
           />
         </Portal>
       )}

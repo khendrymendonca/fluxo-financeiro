@@ -36,14 +36,14 @@ export function CreditCardVisual({
             )}
             style={{
                 backgroundColor: textureKey === 'black' ? '#09090b' : cardColor,
-                background: textureKey === 'solid' 
-                    ? `linear-gradient(135deg, ${cardColor} 0%, ${adjustColor(cardColor, -30)} 100%)` 
+                background: textureKey === 'solid'
+                    ? `linear-gradient(135deg, ${cardColor} 0%, ${adjustColor(cardColor, -30)} 100%)`
                     : undefined,
             }}
         >
             {/* Camada de Textura */}
-            <div 
-                className={cn("absolute inset-0 pointer-events-none", texture.className)} 
+            <div
+                className={cn("absolute inset-0 pointer-events-none", texture.className)}
                 style={texture.style}
             />
 
@@ -55,7 +55,7 @@ export function CreditCardVisual({
                             {cardBank}
                         </span>
                     </div>
-                    
+
                     {invoiceStatus && (
                         <div className={cn(
                             "text-[9px] font-black uppercase px-2.5 py-1 rounded-lg bg-white/10 backdrop-blur-md border border-white/10 transition-colors shadow-sm",
@@ -87,18 +87,22 @@ export function CreditCardVisual({
                                 {Math.min(percentageUsed, 100).toFixed(0)}%
                             </span>
                         </div>
-                        
-                        {/* Progress Bar */}
-                        <div className="w-full h-1 bg-black/20 rounded-full overflow-hidden">
+
+                        {/* Progress Bar Dinâmica */}
+                        <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-2 relative">
                             <div
-                                className={cn("h-full transition-all duration-700 ease-out shadow-sm", percentageUsed > 90 ? "bg-red-400" : "bg-white")}
-                                style={{ width: `${percentageUsed}%` }}
+                                className={cn("h-full transition-all duration-700 ease-out shadow-sm", percentageUsed > 90 ? "bg-red-400" : "")}
+                                style={{
+                                    width: `${Math.min(percentageUsed, 100)}%`,
+                                    background: percentageUsed > 90 ? undefined : (card.progressColor ?? "#ffffff"),
+                                    opacity: 0.85,
+                                }}
                             />
                         </div>
                     </div>
                 </div>
             </div>
-            
+
             {/* Subtle gloss effect (more evident on dark/textures) */}
             <div className="absolute -top-24 -left-24 w-48 h-48 bg-white/5 rounded-full blur-3xl pointer-events-none" />
         </div>

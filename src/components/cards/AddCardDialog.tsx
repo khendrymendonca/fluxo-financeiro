@@ -21,6 +21,7 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
     const [bank, setBank] = useState('');
     const [limit, setLimit] = useState('');
     const [color, setColor] = useState(APP_COLORS[0]);
+    const [progressColor, setProgressColor] = useState('#ffffff');
     const [texture, setTexture] = useState<CardTexture>('solid');
     const [dueDay, setDueDay] = useState('10');
     const [closingDay, setClosingDay] = useState('3');
@@ -50,6 +51,7 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
             bank,
             limit: parseFloat(limit),
             color,
+            progressColor,
             texture,
             dueDay: parseInt(dueDay),
             closingDay: parseInt(closingDay),
@@ -64,6 +66,7 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
         setDueDay('10');
         setClosingDay('3');
         setTexture('solid');
+        setProgressColor('#ffffff');
 
         onClose();
     };
@@ -157,12 +160,12 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
                                     onClick={() => setTexture(t)}
                                     className={cn(
                                         "flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 transition-all",
-                                        texture === t 
-                                            ? "border-primary bg-primary/5 text-primary shadow-sm" 
+                                        texture === t
+                                            ? "border-primary bg-primary/5 text-primary shadow-sm"
                                             : "border-transparent bg-muted/50 text-muted-foreground hover:bg-muted"
                                     )}
                                 >
-                                    <div 
+                                    <div
                                         className={cn("w-full h-8 rounded-lg relative overflow-hidden border border-white/10", t === 'black' ? "bg-zinc-950" : "bg-primary")}
                                         style={{ backgroundColor: t === 'black' ? '#09090b' : color }}
                                     >
@@ -180,6 +183,41 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
                             selectedColor={color}
                             onSelect={setColor}
                         />
+                    </div>
+
+                    {/* Cor da barra de progresso */}
+                    <div className="space-y-2">
+                        <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">
+                            Cor da Barra de Limite
+                        </Label>
+                        <div className="flex gap-2 flex-wrap">
+                            {[
+                                { label: "Branco", value: "#ffffff" },
+                                { label: "Ouro", value: "#f59e0b" },
+                                { label: "Prata", value: "#94a3b8" },
+                                { label: "Verde", value: "#10b981" },
+                                { label: "Rosa", value: "#f43f5e" },
+                                { label: "Azul", value: "#3b82f6" },
+                            ].map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => setProgressColor(opt.value)}
+                                    className={cn(
+                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
+                                        progressColor === opt.value
+                                            ? "border-primary/40 bg-primary/10 text-primary"
+                                            : "border-border/50 text-muted-foreground hover:border-border"
+                                    )}
+                                >
+                                    <span
+                                        className="w-3 h-3 rounded-full border border-black/10 dark:border-white/10"
+                                        style={{ background: opt.value }}
+                                    />
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     <Button type="submit" className="w-full h-14 rounded-2xl font-bold text-base shadow-lg shadow-primary/20 mt-2 active:scale-95 transition-transform">

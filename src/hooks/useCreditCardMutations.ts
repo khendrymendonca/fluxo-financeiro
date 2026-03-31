@@ -20,6 +20,7 @@ export function useAddCreditCard() {
         limit: card.limit,
         color: card.color,
         texture: card.texture || 'solid',
+        progresscolor: card.progressColor ?? null,
         due_day: card.dueDay,
         closing_day: card.closingDay,
         history: card.history || []
@@ -59,6 +60,7 @@ export function useUpdateCreditCard() {
       if (updates.limit !== undefined) dbPayload.limit = updates.limit;
       if (updates.color !== undefined) dbPayload.color = updates.color;
       if (updates.texture !== undefined) dbPayload.texture = updates.texture;
+      if (updates.progressColor !== undefined) dbPayload.progresscolor = updates.progressColor;
       if (updates.dueDay !== undefined) dbPayload.due_day = updates.dueDay;
       if (updates.closingDay !== undefined) dbPayload.closing_day = updates.closingDay;
       if (updates.isClosingDateFixed !== undefined) dbPayload.isClosingDateFixed = updates.isClosingDateFixed;
