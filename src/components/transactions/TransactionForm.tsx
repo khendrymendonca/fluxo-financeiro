@@ -49,7 +49,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [description, setDescription] = useState(initialData?.description || '');
   const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
   const [categoryId, setCategoryId] = useState<string>(initialData?.categoryId || '');
-  const [subcategoryId, setSubcategoryId] = useState<string>(initialData?.subcategoryId || '');
+  const [subcategoryId, setSubcategoryId] = useState<string>(initialData?.subcategoryId || (initialData as any)?.subcategory_id || '');
   const [date, setDate] = useState(initialData?.date || todayLocalString());
   const [accountId, setAccountId] = useState<string>(initialData?.accountId || '');
   const [cardId, setCardId] = useState<string>(initialData?.cardId || '');
@@ -113,7 +113,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
   useEffect(() => {
     if (initialData) {
-      if (initialData.transactionType === 'recurring' || initialData.isRecurring) {
+      if (initialData.transactionType === 'recurring' || initialData.isRecurring || (initialData as any).is_recurring) {
         if (initialData.type === 'income' && (initialData as any).isAutomatic) {
           setActiveTab('renda_fixa');
         } else {
