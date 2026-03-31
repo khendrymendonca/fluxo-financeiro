@@ -239,24 +239,27 @@ export default function CardsDashboard() {
         </div>
       ) : (
         <>
-          {/* MOBILE LAYOUT (ESTILO ITAÚ/NUBANK) */}
-          <div className="block lg:hidden space-y-2">
-            {/* 1. Carrossel de Cartões (Topo) */}
-            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 px-4 pb-6 w-full no-scrollbar">
+          {/* MOBILE LAYOUT (ESTILO ORIGINAL - CARTÃO REDUZIDO) */}
+          <div className="block lg:hidden space-y-4">
+            {/* 1. Carrossel de Cartões (Tamanho Reduzido e Centralizado) */}
+            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 px-10 pb-6 w-full no-scrollbar">
               {creditCards.map(card => {
                 const cardUsed = getCardUsedLimit(card.id);
                 const cardAvailable = card.limit - cardUsed;
                 const isSelected = selectedCardId === card.id;
                 
                 return (
-                  <div key={card.id} className="snap-center min-w-[85vw] max-w-[340px] shrink-0">
+                  <div key={card.id} className="snap-center w-[300px] shrink-0">
                     <CreditCardVisual
                       card={card}
                       usedLimit={cardUsed}
                       availableLimit={cardAvailable}
                       isSelected={isSelected}
                       onClick={() => setSelectedCardId(card.id)}
-                      className={cn(!isSelected && "opacity-80 grayscale-[30%]")}
+                      className={cn(
+                        "transition-transform duration-300",
+                        !isSelected && "opacity-40 grayscale scale-90"
+                      )}
                       invoiceStatus={getInvoiceStatusDisplay(
                         card,
                         viewDate,
@@ -270,96 +273,83 @@ export default function CardsDashboard() {
               })}
             </div>
             
-            {/* 2. Painel de Fatura e Limite (Card de Resumo) */}
+            {/* 2. Painel de Fatura e Limite (Fiel ao Print) */}
             {selectedCard && (
-              <div className="px-4 space-y-4">
-                <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm space-y-5">
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Fatura atual</p>
-                    <h2 className="text-3xl font-black text-primary tabular-nums">
-                      {formatCurrency(currentInvoiceTotal)}
-                    </h2>
-                    {dynamicStatus && (
-                      <span className={cn("text-[10px] font-black uppercase px-2 py-0.5 rounded bg-muted", dynamicStatus.color)}>
-                        {dynamicStatus.text}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-end">
-                      <p className="text-xs text-muted-foreground font-medium">
-                        Limite disponível <span className="text-foreground font-bold">{formatCurrency(stats.available)}</span>
-                      </p>
-                      <span className="text-[10px] font-black text-muted-foreground">{stats.percentUsed.toFixed(0)}%</span>
-                    </div>
+              <div className="px-4 space-y-6">
+                <div className="bg-card border border-border/50 rounded-2xl p-5 shadow-sm space-y-1">
+                  <p className="text-sm text-muted-foreground font-medium">Fatura atual</p>
+                  <h2 className="text-3xl font-bold text-primary mt-1 mb-4 tabular-nums">
+                    {formatCurrency(currentInvoiceTotal)}
+                  </h2>
+                  
+                  <div className="space-y-3">
+                    <p className="text-xs text-muted-foreground">
+                      Limite disponível <span className="text-foreground font-bold">{formatCurrency(stats.available)}</span>
+                    </p>
                     <Progress value={stats.percentUsed} className="h-1.5" />
                   </div>
 
-                  <div className="flex justify-between items-center pt-2 border-t border-border/40 text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-primary" />
-                      <span>Vence dia {selectedCard.dueDay}</span>
+                  <div className="flex justify-between text-xs text-muted-foreground mt-4 pt-4 border-t border-border/40">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>Vencimento {selectedCard.dueDay}</span>
                     </div>
-                    <span>Fechamento dia {selectedCard.closingDay}</span>
+                    <span>Fechamento {selectedCard.closingDay}</span>
                   </div>
                 </div>
 
-                {/* 3. Botões de Ação Rápida (Quick Actions) */}
+                {/* 3. Botões de Ação Rápida */}
                 <div className="grid grid-cols-3 gap-3">
-                  <Button variant="outline" className="flex flex-col h-20 rounded-2xl gap-2 border-border/40 hover:bg-primary/5 hover:border-primary/30" onClick={() => setShowEditCard(true)}>
+                  <Button variant="outline" className="flex flex-col h-20 rounded-2xl gap-2 border-border/40" onClick={() => setShowEditCard(true)}>
                     <Pencil className="w-4 h-4 text-primary" />
-                    <span className="text-[10px] font-bold uppercase tracking-tighter">Ajustar</span>
+                    <span className="text-[10px] font-bold uppercase">Ajustar</span>
                   </Button>
-                  <Button variant="outline" className="flex flex-col h-20 rounded-2xl gap-2 border-border/40 hover:bg-primary/5 hover:border-primary/30">
+                  <Button variant="outline" className="flex flex-col h-20 rounded-2xl gap-2 border-border/40">
                     <Receipt className="w-4 h-4 text-primary" />
-                    <span className="text-[10px] font-bold uppercase tracking-tighter">Pagar</span>
+                    <span className="text-[10px] font-bold uppercase">Pagar</span>
                   </Button>
-                  <Button variant="outline" className="flex flex-col h-20 rounded-2xl gap-2 border-border/40 hover:bg-primary/5 hover:border-primary/30" onClick={() => {
+                  <Button variant="outline" className="flex flex-col h-20 rounded-2xl gap-2 border-border/40" onClick={() => {
                     const el = document.getElementById('transactions-list');
                     el?.scrollIntoView({ behavior: 'smooth' });
                   }}>
                     <ArrowRight className="w-4 h-4 text-primary" />
-                    <span className="text-[10px] font-bold uppercase tracking-tighter">Extrato</span>
+                    <span className="text-[10px] font-bold uppercase">Extrato</span>
                   </Button>
                 </div>
 
                 {/* 4. Lista de Lançamentos */}
-                <div id="transactions-list" className="pt-4 space-y-4">
-                  <div className="flex items-center justify-between px-1">
-                    <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Lançamentos recentes</h3>
-                    <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-xl">
-                      <Button variant="ghost" size="icon" onClick={() => setViewDate(prev => subMonths(prev, 1))} className="h-7 w-7 rounded-lg">{"<"}</Button>
-                      <p className="text-[9px] font-black uppercase w-20 text-center">{format(viewDate, 'MMM yy', { locale: ptBR })}</p>
-                      <Button variant="ghost" size="icon" onClick={() => setViewDate(prev => addMonths(prev, 1))} className="h-7 w-7 rounded-lg">{">"}</Button>
+                <div id="transactions-list" className="pt-2 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Lançamentos do cartão</h3>
+                    <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl">
+                      <Button variant="ghost" size="icon" onClick={() => setViewDate(prev => subMonths(prev, 1))} className="h-7 w-7">{"<"}</Button>
+                      <p className="text-[9px] font-black uppercase w-16 text-center">{format(viewDate, 'MMM yy', { locale: ptBR })}</p>
+                      <Button variant="ghost" size="icon" onClick={() => setViewDate(prev => addMonths(prev, 1))} className="h-7 w-7">{">"}</Button>
                     </div>
                   </div>
 
                   <div className="space-y-2 pb-10">
                     {currentInvoiceTransactions.length === 0 ? (
-                      <div className="text-center py-12 bg-muted/10 rounded-3xl border border-dashed border-border/40">
-                        <p className="text-muted-foreground italic text-xs">Nenhum lançamento.</p>
+                      <div className="text-center py-10 bg-muted/5 rounded-2xl border border-dashed border-border/40">
+                        <p className="text-muted-foreground text-xs">Nenhum gasto nesta fatura.</p>
                       </div>
                     ) : (
-                      currentInvoiceTransactions.map(t => {
-                        const category = categories.find(c => c.id === t.categoryId);
-                        return (
-                          <div key={t.id} className="flex items-center justify-between p-4 rounded-2xl bg-card border border-border/30 active:scale-[0.98] transition-all">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground">
-                                <Receipt className="w-4 h-4" />
-                              </div>
-                              <div>
-                                <p className="font-bold text-xs leading-tight">{t.description}</p>
-                                <p className="text-[10px] text-muted-foreground font-medium uppercase">{format(parseLocalDate(t.date), 'dd MMM')}</p>
-                              </div>
+                      currentInvoiceTransactions.map(t => (
+                        <div key={t.id} className="flex items-center justify-between p-4 rounded-2xl bg-card border border-border/30">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center">
+                              <Receipt className="w-4 h-4 text-muted-foreground" />
                             </div>
-                            <p className={cn("font-black text-xs tabular-nums", t.type === 'income' ? 'text-emerald-500' : 'text-foreground')}>
-                              {t.type === 'income' ? '-' : ''}{formatCurrency(t.amount)}
-                            </p>
+                            <div>
+                              <p className="font-bold text-xs">{t.description}</p>
+                              <p className="text-[10px] text-muted-foreground uppercase">{format(parseLocalDate(t.date), 'dd MMM')}</p>
+                            </div>
                           </div>
-                        );
-                      })
+                          <p className={cn("font-black text-xs", t.type === 'income' ? 'text-emerald-500' : 'text-foreground')}>
+                            {t.type === 'income' ? '-' : ''}{formatCurrency(t.amount)}
+                          </p>
+                        </div>
+                      ))
                     )}
                   </div>
                 </div>
