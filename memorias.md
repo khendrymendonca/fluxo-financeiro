@@ -24,4 +24,8 @@ Este documento serve como a fonte da verdade para decisões de UI/UX, regras de 
 * **Deduplicação de Projeções:** O sistema depende do campo `original_id` mapeado do banco de dados para evitar que contas fixas recém-criadas no mês atual apareçam duplicadas (como reais e projetadas ao mesmo tempo).
 
 ---
+## 5. Histórico de Mudanças Críticas
+* **31/03/2026:** Refatoração completa do motor de lançamentos. Implementação de Query `.or()` encadeada para suporte a projeções cíclicas sem duplicidade. Padronização rigorosa do DTO no front-end (`is_recurring`, `subcategory_id: null` e `toISOString`) para evitar falhas de persistência no Supabase. Introdução de blindagem no formulário contra edição estrutural de projeções virtuais.
+
+---
 *Nota do Tech Lead: Este documento deve ser usado como contexto base em todos os prompts futuros que envolvam UI ou regras de negócio.*
