@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { Portal } from '@/components/ui/Portal';
 import { cn } from '@/lib/utils';
-import { format, isSameMonth, isSameYear } from 'date-fns';
+import { format, isSameMonth, isSameYear, isBefore, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getCardSettingsForDate } from '@/utils/creditCardUtils';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
@@ -154,11 +154,18 @@ export function BillsManager() {
 
     // 2. Filtrar transações recorrentes e injetar as virtuais
     const recurringTransactions = [...currentMonthTransactions, ...virtualInvoices].filter(t => {
-        // ✅ REGRA DE FILTRO: Esta tela centraliza TODA a liquidação financeira do app.
-        // Mostramos: Recorrentes, Parcelamentos, Acordos e Lançamentos Pontuais em Conta.
-
         // Esconder compras individuais feitas no cartão de crédito (estas são liquidadas via fatura)
         if (t.cardId && t.categoryId !== 'card-payment') return false;
+
+        const txDate = parseLocalDate(t.date.slice(0, 10));
+
+        // Inclui: itens do mês visualizado (reais ou virtuais)
+        const isCurrentMonth = isSameMonth(txDate, viewDate) && isSameYear(txDate, viewDate);
+
+        // Inclui: itens de meses anteriores ainda não pagos (atrasados)
+        const isOverdue = isBefore(txDate, startOfMonth(viewDate)) && !t.isPaid;
+
+        if (!isCurrentMonth && !isOverdue) return false;
 
         // Busca por Texto
         if (searchQuery.trim() !== '') {

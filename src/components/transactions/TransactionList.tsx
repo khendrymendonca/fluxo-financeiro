@@ -100,9 +100,17 @@ export function TransactionList({
 
   const filteredItems = displayItems
     .filter(t => {
-      // ✅ REGRA DE FILTRO: Oculte a fatura do cartão consolidada e projeções virtuais.
-      // Remove itens onde categoryId === 'card-payment', isInvoicePayment === true, ou isVirtual === true.
-      if (t.categoryId === 'card-payment' || t.isInvoicePayment || t.isVirtual) return false;
+      // 1. Bloqueia faturas de cartão consolidadas e pagamentos de fatura
+      if (t.categoryId === 'card-payment' || t.isInvoicePayment) return false;
+
+      // 2. Bloqueia projeções virtuais — pertencem à Gestão de Contas
+      if (t.isVirtual) return false;
+
+      // 3. REGRA DO EXTRATO: recorrentes/fixos só aparecem após serem pagos
+      if ((t.isRecurring || t.transactionType === 'recurring') && !t.isPaid) return false;
+
+      // 4. REGRA DO EXTRATO: parcelamentos vinculados a um grupo só aparecem após serem pagos
+      if (t.installmentGroupId && !t.isPaid) return false;
 
       // Filtro de Busca por Texto
       if (searchQuery.trim() !== '') {
