@@ -506,7 +506,8 @@ export default function CardsDashboard() {
           <div
             ref={carouselRef}
             onScroll={handleScroll}
-            className="flex overflow-x-auto snap-x snap-mandatory gap-4 px-10 pb-4 no-scrollbar"
+            className="flex snap-x snap-mandatory gap-4 px-10 py-6 no-scrollbar"
+            style={{ overflowX: 'auto', overflowY: 'visible' }}
           >
             {creditCards.map((card) => {
               const usedLimit = getCardUsedLimit(card.id);

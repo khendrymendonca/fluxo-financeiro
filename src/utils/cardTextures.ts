@@ -5,6 +5,7 @@ export const CARD_TEXTURES: Record<CardTexture, {
   label: string;
   className: string;
   style?: CSSProperties;
+  overrideColor?: boolean;
 }> = {
   solid: {
     label: 'Sólido',
@@ -14,30 +15,32 @@ export const CARD_TEXTURES: Record<CardTexture, {
   // METÁLICO — gloss que respeita a cor base, simulando reflexo de luz
   metallic: {
     label: 'Metálico',
-    className: 'mix-blend-overlay',
+    className: '',
     style: {
-      background: `
-        linear-gradient(
-          135deg,
-          rgba(255,255,255,0.00)  0%,
-          rgba(255,255,255,0.55) 30%,
-          rgba(255,255,255,0.80) 45%,
-          rgba(255,255,255,0.55) 55%,
-          rgba(0,0,0,0.15)       70%,
-          rgba(0,0,0,0.30)      100%
-        )
-      `,
+      background: `linear-gradient(
+        135deg,
+        #c0c0c0 0%,
+        #f8f8f8 25%,
+        #e0e0e0 40%,
+        #ffffff 50%,
+        #d0d0d0 65%,
+        #a8a8a8 80%,
+        #c8c8c8 100%
+      )`,
     },
+    overrideColor: true,
   },
 
   // CARBONO — só a trama, sem alterar a cor base
   carbon: {
     label: 'Carbono',
-    className: 'mix-blend-soft-light opacity-60',
+    className: 'opacity-30',
     style: {
       backgroundImage: `url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000000' fill-opacity='1' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 6V5zM6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E")`,
       backgroundSize: '6px 6px',
+      mixBlendMode: 'overlay' as const,
     },
+    overrideColor: false,
   },
 
   // HOLOGRÁFICO — arco-íris que desloca como se fosse percepção angular

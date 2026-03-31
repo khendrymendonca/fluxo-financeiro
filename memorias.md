@@ -106,5 +106,7 @@ Data	Arquivo	Mudança
 31/03/2026	App.tsx	Otimização radical de tráfego de API desabilitando o refetchOnWindowFocus do ReactQuery, impedindo Loop Infinito e Exception 429 via Supabase de usuários ociosos.
 31/03/2026	cardTextures.ts	Refinamento material de Blend Modes e Texturas Premium (migração de color-dodge para composições balanceadas overlay, soft-light e multiply) + adição global de Animação Holográfica contínua.
 31/03/2026	Dashboard (Componentes)	As listas RecentTransactions e PendingPayments tiveram sua lógica de getSourceLabel expandida. Injeção de tipografia analítica do formato 'Banco - Apelido' junto ao fallback nativo.
+31/03/2026	CreditCardVisual.tsx	Implementada ramificação condicional 'overrideColor' atrelada ao repositório CARD_TEXTURES. A engine domina a renderização estrita base em texturas opacas (ex: Metálico) anulando camadas children transparentes (otimização de render e bugfix de overlays sobrepostos).
+31/03/2026	CardsDashboard.tsx / CreditCardVisual.tsx	Refatorada a engine geométrica de iluminação do seletor mobile de cartões. Substituído o filter: 'drop-shadow' vulnerável à stacking context pelos injetores reativos de 'boxShadow' CSS strict. Removida a barreira de clip do container do CardsDashboard injetando 'overflowX: auto' e 'overflowY: visible' mitigando o shadow-clipping para o snap.
 Nota do Tech Lead: Este documento deve ser usado como contexto base em todos os prompts futuros que envolvam UI ou regras de negócio.
 
