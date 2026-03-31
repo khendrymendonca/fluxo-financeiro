@@ -110,14 +110,30 @@ export function useDeleteTransaction() {
 
       return id;
     },
-    onMutate: async ({ transaction }) => {
-      const id = transaction.id;
+    onMutate: async ({ transaction, applyScope = 'this' }) => {
+      const { id, installmentGroupId, date } = transaction;
       await queryClient.cancelQueries({ queryKey: ['transactions'] });
       const previousTransactions = queryClient.getQueryData(['transactions']);
+
       queryClient.setQueryData(['transactions'], (oldData: any) => {
-        if (!oldData) return [];
-        return oldData.filter((tx: any) => tx.id !== id);
+        if (!oldData) return;
+        return oldData.filter((tx: any) => {
+          if (applyScope === 'this' || !installmentGroupId) {
+            return tx.id !== id;
+          }
+          if (applyScope === 'all') {
+            return tx.installmentGroupId !== installmentGroupId;
+          }
+          if (applyScope === 'future') {
+            return (
+              tx.installmentGroupId !== installmentGroupId ||
+              tx.date < date
+            );
+          }
+          return true;
+        });
       });
+
       return { previousTransactions };
     },
     onError: (err, variables, context) => {
