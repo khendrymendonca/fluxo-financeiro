@@ -298,8 +298,14 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       description,
       amount: parsedAmount,
       categoryId: finalCategoryId || categoryId,
+      // CORREÇÃO: Forçando Mapeamento DTO Rigoroso (snake_case) diretamente no formulário
+      subcategory_id: subcategoryId || null,
+      is_recurring: Boolean(activeTab === 'fixo' || activeTab === 'renda_fixa'),
+      date: parseLocalDate(date).toISOString(), // Evita bugs de timezone
+
+      // Mantendo legacy para evitar quebras em outros locais
       subcategoryId: subcategoryId || undefined,
-      date,
+      isRecurring: activeTab === 'fixo' || activeTab === 'renda_fixa',
       accountId: paymentMethod === 'account' ? accountId : undefined,
       cardId: paymentMethod === 'card' ? cardId : undefined,
       installmentTotal: undefined, // Não é parcelado nesse bloco
@@ -437,26 +443,29 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
             <form onSubmit={handleSubmit} className="p-6 space-y-6 animate-in fade-in slide-in-from-right duration-300">
 
               {/* Context Header for Details Step */}
-              {!initialData && (
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/50 mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className={cn("p-2 rounded-xl", type === 'income' ? "bg-success text-success-foreground" : "bg-danger text-danger-foreground")}>
-                      {activeTab === 'renda_fixa' ? <RotateCw className="w-4 h-4" /> : <Coins className="w-4 h-4" />}
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest opacity-50">{type === 'income' ? 'RECEITA' : 'DESPESA'}</p>
-                      <p className="text-sm font-black">
-                        {activeTab === 'pontual' && 'Lançamento Pontual'}
-                        {activeTab === 'parcelamento' && 'Lançamento Parcelado'}
-                        {activeTab === 'fixo' && 'Lançamento Fixo'}
-                        {activeTab === 'transfer' && 'Transferência'}
-                        {activeTab === 'renda_fixa' && 'Rendimento'}
-                      </p>
-                    </div>
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/50 mb-2">
+                <div className="flex items-center gap-2">
+                  <div className={cn("p-2 rounded-xl", type === 'income' ? "bg-success text-success-foreground" : "bg-danger text-danger-foreground")}>
+                    {activeTab === 'renda_fixa' ? <RotateCw className="w-4 h-4" /> : <Coins className="w-4 h-4" />}
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_SUBTYPE')} disabled={isPending} className="text-[10px] font-bold uppercase">Alterar</Button>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-50">{type === 'income' ? 'RECEITA' : 'DESPESA'}</p>
+                    <p className="text-sm font-black flex items-center gap-2">
+                      {activeTab === 'pontual' && 'Lançamento Pontual'}
+                      {activeTab === 'parcelamento' && 'Lançamento Parcelado'}
+                      {activeTab === 'fixo' && 'Lançamento Fixo'}
+                      {activeTab === 'transfer' && 'Transferência'}
+                      {activeTab === 'renda_fixa' && 'Rendimento'}
+                      {initialData?.isVirtual && <span className="text-[9px] bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded uppercase tracking-tighter">Projeção</span>}
+                    </p>
+                  </div>
                 </div>
-              )}
+                {initialData?.isVirtual ? (
+                  <Button variant="ghost" size="sm" disabled className="text-[10px] font-bold uppercase opacity-50" title="Altere a transação original para mudar o tipo estrutural">Bloqueado</Button>
+                ) : (
+                  <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_SUBTYPE')} disabled={isPending} className="text-[10px] font-bold uppercase">Alterar</Button>
+                )}
+              </div>
 
               {/* Form Content based on activeTab */}
               {activeTab === 'transfer' ? (

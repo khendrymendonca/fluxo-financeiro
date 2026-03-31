@@ -24,7 +24,7 @@ export function useAddTransaction() {
         user_id: user.id,
         // CORREÇÃO: Mapeamento DTO Rigoroso (CamelCase para Snake Case)
         category_id: tx.categoryId !== undefined ? tx.categoryId : tx.category_id,
-        subcategory_id: tx.subcategoryId !== undefined ? tx.subcategoryId : (tx.subcategory_id || null),
+        subcategory_id: tx.subcategoryId || tx.subcategory_id || null,
         account_id: tx.accountId !== undefined ? tx.accountId : tx.account_id,
         card_id: tx.cardId !== undefined ? tx.cardId : tx.card_id,
         is_paid: tx.isPaid !== undefined ? tx.isPaid : (tx.is_paid || false),
@@ -213,12 +213,22 @@ export function useUpdateTransaction() {
       if (updates.date !== undefined) dbUpdates.date = parseLocalDate(updates.date.slice(0, 10)).toISOString();
       if (updates.type !== undefined) dbUpdates.type = updates.type;
       if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
-      if (updates.subcategoryId !== undefined) dbUpdates.subcategory_id = updates.subcategoryId;
+
+      // CORREÇÃO 2: Salvar Subcategoria com fallback para null
+      if (updates.subcategoryId !== undefined || (updates as any).subcategory_id !== undefined) {
+        dbUpdates.subcategory_id = updates.subcategoryId || (updates as any).subcategory_id || null;
+      }
+
       if (updates.accountId !== undefined) dbUpdates.account_id = updates.accountId;
       if (updates.cardId !== undefined) dbUpdates.card_id = updates.cardId;
       if (updates.isPaid !== undefined) dbUpdates.is_paid = updates.isPaid;
       if (updates.paymentDate !== undefined) dbUpdates.payment_date = updates.paymentDate;
-      if (updates.isRecurring !== undefined) dbUpdates.is_recurring = updates.isRecurring;
+
+      // CORREÇÃO 1: Alterar Fixo para Pontual em snake_case
+      if (updates.isRecurring !== undefined || (updates as any).is_recurring !== undefined) {
+        dbUpdates.is_recurring = updates.isRecurring !== undefined ? updates.isRecurring : (updates as any).is_recurring;
+      }
+
       if (updates.recurrence !== undefined) dbUpdates.recurrence = updates.recurrence;
       if (updates.transactionType !== undefined) dbUpdates.transaction_type = updates.transactionType;
 

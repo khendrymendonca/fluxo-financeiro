@@ -40,8 +40,8 @@ export function useTransactions(viewDate: Date) {
         .from('transactions')
         .select('*')
         .is('deleted_at', null)
-        .or(`date.gte.${start},is_recurring.eq.true,installment_group_id.not.is.null,invoice_month_year.eq.${viewDateStr}`)
-        .lte('date', end);
+        .or(`date.gte.${start},is_recurring.eq.true,installment_group_id.not.is.null`)
+        .filter('date', 'lte', end);
 
       if (error) throw error;
 
