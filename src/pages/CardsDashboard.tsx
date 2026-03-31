@@ -66,6 +66,11 @@ export default function CardsDashboard() {
   } = useFinanceStore();
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+
+  const sortedCards = useMemo(
+    () => [...creditCards].sort((a, b) => a.id.localeCompare(b.id)),
+    [creditCards]
+  );
   const [viewDate, setViewDate] = useState(new Date());
   const [showAddCard, setShowAddCard] = useState(false);
   const [showEditCard, setShowEditCard] = useState(false);
@@ -75,10 +80,10 @@ export default function CardsDashboard() {
   const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (creditCards.length > 0 && !selectedCardId) {
-      setSelectedCardId(creditCards[0].id);
+    if (sortedCards.length > 0 && !selectedCardId) {
+      setSelectedCardId(sortedCards[0].id);
     }
-  }, [creditCards, selectedCardId]);
+  }, [sortedCards, selectedCardId]);
 
   const selectedCard = useMemo(
     () => creditCards.find((c) => c.id === selectedCardId) ?? null,
@@ -175,8 +180,8 @@ export default function CardsDashboard() {
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
     const index = Math.round(container.scrollLeft / 316);
-    if (creditCards[index] && creditCards[index].id !== selectedCardId) {
-      setSelectedCardId(creditCards[index].id);
+    if (sortedCards[index] && sortedCards[index].id !== selectedCardId) {
+      setSelectedCardId(sortedCards[index].id);
     }
   };
 
@@ -219,7 +224,7 @@ export default function CardsDashboard() {
       </div>
 
       {/* ── Sem cartões ────────────────────────────────────────────────────── */}
-      {creditCards.length === 0 && (
+      {sortedCards.length === 0 && (
         <div className="mx-4 p-12 text-center text-muted-foreground bg-muted/10 border-dashed border-2 border-white/10 rounded-3xl">
           <CreditCard className="w-16 h-16 mx-auto mb-4 opacity-10" />
           <p className="text-xl font-bold">Nenhum cartão ativo.</p>
@@ -232,12 +237,12 @@ export default function CardsDashboard() {
       {/* ══════════════════════════════════════════════════════════════════════
           DESKTOP — Master-Detail (lg+)
       ══════════════════════════════════════════════════════════════════════ */}
-      {creditCards.length > 0 && (
+      {sortedCards.length > 0 && (
         <div className="hidden lg:grid lg:grid-cols-12 gap-0 items-start">
 
           {/* Coluna esquerda — lista de cartões */}
           <div className="lg:col-span-4 flex flex-col gap-3 px-2 border-r border-border max-h-[calc(100vh-120px)] overflow-y-auto overflow-x-visible no-scrollbar">
-            {creditCards.map((card) => {
+            {sortedCards.map((card) => {
               const usedLimit = getCardUsedLimit(card.id);
               const availableLimit = Number(card.limit ?? 0) - usedLimit;
               const isSelected = selectedCardId === card.id;
@@ -500,7 +505,7 @@ export default function CardsDashboard() {
       {/* ══════════════════════════════════════════════════════════════════════
           MOBILE — Carrossel snap + painel
       ══════════════════════════════════════════════════════════════════════ */}
-      {creditCards.length > 0 && (
+      {sortedCards.length > 0 && (
         <div className="block lg:hidden space-y-4">
 
           <div
@@ -509,7 +514,7 @@ export default function CardsDashboard() {
             className="flex snap-x snap-mandatory gap-4 px-10 py-6 no-scrollbar"
             style={{ overflowX: 'auto', overflowY: 'visible' }}
           >
-            {creditCards.map((card) => {
+            {sortedCards.map((card) => {
               const usedLimit = getCardUsedLimit(card.id);
               const availableLimit = Number(card.limit ?? 0) - usedLimit;
               const isSelected = selectedCardId === card.id;

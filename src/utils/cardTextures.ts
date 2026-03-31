@@ -15,20 +15,18 @@ export const CARD_TEXTURES: Record<CardTexture, {
   // METÁLICO — gloss que respeita a cor base, simulando reflexo de luz
   metallic: {
     label: 'Metálico',
-    className: '',
+    className: 'mix-blend-overlay opacity-60',
     style: {
       background: `linear-gradient(
-        135deg,
-        #c0c0c0 0%,
-        #f8f8f8 25%,
-        #e0e0e0 40%,
-        #ffffff 50%,
-        #d0d0d0 65%,
-        #a8a8a8 80%,
-        #c8c8c8 100%
+        125deg,
+        rgba(255,255,255,0.0) 0%,
+        rgba(255,255,255,0.55) 30%,
+        rgba(255,255,255,0.15) 50%,
+        rgba(255,255,255,0.45) 70%,
+        rgba(255,255,255,0.0) 100%
       )`,
     },
-    overrideColor: true,
+    overrideColor: false,
   },
 
   // CARBONO — só a trama, sem alterar a cor base
