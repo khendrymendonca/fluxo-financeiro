@@ -163,6 +163,13 @@ export default function Index() {
     setShowTransactionForm(true);
   }, []);
 
+  const handleCopyTransaction = useCallback((item: Transaction) => {
+    // 🛡️ REGRA DE NEGÓCIO: Ao copiar, removemos o ID para que seja um novo lançamento
+    const { id, ...transactionData } = item;
+    setEditingTransaction(transactionData as Transaction);
+    setShowTransactionForm(true);
+  }, []);
+
   const handleToggleSidebar = useCallback((expanded: boolean) => {
     // No longer toggleable in Web
   }, []);
@@ -376,6 +383,7 @@ export default function Index() {
                 return tDate.getMonth() === viewDate.getMonth() && tDate.getFullYear() === viewDate.getFullYear();
               })}
               onEdit={handleEditTransaction}
+              onCopy={handleCopyTransaction}
               onPayBill={async (tx) => {
                 await updateTransaction({
                   id: tx.id,

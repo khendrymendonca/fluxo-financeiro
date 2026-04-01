@@ -123,5 +123,6 @@ Data	Arquivo	Mudança
 01/04/2026	Index.tsx	Correção de erro crítico (ReferenceError: parseLocalDate is not defined) que impedia o carregamento da página principal. Adicionada importação de `@/utils/dateUtils`.
 01/04/2026	TransactionForm.tsx	Atualizado placeholder do campo descrição para "Ex: Salário" em todos os lançamentos de receita.
 01/04/2026	PWA / UpdatePrompt	Implementado sistema de notificação de nova versão (UpdatePrompt). Alterado VitePWA para modo 'prompt', permitindo que usuários atualizem o app manualmente para ver novas versões/temas sem perder o login.
+01/04/2026	Regra de Negócio	Apenas lançamentos do tipo "Pontual" podem ser duplicados/copiados. Lançamentos fixos ou parcelados devem ser gerenciados via edição ou novos fluxos para evitar inconsistências de recorrência.
 
 Nota do Tech Lead: Este documento deve ser usado como contexto base em todos os prompts futuros que envolvam UI ou regras de negócio. Evitar refatorações gráficas e preservar filosofia de "Quiet Luxury" minimalista sem ruídos em cores ou blocos de grid.

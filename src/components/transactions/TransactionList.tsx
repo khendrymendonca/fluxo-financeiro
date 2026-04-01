@@ -18,15 +18,18 @@ import { Checkbox } from '@/components/ui/checkbox';
 export interface TransactionListProps {
   transactions: Transaction[];
   onEdit: (transaction: Transaction) => void;
+  onCopy?: (transaction: Transaction) => void;
   onPayBill: (transaction: Transaction) => Promise<void>;
   allowSettlement?: boolean;
 }
 
 import { parseLocalDate, todayLocalString, toLocalDateString } from '@/utils/dateUtils';
+import { Copy } from 'lucide-react';
 
 export function TransactionList({
   transactions,
   onEdit,
+  onCopy,
   onPayBill,
   allowSettlement = true
 }: TransactionListProps) {
@@ -413,6 +416,21 @@ export function TransactionList({
                           <span className={cn("font-bold text-sm", isIncome ? "text-success" : "text-gray-900 dark:text-white")}>
                             {isIncome ? '+' : '-'} {formatCurrency(item.amount)}
                           </span>
+                          
+                          {/* Botão Copiar (Apenas Pontual) */}
+                          {!item.isRecurring && item.transactionType !== 'recurring' && !item.installmentGroupId && onCopy && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onCopy(item as Transaction);
+                              }}
+                              className="p-2 rounded-xl border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 text-gray-400 dark:text-zinc-400 hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all active:scale-90"
+                              title="Duplicar lançamento"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </button>
+                          )}
+                          
                           <ArrowRight className="w-4 h-4 text-gray-200 dark:text-zinc-800 group-hover:text-gray-400 dark:group-hover:text-zinc-600 transition-colors" />
                         </div>
                       </div>
