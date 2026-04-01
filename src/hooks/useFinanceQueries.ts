@@ -41,10 +41,10 @@ export function useTransactions(viewDate: Date) {
         .select('*')
         .is('deleted_at', null)
         .or(
-          `and(date.gte.${start},date.lte.${end}),` +         // Pontuais e Cartão pela data da compra (Extrato/Dashboard)
-          `is_recurring.eq.true,` +                            // Fixas: SEM teto de data (para projeção)
-          `installment_group_id.not.is.null,` +                // Parceladas: SEM teto de data (para projeção)
-          `invoice_month_year.eq.${viewDateStr}`               // 💳 Itens da fatura do mês atual (para o BillsManager)
+          `and(date.gte.${start},date.lte.${end}),` +         // Compras do mês (Extrato/Dashboard)
+          `is_recurring.eq.true,` +                            // Recorrentes (para Projeção)
+          `installment_group_id.not.is.null,` +                // Parceladas (para Projeção)
+          `invoice_month_year.eq.${viewDateStr}`               // 💳 Fatura do mês (para o BillsManager)
         );
 
       if (error) throw error;
