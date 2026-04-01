@@ -24,13 +24,13 @@ export function MonthSelector() {
     const handlePrev = () => {
         if (viewMode === 'day') prevDay();
         else if (viewMode === 'month') prevMonth();
-        else prevYear();
+        else if (viewMode === 'year') prevYear();
     };
 
     const handleNext = () => {
         if (viewMode === 'day') nextDay();
         else if (viewMode === 'month') nextMonth();
-        else nextYear();
+        else if (viewMode === 'year') nextYear();
     };
 
     const getFormat = () => {

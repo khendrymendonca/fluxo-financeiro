@@ -292,28 +292,46 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       ? calcInvoiceMonthYear(parseLocalDate(date), { closingDay: selectedCard.closingDay, dueDay: selectedCard.dueDay })
       : undefined;
 
-    onSubmit({
-      type,
-      transactionType: (activeTab === 'fixo' || activeTab === 'renda_fixa') ? 'recurring' : 'punctual',
-      description,
-      amount: parsedAmount,
-      categoryId: finalCategoryId || categoryId,
-      subcategoryId: subcategoryId || null,
-      isRecurring: Boolean(activeTab === 'fixo' || activeTab === 'renda_fixa'),
-      date: parseLocalDate(date).toISOString(), // 🛡️ Blindagem de Timezone (UTC-3)
-      accountId: paymentMethod === 'account' ? accountId : undefined,
-      cardId: paymentMethod === 'card' ? cardId : undefined,
-      installmentTotal: undefined, 
-      recurrence: (activeTab === 'fixo' || activeTab === 'renda_fixa') ? recurrence : undefined,
-      isAutomatic: activeTab === 'renda_fixa' ? true : isAutomatic,
-      debtId: selectedDebtId || undefined,
-      invoiceMonthYear: initialData ? (paymentMethod === 'card' ? invoiceReference : undefined) : invoiceMonthYear,
-      isPaid,
-      paymentDate: isPaid ? date : undefined,
-      installmentGroupId: initialData?.installmentGroupId
-    } as any, undefined, applyScope);
+    const finalInvoiceMonthYear = useMemo(() => {
+      if (paymentMethod !== 'card' || !cardId) return undefined;
+      const card = creditCards.find(c => c.id === cardId);
+      if (!card) return undefined;
+      const settings = getCardSettingsForDate(card, parseLocalDate(date));
+      return calcInvoiceMonthYear(parseLocalDate(date), settings);
+    }, [paymentMethod, cardId, date, creditCards]);
 
-    onClose();
+    const handleExecuteSubmit = (parsedAmount: number, finalCategoryId?: string) => {
+      let isPaid = false;
+      if (initialData) {
+        isPaid = isPaidLocally;
+      } else if (activeTab === 'pontual') {
+        isPaid = isDateTodayOrPast(date);
+      }
+
+      onSubmit({
+        type,
+        transactionType: (activeTab === 'fixo' || activeTab === 'renda_fixa') ? 'recurring' : 'punctual',
+        description,
+        amount: parsedAmount,
+        categoryId: finalCategoryId || categoryId,
+        subcategoryId: subcategoryId || null,
+        isRecurring: Boolean(activeTab === 'fixo' || activeTab === 'renda_fixa'),
+        date: parseLocalDate(date).toISOString(),
+        accountId: paymentMethod === 'account' ? accountId : undefined,
+        cardId: paymentMethod === 'card' ? cardId : undefined,
+        installmentTotal: undefined, 
+        recurrence: (activeTab === 'fixo' || activeTab === 'renda_fixa') ? recurrence : undefined,
+        isAutomatic: activeTab === 'renda_fixa' ? true : isAutomatic,
+        debtId: selectedDebtId || undefined,
+        // 🛡️ Prioriza o cálculo em tempo real sobre o valor legado do banco
+        invoiceMonthYear: paymentMethod === 'card' ? finalInvoiceMonthYear : undefined,
+        isPaid,
+        paymentDate: isPaid ? date : undefined,
+        installmentGroupId: initialData?.installmentGroupId
+      } as any, undefined, applyScope);
+
+      onClose();
+    };
   };
 
   const generateCustomInstallments = () => {

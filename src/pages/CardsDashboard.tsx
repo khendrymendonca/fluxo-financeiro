@@ -63,6 +63,7 @@ export default function CardsDashboard() {
   const {
     creditCards, transactions, accounts, categories,
     updateCreditCard, addCreditCard, getCardUsedLimit,
+    viewDate, setViewDate // 🛡️ Conectando ao Store Global
   } = useFinanceStore();
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -71,7 +72,7 @@ export default function CardsDashboard() {
     () => [...creditCards].sort((a, b) => a.id.localeCompare(b.id)),
     [creditCards]
   );
-  const [viewDate, setViewDate] = useState(new Date());
+  // REMOVIDO: const [viewDate, setViewDate] = useState(new Date()); 
   const [showAddCard, setShowAddCard] = useState(false);
   const [showEditCard, setShowEditCard] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
