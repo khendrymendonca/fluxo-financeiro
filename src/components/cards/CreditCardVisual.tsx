@@ -41,8 +41,8 @@ export function CreditCardVisual({
                 transition: 'box-shadow 300ms ease, transform 300ms ease',
                 background: textureKey === 'black'
                     ? '#09090b'
-                    : `linear-gradient(135deg, ${cardColor}18 0%, ${cardColor}08 60%, transparent 100%)`,
-                backgroundColor: textureKey === 'black' ? '#09090b' : 'var(--color-card, #18181b)',
+                    : `linear-gradient(135deg, ${cardColor}30 0%, ${cardColor}15 60%, ${cardColor}08 100%)`,
+                backgroundColor: textureKey === 'black' ? '#09090b' : cardColor,
             }}
         >
             {/* Camada de Textura - Processo Condicional via Spread Omissível */}
