@@ -300,7 +300,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       return calcInvoiceMonthYear(parseLocalDate(date), settings);
     }, [paymentMethod, cardId, date, creditCards]);
 
-    const handleExecuteSubmit = (parsedAmount: number, finalCategoryId?: string) => {
+    const executeSubmit = (parsedAmount: number, finalCategoryId?: string) => {
       let isPaid = false;
       if (initialData) {
         isPaid = isPaidLocally;
