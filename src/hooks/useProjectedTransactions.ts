@@ -103,9 +103,15 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
       }
 
       // Sempre incluímos a própria transação se ela for do mês alvo e REAL
-      const isInTargetMonth = (tx.categoryId === 'card-payment' && tx.invoiceMonthYear)
-        ? (() => { const [y, m] = (tx.invoiceMonthYear as string).split('-').map(Number); return m - 1 === targetMonth && y === targetYear; })()
-        : isSameMonth(txDate, viewDate);
+      const isInTargetMonth = (() => {
+        // Se tem invoiceMonthYear, usamos ele como soberano (para Cartão de Crédito)
+        if (tx.cardId && tx.invoiceMonthYear) {
+          const [y, m] = tx.invoiceMonthYear.split('-').map(Number);
+          return (m - 1 === targetMonth && y === targetYear);
+        }
+        // Fallback: usar a data da transação
+        return isSameMonth(txDate, viewDate) && targetYear === txDate.getFullYear();
+      })();
 
       if (!tx.isVirtual && isInTargetMonth) {
         // 🚨 REGRA CRÍTICA: Recorrentes e Parcelamentos só aparecem no extrato se estiverem PAGOS.
