@@ -34,7 +34,7 @@ export function OverdraftWarningDialog({
 
     return (
         <AlertDialog open={isOpen}>
-            <AlertDialogContent className="border-warning/50 bg-warning/5">
+            <AlertDialogContent className="border-warning/30 bg-card shadow-2xl">
                 <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-2 text-warning">
                         <AlertTriangle className="w-5 h-5" />
