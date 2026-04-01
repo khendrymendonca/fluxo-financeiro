@@ -328,9 +328,9 @@ export function AccountsManager({
               <Accordion type="single" collapsible key={institution} className="w-full">
                 <AccordionItem value={institution} className="border-none bg-white dark:bg-zinc-900 rounded-3xl mb-4 overflow-hidden border border-gray-100 dark:border-zinc-800 shadow-sm transition-all hover:shadow-md">
                   <AccordionTrigger className="px-6 py-5 hover:no-underline group">
-                    <div className="flex items-center justify-between w-full pr-4 text-left">
-                      <div className="flex items-center gap-4">
-                        <Avatar className="w-10 h-10 border-2 border-white dark:border-zinc-800 shadow-sm">
+                    <div className="flex items-center justify-between w-full pr-4 text-left gap-2 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <Avatar className="w-10 h-10 border-2 border-white dark:border-zinc-800 shadow-sm shrink-0">
                           <AvatarFallback
                             className="font-black uppercase text-xs text-white"
                             style={{ backgroundColor: instColor }}
@@ -338,14 +338,14 @@ export function AccountsManager({
                             {institution.substring(0, 2)}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <h3 className="font-bold text-lg text-gray-900 dark:text-zinc-50">{institution}</h3>
-                          <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">{instAccounts.length} {instAccounts.length === 1 ? 'conta' : 'contas'}</p>
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-lg text-gray-900 dark:text-zinc-50 truncate">{institution}</h3>
+                          <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground truncate">{instAccounts.length} {instAccounts.length === 1 ? 'conta' : 'contas'}</p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground mb-1">Saldo Consolidado</p>
-                        <p className="font-black text-xl text-primary">{formatCurrency(instTotal)}</p>
+                        <p className="font-bold text-lg md:text-xl text-primary">{formatCurrency(instTotal)}</p>
                       </div>
                     </div>
                   </AccordionTrigger>

@@ -15,7 +15,7 @@ Dashboard Web: Hierarquia rígida. Últimos lançamentos ocupam mais espaço que
 2. Regras de Negócio de Cartões de Crédito
 Privacidade Absoluta: Os cartões NÃO devem exibir números fictícios (como '0000 0000...'). O design é focado apenas no Banco, Bandeira, Limite e Apelido do Cartão centralizado em destaque.
 
-Texturas Premium: Cartões suportam acabamentos visuais (texture: solid, metallic, carbon, holographic, black) aplicados via CSS (mix-blend-mode e gradientes) sobre a cor base.
+Texturas Premium: Cartões suportam acabamentos visuais (texture: solid, black) aplicados via CSS (mix-blend-mode e gradientes) sobre a cor base.
 
 3. Navegação Mobile Customizável
 Bottom Nav Dinâmica: O usuário pode escolher quais atalhos aparecem na barra inferior mobile através das Configurações (limite de 5 itens). Se ele desmarcar todos, a barra desaparece completamente.
@@ -115,5 +115,7 @@ Data	Arquivo	Mudança
 31/03/2026	useProjectedTransactions.ts	Extensão lógica da engine para suportar Projeção Cíclica Infinita de parcelamentos reais do banco. Faturas parceladas contínuas espelham instâncias virtuais até o deadline caso não existam fixas reais detectadas.
 31/03/2026	useTransactionMutations.ts	Estorno de Acordos delegado p/ Supabase e Mutação Mestra robustecida: o `useUpdateTransaction` agora entrega ApplyScope reativo no Frontend aplicando Cache Otimista p/ UX instantânea em repetições ('future' e 'all'). Redundâncias de payload SnakeCase debeladas.
 31/03/2026	User Interface / UX	Layout `MobileNav.tsx` deletado + CSS do Vite nativo purgado. Cartões Mobile `CardsDashboard.tsx` recodificados para deslize horizontal via Intersection matemática fluida. Correção global na `BillsManager` inibindo despesas isoladas de sujarem o pool de competências de cartão.
+31/03/2026	Otimização PWA e Componentes	Implementada Modal `Dialog` nativa em CategoriesManager (substituindo .confirm() para compliance PWA Mobile). Tema primário atualizado meta-tags Teal (`#0d9488`). Variáveis raízes de CSS duplicadas em `App.css` expurgadas em prol do tailwind base.
+31/03/2026	UI/UX e Responsividade Mobile	Gestor de Instituições blindado com truncamento `min-w-0` evitando quebra de Viewport. CategoriaManager migrado de accordion complexo vertical para `Grid Flat Responsivo` sem isolamento visual excessivo. Design System text-2xl padronizado no Dashboard. Readequação semântica do Fallback do `CreditCardVisual` resgatando cartões com texturas mortas de telas brancas nulas.
 
 Nota do Tech Lead: Este documento deve ser usado como contexto base em todos os prompts futuros que envolvam UI ou regras de negócio. Evitar refatorações gráficas e preservar filosofia de "Quiet Luxury" minimalista sem ruídos em cores ou blocos de grid.

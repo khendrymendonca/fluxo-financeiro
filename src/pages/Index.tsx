@@ -351,7 +351,7 @@ export default function Index() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <PageHeader title="Lançamentos" icon={List} />
               <div className="flex items-center gap-3">
-                <Button 
+                <Button
                   onClick={() => {
                     setEditingTransaction(undefined);
                     setShowTransactionForm(true);
@@ -384,7 +384,7 @@ export default function Index() {
         return (
           <div className="space-y-6 pt-2">
             <div className="flex items-center justify-between px-2">
-              <h2 className="text-3xl font-black tracking-tight">Sonhos & Projetos</h2>
+              <h2 className="text-2xl font-black tracking-tight">Sonhos & Projetos</h2>
               <Button size="sm" className="rounded-xl font-bold bg-primary text-white" onClick={() => setShowGoalForm(true)}>Lançar Novo Projeto</Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

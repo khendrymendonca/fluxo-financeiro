@@ -19,7 +19,7 @@ export function CreditCardVisual({
     const cardColor = card.color || '#3b82f6';
     const cardBank = (card.bank || 'Banco').toUpperCase();
     const cardName = card.name || 'Cartão';
-    const textureKey = card.texture || 'solid';
+    const textureKey = (card.texture && CARD_TEXTURES[card.texture]) ? card.texture : 'solid';
     const texture = CARD_TEXTURES[textureKey];
 
     const percentageUsed = card.limit > 0 ? Math.min((usedLimit / card.limit) * 100, 100) : 0;

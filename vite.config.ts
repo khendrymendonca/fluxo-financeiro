@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => ({
         short_name: 'Fluxo',
         description: 'Seu controle financeiro inteligente e simplificado.',
         start_url: '/',
-        theme_color: '#9b87f5',
+        theme_color: '#0d9488',
         background_color: '#1A1F2C',
         display: 'standalone',
         icons: [
