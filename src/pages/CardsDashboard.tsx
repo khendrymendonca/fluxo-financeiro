@@ -141,13 +141,14 @@ export default function CardsDashboard() {
       const d = subMonths(viewDate, n - 1 - i);
       const label = format(d, "MMM", { locale: ptBR });
       const mStr = format(d, "yyyy-MM");
+      
       const total = transactions
-        .filter((t) =>
-          t.cardId === selectedCardId &&
-          !t.isVirtual &&
-          !t.isInvoicePayment &&
-          t.invoiceMonthYear === mStr
-        )
+        .filter((t) => {
+          if (t.cardId !== selectedCardId || t.isVirtual || t.isInvoicePayment) return false;
+          // 🛡️ REGRA DE COMPETÊNCIA: Filtra pela data da transação (date) e não pela fatura (invoiceMonthYear)
+          const tDateStr = t.date.slice(0, 7); // Pega 'YYYY-MM' da string ISO
+          return tDateStr === mStr;
+        })
         .reduce((s, t) => s + (t.type === "income" ? -t.amount : t.amount), 0);
       return { label, total: Math.max(0, total) };
     });

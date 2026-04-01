@@ -76,9 +76,12 @@ export function TransactionList({
     parseLocalDate(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' });
 
   const displayItems = transactions.map(t => {
-    // ✅ REGRA DE BOM SENSO: Compras pontuais no cartão não são pendentes no extrato.
-    // Mas parcelamentos e recorrentes seguem a regra nativa de !isPaid
-    const isPending = (t.cardId && !t.isInvoicePayment && !t.installmentGroupId && !t.isRecurring && t.transactionType !== 'recurring') ? false : !t.isPaid;
+    // ✅ REGRA DE NEGÓCIO: Compras pontuais no cartão (débito do limite) consomem saldo/limite na hora.
+    // Elas nunca são marcadas como pendentes no extrato para evitar confusão.
+    // Apenas Recorrentes, Parcelamentos e Faturas seguem o status isPaid.
+    const isRecurringOrInstallment = t.isRecurring || t.transactionType === 'recurring' || t.installmentGroupId;
+    const isPending = isRecurringOrInstallment ? !t.isPaid : false;
+    
     return { ...t, isPending };
   });
 

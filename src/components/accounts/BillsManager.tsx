@@ -64,16 +64,16 @@ export function BillsManager() {
                     amount: amountValue,
                     type: isPaying.type,
                     transactionType: 'punctual',
-                    date: todayLocalString(), // Bug 5: Data local
+                    date: isPaying.date, // 🛡️ Correção de Competência: usa a data projetada
                     isPaid: true,
                     paymentDate: paymentDate,
                     accountId: isCard ? undefined : targetId,
                     cardId: isCard ? targetId : isPaying.cardId,
-                    isInvoicePayment: isCardInvoice, // Bug 4: Apenas se for fatura
+                    isInvoicePayment: isCardInvoice,
                     invoiceMonthYear: isPaying.invoiceMonthYear,
                     categoryId: isCardInvoice ? 'card-payment' : isPaying.categoryId,
                     subcategoryId: isCardInvoice ? undefined : isPaying.subcategoryId,
-                    originalId: isPaying.originalId // Bug 1: Elo com a recorrente
+                    originalId: isPaying.originalId
                 });
 
                 if (isCardInvoice) {
@@ -360,7 +360,16 @@ export function BillsManager() {
                                                 </Button>
                                             ) : (
                                                 <Button size="sm" variant="ghost"
-                                                    onClick={() => togglePaidMutation({ id: transaction.id, isPaid: false })}
+                                                    onClick={() => {
+                                                        // 🚨 ESTORNO INTELIGENTE: Se veio de uma recorrente e NÃO é parcelamento (fixa),
+                                                        // deletamos para voltar a ser apenas uma "Projeção Virtual".
+                                                        if (transaction.originalId && !transaction.installmentGroupId) {
+                                                            deleteTransactionMutation({ transaction, applyScope: 'this' });
+                                                            toast({ title: "Lançamento estornado para o estado projetado." });
+                                                        } else {
+                                                            togglePaidMutation({ id: transaction.id, isPaid: false });
+                                                        }
+                                                    }}
                                                     className="h-10 px-3 md:px-4 rounded-xl bg-amber-500/5 text-amber-600 hover:bg-amber-500/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider">
                                                     <RotateCcw className="w-4 h-4" /> <span className="hidden xs:inline">Estornar</span>
                                                 </Button>

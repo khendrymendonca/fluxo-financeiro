@@ -27,12 +27,13 @@ export function useTransactions(viewDate: Date) {
   return useQuery({
     queryKey: ['transactions', viewDate.getFullYear(), viewDate.getMonth()],
     queryFn: async () => {
-      const start = format(startOfMonth(viewDate), 'yyyy-MM-dd');
-      const end = format(endOfMonth(viewDate), 'yyyy-MM-dd');
+      // Janela expandida: 3 meses antes e 3 meses depois do mês visualizado
+      const windowStartISO = startOfMonth(subMonths(viewDate, 3)).toISOString();
+      const windowEndISO = endOfMonth(addMonths(viewDate, 3)).toISOString();
       const viewDateStr = format(viewDate, 'yyyy-MM');
 
       // Trazemos:
-      // 1. Transações a partir do início do mês selecionado
+      // 1. Transações dentro da janela de 3 meses antes/próximo
       // 2. Transações RECORRENTES (independente da data)
       // 3. Transações PARCELADAS (independente da data)
       // 🛡️ Filtramos depois pela data final para não trazer pontuais do futuro
@@ -41,10 +42,11 @@ export function useTransactions(viewDate: Date) {
         .select('*')
         .is('deleted_at', null)
         .or(
-          `and(date.gte.${start},date.lte.${end}),` +         // Compras do mês (Extrato/Dashboard)
-          `is_recurring.eq.true,` +                            // Recorrentes (para Projeção)
-          `installment_group_id.not.is.null,` +                // Parceladas (para Projeção)
-          `invoice_month_year.eq.${viewDateStr}`               // 💳 Fatura do mês (para o BillsManager)
+          `and(date.gte.${windowStartISO},date.lte.${windowEndISO}),` + // Compras dentro da janela expandida
+          `is_recurring.eq.true,` + // Recorrentes (para Projeção)
+          `installment_group_id.not.is.null,` + // Parceladas (para Projeção)
+          `invoice_month_year.eq.${viewDateStr},` + // 💳 Fatura do mês
+          `is_paid.eq.false` // 🚨 Pendências históricas (Prevenção de Dados Fantasmas)
         );
 
       if (error) throw error;

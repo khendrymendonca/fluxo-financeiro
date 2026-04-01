@@ -74,7 +74,7 @@ export function CreditCardVisual({
 
                 {/* Centro: Apelido do Cartão - FLEX-1 E CENTERED */}
                 <div className="flex-1 flex items-center justify-center">
-                    <h3 className="font-bold text-lg md:text-xl tracking-wide text-white drop-shadow-md text-center px-2 uppercase line-clamp-2">
+                    <h3 className="font-bold text-base md:text-lg tracking-wide text-white drop-shadow-md text-center px-4 uppercase line-clamp-2 leading-tight">
                         {cardName}
                     </h3>
                 </div>

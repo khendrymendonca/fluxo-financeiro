@@ -2,27 +2,24 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface ExpenseChartProps {
   data: Record<string, number>;
+  categoryColors?: Record<string, string>; // 🎨 Suporte opcional a cores reais
 }
 
-const COLORS = [
+const DEFAULT_COLORS = [
   '#0d9488', // emerald-600
   '#7c3aed', // violet-600
   '#ea580c', // orange-600
   '#db2777', // pink-600
   '#2563eb', // blue-600
-  '#059669', // emerald-600
-  '#d97706', // amber-600
-  '#4f46e5', // indigo-600
-  '#e11d48', // rose-600
-  '#475569', // slate-600
 ];
 
-export function ExpenseChart({ data }: ExpenseChartProps) {
+export function ExpenseChart({ data, categoryColors = {} }: ExpenseChartProps) {
   const initialChartData = Object.entries(data)
     .filter(([_, value]) => value > 0)
     .map(([categoryName, value]) => ({
       name: categoryName,
       value,
+      color: categoryColors[categoryName] || DEFAULT_COLORS[0] // Tenta usar a cor real da categoria
     }))
     .sort((a, b) => b.value - a.value);
 
@@ -34,14 +31,14 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
     finalChartData = [
       ...top3.map((item, index) => ({
         ...item,
-        color: COLORS[index % COLORS.length]
+        color: item.color !== DEFAULT_COLORS[0] ? item.color : DEFAULT_COLORS[index % DEFAULT_COLORS.length]
       })),
       { name: 'Outros', value: othersValue, color: '#a1a1aa' } // zinc-400
     ];
   } else {
     finalChartData = initialChartData.map((item, index) => ({
       ...item,
-      color: COLORS[index % COLORS.length]
+      color: item.color !== DEFAULT_COLORS[0] ? item.color : DEFAULT_COLORS[index % DEFAULT_COLORS.length]
     }));
   }
 

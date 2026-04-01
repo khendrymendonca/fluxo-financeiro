@@ -175,13 +175,23 @@ export function useToggleTransactionPaid() {
       if (error) throw error;
       return id;
     },
-    onMutate: async ({ id, isPaid }) => {
+    onMutate: async ({ id, isPaid, date, accountId }) => {
       await queryClient.cancelQueries({ queryKey: ['transactions'] });
       const previousTransactions = queryClient.getQueryData(['transactions']);
+      
+      const paymentDate = isPaid ? (date || format(new Date(), 'yyyy-MM-dd')) : null;
+
       queryClient.setQueryData(['transactions'], (oldData: any) => {
         if (!oldData) return [];
         return oldData.map((tx: any) =>
-          tx.id === id ? { ...tx, isPaid, is_paid: isPaid } : tx
+          tx.id === id ? { 
+            ...tx, 
+            isPaid, 
+            is_paid: isPaid, 
+            paymentDate, 
+            payment_date: paymentDate,
+            accountId: isPaid ? (accountId || tx.accountId) : tx.accountId
+          } : tx
         );
       });
       return { previousTransactions };

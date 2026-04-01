@@ -298,17 +298,12 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       description,
       amount: parsedAmount,
       categoryId: finalCategoryId || categoryId,
-      // CORREÇÃO: Forçando Mapeamento DTO Rigoroso (snake_case) diretamente no formulário
-      subcategory_id: subcategoryId || null,
-      is_recurring: Boolean(activeTab === 'fixo' || activeTab === 'renda_fixa'),
-      date: parseLocalDate(date).toISOString(), // Evita bugs de timezone
-
-      // Mantendo legacy para evitar quebras em outros locais
       subcategoryId: subcategoryId || null,
       isRecurring: Boolean(activeTab === 'fixo' || activeTab === 'renda_fixa'),
+      date: parseLocalDate(date).toISOString(), // 🛡️ Blindagem de Timezone (UTC-3)
       accountId: paymentMethod === 'account' ? accountId : undefined,
       cardId: paymentMethod === 'card' ? cardId : undefined,
-      installmentTotal: undefined, // Não é parcelado nesse bloco
+      installmentTotal: undefined, 
       recurrence: (activeTab === 'fixo' || activeTab === 'renda_fixa') ? recurrence : undefined,
       isAutomatic: activeTab === 'renda_fixa' ? true : isAutomatic,
       debtId: selectedDebtId || undefined,

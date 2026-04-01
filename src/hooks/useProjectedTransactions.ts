@@ -108,7 +108,12 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
         : isSameMonth(txDate, viewDate);
 
       if (!tx.isVirtual && isInTargetMonth) {
-        if (!projected.some(p => p.id === tx.id)) {
+        // 🚨 REGRA CRÍTICA: Recorrentes e Parcelamentos só aparecem no extrato se estiverem PAGOS.
+        // Se estiverem pendentes, eles residem apenas na Gestão de Contas.
+        const isRecurringOrInstallment = tx.isRecurring || tx.transactionType === 'recurring' || tx.installmentGroupId;
+        const shouldIncludeInStatement = !isRecurringOrInstallment || tx.isPaid;
+
+        if (shouldIncludeInStatement && !projected.some(p => p.id === tx.id)) {
           projected.push(tx);
         }
       }
