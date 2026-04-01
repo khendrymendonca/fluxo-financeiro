@@ -35,11 +35,13 @@ import {
   Moon,
   Zap,
   Rocket,
-  Shield
+  Shield,
+  Rabbit
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useTheme } from '@/hooks/useTheme';
+import { useThemeColor } from '@/hooks/useThemeColor';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useEmergencyFund } from '@/hooks/useEmergencyFund';
 import { todayLocalString, parseLocalDate } from '@/utils/dateUtils';
@@ -104,6 +106,7 @@ export default function Index() {
   const [isExpanded, setIsExpanded] = useState(true);
 
   const { theme, setTheme } = useTheme();
+  const { accentColor, setAccentColor } = useThemeColor();
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>(undefined);
   const [editingGoal, setEditingGoal] = useState<SavingsGoal | undefined>(undefined);
   const [initialFormTab, setInitialFormTab] = useState<'pontual' | 'transfer' | undefined>(undefined);
@@ -198,8 +201,9 @@ export default function Index() {
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-1">Visão Geral</p>
-                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
                       Olá, <span className="text-primary">{userName}</span>
+                      {accentColor === 'pascoa' && <Rabbit className="w-8 h-8 text-primary animate-bounce duration-1000" />}
                     </h1>
                   </div>
                   <MonthSelector />
@@ -235,8 +239,9 @@ export default function Index() {
         return (
           <div className="flex flex-col h-full animate-in slide-in-from-bottom-4 duration-500 overflow-hidden">
             {/* Bloco Superior: Saldo */}
-            <div className="flex flex-col gap-1 shrink-0 mb-4 min-w-0 flex-1 overflow-hidden">
+            <div className="flex flex-col gap-1 shrink-0 mb-4 min-w-0 flex-1 overflow-hidden relative">
               <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-black uppercase tracking-widest">Patrimônio Total</p>
+              {accentColor === 'pascoa' && <Rabbit className="absolute right-4 top-0 w-8 h-8 text-primary animate-bounce duration-1000" />}
               <h1
                 className="text-[clamp(1.5rem,4vw,3rem)] font-black tracking-tighter truncate block w-full max-w-[90vw] md:max-w-md text-gray-900 dark:text-white"
                 title={formatCurrency(totalNetWorth)}
@@ -493,8 +498,13 @@ export default function Index() {
                       <AvatarFallback className="bg-primary/10 text-primary font-bold">{userInitials}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <SheetTitle className="text-sm font-bold">{userName}</SheetTitle>
-                      <SheetDescription className="text-[10px] uppercase font-black tracking-widest text-zinc-500">Menu Principal</SheetDescription>
+                      <SheetTitle className="text-sm font-bold flex items-center gap-2">
+                        {userName}
+                        {accentColor === 'pascoa' && <Rabbit className="w-4 h-4 text-primary" />}
+                      </SheetTitle>
+                      <SheetDescription className="text-[10px] uppercase font-black tracking-widest text-zinc-500">
+                        {accentColor === 'pascoa' ? '🐰 Feliz Páscoa!' : 'Menu Principal'}
+                      </SheetDescription>
                     </div>
                   </div>
                 </SheetHeader>
@@ -521,6 +531,23 @@ export default function Index() {
                 </div>
 
                 <div className="mt-auto border-t border-gray-100 dark:border-zinc-900 p-6 space-y-6">
+                  <div className="space-y-4">
+                    <p className="text-[10px] uppercase font-black tracking-widest text-zinc-500">Temas Especiais</p>
+                    <button
+                      onClick={() => setAccentColor(accentColor === 'pascoa' ? 'teal' : 'pascoa')}
+                      className={cn(
+                        "w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all",
+                        accentColor === 'pascoa' ? "bg-primary/10 border-primary text-primary" : "bg-gray-50 dark:bg-zinc-900 border-transparent text-zinc-500"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Rabbit className="w-5 h-5" />
+                        <span className="text-sm font-bold">Modo Páscoa</span>
+                      </div>
+                      {accentColor === 'pascoa' && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+                    </button>
+                  </div>
+
                   <div>
                     <p className="text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-4">Aparência</p>
                     <div className="grid grid-cols-3 gap-2">
