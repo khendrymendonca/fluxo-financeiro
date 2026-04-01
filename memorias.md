@@ -119,5 +119,9 @@ Data	Arquivo	Mudança
 31/03/2026	UI/UX e Responsividade Mobile	Gestor de Instituições blindado com truncamento `min-w-0` evitando quebra de Viewport. CategoriaManager migrado de accordion complexo vertical para `Grid Flat Responsivo` sem isolamento visual excessivo. Design System text-2xl padronizado no Dashboard. Readequação semântica do Fallback do `CreditCardVisual` resgatando cartões com texturas mortas de telas brancas nulas.
 01/04/2026	CategoriesManager.tsx	Refatoração estrutural (Tabs para Despesas/Receitas) e uso do Accordion com suporte a Subcategorias in-line.
 01/04/2026	Competência de Cartão	Inversão de lógica: Extrato/Dashboard priorizam `date` (data da compra). Gerenciador de Contas (`BillsManager`) prioriza `invoiceMonthYear` para liquidação de fatura. Refatorados `useFinanceQueries`, `useFinanceStore` e `useProjectedTransactions`.
+01/04/2026	useFinanceQueries.ts	Padronização do formato de data para `yyyy-MM-dd` (evitando UTC drift) e remoção do filtro redundante `is_paid.eq.false` no hook `useTransactions`.
+01/04/2026	Index.tsx	Correção de erro crítico (ReferenceError: parseLocalDate is not defined) que impedia o carregamento da página principal. Adicionada importação de `@/utils/dateUtils`.
+01/04/2026	TransactionForm.tsx	Atualizado placeholder do campo descrição para "Ex: Salário" em todos os lançamentos de receita.
+01/04/2026	PWA / UpdatePrompt	Implementado sistema de notificação de nova versão (UpdatePrompt). Alterado VitePWA para modo 'prompt', permitindo que usuários atualizem o app manualmente para ver novas versões/temas sem perder o login.
 
 Nota do Tech Lead: Este documento deve ser usado como contexto base em todos os prompts futuros que envolvam UI ou regras de negócio. Evitar refatorações gráficas e preservar filosofia de "Quiet Luxury" minimalista sem ruídos em cores ou blocos de grid.

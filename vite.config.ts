@@ -15,12 +15,11 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.ico', 'fluxo_logo.png', 'robots.txt'],
       workbox: {
         cleanupOutdatedCaches: true,
-        skipWaiting: true,
-        clientsClaim: true,
+        // Removidos skipWaiting e clientsClaim para permitir o controle via prompt
       },
       manifest: {
         name: 'Fluxo - Gestão Financeira',

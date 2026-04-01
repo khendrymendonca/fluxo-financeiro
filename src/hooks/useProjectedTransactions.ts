@@ -104,13 +104,16 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
 
       // Sempre incluímos a própria transação se ela for do mês alvo e REAL
       const isInTargetMonth = (() => {
-        // Se tem invoiceMonthYear, usamos ele como soberano (para Cartão de Crédito)
+        const matchesDate = isSameMonth(txDate, viewDate) && targetYear === txDate.getFullYear();
+        
+        // Se tem invoiceMonthYear, verificamos se ele também bate com o mês alvo (para Cartão de Crédito)
         if (tx.cardId && tx.invoiceMonthYear) {
           const [y, m] = tx.invoiceMonthYear.split('-').map(Number);
-          return (m - 1 === targetMonth && y === targetYear);
+          const matchesInvoice = (m - 1 === targetMonth && y === targetYear);
+          return matchesDate || matchesInvoice;
         }
-        // Fallback: usar a data da transação
-        return isSameMonth(txDate, viewDate) && targetYear === txDate.getFullYear();
+        
+        return matchesDate;
       })();
 
       if (!tx.isVirtual && isInTargetMonth) {

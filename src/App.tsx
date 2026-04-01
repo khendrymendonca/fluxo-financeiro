@@ -12,6 +12,7 @@ import { FinanceProvider } from "./hooks/useFinanceStore";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
+import { UpdatePrompt } from "./components/layout/UpdatePrompt";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +58,7 @@ const App = () => (
         <ThemeProvider>
           <ThemeColorProvider>
             <TooltipProvider>
+              <UpdatePrompt />
               <Toaster />
               <Sonner position="bottom-right" closeButton richColors expand={false} />
               <AppRoutes />

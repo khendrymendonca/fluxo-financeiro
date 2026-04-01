@@ -42,7 +42,7 @@ import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useTheme } from '@/hooks/useTheme';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useEmergencyFund } from '@/hooks/useEmergencyFund';
-import { todayLocalString } from '@/utils/dateUtils';
+import { todayLocalString, parseLocalDate } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 import { NavigationRail } from '@/components/layout/NavigationRail';
@@ -364,7 +364,11 @@ export default function Index() {
               </div>
             </div>
             <TransactionList
-              transactions={currentMonthTransactions}
+              // 🛡️ REGRA DE COMPETÊNCIA: No extrato, o que manda é a data da transação.
+              transactions={currentMonthTransactions.filter(t => {
+                const tDate = parseLocalDate(t.date.slice(0, 10));
+                return tDate.getMonth() === viewDate.getMonth() && tDate.getFullYear() === viewDate.getFullYear();
+              })}
               onEdit={handleEditTransaction}
               onPayBill={async (tx) => {
                 await updateTransaction({

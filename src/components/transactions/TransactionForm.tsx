@@ -288,24 +288,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     }
 
     // --- LÓGICA PONTUAL OU RECORRENTE ---
-    executeSubmit(parsedAmount, finalCategoryId);
-  };
-
-  const finalInvoiceMonthYear = useMemo(() => {
-    if (paymentMethod !== 'card' || !cardId) return undefined;
-    const card = creditCards.find(c => c.id === cardId);
-    if (!card) return undefined;
-    const settings = getCardSettingsForDate(card, parseLocalDate(date));
-    return calcInvoiceMonthYear(parseLocalDate(date), settings);
-  }, [paymentMethod, cardId, date, creditCards]);
-
-  const executeSubmit = (parsedAmount: number, finalCategoryId?: string) => {
-    let isPaid = false;
-    if (initialData) {
-      isPaid = isPaidLocally;
-    } else if (activeTab === 'pontual') {
-      isPaid = isDateTodayOrPast(date);
-    }
+    const isPaidFinal = initialData ? isPaidLocally : (activeTab === 'pontual' ? isDateTodayOrPast(date) : false);
 
     onSubmit({
       type,
@@ -322,10 +305,9 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       recurrence: (activeTab === 'fixo' || activeTab === 'renda_fixa') ? recurrence : undefined,
       isAutomatic: activeTab === 'renda_fixa' ? true : isAutomatic,
       debtId: selectedDebtId || undefined,
-      // 🛡️ Prioriza o cálculo em tempo real sobre o valor legado do banco
       invoiceMonthYear: paymentMethod === 'card' ? finalInvoiceMonthYear : undefined,
-      isPaid,
-      paymentDate: isPaid ? date : undefined,
+      isPaid: isPaidFinal,
+      paymentDate: isPaidFinal ? date : undefined,
       installmentGroupId: initialData?.installmentGroupId
     } as any, undefined, applyScope);
 
@@ -561,7 +543,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
                       {activeTab === 'renda_fixa' ? 'Nome da Renda' : 'Descrição'}
                     </Label>
-                    <Input value={description} onChange={e => setDescription(e.target.value)} placeholder={activeTab === 'renda_fixa' ? "Ex: Salário Torp" : "Ex: Supermercado"} className="h-12 rounded-2xl border-2 font-bold" required />
+                    <Input value={description} onChange={e => setDescription(e.target.value)} placeholder={type === 'income' ? "Ex: Salário" : "Ex: Supermercado"} className="h-12 rounded-2xl border-2 font-bold" required />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">

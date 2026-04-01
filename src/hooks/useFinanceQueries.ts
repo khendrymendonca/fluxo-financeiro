@@ -28,25 +28,24 @@ export function useTransactions(viewDate: Date) {
     queryKey: ['transactions', viewDate.getFullYear(), viewDate.getMonth()],
     queryFn: async () => {
       // Janela expandida: 3 meses antes e 3 meses depois do mês visualizado
-      const windowStartISO = startOfMonth(subMonths(viewDate, 3)).toISOString();
-      const windowEndISO = endOfMonth(addMonths(viewDate, 3)).toISOString();
+      const windowStart = format(startOfMonth(subMonths(viewDate, 3)), 'yyyy-MM-dd');
+      const windowEnd = format(endOfMonth(addMonths(viewDate, 3)), 'yyyy-MM-dd');
       const viewDateStr = format(viewDate, 'yyyy-MM');
 
       // Trazemos:
-      // 1. Transações dentro da janela de 3 meses antes/próximo
-      // 2. Transações RECORRENTES (independente da data)
-      // 3. Transações PARCELADAS (independente da data)
-      // 🛡️ Filtramos depois pela data final para não trazer pontuais do futuro
+      // 1. Transações dentro da janela de 3 meses antes/depois (pontuais e compras de cartão)
+      // 2. Transações RECORRENTES (independente da data, para Projeção)
+      // 3. Transações PARCELADAS (independente da data, para Projeção)
+      // 4. Itens da fatura do mês atual (compras de cartão fora da janela de datas)
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
         .is('deleted_at', null)
         .or(
-          `and(date.gte.${windowStartISO},date.lte.${windowEndISO}),` + // Compras dentro da janela expandida
-          `is_recurring.eq.true,` + // Recorrentes (para Projeção)
-          `installment_group_id.not.is.null,` + // Parceladas (para Projeção)
-          `invoice_month_year.eq.${viewDateStr},` + // 💳 Fatura do mês
-          `is_paid.eq.false` // 🚨 Pendências históricas (Prevenção de Dados Fantasmas)
+          `and(date.gte.${windowStart},date.lte.${windowEnd}),` + // Pontuais e compras na janela
+          `is_recurring.eq.true,` +                                // Recorrentes (para Projeção)
+          `installment_group_id.not.is.null,` +                    // Parceladas (para Projeção)
+          `invoice_month_year.eq.${viewDateStr}`                   // 💳 Fatura do mês atual
         );
 
       if (error) throw error;

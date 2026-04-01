@@ -12,6 +12,11 @@ export function useDashboardMetrics(viewDate: Date, transactions: Transaction[])
     const viewYear = viewDate.getFullYear();
 
     const currentMonthTransactions = transactions.filter(t => {
+      // 🛡️ REGRA HÍBRIDA: Se for cartão, respeita a fatura. Se for conta, respeita a data.
+      if (t.cardId && t.invoiceMonthYear) {
+        const [year, month] = t.invoiceMonthYear.split('-').map(Number);
+        return (month - 1 === viewMonth && year === viewYear);
+      }
       const d = parseLocalDate(t.date);
       return d.getMonth() === viewMonth && d.getFullYear() === viewYear;
     });
