@@ -43,7 +43,8 @@ export function useTransactions(viewDate: Date) {
         .or(
           `and(date.gte.${start},date.lte.${end}),` +         // Pontuais do mês
           `is_recurring.eq.true,` +                            // Fixas: SEM teto de data
-          `installment_group_id.not.is.null`                   // Parceladas: SEM teto de data
+          `installment_group_id.not.is.null,` +                // Parceladas: SEM teto de data
+          `invoice_month_year.eq.${viewDateStr}`               // 💳 Itens da fatura do mês atual (independente da data de compra)
         );
 
       if (error) throw error;
