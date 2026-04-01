@@ -236,6 +236,9 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       isPaid = isDateTodayOrPast(date);
     }
     const selectedCard = creditCards.find(c => c.id === (paymentMethod === 'card' ? cardId : ''));
+    const finalInvoiceMonthYear = (paymentMethod === 'card' && selectedCard)
+      ? calcInvoiceMonthYear(parseLocalDate(date), { closingDay: selectedCard.closingDay, dueDay: selectedCard.dueDay })
+      : undefined;
 
     // --- LÓGICA DE PARCELAMENTO (BULK) ---
     if (activeTab === 'parcelamento' && !initialData) {

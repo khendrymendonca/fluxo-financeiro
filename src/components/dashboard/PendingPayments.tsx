@@ -33,12 +33,26 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
 
     const deadline = getDeadline(period);
     const today = startOfToday();
+    const currentMonthStart = startOfMonth(today);
 
     const pending = transactions
         .filter(t => {
             if (t.isPaid || t.type !== 'expense') return false;
+
+            // 🛡️ REGRA DE NEGÓCIO: Compras pontuais no cartão não são "Contas a Pagar" individuais.
+            const isCard = !!t.cardId;
+            const isRecurringOrInstallment = t.isRecurring || t.transactionType === 'recurring' || (t.installmentTotal && t.installmentTotal > 1);
+            if (isCard && !isRecurringOrInstallment) return false;
+
             const tDate = parseLocalDate(t.date);
-            return isBefore(tDate, deadline) || isBefore(tDate, today);
+            
+            // FILTRO DE RELEVÂNCIA: 
+            // 1. Está dentro do período selecionado (semana, mes, etc)
+            // 2. OU está atrasado, mas pertence ao mês atual (não mostra lixo de meses muito antigos)
+            const isWithinPeriod = isBefore(tDate, deadline);
+            const isCurrentMonthAtrasado = isBefore(tDate, today) && !isBefore(tDate, currentMonthStart);
+
+            return isWithinPeriod || isCurrentMonthAtrasado;
         })
         .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
 

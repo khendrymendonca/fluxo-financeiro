@@ -67,7 +67,7 @@
     --shadow-lg: 0 10px 15px -3px hsl(220 20% 15% / 0.1), 0 4px 6px -4px hsl(220 20% 15% / 0.05);
   }
 
-  /* Theme Dark (Premium Nubank Style) */
+  /* Theme Dark (Premium Matte Style) */
   .dark {
     --background: 240 10% 2%;
     /* #09090b - Zinc 950 */
@@ -78,51 +78,53 @@
     --card-foreground: 0 0% 100%;
     --popover: 240 10% 4%;
     --popover-foreground: 0 0% 100%;
-    --primary: 174 84% 35%;
-    /* Teal 500 elegante */
+    --primary: 174 60% 35%;
+    /* Teal Matte */
     --primary-foreground: 0 0% 100%;
-    --primary-light: 270 70% 15%;
-    --primary-muted: 270 40% 30%;
+    --primary-light: 174 60% 10%;
+    --primary-muted: 174 30% 20%;
     --secondary: 240 10% 12%;
     /* Zinc 800 */
     --secondary-foreground: 240 10% 90%;
-    --success: 142 70% 45%;
-    /* Verde vibrante */
+    --success: 142 45% 50%;
+    /* Verde Matte Musgo */
     --success-foreground: 0 0% 100%;
-    --success-light: 142 70% 10%;
-    --danger: 0 84% 60%;
-    /* Vermelho vibrante */
+    --success-light: 142 45% 8%;
+    --danger: 0 55% 55%;
+    /* Vermelho Matte Vinho */
     --danger-foreground: 0 0% 100%;
-    --danger-light: 0 84% 10%;
-    --warning: 45 93% 47%;
-    --warning-foreground: 45 93% 10%;
-    --warning-light: 45 93% 10%;
-    --info: 199 89% 48%;
+    --danger-light: 0 55% 8%;
+    --warning: 45 65% 50%;
+    /* Amarelo Ocre Matte */
+    --warning-foreground: 45 65% 10%;
+    --warning-light: 45 65% 8%;
+    --info: 199 65% 50%;
+    /* Azul Matte */
     --info-foreground: 0 0% 100%;
-    --info-light: 199 89% 10%;
+    --info-light: 199 65% 8%;
     --muted: 240 10% 12%;
     /* Zinc 800 */
     --muted-foreground: 240 5% 65%;
     /* Zinc 400 aproximado */
     --accent: 240 10% 15%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
+    --destructive: 0 55% 55%;
     --destructive-foreground: 0 0% 100%;
     --border: 240 10% 12%;
     /* Zinc 800 */
     --input: 240 10% 12%;
-    --ring: 270 70% 60%;
+    --ring: 174 60% 35%;
     --sidebar-background: 240 10% 2%;
     --sidebar-foreground: 240 5% 85%;
-    --sidebar-primary: 270 70% 60%;
+    --sidebar-primary: 174 60% 35%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 10% 12%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 240 10% 12%;
-    --sidebar-ring: 270 70% 60%;
+    --sidebar-ring: 174 60% 35%;
 
-    --shadow-md: 0 4px 12px -2px hsl(84 51% 5% / 0.5);
-    --shadow-lg: 0 10px 25px -5px hsl(84 51% 5% / 0.6);
+    --shadow-md: 0 4px 12px -2px hsl(240 10% 2% / 0.5);
+    --shadow-lg: 0 10px 25px -5px hsl(240 10% 2% / 0.6);
   }
 
   /* Theme differentiation for Mobile (v6.2) */

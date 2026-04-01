@@ -1,4 +1,5 @@
 ﻿import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useSearchParams } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -181,6 +182,15 @@ export default function Index() {
       setCurrentView('dashboard'); // Reset p/ não ficar preso no estado 'menu'
     }
   }, [currentView]);
+
+import { useQueryClient } from '@tanstack/react-query'; // Importar no topo
+
+// ... (dentro do componente Index) ...
+  const queryClient = useQueryClient();
+  const handleRefreshData = () => {
+    queryClient.invalidateQueries();
+    window.location.reload();
+  };
 
   const navigationItems = [
     { id: 'dashboard', icon: Home, label: 'Início' },
@@ -621,7 +631,16 @@ export default function Index() {
           initialData={editingTransaction}
           initialTab={initialFormTab}
           onSubmit={async (tx, _customInstallments, applyScope) => {
-            if (editingTransaction) {
+            // 🛡️ REGRA DE NEGÓCIO: 
+            // 1. Se for VIRTUAL, estamos materializando uma conta fixa/parcelada em um registro real. (INSERT)
+            // 2. Se houver um ID real (não virtual), é uma edição de registro existente. (UPDATE)
+            // 3. Se não houver ID, é uma nova transação simples ou cópia. (INSERT)
+            if (editingTransaction?.isVirtual) {
+              await addTransaction({
+                ...tx,
+                originalId: editingTransaction.originalId || editingTransaction.id.split('-virtual')[0]
+              } as any);
+            } else if (editingTransaction && editingTransaction.id) {
               await updateTransaction({
                 id: editingTransaction.id,
                 updates: tx,
@@ -637,7 +656,7 @@ export default function Index() {
             setEditingTransaction(undefined);
           }}
           onDelete={(id, scope) => {
-            if (editingTransaction) deleteTransaction(editingTransaction, scope);
+            if (editingTransaction && editingTransaction.id) deleteTransaction(editingTransaction, scope);
             setShowTransactionForm(false);
             setEditingTransaction(undefined);
           }}
