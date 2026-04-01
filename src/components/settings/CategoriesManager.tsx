@@ -22,8 +22,11 @@ import {
     Pin,
     PinOff,
     Zap,
-    FolderTree
+    FolderTree,
+    Layers
 } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/use-toast';
 import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
@@ -64,6 +67,8 @@ export function CategoriesManager() {
     // New Subcategory State
     const [newSubName, setNewSubName] = useState('');
     const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+
+    const [activeTab, setActiveTab] = useState<'expense' | 'income'>('expense');
 
 
     const handleAddCategory = () => {
@@ -111,82 +116,133 @@ export function CategoriesManager() {
     };
 
     // Subcomponente interno para os itens da lista
-    const CategoryItem = ({ cat }: { cat: Category }) => {
+    const CategoryAccordionItem = ({ cat }: { cat: Category }) => {
         const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+        const catSubs = subcategories.filter(sub => sub.categoryId === cat.id);
 
         return (
-            <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors group">
-                <div className="flex flex-col min-w-0">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm" style={{ backgroundColor: cat.color }}>
-                            <FolderTree className="w-4 h-4" />
+            <AccordionItem value={cat.id} className="border-none bg-muted/10 rounded-2xl overflow-hidden mb-2">
+                <AccordionTrigger className="hover:no-underline px-4 py-2 flex-1 hover:bg-muted/30 transition-colors group [&[data-state=open]]:bg-muted/30 [&>svg]:hidden">
+                    <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm" style={{ backgroundColor: cat.color }}>
+                                <FolderTree className="w-4 h-4" />
+                            </div>
+                            <div className="flex flex-col items-start min-w-0">
+                                <span className="font-bold text-sm truncate">{cat.name}</span>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    {cat.isFixed && (
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1 bg-background px-1.5 py-0.5 rounded-full">
+                                            <Pin className="w-2.5 h-2.5" /> Fixa
+                                        </span>
+                                    )}
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-background px-1.5 py-0.5 rounded-full">
+                                        {catSubs.length} subs
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <div className="flex flex-col min-w-0">
-                            <span className="font-medium text-sm truncate">{cat.name}</span>
-                            {cat.isFixed && (
-                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                                    <Pin className="w-2.5 h-2.5" /> Fixa
-                                </span>
+
+                        <div className="flex gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateCategory({ id: cat.id, updates: { isFixed: !cat.isFixed } });
+                                }}
+                                className={cn(
+                                    "p-1.5 rounded-lg transition-colors",
+                                    cat.isFixed ? "text-primary hover:bg-muted" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                )}
+                                title={cat.isFixed ? "Remover de Contas Fixas" : "Marcar como Conta Fixa"}
+                            >
+                                {cat.isFixed ? <Pin className="w-3.5 h-3.5" /> : <PinOff className="w-3.5 h-3.5" />}
+                            </button>
+
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const name = prompt('Nome da nova subcategoria:');
+                                    if (name) handleAddSubcategory(cat.id, name);
+                                }}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-success/10 hover:text-success transition-colors"
+                                title="Adicionar Subcategoria"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                            </button>
+
+                            {['Renegociação', 'Fatura de Cartão de Crédito', 'Outros'].includes(cat.name) ? null : (
+                                <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <button
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="p-1.5 rounded-lg text-muted-foreground hover:bg-danger/10 hover:text-danger transition-colors"
+                                            title="Excluir Categoria"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-md rounded-3xl p-6" onClick={(e) => e.stopPropagation()}>
+                                        <DialogHeader>
+                                            <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-2 text-danger">
+                                                <Trash2 className="w-5 h-5" /> Excluir Categoria
+                                            </DialogTitle>
+                                        </DialogHeader>
+                                        <div className="space-y-4 mt-2">
+                                            <p className="text-sm text-foreground">
+                                                Tem certeza que deseja remover a categoria <strong>{cat.name}</strong>? Esta ação não pode ser desfeita.
+                                            </p>
+                                            <div className="flex gap-3 justify-end pt-2">
+                                                <Button variant="outline" className="h-12 rounded-xl" onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(false); }}>
+                                                    Cancelar
+                                                </Button>
+                                                <Button
+                                                    variant="destructive"
+                                                    className="h-12 rounded-xl"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        deleteCategory(cat.id);
+                                                        setIsDeleteDialogOpen(false);
+                                                    }}
+                                                >
+                                                    Sim, Excluir
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
                             )}
                         </div>
                     </div>
-                </div>
-
-                <div className="flex gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                    <button
-                        onClick={() => updateCategory({ id: cat.id, updates: { isFixed: !cat.isFixed } })}
-                        className={cn(
-                            "p-1.5 rounded-lg transition-colors",
-                            cat.isFixed ? "text-primary hover:bg-muted" : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                        )}
-                        title={cat.isFixed ? "Remover de Contas Fixas" : "Marcar como Conta Fixa"}
-                    >
-                        {cat.isFixed ? <Pin className="w-3.5 h-3.5" /> : <PinOff className="w-3.5 h-3.5" />}
-                    </button>
-
-                    {['Renegociação', 'Fatura de Cartão de Crédito', 'Outros'].includes(cat.name) ? null : (
-                        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                            <DialogTrigger asChild>
-                                <button
-                                    className="p-1.5 rounded-lg text-muted-foreground hover:bg-danger/10 hover:text-danger transition-colors"
-                                    title="Excluir Categoria"
-                                >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-md rounded-3xl p-6">
-                                <DialogHeader>
-                                    <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-2 text-danger">
-                                        <Trash2 className="w-5 h-5" /> Excluir Categoria
-                                    </DialogTitle>
-                                </DialogHeader>
-                                <div className="space-y-4 mt-2">
-                                    <p className="text-sm text-foreground">
-                                        Tem certeza que deseja remover a categoria <strong>{cat.name}</strong>? Esta ação não pode ser desfeita.
-                                    </p>
-                                    <div className="flex gap-3 justify-end pt-2">
-                                        <Button variant="outline" className="h-12 rounded-xl" onClick={() => setIsDeleteDialogOpen(false)}>
-                                            Cancelar
-                                        </Button>
-                                        <Button
-                                            variant="destructive"
-                                            className="h-12 rounded-xl"
-                                            onClick={() => {
-                                                deleteCategory(cat.id);
-                                                setIsDeleteDialogOpen(false);
-                                            }}
-                                        >
-                                            Sim, Excluir
-                                        </Button>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                    {catSubs.length === 0 ? (
+                        <div className="flex flex-col items-center py-6 text-center">
+                            <Layers className="w-5 h-5 text-muted-foreground mb-2" />
+                            <p className="text-sm text-muted-foreground">Nenhuma subcategoria</p>
+                            <p className="text-xs text-muted-foreground/60">Clique em + para adicionar</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                            {catSubs.map(sub => (
+                                <div key={sub.id} className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-transparent hover:border-border/50 transition-all group/sub">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />
+                                        <span className="font-bold text-sm">{sub.name}</span>
                                     </div>
+                                    <button onClick={() => deleteSubcategory(sub.id)} className="opacity-0 group-hover/sub:opacity-100 p-1.5 text-muted-foreground hover:bg-danger/10 hover:text-danger rounded-lg transition-colors">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
                                 </div>
-                            </DialogContent>
-                        </Dialog>
+                            ))}
+                        </div>
                     )}
-                </div>
-            </div>
+                </AccordionContent>
+            </AccordionItem>
         );
     };
+
+    const expenseCategories = categories.filter(c => c.type === 'expense');
+    const incomeCategories = categories.filter(c => c.type === 'income');
 
     return (
         <div className="space-y-6 animate-fade-in max-w-7xl mx-auto pb-12 px-4 md:px-8">
@@ -280,58 +336,25 @@ export function CategoriesManager() {
                 </Dialog>
             </div>
 
-            {/* Listas de Categorias - Modo Grid 3 cols (Flat Layout) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6 mt-8">
-                {/* Coluna 1 — Despesas */}
-                <section>
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4 px-1 flex items-center gap-2 border-b border-border/50 pb-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-danger/50 inline-block" />
-                        Despesas
-                    </h3>
-                    <div className="space-y-2">
-                        {categories.filter(c => c.type === 'expense').length === 0 ? (
-                            <p className="text-sm text-muted-foreground italic px-1 py-4">Nenhuma despesa encontrada.</p>
-                        ) : (
-                            categories.filter(c => c.type === 'expense').map(cat => (
-                                <CategoryItem key={cat.id} cat={cat} />
-                            ))
-                        )}
-                    </div>
-                </section>
+            <div className="flex flex-col gap-6">
+                <div className="flex gap-1 p-1 bg-muted rounded-2xl w-fit">
+                    <button onClick={() => setActiveTab('expense')} className={cn('px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all', activeTab === 'expense' ? 'bg-background shadow-sm text-danger' : 'text-muted-foreground hover:text-foreground')}>
+                        Despesas <span className="ml-2 text-[9px] bg-background/50 text-foreground rounded-full px-1.5 py-0.5">{expenseCategories.length}</span>
+                    </button>
+                    <button onClick={() => setActiveTab('income')} className={cn('px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all', activeTab === 'income' ? 'bg-background shadow-sm text-success' : 'text-muted-foreground hover:text-foreground')}>
+                        Receitas <span className="ml-2 text-[9px] bg-background/50 text-foreground rounded-full px-1.5 py-0.5">{incomeCategories.length}</span>
+                    </button>
+                </div>
 
-                {/* Coluna 2 — Receitas */}
-                <section>
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4 px-1 flex items-center gap-2 border-b border-border/50 pb-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-success/50 inline-block" />
-                        Receitas
-                    </h3>
-                    <div className="space-y-2">
-                        {categories.filter(c => c.type === 'income').length === 0 ? (
-                            <p className="text-sm text-muted-foreground italic px-1 py-4">Nenhuma receita encontrada.</p>
-                        ) : (
-                            categories.filter(c => c.type === 'income').map(cat => (
-                                <CategoryItem key={cat.id} cat={cat} />
-                            ))
-                        )}
-                    </div>
-                </section>
-
-                {/* Coluna 3 — Objetivos */}
-                <section>
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4 px-1 flex items-center gap-2 border-b border-border/50 pb-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-info/50 inline-block" />
-                        Objetivos
-                    </h3>
-                    <div className="space-y-2">
-                        {categories.filter(c => c.type === 'expense' && c.budgetGroup === 'financial').length === 0 ? (
-                            <p className="text-sm text-muted-foreground italic px-1 py-4">Nenhum objetivo encontrado.</p>
-                        ) : (
-                            categories.filter(c => c.type === 'expense' && c.budgetGroup === 'financial').map(cat => (
-                                <CategoryItem key={cat.id} cat={cat} />
-                            ))
-                        )}
-                    </div>
-                </section>
+                <Accordion type="multiple" className="w-full">
+                    {(activeTab === 'expense' ? expenseCategories : incomeCategories).length === 0 ? (
+                        <p className="text-sm text-muted-foreground italic px-1 py-4">Nenhuma categoria encontrada.</p>
+                    ) : (
+                        (activeTab === 'expense' ? expenseCategories : incomeCategories).map(cat => (
+                            <CategoryAccordionItem key={cat.id} cat={cat} />
+                        ))
+                    )}
+                </Accordion>
             </div>
         </div>
     );
