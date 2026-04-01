@@ -14,6 +14,11 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
     // 1. Separamos o que é REAL (transações normais do banco) do mês alvo
     const realTransactions = transactions.filter(tx => {
       if (tx.isVirtual) return false;
+      // ✅ Transações de cartão: usar invoiceMonthYear como referência de mês
+      if (tx.cardId && tx.invoiceMonthYear) {
+        const [year, month] = tx.invoiceMonthYear.split('-').map(Number);
+        return month - 1 === targetMonth && year === targetYear;
+      }
       const txDate = parseLocalDate(tx.date.slice(0, 10));
       return isSameMonth(txDate, viewDate);
     });
@@ -96,7 +101,12 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
       }
 
       // Sempre incluímos a própria transação se ela for do mês alvo e REAL
-      if (!tx.isVirtual && isSameMonth(txDate, viewDate)) {
+      // ✅ Transações de cartão: usar invoiceMonthYear como referência de mês
+      const isInTargetMonth = (tx.cardId && tx.invoiceMonthYear)
+        ? (() => { const [y, m] = (tx.invoiceMonthYear as string).split('-').map(Number); return m - 1 === targetMonth && y === targetYear; })()
+        : isSameMonth(txDate, viewDate);
+
+      if (!tx.isVirtual && isInTargetMonth) {
         if (!projected.some(p => p.id === tx.id)) {
           projected.push(tx);
         }
@@ -106,5 +116,3 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
     return projected.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [transactions, viewDate]);
 }
-
-
