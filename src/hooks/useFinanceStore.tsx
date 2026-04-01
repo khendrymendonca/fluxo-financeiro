@@ -151,18 +151,15 @@ function useFinanceProvider() {
   const currentMonthTransactions = useMemo(() => {
     if (viewMode === 'all') return transactions;
     return transactions.filter(t => {
-      // ✅ Transações de cartão: usar invoiceMonthYear como referência
-      if (t.cardId && t.invoiceMonthYear) {
+      // ✅ Pagamento de Fatura (Baixa): usar invoiceMonthYear como referência
+      if (t.categoryId === 'card-payment' && t.invoiceMonthYear) {
         const [year, month] = t.invoiceMonthYear.split('-').map(Number);
-        if (viewMode === 'day') {
-          // Em modo dia, mostramos todos os itens da fatura do mês atual (decisão de design UX)
-          return month - 1 === viewDate.getMonth() && year === viewDate.getFullYear();
-        }
+        if (viewMode === 'day') return month - 1 === viewDate.getMonth() && year === viewDate.getFullYear();
         if (viewMode === 'year') return year === viewDate.getFullYear();
         return month - 1 === viewDate.getMonth() && year === viewDate.getFullYear();
       }
 
-      // Demais transações: usar date normalmente
+      // ✅ Demais transações (incluindo compras de cartão): usar date normalmente (Extrato Real/Dashboard)
       const tDate = parseLocalDate(t.date);
       if (viewMode === 'day') {
         return tDate.getDate() === viewDate.getDate() && tDate.getMonth() === viewDate.getMonth() && tDate.getFullYear() === viewDate.getFullYear();

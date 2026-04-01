@@ -14,18 +14,20 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
     // 1. Separamos o que é REAL (transações normais do banco) do mês alvo
     const realTransactions = transactions.filter(tx => {
       if (tx.isVirtual) return false;
-      // ✅ Transações de cartão: usar invoiceMonthYear como referência de mês
-      if (tx.cardId && tx.invoiceMonthYear) {
+
+      // ✅ Pagamento de Fatura (Baixa): usar invoiceMonthYear como referência
+      if (tx.categoryId === 'card-payment' && tx.invoiceMonthYear) {
         const [year, month] = tx.invoiceMonthYear.split('-').map(Number);
         return month - 1 === targetMonth && year === targetYear;
       }
+
+      // ✅ Demais transações (incluindo compras de cartão): usar date normalmente (Extrato Real)
       const txDate = parseLocalDate(tx.date.slice(0, 10));
       return isSameMonth(txDate, viewDate);
     });
 
     // 2. Processamos todas as transações para buscar recorrentes que precisam ser projetadas
     transactions.forEach(tx => {
-      // Ignoramos transações deletadas (o hook de query já deve filtrar, mas por segurança)
       const isRecurring = tx.isRecurring || tx.transactionType === 'recurring';
       const txDate = parseLocalDate(tx.date.slice(0, 10));
 
@@ -101,8 +103,7 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
       }
 
       // Sempre incluímos a própria transação se ela for do mês alvo e REAL
-      // ✅ Transações de cartão: usar invoiceMonthYear como referência de mês
-      const isInTargetMonth = (tx.cardId && tx.invoiceMonthYear)
+      const isInTargetMonth = (tx.categoryId === 'card-payment' && tx.invoiceMonthYear)
         ? (() => { const [y, m] = (tx.invoiceMonthYear as string).split('-').map(Number); return m - 1 === targetMonth && y === targetYear; })()
         : isSameMonth(txDate, viewDate);
 
