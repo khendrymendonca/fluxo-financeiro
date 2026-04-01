@@ -6,7 +6,8 @@ import {
     useDeleteCategory,
     useAddSubcategory,
     useDeleteSubcategory,
-    useUpdateCategory
+    useUpdateCategory,
+    useUpdateSubcategory
 } from '@/hooks/useCategoryMutations';
 import { BudgetGroup, Category } from '@/types/finance';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,10 @@ import {
     PinOff,
     Zap,
     FolderTree,
-    Layers
+    Layers,
+    Check,
+    X,
+    Pencil
 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
@@ -52,6 +56,7 @@ export function CategoriesManager() {
     const { mutate: deleteCategory } = useDeleteCategory();
     const { mutate: addSubcategory } = useAddSubcategory();
     const { mutate: deleteSubcategory } = useDeleteSubcategory();
+    const { mutate: updateSubcategory } = useUpdateSubcategory();
 
     // New Category State
     const [newCatName, setNewCatName] = useState('');
@@ -118,7 +123,16 @@ export function CategoriesManager() {
     // Subcomponente interno para os itens da lista
     const CategoryAccordionItem = ({ cat }: { cat: Category }) => {
         const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+        const [editingSubId, setEditingSubId] = useState<string | null>(null);
+        const [editingSubName, setEditingSubName] = useState('');
+
         const catSubs = subcategories.filter(sub => sub.categoryId === cat.id);
+
+        const confirmEdit = (subId: string) => {
+            if (!editingSubName.trim()) return;
+            updateSubcategory({ id: subId, name: editingSubName.trim() });
+            setEditingSubId(null);
+        };
 
         return (
             <AccordionItem value={cat.id} className="border-none bg-muted/10 rounded-2xl overflow-hidden mb-2">
@@ -224,15 +238,46 @@ export function CategoriesManager() {
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
                             {catSubs.map(sub => (
-                                <div key={sub.id} className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-transparent hover:border-border/50 transition-all group/sub">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />
-                                        <span className="font-bold text-sm">{sub.name}</span>
+                                editingSubId === sub.id ? (
+                                    <div key={sub.id} className="flex items-center gap-2 p-2 rounded-2xl bg-muted/50 border-2 border-primary/30">
+                                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                                        <Input
+                                            value={editingSubName}
+                                            onChange={(e) => setEditingSubName(e.target.value)}
+                                            className="h-8 rounded-lg border-0 bg-transparent font-bold text-sm focus-visible:ring-0 p-0"
+                                            autoFocus
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') confirmEdit(sub.id);
+                                                if (e.key === 'Escape') setEditingSubId(null);
+                                            }}
+                                        />
+                                        <button onClick={() => confirmEdit(sub.id)} className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-all">
+                                            <Check className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button onClick={() => setEditingSubId(null)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-all">
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
                                     </div>
-                                    <button onClick={() => deleteSubcategory(sub.id)} className="opacity-0 group-hover/sub:opacity-100 p-1.5 text-muted-foreground hover:bg-danger/10 hover:text-danger rounded-lg transition-colors">
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
+                                ) : (
+                                    <div key={sub.id} className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-transparent hover:border-border/50 transition-all group/sub">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />
+                                            <span className="font-bold text-sm">{sub.name}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover/sub:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={() => { setEditingSubId(sub.id); setEditingSubName(sub.name); }}
+                                                className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all"
+                                                title="Editar Subcategoria"
+                                            >
+                                                <Pencil className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button onClick={() => deleteSubcategory(sub.id)} className="p-1.5 text-muted-foreground hover:bg-danger/10 hover:text-danger rounded-lg transition-colors">
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )
                             ))}
                         </div>
                     )}

@@ -134,6 +134,27 @@ export function useDeleteSubcategory() {
   });
 }
 
+export function useUpdateSubcategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, name }: { id: string, name: string }) => {
+      const { data, error } = await supabase.from('subcategories').update({ name }).eq('id', id).select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+      toast({ title: 'Subcategoria atualizada!' });
+    },
+    onError: (err) => {
+      console.error('Erro ao atualizar subcategoria:', err);
+      toast({ title: 'Erro ao atualizar subcategoria', variant: 'destructive' });
+    }
+  });
+}
+
 export function useUpdateBudgetRule() {
   const queryClient = useQueryClient();
 
