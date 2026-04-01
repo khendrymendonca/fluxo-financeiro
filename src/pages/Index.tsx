@@ -62,6 +62,7 @@ import { Transaction, SavingsGoal } from '@/types/finance';
 import { CategoriesManager } from '@/components/settings/CategoriesManager';
 import { ProfileSettings } from './ProfileSettings';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { EasterWelcome } from '@/components/layout/EasterWelcome';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
 import EmergencyFund from './EmergencyFund';
@@ -603,6 +604,7 @@ export default function Index() {
       }
     >
       {renderView()}
+      <EasterWelcome />
 
       {showTransactionForm && (
         <TransactionForm
