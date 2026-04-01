@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
-import { addMonths, format } from 'date-fns';
+import { format } from 'date-fns';
 import { Transaction } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 import { calcInvoiceMonthYear } from '@/utils/creditCardUtils';
