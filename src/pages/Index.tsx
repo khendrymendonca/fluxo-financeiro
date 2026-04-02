@@ -37,7 +37,8 @@ import {
   Zap,
   Rocket,
   Shield,
-  Rabbit
+  Rabbit,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
@@ -94,7 +95,14 @@ type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 
 
 export default function Index() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const handleRefreshData = useCallback(() => {
+    queryClient.invalidateQueries();
+    window.location.reload();
+  }, [queryClient]);
+
   const currentView = (searchParams.get('view') as ViewType) || 'dashboard';
 
   const setCurrentView = (view: ViewType) => {
@@ -183,15 +191,6 @@ export default function Index() {
     }
   }, [currentView]);
 
-import { useQueryClient } from '@tanstack/react-query'; // Importar no topo
-
-// ... (dentro do componente Index) ...
-  const queryClient = useQueryClient();
-  const handleRefreshData = () => {
-    queryClient.invalidateQueries();
-    window.location.reload();
-  };
-
   const navigationItems = [
     { id: 'dashboard', icon: Home, label: 'Início' },
     { id: 'transactions', icon: List, label: 'Lançamentos' },
@@ -224,7 +223,18 @@ import { useQueryClient } from '@tanstack/react-query'; // Importar no topo
                       {accentColor === 'pascoa' && <Rabbit className="w-8 h-8 text-primary animate-bounce duration-1000" />}
                     </h1>
                   </div>
-                  <MonthSelector />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleRefreshData}
+                      className="rounded-xl border-gray-100 dark:border-zinc-800 h-10 w-10 hover:bg-primary/5 hover:text-primary transition-colors"
+                      title="Sincronizar dados"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </Button>
+                    <MonthSelector />
+                  </div>
                 </div>
               </div>
 
@@ -387,11 +397,7 @@ import { useQueryClient } from '@tanstack/react-query'; // Importar no topo
               </div>
             </div>
             <TransactionList
-              // 🛡️ REGRA DE COMPETÊNCIA: No extrato, o que manda é a data da transação.
-              transactions={currentMonthTransactions.filter(t => {
-                const tDate = parseLocalDate(t.date.slice(0, 10));
-                return tDate.getMonth() === viewDate.getMonth() && tDate.getFullYear() === viewDate.getFullYear();
-              })}
+              transactions={currentMonthTransactions}
               onEdit={handleEditTransaction}
               onCopy={handleCopyTransaction}
               onPayBill={async (tx) => {

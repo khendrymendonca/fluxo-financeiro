@@ -4,7 +4,7 @@ import { Transaction, Account, CreditCard } from '@/types/finance';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToggleTransactionPaid } from '@/hooks/useTransactionMutations';
-import { addDays, endOfMonth, endOfYear, isBefore, startOfToday } from 'date-fns';
+import { addDays, endOfMonth, endOfYear, isBefore, startOfToday, startOfMonth } from 'date-fns';
 
 import { parseLocalDate } from '@/utils/dateUtils';
 
