@@ -120,12 +120,10 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
       })();
 
       if (!tx.isVirtual && isInTargetMonth) {
-        // 🚨 REGRA CRÍTICA: Recorrentes e Parcelamentos só aparecem no extrato se estiverem PAGOS.
-        // Se estiverem pendentes, eles residem apenas na Gestão de Contas.
-        const isRecurringOrInstallment = tx.isRecurring || tx.transactionType === 'recurring' || tx.installmentGroupId;
-        const shouldIncludeInStatement = !isRecurringOrInstallment || tx.isPaid;
-
-        if (shouldIncludeInStatement && !projected.some(p => p.id === tx.id)) {
+        // 🛡️ AJUSTE DE REGRA: Incluímos a transação real no array de retorno sempre.
+        // A filtragem de "Só mostrar no extrato se estiver paga" deve ser feita 
+        // no componente TransactionList, e não aqui, para não sumir da Gestão de Contas.
+        if (!projected.some(p => p.id === tx.id)) {
           projected.push(tx);
         }
       }

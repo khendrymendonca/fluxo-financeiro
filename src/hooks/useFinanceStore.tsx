@@ -314,12 +314,14 @@ function useFinanceProvider() {
       return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     },
     getCardUsedLimit: (id: string) => {
-      const currentInvoiceMonthYear = format(viewDate, 'yyyy-MM');
+      // 🛡️ REGRA DE NEGÓCIO: O limite do cartão é consumido por TODAS as despesas não pagas.
+      // Isso inclui compras à vista, parcelas futuras e saldos remanescentes.
+      // O limite só é liberado quando a FATURA (ou a transação individual) é marcada como PAGA.
       return transactions
         .filter(t =>
           t.cardId === id &&
           t.type === 'expense' &&
-          t.invoiceMonthYear === currentInvoiceMonthYear &&
+          !t.isPaid &&
           !t.deleted_at
         )
         .reduce((acc, t) => acc + Number(t.amount), 0);

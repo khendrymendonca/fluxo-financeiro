@@ -19,43 +19,49 @@ export function useAddTransaction() {
       if (!user) throw new Error('Utilizador não autenticado');
 
       const txs = Array.isArray(data) ? data : [data];
-      const txsWithUser = txs.map(tx => ({
-        ...tx,
-        user_id: user.id,
-        // CORREÇÃO: Mapeamento DTO Rigoroso (CamelCase para Snake Case)
-        category_id: tx.categoryId !== undefined ? tx.categoryId : tx.category_id,
-        subcategory_id: tx.subcategoryId || tx.subcategory_id || null,
-        account_id: tx.accountId !== undefined ? tx.accountId : tx.account_id,
-        card_id: tx.cardId !== undefined ? tx.cardId : tx.card_id,
-        is_paid: tx.isPaid !== undefined ? tx.isPaid : (tx.is_paid || false),
-        payment_date: tx.paymentDate || tx.payment_date,
-        is_recurring: tx.isRecurring !== undefined ? tx.isRecurring : (tx.is_recurring || false),
-        recurrence: tx.recurrence || 'none',
-        installment_group_id: tx.installmentGroupId !== undefined ? tx.installmentGroupId : tx.installment_group_id,
-        installment_number: tx.installmentNumber !== undefined ? tx.installmentNumber : undefined,
-        installment_total: tx.installmentTotal !== undefined ? tx.installmentTotal : tx.installment_total,
-        invoice_month_year: tx.invoiceMonthYear !== undefined ? tx.invoiceMonthYear : tx.invoice_month_year,
-        is_automatic: tx.isAutomatic !== undefined ? tx.isAutomatic : (tx.is_automatic || false),
-        debt_id: tx.debtId !== undefined ? tx.debtId : tx.debt_id,
-        transaction_type: tx.transactionType !== undefined ? tx.transactionType : tx.transaction_type,
-        original_id: tx.originalId || tx.original_id,
-        original_bill_id: tx.originalBillId || tx.original_bill_id,
-        is_invoice_payment: tx.isInvoicePayment !== undefined ? tx.isInvoicePayment : tx.is_invoice_payment,
-        // Uso obrigatório de parseLocalDate para evitar bugs de timezone
-        date: tx.date ? parseLocalDate(tx.date.slice(0, 10)).toISOString() : undefined,
-      }));
+      const txsWithUser = txs.map(tx => {
+        const mapped: any = {
+          ...tx,
+          user_id: user.id,
+          category_id: tx.categoryId || tx.category_id,
+          subcategory_id: tx.subcategoryId || tx.subcategory_id || null,
+          account_id: tx.accountId || tx.account_id || null,
+          card_id: tx.cardId || tx.card_id || null,
+          is_paid: tx.isPaid !== undefined ? tx.isPaid : (tx.is_paid || false),
+          payment_date: tx.paymentDate || tx.payment_date || null,
+          is_recurring: tx.isRecurring !== undefined ? tx.isRecurring : (tx.is_recurring || false),
+          recurrence: tx.recurrence || 'none',
+          installment_group_id: tx.installmentGroupId || tx.installment_group_id || null,
+          installment_number: tx.installmentNumber || tx.installment_number || null,
+          installment_total: tx.installmentTotal || tx.installment_total || null,
+          invoice_month_year: tx.invoiceMonthYear || tx.invoice_month_year || null,
+          is_automatic: tx.isAutomatic !== undefined ? tx.isAutomatic : (tx.is_automatic || false),
+          debt_id: tx.debtId || tx.debt_id || null,
+          transaction_type: tx.transactionType || tx.transaction_type || 'punctual',
+          original_id: tx.originalId || tx.original_id || null,
+          original_bill_id: tx.originalBillId || tx.original_bill_id || null,
+          is_invoice_payment: tx.isInvoicePayment !== undefined ? tx.isInvoicePayment : (tx.is_invoice_payment || false),
+          date: tx.date ? parseLocalDate(tx.date.slice(0, 10)).toISOString() : new Date().toISOString(),
+        };
 
-      // Remover campos que não existem no banco (Campos CamelCase que foram mapeados acima + Campos Virtuais)
-      const cleanTxs = txsWithUser.map(({
-        categoryId, subcategoryId, accountId, cardId, isPaid, paymentDate,
-        isRecurring, installmentGroupId, installmentNumber, installmentTotal,
-        invoiceMonthYear, isAutomatic, debtId, transactionType, cardClosingDay, cardDueDay,
-        userId, isVirtual, originalId, originalBillId, isInvoicePayment, deleted_at, ...rest
-      }) => rest);
+        // Remove chaves CamelCase para não dar erro no Supabase
+        const clean: any = {};
+        Object.keys(mapped).forEach(key => {
+          if (![
+            'categoryId', 'subcategoryId', 'accountId', 'cardId', 'isPaid', 'paymentDate',
+            'isRecurring', 'installmentGroupId', 'installmentNumber', 'installmentTotal',
+            'invoiceMonthYear', 'isAutomatic', 'debtId', 'transactionType', 'cardClosingDay', 'cardDueDay',
+            'userId', 'isVirtual', 'originalId', 'originalBillId', 'isInvoicePayment'
+          ].includes(key)) {
+            clean[key] = mapped[key];
+          }
+        });
+        return clean;
+      });
 
       const { data: insertedData, error } = await supabase
         .from('transactions')
-        .insert(cleanTxs)
+        .insert(txsWithUser)
         .select();
 
       if (error) throw error;
@@ -235,43 +241,36 @@ export function useUpdateTransaction() {
       cardDueDay?: number;
       applyScope?: 'this' | 'future' | 'all';
     }) => {
-      const dbUpdates: any = {};
-      if (updates.description !== undefined) dbUpdates.description = updates.description;
-      if (updates.amount !== undefined) dbUpdates.amount = updates.amount;
-      // CORREÇÃO: Uso obrigatório de parseLocalDate para evitar bugs de timezone
-      if (updates.date !== undefined) dbUpdates.date = parseLocalDate(updates.date.slice(0, 10)).toISOString();
-      if (updates.type !== undefined) dbUpdates.type = updates.type;
-      if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
-
-      // CORREÇÃO 2: Salvar Subcategoria com fallback para null
-      if (updates.subcategoryId !== undefined || (updates as any).subcategory_id !== undefined) {
-        dbUpdates.subcategory_id = updates.subcategoryId || (updates as any).subcategory_id || null;
-      }
-
-      if (updates.accountId !== undefined) dbUpdates.account_id = updates.accountId;
-      if (updates.cardId !== undefined) dbUpdates.card_id = updates.cardId;
-      if (updates.isPaid !== undefined) dbUpdates.is_paid = updates.isPaid;
-      if (updates.paymentDate !== undefined) dbUpdates.payment_date = updates.paymentDate;
-
-      // CORREÇÃO 1: Alterar Fixo para Pontual em snake_case
-      if (updates.isRecurring !== undefined || (updates as any).is_recurring !== undefined) {
-        dbUpdates.is_recurring = updates.isRecurring !== undefined ? updates.isRecurring : (updates as any).is_recurring;
-      }
-
-      if (updates.recurrence !== undefined) dbUpdates.recurrence = updates.recurrence;
-      if (updates.transactionType !== undefined) dbUpdates.transaction_type = updates.transactionType;
-
       const effectiveCardId = updates.cardId !== undefined ? updates.cardId : currentCardId;
+      let finalInvoiceMonthYear = updates.invoiceMonthYear;
 
-      if (updates.invoiceMonthYear !== undefined) {
-        dbUpdates.invoice_month_year = updates.invoiceMonthYear;
-      } else if (effectiveCardId && updates.date && cardClosingDay != null && cardDueDay != null) {
-        dbUpdates.invoice_month_year = calcInvoiceMonthYear(parseLocalDate(updates.date), { closingDay: cardClosingDay, dueDay: cardDueDay });
+      if (finalInvoiceMonthYear === undefined && effectiveCardId && updates.date && cardClosingDay != null && cardDueDay != null) {
+        finalInvoiceMonthYear = calcInvoiceMonthYear(parseLocalDate(updates.date), { closingDay: cardClosingDay, dueDay: cardDueDay });
       } else if (updates.accountId) {
-        dbUpdates.invoice_month_year = null;
+        finalInvoiceMonthYear = null;
       }
 
-      // Se não há grupo ou o escopo é apenas 'this', faz o update simples
+      const dbUpdates: any = {
+        description: updates.description,
+        amount: updates.amount,
+        date: updates.date ? parseLocalDate(updates.date.slice(0, 10)).toISOString() : undefined,
+        type: updates.type,
+        category_id: updates.categoryId,
+        subcategory_id: updates.subcategoryId || (updates as any).subcategory_id,
+        account_id: updates.accountId,
+        card_id: updates.cardId,
+        is_paid: updates.isPaid,
+        payment_date: updates.paymentDate,
+        is_recurring: updates.isRecurring !== undefined ? updates.isRecurring : (updates as any).is_recurring,
+        recurrence: updates.recurrence,
+        transaction_type: updates.transactionType,
+        invoice_month_year: finalInvoiceMonthYear
+      };
+
+      // Remover undefined para não sobrescrever dados existentes com null acidentalmente
+      Object.keys(dbUpdates).forEach(key => dbUpdates[key] === undefined && delete dbUpdates[key]);
+
+      // Buscar o mestre para saber o grupo se necessário
       const { data: currentTx } = await supabase.from('transactions').select('*').eq('id', id).single();
       const groupId = currentTx?.installment_group_id;
 
@@ -281,7 +280,10 @@ export function useUpdateTransaction() {
           .update(dbUpdates)
           .eq('id', id)
           .select();
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase Update Error:', error);
+          throw error;
+        }
         return data;
       }
 
@@ -293,7 +295,10 @@ export function useUpdateTransaction() {
       }
 
       const { data, error } = await query.select();
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase Bulk Update Error:', error);
+        throw error;
+      }
       return data;
     },
     onMutate: async ({ id, updates, applyScope = 'this' }) => {

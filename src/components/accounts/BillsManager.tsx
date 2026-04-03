@@ -167,7 +167,8 @@ export function BillsManager() {
     // 2. Filtrar transações recorrentes e injetar as virtuais
     const recurringTransactions = [...currentMonthTransactions, ...virtualInvoices].filter(t => {
         // Bloqueio de Isolamento: O Gerenciador de Contas não deve vazar lançamentos "pontuais".
-        if (!t.isVirtual && !t.isRecurring && t.transactionType !== 'recurring' && t.transactionType !== 'installment' && t.categoryId !== 'card-payment') {
+        const isRecurringType = t.isRecurring || t.transactionType === 'recurring' || t.transactionType === 'installment' || t.categoryId === 'card-payment';
+        if (!t.isVirtual && !isRecurringType) {
             return false;
         }
 
@@ -175,9 +176,9 @@ export function BillsManager() {
         if (t.cardId && t.categoryId !== 'card-payment') return false;
 
         const txDate = parseLocalDate(t.date.slice(0, 10));
-
-        // Inclui: itens do mês visualizado (reais ou virtuais)
-        const isCurrentMonth = isSameMonth(txDate, viewDate) && isSameYear(txDate, viewDate);
+        
+        // Fix: Usar uma margem de segurança para comparação de meses (evita bugs de fuso horário no limite do mês)
+        const isCurrentMonth = (txDate.getMonth() === viewDate.getMonth() && txDate.getFullYear() === viewDate.getFullYear());
 
         // Inclui: itens de meses anteriores ainda não pagos (atrasados)
         const isOverdue = isBefore(txDate, startOfMonth(viewDate)) && !t.isPaid;
