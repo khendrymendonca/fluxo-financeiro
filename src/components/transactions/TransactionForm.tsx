@@ -174,8 +174,10 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     if (!description) errors.push('Descrição');
     if (!amount || parseFloat(amount) <= 0) errors.push('Valor');
     if (activeTab !== 'renda_fixa' && !categoryId) errors.push('Categoria');
-    if (paymentMethod === 'account' && !accountId) errors.push('Conta');
-    if (paymentMethod === 'card' && !cardId) errors.push('Cartão');
+    
+    const isRecurringTab = activeTab === 'fixo' || activeTab === 'renda_fixa';
+    if (!isRecurringTab && paymentMethod === 'account' && !accountId) errors.push('Conta');
+    if (!isRecurringTab && paymentMethod === 'card' && !cardId) errors.push('Cartão');
 
     if (errors.length > 0) {
       toast({

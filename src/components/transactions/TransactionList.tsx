@@ -19,17 +19,19 @@ export interface TransactionListProps {
   transactions: Transaction[];
   onEdit: (transaction: Transaction) => void;
   onCopy?: (transaction: Transaction) => void;
+  onUndoPayment?: (transaction: Transaction) => void;
   onPayBill: (transaction: Transaction) => Promise<void>;
   allowSettlement?: boolean;
 }
 
 import { parseLocalDate, todayLocalString, toLocalDateString } from '@/utils/dateUtils';
-import { Copy } from 'lucide-react';
+import { Copy, RotateCcw as UndoIcon } from 'lucide-react';
 
 export function TransactionList({
   transactions,
   onEdit,
   onCopy,
+  onUndoPayment,
   onPayBill,
   allowSettlement = true
 }: TransactionListProps) {
@@ -364,6 +366,16 @@ export function TransactionList({
                     ? getFutureInstallments(item.installmentGroupId, item.installmentNumber || 0)
                     : [];
 
+                  // 🛡️ REGRA DE INTEGRIDADE: Lançamentos originados na Gestão de Contas são "bloqueados" no Extrato.
+                  // A única ação permitida é o Estorno. Cópia e Edição são proibidas aqui.
+                  const isManagedByBills = Boolean(
+                    item.isRecurring || 
+                    item.transactionType === 'recurring' || 
+                    item.installmentGroupId || 
+                    item.isInvoicePayment || 
+                    item.originalId
+                  );
+
                   return (
                     <div key={item.id} className="group relative">
                       {isSelectionMode && (
@@ -377,10 +389,16 @@ export function TransactionList({
                       )}
                       <div className={cn(
                         "flex items-center justify-between p-4 transition-all active:bg-white/5 cursor-pointer",
-                        isSelectionMode && "pl-14"
+                        isSelectionMode && "pl-14",
+                        isManagedByBills && !isSelectionMode && "cursor-default"
                       )} onClick={() => {
                         if (isSelectionMode) toggleSelectId(item.id);
-                        else onEdit(item as Transaction);
+                        else if (!isManagedByBills) onEdit(item as Transaction);
+                        else toast({ 
+                          title: "Lançamento Protegido", 
+                          description: "Este item é gerenciado pela Gestão de Contas. Para editar, use o estorno ou altere o lançamento mestre.",
+                          variant: "default"
+                        });
                       }}>
                         {/* Lado esquerdo */}
                         <div className="flex items-center gap-4">
@@ -395,6 +413,7 @@ export function TransactionList({
                               <p className="font-bold text-gray-900 dark:text-white text-sm">{item.description}</p>
                               {isPending && <span className="text-[8px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Pendente</span>}
                               {item.isVirtual && <span className="text-[8px] bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Projetado</span>}
+                              {isManagedByBills && <span className="text-[8px] bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Gestão de Contas</span>}
                             </div>
                             <div className="flex items-center gap-1.5 text-xs text-zinc-500">
                               <span>
@@ -417,21 +436,40 @@ export function TransactionList({
                             {isIncome ? '+' : '-'} {formatCurrency(item.amount)}
                           </span>
                           
-                          {/* Botão Copiar (Apenas Pontual) */}
-                          {!item.isRecurring && item.transactionType !== 'recurring' && !item.installmentGroupId && onCopy && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onCopy(item as Transaction);
-                              }}
-                              className="p-2 rounded-xl border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 text-gray-400 dark:text-zinc-400 hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all active:scale-90"
-                              title="Duplicar lançamento"
-                            >
-                              <Copy className="w-4 h-4" />
-                            </button>
-                          )}
-                          
-                          <ArrowRight className="w-4 h-4 text-gray-200 dark:text-zinc-800 group-hover:text-gray-400 dark:group-hover:text-zinc-600 transition-colors" />
+                          {/* Ações protegidas */}
+                          <div className="flex items-center gap-2">
+                            {/* Botão Estornar (Apenas Gerenciados pela Gestão de Contas) */}
+                            {isManagedByBills && onUndoPayment && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onUndoPayment(item as Transaction);
+                                }}
+                                className="p-2 rounded-xl border border-amber-100 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-900/10 text-amber-600 hover:text-amber-700 hover:border-amber-200 transition-all active:scale-90"
+                                title="Estornar pagamento"
+                              >
+                                <UndoIcon className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            {/* Botão Copiar (Apenas Pontual e NÃO gerenciado por Bills) */}
+                            {!isManagedByBills && !item.isRecurring && item.transactionType !== 'recurring' && !item.installmentGroupId && onCopy && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onCopy(item as Transaction);
+                                }}
+                                className="p-2 rounded-xl border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 text-gray-400 dark:text-zinc-400 hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all active:scale-90"
+                                title="Duplicar lançamento"
+                              >
+                                <Copy className="w-4 h-4" />
+                              </button>
+                            )}
+                            
+                            {!isManagedByBills && (
+                              <ArrowRight className="w-4 h-4 text-gray-200 dark:text-zinc-800 group-hover:text-gray-400 dark:group-hover:text-zinc-600 transition-colors" />
+                            )}
+                          </div>
                         </div>
                       </div>
 

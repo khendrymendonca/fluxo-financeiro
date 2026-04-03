@@ -494,3 +494,30 @@ export function useAnticipateInstallments() {
     }
   });
 }
+
+export const useBulkUpdateTransactions = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ ids, updates }: { ids: string[]; updates: Partial<Transaction> }) => {
+      const data: any = { ...updates };
+      
+      // Mapeamento Snake Case
+      if (data.isPaid !== undefined) { data.is_paid = data.isPaid; delete data.isPaid; }
+      if (data.paymentDate !== undefined) { data.payment_date = data.paymentDate; delete data.paymentDate; }
+      if (data.invoiceMonthYear !== undefined) { data.invoice_month_year = data.invoiceMonthYear; delete data.invoiceMonthYear; }
+
+      const { error } = await supabase
+        .from('transactions')
+        .update(data)
+        .in('id', ids);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+    },
+  });
+};

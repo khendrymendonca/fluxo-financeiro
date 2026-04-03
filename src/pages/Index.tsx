@@ -141,6 +141,7 @@ export default function Index() {
     updateSavingsGoal,
     deleteSavingsGoal,
     deleteTransaction,
+    togglePaid,
     depositToGoal,
     totalPendingOutflows,
     viewDate
@@ -178,6 +179,18 @@ export default function Index() {
     setEditingTransaction(transactionData as Transaction);
     setShowTransactionForm(true);
   }, []);
+
+  const handleUndoPayment = useCallback(async (item: Transaction) => {
+    // 🛡️ ESTORNO INTELIGENTE: Se veio de uma recorrente e NÃO é parcelamento (fixa),
+    // deletamos o registro real para que ele volte a ser apenas uma "Projeção Virtual".
+    if (item.originalId && !item.installmentGroupId) {
+      await deleteTransaction(item, 'this');
+      toast({ title: "Lançamento estornado para o estado projetado." });
+    } else {
+      await togglePaid({ id: item.id, isPaid: false });
+      toast({ title: "Pagamento desfeito com sucesso." });
+    }
+  }, [deleteTransaction, togglePaid]);
 
   const handleToggleSidebar = useCallback((expanded: boolean) => {
     // No longer toggleable in Web
@@ -400,6 +413,7 @@ export default function Index() {
               transactions={currentMonthTransactions}
               onEdit={handleEditTransaction}
               onCopy={handleCopyTransaction}
+              onUndoPayment={handleUndoPayment}
               onPayBill={async (tx) => {
                 await updateTransaction({
                   id: tx.id,

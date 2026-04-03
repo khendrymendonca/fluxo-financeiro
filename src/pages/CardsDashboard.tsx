@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useFinanceStore } from "@/hooks/useFinanceStore";
+import { useAddTransaction, useUpdateTransaction, useBulkUpdateTransactions } from "@/hooks/useTransactionMutations";
 import { CreditCardVisual } from "@/components/cards/CreditCardVisual";
 import { AddCardDialog } from "@/components/cards/AddCardDialog";
 import { EditCardDialog } from "@/components/cards/EditCardDialog";
@@ -7,18 +9,27 @@ import { AnticipateInstallmentsDialog } from "@/components/cards/AnticipateInsta
 import { Button } from "@/components/ui/button";
 import { Portal } from "@/components/ui/Portal";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Plus, Receipt, Calendar, CreditCard, Pencil, Download,
   ChevronLeft, ChevronRight, Search, TrendingUp, TrendingDown,
-  AlertCircle, CheckCircle2, Clock, XCircle,
+  AlertCircle, CheckCircle2, Clock, XCircle, Check
 } from "lucide-react";
-import { parseLocalDate } from "@/utils/dateUtils";
+import { parseLocalDate, todayLocalString } from "@/utils/dateUtils";
 import { cn } from "@/lib/utils";
 import { format, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getCardSettingsForDate, getInvoiceStatusDisplay } from "@/utils/creditCardUtils";
 import { Transaction } from "@/types/finance";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { toast } from "@/components/ui/use-toast";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer,
@@ -60,11 +71,16 @@ function StatusBadge({ status }: { status: ReturnType<typeof getInvoiceStatusDis
 }
 
 export default function CardsDashboard() {
+  const queryClient = useQueryClient();
   const {
     creditCards, transactions, accounts, categories,
     updateCreditCard, addCreditCard, getCardUsedLimit,
-    viewDate, setViewDate // 🛡️ Conectando ao Store Global
+    viewDate, setViewDate 
   } = useFinanceStore();
+
+  const { mutateAsync: addTransaction } = useAddTransaction();
+  const { mutateAsync: updateTransaction } = useUpdateTransaction();
+  const { mutateAsync: bulkUpdateTransactions } = useBulkUpdateTransactions();
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
 
@@ -72,9 +88,17 @@ export default function CardsDashboard() {
     () => [...creditCards].sort((a, b) => a.id.localeCompare(b.id)),
     [creditCards]
   );
-  // REMOVIDO: const [viewDate, setViewDate] = useState(new Date()); 
+  
   const [showAddCard, setShowAddCard] = useState(false);
   const [showEditCard, setShowEditCard] = useState(false);
+  const [showPayInvoice, setShowPayInvoice] = useState(false);
+  
+  // Pay Invoice State
+  const [payInvoiceAccountId, setPayInvoiceAccountId] = useState<string>("");
+  const [payInvoiceAmount, setPayInvoiceAmount] = useState<string>("");
+  const [payInvoiceDate, setPayInvoiceDate] = useState<string>(todayLocalString());
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [chartPeriod, setChartPeriod] = useState<"mensal" | "anual">("mensal");
   const [transactionToAnticipate, setTransactionToAnticipate] = useState<Transaction | null>(null);
@@ -161,6 +185,88 @@ export default function CardsDashboard() {
     ),
     [currentInvoiceTransactions, searchQuery]
   );
+
+  const handleConfirmPayment = async () => {
+    if (!selectedCard || !payInvoiceAccountId || !payInvoiceAmount) {
+      toast({ title: "Preencha todos os campos", variant: "destructive" });
+      return;
+    }
+
+    const valorPago = parseFloat(payInvoiceAmount);
+    const totalFatura = currentInvoiceTotal;
+
+    if (isNaN(valorPago) || valorPago <= 0) {
+      toast({ title: "Valor pago inválido", variant: "destructive" });
+      return;
+    }
+
+    if (valorPago > totalFatura) {
+      toast({ title: "O valor pago não pode ser maior que o total da fatura", variant: "destructive" });
+      return;
+    }
+
+    setIsProcessingPayment(true);
+    const viewDateStr = format(viewDate, "yyyy-MM");
+    const isParcial = valorPago < totalFatura;
+    const saldoRestante = totalFatura - valorPago;
+
+    try {
+      // 1. Criar transação de pagamento (BAIXA)
+      await addTransaction({
+        description: `Pagamento Fatura ${selectedCard.name} ${format(viewDate, 'MMM/yy', { locale: ptBR })}`,
+        amount: valorPago,
+        type: 'expense',
+        transactionType: 'punctual',
+        is_invoice_payment: true,
+        accountId: payInvoiceAccountId,
+        cardId: selectedCard.id,
+        invoiceMonthYear: viewDateStr,
+        isPaid: true,
+        date: parseLocalDate(payInvoiceDate).toISOString(),
+        paymentDate: payInvoiceDate
+      } as any);
+
+      // 2. Se parcial, criar saldo remanescente para o mês seguinte
+      if (isParcial) {
+        await addTransaction({
+          description: `Saldo Fatura ${selectedCard.name} ${format(viewDate, 'MMM/yy', { locale: ptBR })}`,
+          amount: saldoRestante,
+          type: 'expense',
+          transactionType: 'punctual',
+          is_invoice_payment: false,
+          accountId: null,
+          cardId: selectedCard.id,
+          invoiceMonthYear: format(addMonths(viewDate, 1), 'yyyy-MM'),
+          isPaid: false,
+          date: format(addMonths(parseLocalDate(payInvoiceDate), 1), 'yyyy-MM-dd')
+        } as any);
+      }
+
+      // 3. Atualizar compras originais
+      if (!isParcial) {
+        // Pagamento TOTAL: marcar tudo como pago
+        const ids = currentInvoiceTransactions.map(t => t.id);
+        if (ids.length > 0) {
+          await bulkUpdateTransactions({ ids, updates: { isPaid: true, paymentDate: payInvoiceDate } });
+        }
+      }
+
+      // 4. Finalizar
+      await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      await queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+      await queryClient.invalidateQueries({ queryKey: ['accounts'] });
+
+      setShowPayInvoice(false);
+      setPayInvoiceAccountId("");
+      setPayInvoiceAmount("");
+      toast({ title: "Pagamento registrado com sucesso!" });
+    } catch (error) {
+      console.error("Erro ao pagar fatura:", error);
+      toast({ title: "Erro ao processar pagamento", variant: "destructive" });
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
 
   const handleExport = useCallback(() => {
     const header = "Data,Descrição,Categoria,Valor\n";
@@ -333,9 +439,22 @@ export default function CardsDashboard() {
                       </p>
                       <StatusBadge status={dynamicStatus} />
                     </div>
-                    <h2 className="text-5xl lg:text-6xl font-black tracking-tighter tabular-nums text-foreground mb-4">
-                      {fmtBRL(currentInvoiceTotal)}
-                    </h2>
+                    <div className="flex items-end justify-between mb-4">
+                      <h2 className="text-5xl lg:text-6xl font-black tracking-tighter tabular-nums text-foreground">
+                        {fmtBRL(currentInvoiceTotal)}
+                      </h2>
+                      {dynamicStatus?.text !== 'Paga' && currentInvoiceTotal > 0 && (
+                        <Button 
+                          onClick={() => {
+                            setPayInvoiceAmount(currentInvoiceTotal.toFixed(2));
+                            setShowPayInvoice(true);
+                          }}
+                          className="bg-[#00d4aa] hover:bg-[#00b894] text-[#0a0a0f] rounded-xl font-black uppercase text-[10px] tracking-widest px-6 h-11 shadow-lg shadow-[#00d4aa]/20 transition-all hover:scale-105 active:scale-95"
+                        >
+                          Pagar Fatura
+                        </Button>
+                      )}
+                    </div>
                     <div className="flex items-center gap-6 text-[11px] font-semibold text-muted-foreground">
                       <span>Fecha <strong className="text-foreground">dia {selectedCard.closingDay}</strong></span>
                       <span>Vence <strong className="text-foreground">dia {selectedCard.dueDay}</strong></span>
@@ -592,9 +711,22 @@ export default function CardsDashboard() {
                     <StatusBadge status={dynamicStatus} />
                   </div>
 
-                  <h2 className="text-4xl font-black tracking-tighter tabular-nums text-foreground mb-3">
-                    {fmtBRL(currentInvoiceTotal)}
-                  </h2>
+                  <div className="flex items-end justify-between mb-3">
+                    <h2 className="text-4xl font-black tracking-tighter tabular-nums text-foreground">
+                      {fmtBRL(currentInvoiceTotal)}
+                    </h2>
+                    {dynamicStatus?.text !== 'Paga' && currentInvoiceTotal > 0 && (
+                      <Button 
+                        onClick={() => {
+                          setPayInvoiceAmount(currentInvoiceTotal.toFixed(2));
+                          setShowPayInvoice(true);
+                        }}
+                        className="bg-[#00d4aa] hover:bg-[#00b894] text-[#0a0a0f] rounded-xl font-black uppercase text-[9px] tracking-widest px-4 h-10 shadow-lg shadow-[#00d4aa]/20"
+                      >
+                        Pagar
+                      </Button>
+                    )}
+                  </div>
 
                   <div className="flex items-center gap-4 text-[10px] font-semibold text-muted-foreground">
                     <span>Fecha <strong className="text-foreground">dia {selectedCard.closingDay}</strong></span>
@@ -734,6 +866,93 @@ export default function CardsDashboard() {
             transaction={transactionToAnticipate}
           />
         </Portal>
+      )}
+
+      {/* Pay Invoice Dialog */}
+      {showPayInvoice && selectedCard && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-card border-2 border-primary/20 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex flex-col items-center text-center space-y-4 mb-8">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-lg">
+                <Check className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black tracking-tight">Pagar Fatura</h3>
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest mt-1">
+                  {selectedCard.name} · {format(viewDate, 'MMMM yyyy', { locale: ptBR })}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* Seleção de Conta */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Pagar com</label>
+                <Select value={payInvoiceAccountId} onValueChange={setPayInvoiceAccountId}>
+                  <SelectTrigger className="h-14 rounded-2xl border-2 border-muted bg-muted/30 font-bold text-sm">
+                    <SelectValue placeholder="Selecione a conta" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border-2 border-primary/10 bg-card">
+                    {accounts
+                      .filter(acc => acc.accountType !== 'investment' && acc.accountType !== 'savings_goal')
+                      .map(acc => (
+                        <SelectItem key={acc.id} value={acc.id} className="rounded-xl font-bold py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: acc.color }} />
+                            {acc.bank} - {acc.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Valor Pago */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Valor pago</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-muted-foreground text-sm">R$</span>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    value={payInvoiceAmount}
+                    onChange={(e) => setPayInvoiceAmount(e.target.value)}
+                    className="h-14 rounded-2xl border-2 border-muted bg-muted/30 pl-10 font-black text-xl"
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground font-bold ml-1">Total da fatura: {fmtBRL(currentInvoiceTotal)}</p>
+              </div>
+
+              {/* Data do Pagamento */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Data do pagamento</label>
+                <Input 
+                  type="date"
+                  value={payInvoiceDate}
+                  onChange={(e) => setPayInvoiceDate(e.target.value)}
+                  className="h-14 rounded-2xl border-2 border-muted bg-muted/30 font-bold"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 mt-8">
+              <Button 
+                onClick={handleConfirmPayment}
+                disabled={isProcessingPayment}
+                className="w-full h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl font-black text-base shadow-lg shadow-primary/20"
+              >
+                {isProcessingPayment ? "Processando..." : "Confirmar Pagamento"}
+              </Button>
+              <Button 
+                variant="ghost" 
+                onClick={() => setShowPayInvoice(false)}
+                className="w-full h-12 rounded-2xl font-bold text-muted-foreground hover:text-foreground"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

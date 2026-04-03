@@ -98,6 +98,12 @@ Quando uma conta fixa é paga via cartão de crédito no BillsManager, o sistema
 
 Isso consome o limite do cartão no mês correto via getCardUsedLimit (que já filtra por invoiceMonthYear). Nunca definir invoice_month_year manualmente fora dessa lógica.
 
+### Proteção de Integridade — Extrato (Lançamentos)
+Lançamentos originados na Gestão de Contas (recorrentes, parcelados, pagamentos de fatura ou materializados) são protegidos na aba 'Lançamentos'.
+- Cópia e Edição: Proibidas para estes itens nesta tela.
+- Ação Permitida: Apenas o "Estorno" (Desfazer Pagamento) é permitido.
+- Motivo: Garantir que a lógica de recorrência e competência de faturas não seja quebrada por edições manuais isoladas no extrato.
+
 
 5. Histórico de Mudanças Críticas
 Data	Arquivo	Mudança

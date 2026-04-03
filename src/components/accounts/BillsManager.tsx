@@ -363,7 +363,7 @@ export function BillsManager() {
                                                         setIsPaying(transaction);
                                                         setPaymentDate(transaction.date?.split('T')[0] || todayLocalString());
                                                         setPaymentAmount(transaction.amount.toFixed(2));
-                                                        setPaymentMethod(transaction.cardId ? 'credit_card' : 'account');
+                                                        setPaymentMethod('account');
                                                     }}
                                                     className="h-10 px-3 md:px-4 rounded-xl bg-success/5 text-success hover:bg-success/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider">
                                                     <CheckCircle2 className="w-4 h-4" /> <span className="hidden xs:inline">Baixar</span>
@@ -473,20 +473,18 @@ export function BillsManager() {
                                     </label>
                                 </div>
 
-                                {!isPaying.cardId && (
-                                    <div className="flex rounded-xl bg-muted/40 p-1">
-                                        <button onClick={() => setPaymentMethod('account')}
-                                            className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
-                                                paymentMethod === 'account' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                                            Conta Bancária
-                                        </button>
-                                        <button onClick={() => setPaymentMethod('credit_card')}
-                                            className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
-                                                paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                                            Cartão de Crédito
-                                        </button>
-                                    </div>
-                                )}
+                                <div className="flex rounded-xl bg-muted/40 p-1">
+                                    <button onClick={() => setPaymentMethod('account')}
+                                        className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
+                                            paymentMethod === 'account' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                                        Conta Bancária
+                                    </button>
+                                    <button onClick={() => setPaymentMethod('credit_card')}
+                                        className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
+                                            paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                                        Cartão de Crédito
+                                    </button>
+                                </div>
 
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Valor do Pagamento</label>
