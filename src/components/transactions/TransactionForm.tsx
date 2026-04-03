@@ -232,7 +232,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     executeSubmit(parsedAmount, finalCategoryId);
   };
 
-  const executeSubmit = (parsedAmount: number, finalCategoryId?: string) => {
+  const executeSubmit = async (parsedAmount: number, finalCategoryId?: string) => {
     let isPaid = false;
     if (initialData) {
       isPaid = isPaidLocally;
@@ -289,7 +289,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         installmentList[count - 1].amount = parseFloat((installmentList[count - 1].amount + diff).toFixed(2));
       }
 
-      onSubmit(installmentList as any, undefined, applyScope);
+      await onSubmit(installmentList as any, undefined, applyScope);
       onClose();
       return;
     }
@@ -298,7 +298,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     const isPaidFinal = initialData ? isPaidLocally : (activeTab === 'pontual' ? isDateTodayOrPast(date) : false);
     const isRecurring = Boolean(activeTab === 'fixo' || activeTab === 'renda_fixa');
 
-    onSubmit({
+    await onSubmit({
       type,
       transactionType: isRecurring ? 'recurring' : 'punctual',
       description,
