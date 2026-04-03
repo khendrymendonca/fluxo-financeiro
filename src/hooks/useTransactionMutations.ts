@@ -80,16 +80,19 @@ export function useDeleteTransaction() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ transaction, applyScope = 'this' }: { transaction: Transaction, applyScope?: 'this' | 'future' | 'all' }) => {
-      const { id, installmentGroupId, date } = transaction;
+    mutationFn: async ({ transaction, applyScope = 'this' }: { transaction: any, applyScope?: 'this' | 'future' | 'all' }) => {
+      const { id, installmentGroupId, date, isVirtual, originalId } = transaction;
       const now = new Date().toISOString();
+
+      // CORREÇÃO: Se for uma projeção virtual, extraímos o UUID real (originalId) para a query no banco
+      const targetId = isVirtual ? (originalId || id.split('-virtual')[0]) : id;
 
       // 1. Exclusão Simples: "Apenas esta parcela" ou Transação única
       if (applyScope === 'this' || !installmentGroupId) {
         const { error } = await supabase
           .from('transactions')
           .update({ deleted_at: now })
-          .eq('id', id);
+          .eq('id', targetId);
         if (error) throw error;
       }
       else if (applyScope === 'future') {
