@@ -13,7 +13,7 @@ import { Portal } from '@/components/ui/Portal';
 import { cn } from '@/lib/utils';
 import { format, isSameMonth, isSameYear, isBefore, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { getCardSettingsForDate } from '@/utils/creditCardUtils';
+import { getCardSettingsForDate, calcInvoiceMonthYear } from '@/utils/creditCardUtils';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
 import { BulkDeleteDialog } from '../transactions/BulkDeleteDialog';
 
@@ -53,6 +53,15 @@ export function BillsManager() {
     const handleMarkAsPaid = async (targetId: string, isCard: boolean) => {
         if (!isPaying) return;
         const amountValue = paymentAmount ? parseFloat(paymentAmount) : isPaying.amount;
+        const pDate = parseLocalDate(paymentDate);
+
+        let finalInvoiceMonthYear: string | undefined = undefined;
+        if (isCard) {
+            const card = creditCards.find(c => c.id === targetId);
+            if (card) {
+                finalInvoiceMonthYear = calcInvoiceMonthYear(pDate, { closingDay: card.closingDay, dueDay: card.dueDay });
+            }
+        }
 
         try {
             if (isPaying.isVirtual) {
@@ -64,13 +73,13 @@ export function BillsManager() {
                     amount: amountValue,
                     type: isPaying.type,
                     transactionType: 'punctual',
-                    date: isPaying.date, // 🛡️ Correção de Competência: usa a data projetada
+                    date: isPaying.date,
                     isPaid: true,
                     paymentDate: paymentDate,
-                    accountId: isCard ? undefined : targetId,
-                    cardId: isCard ? targetId : isPaying.cardId,
+                    accountId: isCard ? null : targetId,
+                    cardId: isCard ? targetId : null,
                     isInvoicePayment: isCardInvoice,
-                    invoiceMonthYear: isPaying.invoiceMonthYear,
+                    invoiceMonthYear: isCard ? finalInvoiceMonthYear : (isCardInvoice ? isPaying.invoiceMonthYear : null),
                     categoryId: isCardInvoice ? 'card-payment' : isPaying.categoryId,
                     subcategoryId: isCardInvoice ? undefined : isPaying.subcategoryId,
                     originalId: isPaying.originalId
@@ -95,8 +104,9 @@ export function BillsManager() {
                     updates: {
                         isPaid: true,
                         paymentDate: paymentDate,
-                        accountId: isCard ? undefined : targetId,
-                        cardId: isCard ? targetId : undefined,
+                        accountId: isCard ? null : targetId,
+                        cardId: isCard ? targetId : null,
+                        invoiceMonthYear: isCard ? finalInvoiceMonthYear : null,
                         amount: amountValue
                     }
                 });

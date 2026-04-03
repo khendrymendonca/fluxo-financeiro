@@ -87,9 +87,16 @@ Gestão de Contas — Inclusão de Atrasados:
 A tela de 'Gestão de Contas' deve obrigatoriamente incluir todos os lançamentos pendentes de meses anteriores (`isBefore(date, startOfMonth(viewDate)) && !isPaid`). Isso garante que o usuário visualize dívidas acumuladas que ainda precisam de atenção.
 
 ### Contas Fixas — Forma de Pagamento
-Contas fixas (is_recurring: true) NÃO possuem vínculo de pagamento no cadastro. account_id e card_id são sempre null ao criar.
+Contas fixas (is_recurring: true) NÃO possuem vínculo de pagamento no cadastro. account_id e card_id são sempre null al criar.
 A forma de pagamento (débito em conta ou cartão) é escolhida exclusivamente no ato da baixa pelo BillsManager.
 Isso permite que uma mesma conta fixa (ex: internet) seja paga no débito em um mês e no crédito em outro.
+
+### Baixa de Conta Fixa no Cartão — invoiceMonthYear
+Quando uma conta fixa é paga via cartão de crédito no BillsManager, o sistema calcula automaticamente em qual fatura o valor entra:
+- Se dia_pagamento <= closing_day do cartão → fatura do mês atual
+- Se dia_pagamento > closing_day do cartão → fatura do mês seguinte
+
+Isso consome o limite do cartão no mês correto via getCardUsedLimit (que já filtra por invoiceMonthYear). Nunca definir invoice_month_year manualmente fora dessa lógica.
 
 
 5. Histórico de Mudanças Críticas
