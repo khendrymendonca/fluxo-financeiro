@@ -28,6 +28,9 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
 
     // 2. Processamos todas as transações para buscar recorrentes que precisam ser projetadas
     transactions.forEach(tx => {
+      // 🛡️ TRAVA DE SEGURANÇA: Não projeta se o item original estiver marcado como deletado
+      if ((tx as any).deleted_at) return;
+
       const isRecurring = tx.isRecurring || tx.transactionType === 'recurring';
       const txDate = parseLocalDate(tx.date.slice(0, 10));
 
@@ -117,9 +120,12 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
       })();
 
       if (!tx.isVirtual && isInTargetMonth) {
-        // 🛡️ REVISÃO DE REGRA: Exibir todos os lançamentos reais do mês no extrato,
-        // independentemente de serem recorrentes/parcelados ou estarem pagos/pendentes.
-        if (!projected.some(p => p.id === tx.id)) {
+        // 🚨 REGRA CRÍTICA: Recorrentes e Parcelamentos só aparecem no extrato se estiverem PAGOS.
+        // Se estiverem pendentes, eles residem apenas na Gestão de Contas.
+        const isRecurringOrInstallment = tx.isRecurring || tx.transactionType === 'recurring' || tx.installmentGroupId;
+        const shouldIncludeInStatement = !isRecurringOrInstallment || tx.isPaid;
+
+        if (shouldIncludeInStatement && !projected.some(p => p.id === tx.id)) {
           projected.push(tx);
         }
       }

@@ -151,6 +151,12 @@ function useFinanceProvider() {
   const currentMonthTransactions = useMemo(() => {
     if (viewMode === 'all') return transactions;
     return transactions.filter(t => {
+      // ✅ Virtuais (projetadas): já têm date no mês alvo, aceitar direto
+      if (t.isVirtual) {
+        const tDate = parseLocalDate(t.date);
+        return tDate.getMonth() === viewDate.getMonth() && tDate.getFullYear() === viewDate.getFullYear();
+      }
+
       // ✅ Pagamento de Fatura (Baixa): usar invoiceMonthYear como referência
       if (t.categoryId === 'card-payment' && t.invoiceMonthYear) {
         const [year, month] = t.invoiceMonthYear.split('-').map(Number);
@@ -250,6 +256,7 @@ function useFinanceProvider() {
     togglePaid: togglePaidMutation.mutateAsync,
     bulkDeleteTransactions: bulkDeleteMutation.mutateAsync,
 
+    // --- Mutation Status ---
     isAddingTransaction: addTransactionMutation.isPending,
     isUpdatingTransaction: updateTransactionMutation.isPending,
     isDeletingTransaction: deleteTransactionMutation.isPending,

@@ -132,9 +132,11 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     }
   }, [initialData]);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
+    if (isSubmitting || isPending) return;
 
     if (activeTab === 'transfer') {
       const errors: string[] = [];
@@ -292,20 +294,21 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
     // --- LÓGICA PONTUAL OU RECORRENTE ---
     const isPaidFinal = initialData ? isPaidLocally : (activeTab === 'pontual' ? isDateTodayOrPast(date) : false);
+    const isRecurring = Boolean(activeTab === 'fixo' || activeTab === 'renda_fixa');
 
     onSubmit({
       type,
-      transactionType: (activeTab === 'fixo' || activeTab === 'renda_fixa') ? 'recurring' : 'punctual',
+      transactionType: isRecurring ? 'recurring' : 'punctual',
       description,
       amount: parsedAmount,
       categoryId: finalCategoryId || categoryId,
       subcategoryId: subcategoryId || null,
-      isRecurring: Boolean(activeTab === 'fixo' || activeTab === 'renda_fixa'),
+      isRecurring,
       date: parseLocalDate(date).toISOString(),
-      accountId: paymentMethod === 'account' ? accountId : undefined,
-      cardId: paymentMethod === 'card' ? cardId : undefined,
+      accountId: isRecurring ? null : (paymentMethod === 'account' ? accountId : undefined),
+      cardId: isRecurring ? null : (paymentMethod === 'card' ? cardId : undefined),
       installmentTotal: undefined, 
-      recurrence: (activeTab === 'fixo' || activeTab === 'renda_fixa') ? recurrence : undefined,
+      recurrence: isRecurring ? recurrence : undefined,
       isAutomatic: activeTab === 'renda_fixa' ? true : isAutomatic,
       debtId: selectedDebtId || undefined,
       invoiceMonthYear: paymentMethod === 'card' ? finalInvoiceMonthYear : undefined,
@@ -628,52 +631,51 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     </div>
                   )}
 
-                  {/* Account / Card Selection */}
-                  <div className="space-y-3">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
-                      {type === 'income' ? 'Em qual conta vai cair?' : 'Forma de Pagamento'}
-                    </Label>
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => setPaymentMethod('account')}
-                        className={cn("flex-1 py-3 px-4 rounded-2xl font-bold text-sm transition-all border-2 flex items-center justify-center gap-2",
-                          paymentMethod === 'account' ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted/50 border-transparent text-muted-foreground")}>
-                        <Wallet className="w-4 h-4" /> Conta
-                      </button>
-                      {activeTab !== 'renda_fixa' && (
+                  {/* Account / Card Selection - Apenas para Não Recorrentes */}
+                  {activeTab !== 'fixo' && activeTab !== 'renda_fixa' && (
+                    <div className="space-y-3">
+                      <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
+                        {type === 'income' ? 'Em qual conta vai cair?' : 'Forma de Pagamento'}
+                      </Label>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => setPaymentMethod('account')}
+                          className={cn("flex-1 py-3 px-4 rounded-2xl font-bold text-sm transition-all border-2 flex items-center justify-center gap-2",
+                            paymentMethod === 'account' ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted/50 border-transparent text-muted-foreground")}>
+                          <Wallet className="w-4 h-4" /> Conta
+                        </button>
                         <button type="button" onClick={() => setPaymentMethod('card')}
                           className={cn("flex-1 py-3 px-4 rounded-2xl font-bold text-sm transition-all border-2 flex items-center justify-center gap-2",
                             paymentMethod === 'card' ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted/50 border-transparent text-muted-foreground")}>
                           <CreditCard className="w-4 h-4" /> Cartão
                         </button>
+                      </div>
+
+                      {paymentMethod === 'account' && (
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          {accounts.map(acc => (
+                            <button key={acc.id} type="button" onClick={() => setAccountId(acc.id)}
+                              className={cn("py-3 px-3 rounded-xl text-xs font-bold transition-all border-2 flex items-center gap-2",
+                                accountId === acc.id ? "border-primary bg-primary/5 text-primary" : "bg-muted/30 border-transparent hover:bg-muted/50")}>
+                              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: acc.color }} />
+                              <span className="truncate">{acc.bank} - {acc.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {paymentMethod === 'card' && (
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          {creditCards.map(card => (
+                            <button key={card.id} type="button" onClick={() => setCardId(card.id)}
+                              className={cn("py-3 px-3 rounded-xl text-xs font-bold transition-all border-2",
+                                cardId === card.id ? "border-primary bg-primary/5 text-primary" : "bg-muted/30 border-transparent hover:bg-muted/50")}>
+                              {card.name}
+                            </button>
+                          ))}
+                        </div>
                       )}
                     </div>
-
-                    {paymentMethod === 'account' && (
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {accounts.map(acc => (
-                          <button key={acc.id} type="button" onClick={() => setAccountId(acc.id)}
-                            className={cn("py-3 px-3 rounded-xl text-xs font-bold transition-all border-2 flex items-center gap-2",
-                              accountId === acc.id ? "border-primary bg-primary/5 text-primary" : "bg-muted/30 border-transparent hover:bg-muted/50")}>
-                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: acc.color }} />
-                            <span className="truncate">{acc.bank} - {acc.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {paymentMethod === 'card' && (
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {creditCards.map(card => (
-                          <button key={card.id} type="button" onClick={() => setCardId(card.id)}
-                            className={cn("py-3 px-3 rounded-xl text-xs font-bold transition-all border-2",
-                              cardId === card.id ? "border-primary bg-primary/5 text-primary" : "bg-muted/30 border-transparent hover:bg-muted/50")}>
-                            {card.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
+                  )}
                   {activeTab === 'renda_fixa' && (
                     <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 flex gap-3">
                       <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />

@@ -86,6 +86,11 @@ Transações Recorrentes (Fixas) e Parcelamentos só devem ser visíveis na tela
 Gestão de Contas — Inclusão de Atrasados:
 A tela de 'Gestão de Contas' deve obrigatoriamente incluir todos os lançamentos pendentes de meses anteriores (`isBefore(date, startOfMonth(viewDate)) && !isPaid`). Isso garante que o usuário visualize dívidas acumuladas que ainda precisam de atenção.
 
+### Contas Fixas — Forma de Pagamento
+Contas fixas (is_recurring: true) NÃO possuem vínculo de pagamento no cadastro. account_id e card_id são sempre null ao criar.
+A forma de pagamento (débito em conta ou cartão) é escolhida exclusivamente no ato da baixa pelo BillsManager.
+Isso permite que uma mesma conta fixa (ex: internet) seja paga no débito em um mês e no crédito em outro.
+
 
 5. Histórico de Mudanças Críticas
 Data	Arquivo	Mudança
@@ -124,5 +129,7 @@ Data	Arquivo	Mudança
 01/04/2026	TransactionForm.tsx	Atualizado placeholder do campo descrição para "Ex: Salário" em todos os lançamentos de receita.
 01/04/2026	PWA / UpdatePrompt	Implementado sistema de notificação de nova versão (UpdatePrompt). Alterado VitePWA para modo 'prompt', permitindo que usuários atualizem o app manualmente para ver novas versões/temas sem perder o login.
 01/04/2026	Regra de Negócio	Apenas lançamentos do tipo "Pontual" podem ser duplicados/copiados. Lançamentos fixos ou parcelados devem ser gerenciados via edição ou novos fluxos para evitar inconsistências de recorrência.
+01/04/2026	useThemeColor.tsx	Ajuste da cor de Páscoa para tom Matte (HSL 267 60% 72%) alinhado ao princípio de Luxo Silencioso, removendo efeito neon no modo escuro.
+01/04/2026	useFinanceStore.tsx	Corrigida filtragem de transações virtuais em currentMonthTransactions, garantindo que projeções apareçam corretamente nas telas de destino (Gestão de Contas) respeitando a data visualizada.
 
 Nota do Tech Lead: Este documento deve ser usado como contexto base em todos os prompts futuros que envolvam UI ou regras de negócio. Evitar refatorações gráficas e preservar filosofia de "Quiet Luxury" minimalista sem ruídos em cores ou blocos de grid.

@@ -15,7 +15,7 @@ export const accentColors = [
     { id: 'emerald', name: 'Esmeralda', hsl: '142.1 76.2% 36.3%' },
     { id: 'teal', name: 'Turquesa', hsl: '173.4 80.4% 40%' },
     { id: 'cyan', name: 'Ciano', hsl: '188.7 94.5% 42.7%' },
-    { id: 'pascoa', name: 'Páscoa', hsl: '267 100% 83%' },
+    { id: 'pascoa', name: 'Páscoa', hsl: '267 60% 72%' },
 ];
 
 interface ThemeColorContextType {
