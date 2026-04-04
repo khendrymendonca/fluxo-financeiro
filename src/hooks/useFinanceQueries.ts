@@ -37,6 +37,7 @@ export function useTransactions(viewDate: Date) {
       // 2. Transações RECORRENTES (independente da data, para Projeção)
       // 3. Transações PARCELADAS (independente da data, para Projeção)
       // 4. Itens da fatura do mês atual (compras de cartão fora da janela de datas)
+      // 5. 🚨 NOVO: Todas as despesas de cartão pendentes (não pagas) para cálculo de limite global
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
@@ -45,7 +46,8 @@ export function useTransactions(viewDate: Date) {
           `and(date.gte.${windowStart},date.lte.${windowEnd}),` + // Pontuais e compras na janela
           `is_recurring.eq.true,` +                                // Recorrentes (para Projeção)
           `installment_group_id.not.is.null,` +                    // Parceladas (para Projeção)
-          `invoice_month_year.eq.${viewDateStr}`                   // 💳 Fatura do mês atual
+          `invoice_month_year.eq.${viewDateStr},` +                // 💳 Fatura do mês atual
+          `and(card_id.not.is.null,is_paid.eq.false)`              // 🚨 Histórico de cartão não pago
         );
 
       if (error) throw error;

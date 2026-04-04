@@ -313,18 +313,29 @@ function useFinanceProvider() {
       });
       return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     },
-    getCardUsedLimit: (id: string) => {
-      // 🛡️ REGRA DE NEGÓCIO: O limite do cartão é consumido por TODAS as despesas não pagas.
-      // Isso inclui compras à vista, parcelas futuras e saldos remanescentes.
-      // O limite só é liberado quando a FATURA (ou a transação individual) é marcada como PAGA.
-      return transactions
-        .filter(t =>
-          t.cardId === id &&
-          t.type === 'expense' &&
-          !t.isPaid &&
-          !t.deleted_at
-        )
-        .reduce((acc, t) => acc + Number(t.amount), 0);
-    }
+    getCardUsedLimit: useCallback((cardId: string) => {
+      // 🚨 REGRA DE OURO: Usamos rawTransactions (histórico real) em vez de 'transactions' (que é cortado pelo mês)
+      return rawTransactions.filter(t => {
+        // 1. Pega apenas as transações deste cartão específico
+        if (t.cardId !== cardId) return false;
+
+        // 2. Ignora marcações de pagamento de fatura e itens deletados
+        if (t.categoryId === 'card-payment' || t.isInvoicePayment || t.deleted_at) return false;
+
+        // 3. SE ESTÁ PAGO, LIBEROU O LIMITE
+        if (t.isPaid) return false;
+
+        // 4. Assinaturas (Spotify/Netflix) do futuro não comprometem o limite global hoje.
+        const txDate = parseLocalDate(t.date.slice(0, 10));
+        const isInstallment = (t.installmentTotal || 0) > 1;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (t.isRecurring && !isInstallment && txDate > today) return false;
+
+        // Se chegou aqui, é uma compra (pontual ou parcelada) do passado/presente que AINDA NÃO FOI PAGA. Consome o limite!
+        return true;
+      }).reduce((acc, t) => acc + (t.type === 'income' ? -Number(t.amount) : Number(t.amount)), 0);
+    }, [rawTransactions])
   };
 }

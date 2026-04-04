@@ -104,6 +104,11 @@ Lançamentos originados na Gestão de Contas (recorrentes, parcelados, pagamento
 - Ação Permitida: Apenas o "Estorno" (Desfazer Pagamento) é permitido.
 - Motivo: Garantir que a lógica de recorrência e competência de faturas não seja quebrada por edições manuais isoladas no extrato.
 
+### Cálculo de Limite Global de Cartão — Solução de Inconsistência
+- **Regra de Ouro:** Compras no cartão (avulsas ou parcelas) sempre nascem com `is_paid = false`. O status só muda para `true` quando a **FATURA** inteira (ou parte dela) é quitada no BillsManager.
+- **Cálculo:** `getCardUsedLimit` utiliza `rawTransactions` para varrer todo o histórico. Ele ignora transações onde `is_invoice_payment: true` para evitar bitributação do limite.
+- **Disponível vs Gastos:** No painel de detalhes, "Gastos" refere-se à fatura do mês, enquanto "Disponível" refere-se ao limite real do cartão (global).
+
 
 5. Histórico de Mudanças Críticas
 Data	Arquivo	Mudança

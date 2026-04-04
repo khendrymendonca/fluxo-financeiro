@@ -115,15 +115,6 @@ export default function CardsDashboard() {
     [creditCards, selectedCardId]
   );
 
-  const stats = useMemo(() => {
-    if (!selectedCardId || !selectedCard) return { used: 0, available: 0, limit: 0, percentUsed: 0 };
-    const limit = Number(selectedCard.limit ?? 0);
-    const used = getCardUsedLimit(selectedCardId);
-    const available = Math.max(0, limit - used);
-    const percentUsed = limit > 0 ? (used / limit) * 100 : 0;
-    return { used, available, limit, percentUsed };
-  }, [selectedCardId, selectedCard, getCardUsedLimit]);
-
   const currentInvoiceTransactions = useMemo(() => {
     if (!selectedCardId || !selectedCard) return [];
     const viewDateStr = format(viewDate, "yyyy-MM");
@@ -149,6 +140,15 @@ export default function CardsDashboard() {
     ),
     [currentInvoiceTransactions]
   );
+
+  const stats = useMemo(() => {
+    if (!selectedCardId || !selectedCard) return { used: 0, available: 0, limit: 0, percentUsed: 0 };
+    const limit = Number(selectedCard.limit ?? 0);
+    const used = getCardUsedLimit(selectedCardId);
+    const available = Math.max(0, limit - used);
+    const percentUsed = limit > 0 ? (used / limit) * 100 : 0;
+    return { used, available, limit, percentUsed };
+  }, [selectedCardId, selectedCard, getCardUsedLimit]);
 
   const dynamicStatus = useMemo(() => {
     if (!selectedCard || !selectedCardId) return null;
