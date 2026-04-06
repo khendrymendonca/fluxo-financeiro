@@ -13,7 +13,12 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
 
     // 1. Separamos o que é REAL (transações normais do banco) do mês alvo
     const realTransactions = transactions.filter(tx => {
-      if (tx.isVirtual) return false;
+      // Sombras de exceção (deleted_at preenchido + originalId + não recorrente)
+      // Estas servem apenas para bloquear a projeção de um mês específico
+      const isShadow = !!(tx as any).deleted_at && !!tx.originalId && !tx.isRecurring;
+
+      if (!isShadow && tx.isVirtual) return false;
+      if (!isShadow && (tx as any).deleted_at) return false;
 
       // ✅ Pagamento de Fatura (Baixa): usar invoiceMonthYear como referência
       if (tx.categoryId === 'card-payment' && tx.invoiceMonthYear) {
@@ -29,7 +34,10 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
     // 2. Processamos todas as transações para buscar recorrentes que precisam ser projetadas
     transactions.forEach(tx => {
       // 🛡️ TRAVA DE SEGURANÇA: Não projeta se o item original estiver marcado como deletado
-      if ((tx as any).deleted_at) return;
+      // EXCETO se for uma sombra (que já está deletada por definição e não gera projeção própria)
+      const isShadow = !!(tx as any).deleted_at && !!tx.originalId && !tx.isRecurring;
+      if ((tx as any).deleted_at && !isShadow) return;
+      if (isShadow) return; // Sombras apenas bloqueiam, não projetam.
 
       const isRecurring = tx.isRecurring || tx.transactionType === 'recurring';
       const txDate = parseLocalDate(tx.date.slice(0, 10));

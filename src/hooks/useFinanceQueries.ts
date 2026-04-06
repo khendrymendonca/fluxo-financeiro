@@ -32,22 +32,16 @@ export function useTransactions(viewDate: Date) {
       const windowEnd = format(endOfMonth(addMonths(viewDate, 3)), 'yyyy-MM-dd');
       const viewDateStr = format(viewDate, 'yyyy-MM');
 
-      // Trazemos:
-      // 1. Transações dentro da janela de 3 meses antes/depois (pontuais e compras de cartão)
-      // 2. Transações RECORRENTES (independente da data, para Projeção)
-      // 3. Transações PARCELADAS (independente da data, para Projeção)
-      // 4. Itens da fatura do mês atual (compras de cartão fora da janela de datas)
-      // 5. 🚨 NOVO: Todas as despesas de cartão pendentes (não pagas) para cálculo de limite global
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
-        .is('deleted_at', null)
         .or(
-          `and(date.gte.${windowStart},date.lte.${windowEnd}),` + // Pontuais e compras na janela
-          `is_recurring.eq.true,` +                                // Recorrentes (para Projeção)
-          `installment_group_id.not.is.null,` +                    // Parceladas (para Projeção)
-          `invoice_month_year.eq.${viewDateStr},` +                // 💳 Fatura do mês atual
-          `and(card_id.not.is.null,is_paid.eq.false)`              // 🚨 Histórico de cartão não pago
+          `and(deleted_at.is.null,date.gte.${windowStart},date.lte.${windowEnd}),` + 
+          `and(deleted_at.is.null,is_recurring.eq.true),` +
+          `and(deleted_at.is.null,installment_group_id.not.is.null),` +
+          `and(deleted_at.is.null,invoice_month_year.eq.${viewDateStr}),` +
+          `and(deleted_at.is.null,card_id.not.is.null,is_paid.eq.false),` +
+          `and(deleted_at.not.is.null,original_id.not.is.null,is_recurring.eq.false)`
         );
 
       if (error) throw error;

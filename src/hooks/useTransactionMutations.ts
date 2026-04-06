@@ -90,10 +90,39 @@ export function useDeleteTransaction() {
       const { id, installmentGroupId, date, isVirtual, originalId } = transaction;
       const now = new Date().toISOString();
 
-      // CORREÇÃO: Se for uma projeção virtual, extraímos o UUID real (originalId) para a query no banco
       const targetId = isVirtual ? (originalId || id.split('-virtual')[0]) : id;
 
-      // 1. Exclusão Simples: "Apenas esta parcela" ou Transação única
+      // --- EXCEÇÃO: Exclusão de "apenas este mês" de uma recorrente virtual ---
+      // Em vez de deletar a mãe, criamos uma "sombra deletada" para este mês específico.
+      // O motor de projeção verá este registro e saberá que deve pular este mês.
+      if (applyScope === 'this' && isVirtual) {
+        const { data: madre } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('id', targetId)
+          .single();
+
+        if (madre) {
+          const { error } = await supabase
+            .from('transactions')
+            .insert({
+              ...madre,
+              id: undefined, // Novo ID automático
+              date: parseLocalDate(date.slice(0, 10)).toISOString(),
+              original_id: targetId,
+              is_recurring: false,
+              transaction_type: 'punctual',
+              is_paid: false,
+              payment_date: null,
+              deleted_at: now, // Marca como deletada para bloquear a projeção
+              created_at: undefined,
+            });
+          if (error) throw error;
+        }
+        return id;
+      }
+
+      // --- FLUXO NORMAL: Transação real ou exclusão em massa ---
       if (applyScope === 'this' || !installmentGroupId) {
         const { error } = await supabase
           .from('transactions')

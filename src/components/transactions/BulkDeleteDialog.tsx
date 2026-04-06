@@ -112,7 +112,7 @@ export function BulkDeleteDialog({
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={onClose} disabled={isPending}>Cancelar</Button>
           <Button variant="destructive" onClick={handleConfirm} disabled={isPending}>
-            {isPending ? 'Removendo...' : 'Remover Tudo'}
+            {isPending ? 'Removendo...' : (hasRecurring && deleteFutureBills) || (hasInstallments && installmentScope !== 'this') ? 'Remover Tudo' : 'Remover'}
           </Button>
         </DialogFooter>
       </DialogContent>
