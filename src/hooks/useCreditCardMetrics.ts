@@ -22,12 +22,14 @@ export function useCreditCardMetrics(
 
     const paidInvoices = new Set(
       cardTransactions
-        .filter(t => t.isInvoicePayment && !!t.invoiceMonthYear)
+        .filter(t => t.isInvoicePayment && t.type === 'expense' && !!t.invoiceMonthYear)
         .map(t => t.invoiceMonthYear as string)
     );
 
     cardTransactions.forEach(t => {
-      if (t.isVirtual || t.isInvoicePayment) return;
+      // ✅ Só exclui pagamentos de fatura se forem DESPESAS (saída de dinheiro).
+      // Estornos e abatimentos (RECEITA) devem ser mantidos para reduzir o total.
+      if (t.isVirtual || (t.isInvoicePayment && t.type === 'expense')) return;
 
       const txDate = new Date(t.date);
       const isFuture = txDate > new Date();
@@ -47,7 +49,8 @@ export function useCreditCardMetrics(
     });
 
     cardTransactions.forEach(t => {
-      if (t.isInvoicePayment && t.invoiceMonthYear === viewMonthYear) {
+      // ✅ Só somamos pagamentos reais da fatura (saída de caixa)
+      if (t.isInvoicePayment && t.type === 'expense' && t.invoiceMonthYear === viewMonthYear) {
         paidCurrentInvoiceAmount += t.amount;
       }
     });

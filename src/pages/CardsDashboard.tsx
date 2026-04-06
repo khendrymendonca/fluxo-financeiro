@@ -125,7 +125,10 @@ export default function CardsDashboard() {
     const startInv = new Date(viewYear, viewMonth - 1, Number(closingDay) + 1, 0, 0, 0);
     return transactions
       .filter((t) => {
-        if (t.cardId !== selectedCardId || t.isInvoicePayment) return false;
+        if (t.cardId !== selectedCardId) return false;
+        // 🛡️ REGRA DE ABATIMENTO: Só excluímos pagamentos de fatura se forem DESPESAS (saída de dinheiro).
+        // Estornos e abatimentos (RECEITA) devem ser mantidos para reduzir o total da fatura.
+        if (t.isInvoicePayment && t.type === 'expense') return false;
         if (t.isVirtual) return false;
         if (t.invoiceMonthYear) return t.invoiceMonthYear === viewDateStr;
         const tDate = parseLocalDate(t.date);
@@ -169,7 +172,8 @@ export default function CardsDashboard() {
       
       const total = transactions
         .filter((t) => {
-          if (t.cardId !== selectedCardId || t.isVirtual || t.isInvoicePayment) return false;
+          // 🛡️ REGRA DE ABATIMENTO: Só excluímos se for PAGAMENTO real (despesa), não estorno/abatimento (income)
+          if (t.cardId !== selectedCardId || t.isVirtual || (t.isInvoicePayment && t.type === 'expense')) return false;
           // 🛡️ REGRA DE COMPETÊNCIA: Filtra pela data da transação (date) e não pela fatura (invoiceMonthYear)
           const tDateStr = t.date.slice(0, 7); // Pega 'YYYY-MM' da string ISO
           return tDateStr === mStr;
@@ -316,7 +320,12 @@ export default function CardsDashboard() {
       (t) => t.cardId === cardId && t.isInvoicePayment && t.invoiceMonthYear === viewDateStr
     );
     const total = transactions
-      .filter((t) => t.cardId === cardId && !t.isVirtual && t.invoiceMonthYear === viewDateStr)
+      .filter((t) => {
+        if (t.cardId !== cardId || t.isVirtual) return false;
+        // 🛡️ REGRA DE ABATIMENTO: Só excluímos se for PAGAMENTO real (despesa), não estorno/abatimento (income)
+        if (t.isInvoicePayment && t.type === 'expense') return false;
+        return t.invoiceMonthYear === viewDateStr;
+      })
       .reduce((s, t) => s + (t.type === "income" ? -t.amount : t.amount), 0);
     return getInvoiceStatusDisplay(card, viewDate, isPaid, total);
   };

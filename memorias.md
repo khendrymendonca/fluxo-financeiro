@@ -109,6 +109,11 @@ Lançamentos originados na Gestão de Contas (recorrentes, parcelados, pagamento
 - **Cálculo:** `getCardUsedLimit` utiliza `rawTransactions` para varrer todo o histórico. Ele ignora transações onde `is_invoice_payment: true` para evitar bitributação do limite.
 - **Disponível vs Gastos:** No painel de detalhes, "Gastos" refere-se à fatura do mês, enquanto "Disponível" refere-se ao limite real do cartão (global).
 
+### Pagamento de Fatura do Cartão
+- Fatura sempre paga via CONTA BANCÁRIA — nunca com outro cartão.
+- Pagamento parcial: cria transação de saldo remanescente (transaction_type: 'invoice_remainder') na fatura do mês seguinte com is_paid: false. As compras originais NÃO são marcadas como pagas em pagamento parcial.
+- Pagamento total: todas as compras do mês são marcadas is_paid: true via bulk update.
+
 
 5. Histórico de Mudanças Críticas
 Data	Arquivo	Mudança
@@ -149,5 +154,7 @@ Data	Arquivo	Mudança
 01/04/2026	Regra de Negócio	Apenas lançamentos do tipo "Pontual" podem ser duplicados/copiados. Lançamentos fixos ou parcelados devem ser gerenciados via edição ou novos fluxos para evitar inconsistências de recorrência.
 01/04/2026	useThemeColor.tsx	Ajuste da cor de Páscoa para tom Matte (HSL 267 60% 72%) alinhado ao princípio de Luxo Silencioso, removendo efeito neon no modo escuro.
 01/04/2026	useFinanceStore.tsx	Corrigida filtragem de transações virtuais em currentMonthTransactions, garantindo que projeções apareçam corretamente nas telas de destino (Gestão de Contas) respeitando a data visualizada.
+01/04/2026	CardsDashboard.tsx	Corrigido bug de abatimentos: Filtro de transações da fatura ajustado para incluir créditos/estornos (income) mesmo se marcados como isInvoicePayment, garantindo o cálculo correto do total da fatura.
+06/04/2026	Projeto Global	Correção Estrutural de Abatimentos: Refatorados `CardsDashboard.tsx`, `useCreditCardMetrics.ts`, `useFinanceStore.tsx`, `TransactionList.tsx` e `AccountEvolution.tsx`. A nova regra global garante que transações de "Crédito/Estorno" (tipo `income`) não sejam excluídas dos cálculos de fatura e limite (mesmo se marcadas como `isInvoicePayment`), permitindo que abatimentos reduzam corretamente os totais de gastos e o limite consumido.
 
 Nota do Tech Lead: Este documento deve ser usado como contexto base em todos os prompts futuros que envolvam UI ou regras de negócio. Evitar refatorações gráficas e preservar filosofia de "Quiet Luxury" minimalista sem ruídos em cores ou blocos de grid.

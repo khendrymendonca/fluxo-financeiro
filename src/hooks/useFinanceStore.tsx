@@ -320,10 +320,11 @@ function useFinanceProvider() {
         if (t.cardId !== cardId) return false;
 
         // 2. Ignora marcações de pagamento de fatura e itens deletados
-        if (t.categoryId === 'card-payment' || t.isInvoicePayment || t.deleted_at) return false;
+        // ✅ Mantemos estornos/abatimentos (income) mesmo que marcados como isInvoicePayment
+        if (t.categoryId === 'card-payment' || (t.isInvoicePayment && t.type === 'expense') || t.deleted_at) return false;
 
-        // 3. SE ESTÁ PAGO, LIBEROU O LIMITE
-        if (t.isPaid) return false;
+        // 3. SE ESTÁ PAGO, LIBEROU O LIMITE (Apenas para despesas)
+        if (t.isPaid && t.type === 'expense') return false;
 
         // 4. Assinaturas (Spotify/Netflix) do futuro não comprometem o limite global hoje.
         const txDate = parseLocalDate(t.date.slice(0, 10));

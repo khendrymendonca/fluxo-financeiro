@@ -144,17 +144,29 @@ export function AccountsManager({
 
       if (parsedNewBalance !== currentRealBalance) {
         const diferenca = parsedNewBalance - currentRealBalance;
+        const type = diferenca > 0 ? 'income' : 'expense';
+        
+        // 🛡️ Busca categoria de ajuste ou a primeira compatível
+        let adjustmentCategoryId = categories.find(c => c.name.toLowerCase().includes('ajuste'))?.id;
+        if (!adjustmentCategoryId) {
+          adjustmentCategoryId = categories.find(c => c.type === type)?.id || categories[0]?.id;
+        }
+
+        if (!adjustmentCategoryId) {
+          toast({ title: 'Crie uma categoria primeiro', description: 'Você precisa ter pelo menos uma categoria cadastrada para ajustar o saldo.', variant: 'destructive' });
+          return;
+        }
 
         try {
           await addTransaction({
             description: 'Ajuste de Saldo',
             amount: Math.abs(diferenca),
-            type: diferenca > 0 ? 'income' : 'expense',
+            type,
             transactionType: 'adjustment',
             isPaid: true,
-            date: new Date().toISOString().split('T')[0],
+            date: todayLocalString(), // ✅ Uso de local string padronizada
             accountId: editingAccount.id,
-            categoryId: categories.length > 0 ? categories[0].id : undefined
+            categoryId: adjustmentCategoryId
           });
         } catch (error) {
           console.error('Erro ao criar ajuste:', error);

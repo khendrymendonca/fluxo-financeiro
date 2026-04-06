@@ -30,7 +30,8 @@ export function ExpenseEvolution() {
         const monthExpenses = transactions
             .filter(t => {
                 if (t.type !== 'expense') return false;
-                if (t.isInvoicePayment) return false; // ← exclui pagamentos de fatura para não dobrar
+                // ✅ Só excluímos se for PAGAMENTO real (despesa), não estorno/abatimento (income)
+                if (t.isInvoicePayment && t.type === 'expense') return false;
                 const d = parseLocalDate(t.date);
                 return d >= startOfMonth(monthDate) && d <= endOfMonth(monthDate);
             })

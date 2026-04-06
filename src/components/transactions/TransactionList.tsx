@@ -108,8 +108,9 @@ export function TransactionList({
 
   const filteredItems = displayItems
     .filter(t => {
-      // 1. Bloqueia faturas de cartão consolidadas e pagamentos de fatura
-      if (t.categoryId === 'card-payment' || t.isInvoicePayment) return false;
+      // 1. Bloqueia faturas de cartão consolidadas e pagamentos de fatura (DESPESAS)
+      // ✅ Estornos/abatimentos (income) devem ser exibidos
+      if (t.categoryId === 'card-payment' || (t.isInvoicePayment && t.type === 'expense')) return false;
 
       // 2. Bloqueia projeções virtuais — pertencem à Gestão de Contas
       if (t.isVirtual) return false;
