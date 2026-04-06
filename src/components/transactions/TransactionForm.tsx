@@ -251,8 +251,18 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       const baseDate = parseLocalDate(date);
       const installmentList: any[] = [];
 
+      if (!areInstallmentsEqual) {
+        const totalCustom = customInstallmentDates.reduce((s, x) => s + x.amount, 0);
+        if (Math.abs(totalCustom - parsedAmount) > 0.10) {
+          toast({ title: 'Valores não batem', description: `Total das parcelas (${formatCurrency(totalCustom)}) difere do valor total (${formatCurrency(parsedAmount)}).`, variant: 'destructive' });
+          return;
+        }
+      }
+
       for (let i = 0; i < count; i++) {
-        const currentInstDate = addMonths(baseDate, i);
+        const currentInstDate = (!areInstallmentsEqual && customInstallmentDates[i])
+          ? parseLocalDate(customInstallmentDates[i].date)
+          : addMonths(baseDate, i);
         const dateStr = format(currentInstDate, 'yyyy-MM-dd');
 
         // Se for cartão, consideramos pago (já que o limite é consumido)
@@ -267,7 +277,9 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
           type,
           transactionType: 'installment',
           description: `${description} (${i + 1}/${count})`,
-          amount: parseFloat((parsedAmount / count).toFixed(2)),
+          amount: !areInstallmentsEqual && customInstallmentDates[i]
+            ? customInstallmentDates[i].amount
+            : parseFloat((parsedAmount / count).toFixed(2)),
           categoryId: finalCategoryId || categoryId,
           subcategoryId: subcategoryId || undefined,
           date: dateStr,
@@ -282,11 +294,13 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         });
       }
 
-      // Ajuste de dízima na última parcela
-      const totalGenerated = installmentList.reduce((sum, inst) => sum + inst.amount, 0);
-      const diff = parseFloat((parsedAmount - totalGenerated).toFixed(2));
-      if (!Number.isNaN(diff) && Math.abs(diff) > 0.001) {
-        installmentList[count - 1].amount = parseFloat((installmentList[count - 1].amount + diff).toFixed(2));
+      // Ajuste de dízima na última parcela (apenas se forem iguais)
+      if (areInstallmentsEqual) {
+        const totalGenerated = installmentList.reduce((sum, inst) => sum + inst.amount, 0);
+        const diff = parseFloat((parsedAmount - totalGenerated).toFixed(2));
+        if (!Number.isNaN(diff) && Math.abs(diff) > 0.001) {
+          installmentList[count - 1].amount = parseFloat((installmentList[count - 1].amount + diff).toFixed(2));
+        }
       }
 
       await onSubmit(installmentList as any, undefined, applyScope);
@@ -556,7 +570,9 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Valor (R$)</Label>
+                      <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
+                        {activeTab === 'parcelamento' ? 'Valor Total da Compra (R$)' : 'Valor (R$)'}
+                      </Label>
                       <Input type="number" step="0.01" min="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="h-12 rounded-2xl border-2 font-black text-xl" required />
                     </div>
                     <div className="space-y-2">
@@ -693,12 +709,47 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label className="text-[10px] font-black uppercase text-muted-foreground">Nº Parcelas</Label>
-                          <Input type="number" value={installmentsCount} onChange={e => { setInstallmentsCount(e.target.value); setCustomInstallmentDates([]); }} min="2" className="h-10 rounded-xl" />
+                          <Input
+                            type="number"
+                            value={installmentsCount}
+                            onChange={e => {
+                              setInstallmentsCount(e.target.value);
+                              setCustomInstallmentDates([]);
+                            }}
+                            min="2"
+                            className="h-10 rounded-xl"
+                          />
                         </div>
                         <div className="flex flex-col gap-2 justify-center">
                           <div className="flex items-center justify-between">
                             <Label className="text-[10px] font-black uppercase text-muted-foreground cursor-pointer" htmlFor="equal-inst">Iguais?</Label>
-                            <input type="checkbox" id="equal-inst" checked={areInstallmentsEqual} onChange={e => setAreInstallmentsEqual(e.target.checked)} className="w-4 h-4" />
+                            <input
+                              type="checkbox"
+                              id="equal-inst"
+                              checked={areInstallmentsEqual}
+                              onChange={e => {
+                                setAreInstallmentsEqual(e.target.checked);
+                                if (!e.target.checked) {
+                                  // Inicializa customInstallmentDates com valores iguais como ponto de partida
+                                  const count = parseInt(installmentsCount) || 2;
+                                  const parsedAmount = parseFloat(amount) || 0;
+                                  const baseDate = parseLocalDate(date);
+                                  const perInstallment = parseFloat((parsedAmount / count).toFixed(2));
+                                  const list = Array.from({ length: count }, (_, i) => ({
+                                    date: format(addMonths(baseDate, i), 'yyyy-MM-dd'),
+                                    amount: perInstallment
+                                  }));
+                                  // Ajuste de dízima na última
+                                  const total = list.reduce((s, x) => s + x.amount, 0);
+                                  const diff = parseFloat((parsedAmount - total).toFixed(2));
+                                  if (Math.abs(diff) > 0.001) list[count - 1].amount = parseFloat((list[count - 1].amount + diff).toFixed(2));
+                                  setCustomInstallmentDates(list);
+                                } else {
+                                  setCustomInstallmentDates([]);
+                                }
+                              }}
+                              className="w-4 h-4"
+                            />
                           </div>
                           <div className="flex items-center justify-between">
                             <Label className="text-[10px] font-black uppercase text-muted-foreground cursor-pointer" htmlFor="fixed-pay">Data Fixa?</Label>
@@ -706,6 +757,52 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                           </div>
                         </div>
                       </div>
+
+                      {/* Editor de parcelas desiguais */}
+                      {!areInstallmentsEqual && customInstallmentDates.length > 0 && (
+                        <div className="space-y-2 animate-in fade-in duration-200">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Valores por Parcela</Label>
+                            <span className={`text-[10px] font-black ${
+                              Math.abs(customInstallmentDates.reduce((s, x) => s + x.amount, 0) - (parseFloat(amount) || 0)) < 0.01
+                                ? 'text-success' : 'text-danger'
+                            }`}>
+                              Total: {formatCurrency(customInstallmentDates.reduce((s, x) => s + x.amount, 0))}
+                              {' / '}{formatCurrency(parseFloat(amount) || 0)}
+                            </span>
+                          </div>
+                          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                            {customInstallmentDates.map((inst, i) => (
+                              <div key={i} className="flex items-center gap-2">
+                                <span className="text-[10px] font-black text-muted-foreground w-6 shrink-0">{i + 1}x</span>
+                                <input
+                                  type="date"
+                                  value={inst.date}
+                                  onChange={e => {
+                                    const updated = [...customInstallmentDates];
+                                    updated[i] = { ...updated[i], date: e.target.value };
+                                    setCustomInstallmentDates(updated);
+                                  }}
+                                  className="h-8 rounded-lg border border-input bg-background px-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary flex-1"
+                                />
+                                <div className="relative flex-1">
+                                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground">R$</span>
+                                  <input
+                                    type="number"
+                                    value={inst.amount}
+                                    onChange={e => {
+                                      const updated = [...customInstallmentDates];
+                                      updated[i] = { ...updated[i], amount: parseFloat(e.target.value) || 0 };
+                                      setCustomInstallmentDates(updated);
+                                    }}
+                                    className="h-8 rounded-lg border border-input bg-background pl-7 pr-2 text-xs font-bold w-full focus:outline-none focus:ring-2 focus:ring-primary"
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </>
