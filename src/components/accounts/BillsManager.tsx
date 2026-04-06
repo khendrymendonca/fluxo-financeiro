@@ -73,13 +73,14 @@ export function BillsManager() {
                     amount: amountValue,
                     type: isPaying.type,
                     transactionType: 'punctual',
+                    isRecurring: false,
                     date: isPaying.date,
                     isPaid: true,
                     paymentDate: paymentDate,
                     accountId: isCard ? null : targetId,
-                    cardId: isCard ? targetId : null,
+                    cardId: (isCard && !isCardInvoice) ? null : (isCard ? targetId : null),
                     isInvoicePayment: isCardInvoice,
-                    invoiceMonthYear: isCard ? finalInvoiceMonthYear : (isCardInvoice ? isPaying.invoiceMonthYear : null),
+                    invoiceMonthYear: isCardInvoice ? isPaying.invoiceMonthYear : null,
                     categoryId: isCardInvoice ? 'card-payment' : isPaying.categoryId,
                     subcategoryId: isCardInvoice ? undefined : isPaying.subcategoryId,
                     originalId: isPaying.originalId
@@ -165,15 +166,16 @@ export function BillsManager() {
     }, [creditCards, transactions, viewDate]);
 
     // 2. Filtrar transações recorrentes e injetar as virtuais
-    const recurringTransactions = [...currentMonthTransactions, ...virtualInvoices].filter(t => {
+    const recurringTransactions = [...transactions, ...virtualInvoices].filter(t => {
         // Bloqueio de Isolamento: O Gerenciador de Contas não deve vazar lançamentos "pontuais".
-        const isRecurringType = t.isRecurring || t.transactionType === 'recurring' || t.transactionType === 'installment' || t.categoryId === 'card-payment';
+        const isRecurringType = t.isRecurring || t.transactionType === 'recurring' || t.transactionType === 'installment' || t.categoryId === 'card-payment' || !!t.originalId;
         if (!t.isVirtual && !isRecurringType) {
             return false;
         }
 
         // Esconder compras individuais feitas no cartão de crédito (estas são liquidadas via fatura)
-        if (t.cardId && t.categoryId !== 'card-payment') return false;
+        // Mas permite se for uma transação recorrente (fixa) ou filha de uma recorrente
+        if (t.cardId && t.categoryId !== 'card-payment' && !t.isRecurring && t.transactionType !== 'recurring' && !t.originalId) return false;
 
         const txDate = parseLocalDate(t.date.slice(0, 10));
         

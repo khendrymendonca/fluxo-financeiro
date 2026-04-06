@@ -45,10 +45,10 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
           const virtualDate = new Date(targetYear, targetMonth, safeDay);
 
           // Deduplicação: Não projetamos se já houver uma transação REAL neste mês 
-          // que seja filha desta recorrente
+          // que seja filha desta recorrente ou a própria recorrente original neste mês
           const hasRealEquivalent = realTransactions.some(real =>
             real.originalId === tx.id ||
-            real.id === tx.id
+            (real.id === tx.id && isSameMonth(parseLocalDate(real.date.slice(0, 10)), viewDate))
           );
 
           if (!hasRealEquivalent) {
@@ -77,7 +77,10 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
 
           if (!hasMoreRecentInPast) {
             const hasGroupInTargetMonth = realTransactions.some(real => real.installmentGroupId === tx.installmentGroupId);
-            const hasRealEquivalent = realTransactions.some(real => real.originalId === tx.id || real.id === tx.id);
+            const hasRealEquivalent = realTransactions.some(real => 
+              real.originalId === tx.id || 
+              (real.id === tx.id && isSameMonth(parseLocalDate(real.date.slice(0, 10)), viewDate))
+            );
 
             if (!hasGroupInTargetMonth && !hasRealEquivalent) {
               const originalDay = txDate.getDate();
@@ -110,7 +113,10 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
         const matchesDate = isSameMonth(txDate, viewDate) && targetYear === txDate.getFullYear();
         
         // Se tem invoiceMonthYear, verificamos se ele também bate com o mês alvo (para Cartão de Crédito)
-        if (tx.cardId && tx.invoiceMonthYear) {
+        // 🛡️ TRAVA: Apenas para transações PONTUAIS ou PARCELAS REAIS. 
+        // Transações recorrentes mestres (fixas) não devem ser puxadas para o mês real pelo invoiceMonthYear, 
+        // pois elas devem ser projetadas como virtuais para manter a integridade da série.
+        if (tx.cardId && tx.invoiceMonthYear && !isRecurring) {
           const [y, m] = tx.invoiceMonthYear.split('-').map(Number);
           const matchesInvoice = (m - 1 === targetMonth && y === targetYear);
           return matchesDate || matchesInvoice;
