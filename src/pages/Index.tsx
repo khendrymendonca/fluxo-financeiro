@@ -690,6 +690,7 @@ export default function Index() {
 
       {showGoalForm && (
         <GoalForm
+          key={editingGoal?.id || 'new'}
           initialData={editingGoal}
           onSubmit={async (goal) => {
             if (editingGoal) await updateSavingsGoal({ id: editingGoal.id, updates: goal });

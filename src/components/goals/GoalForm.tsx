@@ -64,22 +64,6 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
   const [selectedIcon, setSelectedIcon] = useState(initialData?.icon || 'Rocket');
   const [selectedColor, setSelectedColor] = useState(initialData?.color || APP_COLORS[0]);
 
-  // Garantir população de dados no modo edição
-  useEffect(() => {
-    if (initialData) {
-      setName(initialData.name || '');
-      setPurpose(initialData.purpose || '');
-      setDreamStartDate(initialData.dreamStartDate || '');
-      setItems(initialData.items || []);
-      setCurrentAmount(initialData.currentAmount?.toString() || '0');
-      setDeadline(initialData.deadline || '');
-      setSelectedIcon(initialData.icon || 'Rocket');
-      setSelectedColor(initialData.color || APP_COLORS[0]);
-      setProjectType(initialData.projectType || 'projeto');
-      setStep(2);
-    }
-  }, [initialData]);
-
   const targetAmount = items.reduce((acc, item) => acc + item.value, 0);
   const creditLimitNeeded = items
     .filter(item => item.paymentMethod === 'credit')
@@ -137,7 +121,7 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/20 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-foreground/20 backdrop-blur-sm">
       <div className="bg-card rounded-[2.5rem] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col animate-scale-in border border-border">
 
         {/* Header */}
