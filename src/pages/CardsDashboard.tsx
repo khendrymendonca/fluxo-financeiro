@@ -6,6 +6,7 @@ import { CreditCardVisual } from "@/components/cards/CreditCardVisual";
 import { AddCardDialog } from "@/components/cards/AddCardDialog";
 import { EditCardDialog } from "@/components/cards/EditCardDialog";
 import { AnticipateInstallmentsDialog } from "@/components/cards/AnticipateInstallmentsDialog";
+import { AnticipatePaymentDialog } from "@/components/cards/AnticipatePaymentDialog";
 import { Button } from "@/components/ui/button";
 import { Portal } from "@/components/ui/Portal";
 import { Progress } from "@/components/ui/progress";
@@ -92,6 +93,8 @@ export default function CardsDashboard() {
   const [showAddCard, setShowAddCard] = useState(false);
   const [showEditCard, setShowEditCard] = useState(false);
   const [showPayInvoice, setShowPayInvoice] = useState(false);
+  const [showAnticipatePayment, setShowAnticipatePayment] = useState(false);
+  const [selectedCardForAnticipation, setSelectedCardForAnticipation] = useState<any>(null);
   
   // Pay Invoice State
   const [payInvoiceAccountId, setPayInvoiceAccountId] = useState<string>("");
@@ -490,9 +493,19 @@ export default function CardsDashboard() {
                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Gastos</p>
                     <p className="text-2xl font-black tabular-nums text-foreground">{fmtBRL(currentInvoiceTotal)}</p>
                   </div>
-                  <div className="bg-card border border-border rounded-2xl p-5">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Disponível</p>
-                    <p className="text-2xl font-black tabular-nums text-foreground">{fmtBRL(stats.available)}</p>
+                  <div className="bg-card border border-border rounded-2xl p-5 relative group">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Disponível</p>
+                        <p className="text-2xl font-black tabular-nums text-foreground">{fmtBRL(stats.available)}</p>
+                      </div>
+                      <button
+                        onClick={() => setShowAnticipatePayment(true)}
+                        className="px-3 py-1.5 rounded-xl border border-border text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all duration-300"
+                      >
+                        Abater Fatura
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -763,9 +776,19 @@ export default function CardsDashboard() {
                   <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Gastos</p>
                   <p className="text-xl font-black tabular-nums text-foreground">{fmtBRL(currentInvoiceTotal)}</p>
                 </div>
-                <div className="bg-card border border-border rounded-2xl p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Disponível</p>
-                  <p className="text-xl font-black tabular-nums text-foreground">{fmtBRL(stats.available)}</p>
+                <div className="bg-card border border-border rounded-2xl p-4 relative group">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Disponível</p>
+                      <p className="text-xl font-black tabular-nums text-foreground">{fmtBRL(stats.available)}</p>
+                    </div>
+                    <button
+                      onClick={() => setShowAnticipatePayment(true)}
+                      className="px-2 py-1 rounded-lg border border-border text-[8px] font-black uppercase tracking-widest text-muted-foreground"
+                    >
+                      Abater
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -962,6 +985,17 @@ export default function CardsDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Anticipate Payment Dialog */}
+      {showAnticipatePayment && selectedCard && (
+        <Portal>
+          <AnticipatePaymentDialog
+            card={selectedCard}
+            isOpen={showAnticipatePayment}
+            onClose={() => setShowAnticipatePayment(false)}
+          />
+        </Portal>
       )}
     </div>
   );

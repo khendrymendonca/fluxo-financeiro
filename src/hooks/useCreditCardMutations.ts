@@ -3,6 +3,9 @@ import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { CreditCard } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
+import { parseISO } from 'date-fns';
+import { calcInvoiceMonthYear } from '@/utils/creditCardUtils';
+import { anticipateCardPayment } from '@/services/transactionService';
 
 // --- 1. ADICIONAR CARTÃO DE CRÉDITO ---
 export function useAddCreditCard() {
@@ -107,6 +110,37 @@ export function useDeleteCreditCard() {
     onError: (err) => {
       console.error('Erro ao remover cartão:', err);
       toast({ title: 'Erro ao remover cartão', variant: 'destructive' });
+    }
+  });
+}
+
+// --- 4. ABATER/ADIANTAR PAGAMENTO DE FATURA ---
+export function useAnticipateCardPayment() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (params: { cardId: string, accountId: string, amount: number, date: string }) => {
+      if (!user) throw new Error('Utilizador não autenticado');
+      
+      const result = await anticipateCardPayment({
+        ...params,
+        userId: user.id
+      });
+      
+      if (!result.success) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+      queryClient.invalidateQueries({ queryKey: ['bills'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      toast({ title: 'Abatimento processado com sucesso!' });
+    },
+    onError: (err: any) => {
+      console.error('Erro ao processar abatimento:', err);
+      toast({ title: err.message || 'Erro ao processar abatimento', variant: 'destructive' });
     }
   });
 }
