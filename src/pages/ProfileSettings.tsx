@@ -145,7 +145,6 @@ export function ProfileSettings() {
     };
 
     const availableShortcuts: { id: ShortcutId; label: string; icon: any }[] = [
-        { id: 'dashboard', label: 'Início', icon: LayoutDashboard },
         { id: 'transactions', label: 'Lançamentos', icon: ArrowUpDown },
         { id: 'cards', label: 'Cartões', icon: CreditCard },
         { id: 'bills', label: 'Fixas', icon: Receipt },

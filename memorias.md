@@ -18,11 +18,11 @@ Privacidade Absoluta: Os cartões NÃO devem exibir números fictícios (como '0
 Texturas Premium: Cartões suportam acabamentos visuais (texture: solid, black) aplicados via CSS (mix-blend-mode e gradientes) sobre a cor base.
 
 3. Navegação Mobile Customizável
-Menu Orbital Semicircular (FAB): A barra inferior linear foi substituída por um menu flutuante semicircular. O usuário personaliza seus atalhos (até 13 opções) que orbitam ao redor do FAB principal. O menu utiliza glassmorphism (dark glass) e animações em cascata, priorizando a ergonomia do polegar e a limpeza visual.
+Menu Orbital Semicircular (FAB): Substitui a barra linear inferior. Utiliza geometria de arco superior (160° a 20°), mantendo os itens sempre visíveis na área útil da tela. Ícone gatilho unificado (LayoutGrid) com indicador de status. Design baseado em glassmorphism dark e animações de escala com stagger.
 
-Botão Home Estratégico: Como o FAB foca em atalhos dinâmicos, o retorno à Dashboard (Home) é garantido por um botão fixo no canto superior esquerdo do Header Mobile, visível em todas as telas exceto na própria Dashboard.
+Botão Home Estratégico: Retorno à Dashboard via botão fixo no Header Mobile (visível em todas as telas exceto Home).
 
-Menu Lateral (Drawer): O menu lateral esquerdo atua como 'cofre de segurança' da navegação, contendo SEMPRE todas as rotas do aplicativo, imune à personalização do menu orbital.
+Menu Lateral (Drawer): Fonte da verdade absoluta de navegação, contendo todas as rotas do app.
 
 4. Motor de Lançamentos e Projeções
 Segregação de Responsabilidades (Pagamentos): A tela de 'Lançamentos' funciona apenas como um Extrato (Read-only para status). É estritamente proibido dar baixa (pagar) em contas fixas ou projeções por esta tela. A alteração do status isPaid de contas recorrentes/parceladas é exclusividade da tela 'Gestão de Contas'.
@@ -159,5 +159,6 @@ Data	Arquivo	Mudança
 01/04/2026	CardsDashboard.tsx	Corrigido bug de abatimentos: Filtro de transações da fatura ajustado para incluir créditos/estornos (income) mesmo se marcados como isInvoicePayment, garantindo o cálculo correto do total da fatura.
 06/04/2026	Projeto Global	Correção Estrutural de Abatimentos: Refatorados `CardsDashboard.tsx`, `useCreditCardMetrics.ts`, `useFinanceStore.tsx`, `TransactionList.tsx` e `AccountEvolution.tsx`. A nova regra global garante que transações de "Crédito/Estorno" (tipo `income`) não sejam excluídas dos cálculos de fatura e limite (mesmo se marcadas como `isInvoicePayment`), permitindo que abatimentos reduzam corretamente os totais de gastos e o limite consumido.
 07/04/2026	Projeto Global	Substituição global de tamanhos de fonte críticos (8px, 9px, 10px) por padrões legíveis (11px e text-xs/12px) em todo o diretório `src/` para conformidade com acessibilidade e legibilidade mínima.
+08/04/2026	ProfileSettings.tsx / FloatingNavMenu.tsx	Remoção do item "Início" do menu de escolha de atalhos mobile e refatoração estética do FAB orbital (geometria de arco superior 160° a 20°) para melhor ergonomia e visual "Quiet Luxury".
 
 Nota do Tech Lead: Este documento deve ser usado como contexto base em todos os prompts futuros que envolvam UI ou regras de negócio. Evitar refatorações gráficas e preservar filosofia de "Quiet Luxury" minimalista sem ruídos em cores ou blocos de grid.
