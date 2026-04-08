@@ -53,6 +53,7 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
     .filter(item => !!item.icon);
 
   // Geometria aprimorada: Arco Superior centralizado (180° a 0°)
+  // O centro do botão central de 64px está a 32px do fundo do container.
   const RADIUS = 100;
   const START_ANGLE = 180; // Totalmente à esquerda
   const END_ANGLE = 0;     // Totalmente à direita
@@ -90,10 +91,11 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
               className="absolute"
               style={{
                 left: `calc(50% + ${x}px)`,
-                bottom: `calc(32px + ${y}px)`,
-                // A animação scaleInOrbital agora lida com o translate(-50%, -24px)
-                // -50% centraliza horizontalmente (botão + label)
-                // -24px sobe o container para que o CENTRO do botão (48px) fique no ponto (x,y)
+                // Posicionamento Centralizado Verticalmente:
+                // 32px é o centro do botão Plus de 64px.
+                // Subtraímos 46px (offset empírico para que o CENTRO do ícone orbital 
+                // fique alinhado ao centro do Plus quando y=0).
+                bottom: `calc(32px + ${y}px - 46px)`,
                 animation: `scaleInOrbital 250ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards ${index * 40}ms`,
                 opacity: 0,
               }}
