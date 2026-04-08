@@ -97,8 +97,8 @@ export function ProfileSettings() {
         if (shortcuts.includes(id)) {
             newShortcuts = shortcuts.filter(s => s !== id);
         } else {
-            if (shortcuts.length >= 5) {
-                toast.error('Máximo de 5 atalhos permitidos');
+            if (shortcuts.length >= 4) {
+                toast.error('Máximo de 4 atalhos permitidos');
                 return;
             }
             newShortcuts = [...shortcuts, id];
@@ -237,11 +237,11 @@ export function ProfileSettings() {
                             </div>
                             <div>
                                 <h2 className="text-xl font-bold">Menu Inferior (Mobile)</h2>
-                                <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Escolha até 5 atalhos para sua barra de navegação</p>
+                                <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Escolha até 4 atalhos para sua barra de navegação</p>
                             </div>
                         </div>
                         <div className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-black uppercase">
-                            {shortcuts.length}/5
+                            {shortcuts.length}/4
                         </div>
                     </div>
 

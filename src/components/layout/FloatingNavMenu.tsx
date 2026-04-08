@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, LayoutGrid } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMobileShortcuts, ShortcutId } from '@/hooks/useMobileShortcuts';
 import {
@@ -54,8 +54,8 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
 
   // Geometria aprimorada: Arco Superior centralizado
   const RADIUS = 100;
-  const START_ANGLE = 160; 
-  const END_ANGLE = 20;    
+  const START_ANGLE = 150; 
+  const END_ANGLE = 30;    
 
   return (
     <>
@@ -90,7 +90,7 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
               className="absolute flex flex-col items-center gap-1.5"
               style={{
                 left: `calc(50% + ${x}px - 24px)`,
-                bottom: `calc(28px + ${y}px - 24px)`,
+                bottom: `calc(32px + ${y}px - 24px)`,
                 animation: `scaleIn 250ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards ${index * 40}ms`,
                 opacity: 0,
               }}
@@ -129,7 +129,7 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
             'flex items-center justify-center transition-all duration-500',
             'shadow-[0_20px_50px_rgba(0,0,0,0.4)] active:scale-95',
             isOpen 
-              ? 'bg-zinc-100 text-zinc-900 rotate-90' 
+              ? 'bg-zinc-100 text-zinc-900 rotate-45' 
               : 'bg-zinc-900 text-white hover:bg-zinc-800'
           )}
           aria-label={isOpen ? 'Fechar menu' : 'Abrir menu de navegação'}
@@ -138,7 +138,7 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
             <X className="w-7 h-7" />
           ) : (
             <div className="relative">
-              <LayoutGrid className="w-7 h-7" />
+              <Plus className="w-7 h-7" />
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-zinc-900" />
             </div>
           )}
