@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { X, Calendar, CreditCard, RotateCw, Coins, Check, ChevronsUpDown, Trash2, ArrowRightLeft, TrendingUp, TrendingDown, Wallet, ArrowUpCircle, ArrowDownCircle, Info, Percent } from 'lucide-react';
+import { X, Calendar, CreditCard, Loader2, Coins, Check, ChevronsUpDown, Trash2, ArrowRightLeft, TrendingUp, TrendingDown, Wallet, ArrowUpCircle, ArrowDownCircle, Info, Percent, RotateCw } from 'lucide-react';
 import { format, addMonths } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,7 +74,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [transferFrom, setTransferFrom] = useState('');
   const [transferTo, setTransferTo] = useState('');
   const [transferToType, setTransferToType] = useState<'account' | 'card'>('account');
-  const [transferDescription, setTransferDescription] = useState('Transfer�ncia entre contas');
+  const [transferDescription, setTransferDescription] = useState('Transferência entre contas');
 
   // Reference for Editing
   const [invoiceReference, setInvoiceReference] = useState(() => {
@@ -92,7 +92,6 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [pendingAmount, setPendingAmount] = useState<number | null>(null);
 
   const {
-    debts,
     categories,
     subcategories,
     transferBetweenAccounts,
@@ -123,8 +122,8 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         setActiveTab('parcelamento');
         setInstallmentsCount(initialData.installmentTotal?.toString() || '2');
       } else if (initialData.debtId) {
-        // Agora d�vidas s�o gerenciadas apenas no DebtsManager, 
-        // mas marcamos como pontual se vier algo com debtId para n�o quebrar.
+        // Agora dívidas são gerenciadas apenas no DebtsManager, 
+        // mas marcamos como pontual se vier algo com debtId para não quebrar.
         setActiveTab('pontual');
       } else {
         setActiveTab('pontual');
@@ -152,12 +151,12 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       }
 
       if (errors.length > 0) {
-        toast({ title: 'Campos obrigat�rios', description: `Preencha: ${errors.join(', ')}`, variant: 'destructive' });
+        toast({ title: 'Campos obrigatórios', description: `Preencha: ${errors.join(', ')}`, variant: 'destructive' });
         return;
       }
 
       if (transferFrom === transferTo && transferToType === 'account') {
-        toast({ title: 'Origem e destino n�o podem ser iguais', variant: 'destructive' });
+        toast({ title: 'Origem e destino não podem ser iguais', variant: 'destructive' });
         return;
       }
 
@@ -178,7 +177,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     }
 
     const errors: string[] = [];
-    if (!description) errors.push('Descrio');
+    if (!description) errors.push('Descrição');
     if (!amount || parseFloat(String(amount)) <= 0) {
       toast({
         title: "Valor inválido",
@@ -191,11 +190,11 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     
     const isRecurringTab = activeTab === 'fixo' || activeTab === 'renda_fixa';
     if (!isRecurringTab && paymentMethod === 'account' && !accountId) errors.push('Conta');
-    if (!isRecurringTab && paymentMethod === 'card' && !cardId) errors.push('Cart�o');
+    if (!isRecurringTab && paymentMethod === 'card' && !cardId) errors.push('Cartão');
 
     if (errors.length > 0) {
       toast({
-        title: 'Campos obrigat�rios',
+        title: 'Campos obrigatórios',
         description: `Preencha: ${errors.join(', ')}`,
         variant: 'destructive'
       });
@@ -204,12 +203,12 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
     let finalCategoryId = categoryId;
     if (activeTab === 'renda_fixa' && !categoryId) {
-      const salaryCat = categories.find(c => c.name.toLowerCase().includes('sal�rio') || c.name.toLowerCase().includes('renda'));
+      const salaryCat = categories.find(c => c.name.toLowerCase().includes('salário') || c.name.toLowerCase().includes('renda'));
       const firstIncomeCat = categories.find(c => c.type === 'income');
       finalCategoryId = salaryCat?.id || firstIncomeCat?.id || '';
 
       if (!finalCategoryId) {
-        toast({ title: 'Erro de Categoria', description: 'Nenhuma categoria de receita encontrada. Crie uma em Configura��es.', variant: 'destructive' });
+        toast({ title: 'Erro de Categoria', description: 'Nenhuma categoria de receita encontrada. Crie uma em Configurações.', variant: 'destructive' });
         return;
       }
     }
@@ -258,7 +257,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       ? calcInvoiceMonthYear(parseLocalDate(date), { closingDay: selectedCard.closingDay, dueDay: selectedCard.dueDay })
       : undefined;
 
-    // --- L�GICA DE PARCELAMENTO (BULK) ---
+    // --- LÓGICA DE PARCELAMENTO (BULK) ---
     if (activeTab === 'parcelamento' && !initialData) {
       const count = parseInt(installmentsCount) || 2;
       const groupId = crypto.randomUUID();
@@ -268,7 +267,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       if (!areInstallmentsEqual) {
         const totalCustom = customInstallmentDates.reduce((s, x) => s + x.amount, 0);
         if (Math.abs(totalCustom - parsedAmount) > 0.10) {
-          toast({ title: 'Valores n�o batem', description: `Total das parcelas (${formatCurrency(totalCustom)}) difere do valor total (${formatCurrency(parsedAmount)}).`, variant: 'destructive' });
+          toast({ title: 'Valores não batem', description: `Total das parcelas (${formatCurrency(totalCustom)}) difere do valor total (${formatCurrency(parsedAmount)}).`, variant: 'destructive' });
           return;
         }
       }
@@ -279,8 +278,8 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
           : addMonths(baseDate, i);
         const dateStr = format(currentInstDate, 'yyyy-MM-dd');
 
-        // Se for cart�o, consideramos pago (j� que o limite � consumido)
-        // Se n�o for cart�o, marcamos como pago apenas se a data for hoje ou passada
+        // Se for cartão, consideramos pago (já que o limite é consumido)
+        // Se não for cartão, marcamos como pago apenas se a data for hoje ou passada
         const instIsPaid = paymentMethod === 'card' ? true : isDateTodayOrPast(dateStr);
 
         const invoiceMonthYear = (paymentMethod === 'card' && selectedCard)
@@ -308,7 +307,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         });
       }
 
-      // Ajuste de d�zima na �ltima parcela (apenas se forem iguais)
+      // Ajuste de dízima na última parcela (apenas se forem iguais)
       if (areInstallmentsEqual) {
         const totalGenerated = installmentList.reduce((sum, inst) => sum + inst.amount, 0);
         const diff = parseFloat((parsedAmount - totalGenerated).toFixed(2));
@@ -322,7 +321,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       return;
     }
 
-    // --- L�GICA PONTUAL OU RECORRENTE ---
+    // --- LÓGICA PONTUAL OU RECORRENTE ---
     const isPaidFinal = initialData ? isPaidLocally : (activeTab === 'pontual' ? isDateTodayOrPast(date) : false);
     const isRecurring = Boolean(activeTab === 'fixo' || activeTab === 'renda_fixa');
 
@@ -397,21 +396,21 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const renderStep2 = () => {
     const options = type === 'income'
       ? [
-        { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Recebi hoje ou em data �nica.' },
-        { id: 'renda_fixa', label: 'Renda Fixa', icon: RotateCw, desc: 'Sal�rio ou renda mensal autom�tica.' },
-        { id: 'transfer', label: 'Transfer�ncia', icon: ArrowRightLeft, desc: 'Mover dinheiro entre contas.' },
+        { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Recebi hoje ou em data única.' },
+        { id: 'renda_fixa', label: 'Renda Fixa', icon: RotateCw, desc: 'Salário ou renda mensal automática.' },
+        { id: 'transfer', label: 'Transferência', icon: ArrowRightLeft, desc: 'Mover dinheiro entre contas.' },
       ]
       : [
-        { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Compra � vista no d�bito ou dinheiro.' },
-        { id: 'parcelamento', label: 'Parcelado', icon: CreditCard, desc: 'Compra no cart�o de cr�dito.' },
-        { id: 'fixo', label: 'Fixo', icon: RotateCw, desc: 'Contas que repetem todo m�s.' },
-        { id: 'transfer', label: 'Transfer�ncia', icon: ArrowRightLeft, desc: 'Mover entre contas ou pagar cart�o.' },
+        { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Compra à vista no débito ou dinheiro.' },
+        { id: 'parcelamento', label: 'Parcelado', icon: CreditCard, desc: 'Compra no cartão de crédito.' },
+        { id: 'fixo', label: 'Fixo', icon: RotateCw, desc: 'Contas que repetem todo mês.' },
+        { id: 'transfer', label: 'Transferência', icon: ArrowRightLeft, desc: 'Mover entre contas ou pagar cartão.' },
       ];
 
     return (
       <div className="p-6 space-y-4 animate-in fade-in slide-in-from-right duration-300">
         <div className="flex items-center gap-2 mb-2">
-          <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_TYPE')} className="rounded-xl text-xs font-bold uppercase tracking-tighter">? Voltar</Button>
+          <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_TYPE')} className="rounded-xl text-xs font-bold uppercase tracking-tighter">← Voltar</Button>
           <span className={cn("text-xs font-black uppercase px-2 py-0.5 rounded-md", type === 'income' ? "bg-success/10 text-success" : "bg-danger/10 text-danger")}>
             {type === 'income' ? 'Receita' : 'Despesa'} selecionada
           </span>
@@ -448,14 +447,14 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         <div className="flex items-center justify-between p-6 border-b border-border bg-muted/5">
           <div>
             <h2 className="text-xl font-extrabold tracking-tight">
-              {step === 'SELECT_TYPE' ? 'O que deseja lan�ar?' :
-                step === 'SELECT_SUBTYPE' ? 'Qual o tipo de lan�amento?' :
-                  initialData ? 'Editar Lan�amento' : 'Detalhes do Lan�amento'}
+              {step === 'SELECT_TYPE' ? 'O que deseja lançar?' :
+                step === 'SELECT_SUBTYPE' ? 'Qual o tipo de lançamento?' :
+                  initialData ? 'Editar Lançamento' : 'Detalhes do Lançamento'}
             </h2>
             <p className="text-xs text-muted-foreground font-medium">
-              {step === 'SELECT_TYPE' ? 'Selecione a natureza da transa��o.' :
-                step === 'SELECT_SUBTYPE' ? 'Escolha como este valor ser� processado.' :
-                  'Preencha as informa��es para concluir.'}
+              {step === 'SELECT_TYPE' ? 'Selecione a natureza da transação.' :
+                step === 'SELECT_SUBTYPE' ? 'Escolha como este valor será processado.' :
+                  'Preencha as informações para concluir.'}
             </p>
           </div>
           <button onClick={onClose} className="p-2.5 rounded-2xl hover:bg-muted transition-colors text-muted-foreground">
@@ -479,17 +478,17 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                   <div>
                     <p className="text-xs font-black uppercase tracking-widest opacity-50">{type === 'income' ? 'RECEITA' : 'DESPESA'}</p>
                     <p className="text-sm font-black flex items-center gap-2">
-                      {activeTab === 'pontual' && 'Lan�amento Pontual'}
-                      {activeTab === 'parcelamento' && 'Lan�amento Parcelado'}
-                      {activeTab === 'fixo' && 'Lan�amento Fixo'}
-                      {activeTab === 'transfer' && 'Transfer�ncia'}
+                      {activeTab === 'pontual' && 'Lançamento Pontual'}
+                      {activeTab === 'parcelamento' && 'Lançamento Parcelado'}
+                      {activeTab === 'fixo' && 'Lançamento Fixo'}
+                      {activeTab === 'transfer' && 'Transferência'}
                       {activeTab === 'renda_fixa' && 'Rendimento'}
-                      {initialData?.isVirtual && <span className="text-[11px] bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded uppercase tracking-tighter">Proje��o</span>}
+                      {initialData?.isVirtual && <span className="text-[11px] bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded uppercase tracking-tighter">Projeção</span>}
                     </p>
                   </div>
                 </div>
                 {initialData?.isVirtual ? (
-                  <Button variant="ghost" size="sm" disabled className="text-xs font-bold uppercase opacity-50" title="Altere a transa��o original para mudar o tipo estrutural">Bloqueado</Button>
+                  <Button variant="ghost" size="sm" disabled className="text-xs font-bold uppercase opacity-50" title="Altere a transação original para mudar o tipo estrutural">Bloqueado</Button>
                 ) : (
                   <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_SUBTYPE')} disabled={isPending} className="text-xs font-bold uppercase">Alterar</Button>
                 )}
@@ -533,7 +532,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                         <button type="button" onClick={() => { setTransferToType('account'); setTransferTo(''); }}
                           className={cn("px-3 py-1 text-xs font-bold rounded-md transition-all", transferToType === 'account' ? "bg-card shadow-sm" : "text-muted-foreground")}>Conta</button>
                         <button type="button" onClick={() => { setTransferToType('card'); setTransferTo(''); }}
-                          className={cn("px-3 py-1 text-xs font-bold rounded-md transition-all", transferToType === 'card' ? "bg-card shadow-sm" : "text-muted-foreground")}>Cart�o</button>
+                          className={cn("px-3 py-1 text-xs font-bold rounded-md transition-all", transferToType === 'card' ? "bg-card shadow-sm" : "text-muted-foreground")}>Cartão</button>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -577,9 +576,9 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 <>
                   <div className="space-y-2">
                     <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
-                      {activeTab === 'renda_fixa' ? 'Nome da Renda' : 'Descri��o'}
+                      {activeTab === 'renda_fixa' ? 'Nome da Renda' : 'Descrição'}
                     </Label>
-                    <Input value={description} onChange={e => setDescription(e.target.value)} placeholder={type === 'income' ? "Ex: Sal�rio" : "Ex: Supermercado"} className="h-12 rounded-2xl border-2 font-bold" required />
+                    <Input value={description} onChange={e => setDescription(e.target.value)} placeholder={type === 'income' ? "Ex: Salário" : "Ex: Supermercado"} className="h-12 rounded-2xl border-2 font-bold" required />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -591,7 +590,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
-                        {activeTab === 'renda_fixa' ? 'Dia do Cr�dito' : 'Data'}
+                        {activeTab === 'renda_fixa' ? 'Dia do Crédito' : 'Data'}
                       </Label>
                       <Input type="date" value={date?.split('T')[0] || ''} onChange={e => { setDate(e.target.value); setInvoiceReference(e.target.value.slice(0, 7)); }} className="h-12 rounded-2xl border-2" required />
                     </div>
@@ -663,7 +662,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     </div>
                   )}
 
-                  {/* Account / Card Selection - Apenas para N�o Recorrentes */}
+                  {/* Account / Card Selection - Apenas para Não Recorrentes */}
                   {activeTab !== 'fixo' && activeTab !== 'renda_fixa' && (
                     <div className="space-y-3">
                       <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">
@@ -678,7 +677,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                         <button type="button" onClick={() => setPaymentMethod('card')}
                           className={cn("flex-1 py-3 px-4 rounded-2xl font-bold text-sm transition-all border-2 flex items-center justify-center gap-2",
                             paymentMethod === 'card' ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted/50 border-transparent text-muted-foreground")}>
-                          <CreditCard className="w-4 h-4" /> Cart�o
+                          <CreditCard className="w-4 h-4" /> Cartão
                         </button>
                       </div>
 
@@ -712,8 +711,8 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 flex gap-3">
                       <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                       <div className="space-y-1">
-                        <p className="text-xs font-bold text-primary">Automa��o Ativa</p>
-                        <p className="text-xs text-primary/70 leading-tight">Esta renda ser� lan�ada automaticamente na sua carteira todo m�s no dia selecionado. Voc� poder� editar o valor a qualquer momento.</p>
+                        <p className="text-xs font-bold text-primary">Automação Ativa</p>
+                        <p className="text-xs text-primary/70 leading-tight">Esta renda será lançada automaticamente na sua carteira todo mês no dia selecionado. Você poderá editar o valor a qualquer momento.</p>
                       </div>
                     </div>
                   )}
@@ -722,7 +721,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     <div className="space-y-4 border-t border-border pt-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-xs font-black uppercase text-muted-foreground">N� Parcelas</Label>
+                          <Label className="text-xs font-black uppercase text-muted-foreground">Nº Parcelas</Label>
                           <Input
                             type="number"
                             value={installmentsCount}
@@ -753,7 +752,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                                     date: format(addMonths(baseDate, i), 'yyyy-MM-dd'),
                                     amount: perInstallment
                                   }));
-                                  // Ajuste de d�zima na �ltima
+                                  // Ajuste de dízima na última
                                   const total = list.reduce((s, x) => s + x.amount, 0);
                                   const diff = parseFloat((parsedAmount - total).toFixed(2));
                                   if (Math.abs(diff) > 0.001) list[count - 1].amount = parseFloat((list[count - 1].amount + diff).toFixed(2));
@@ -822,28 +821,28 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 </>
               )}
 
-              {/* Alcance da Atualiza��o / Exclus�o */}
+              {/* Alcance da Atualização / Exclusão */}
               {(initialData?.installmentGroupId || initialData?.isRecurring) && (
                 <div className="flex flex-col gap-2 p-4 bg-primary/5 rounded-2xl border border-primary/20 animate-in fade-in zoom-in duration-300">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="p-1.5 rounded-lg bg-primary text-primary-foreground">
                       <RotateCw className="w-3 h-3" />
                     </div>
-                    <Label className="text-xs font-black uppercase tracking-widest text-primary">Alcance da Altera��o / Exclus�o</Label>
+                    <Label className="text-xs font-black uppercase tracking-widest text-primary">Alcance da Alteração / Exclusão</Label>
                   </div>
                   <select
                     className="h-11 rounded-xl border-2 border-primary/20 bg-background px-3 text-xs font-bold focus:ring-2 focus:ring-primary outline-none transition-all cursor-pointer hover:border-primary/40"
                     value={applyScope}
                     onChange={e => setApplyScope(e.target.value as any)}
                   >
-                    <option value="this">Somente este lan�amento</option>
+                    <option value="this">Somente este lançamento</option>
                     <option value="future">Este e todos os futuros</option>
                     <option value="all">Todo o grupo (todos os meses)</option>
                   </select>
                   <p className="text-[11px] text-primary/60 font-medium leading-tight px-1">
-                    {applyScope === 'this' ? 'A altera��o afetar� apenas o m�s selecionado.' :
-                      applyScope === 'future' ? 'A altera��o ser� replicada para os pr�ximos meses.' :
-                        'A altera��o ser� aplicada em todo o hist�rico deste lan�amento.'}
+                    {applyScope === 'this' ? 'A alteração afetará apenas o mês selecionado.' :
+                      applyScope === 'future' ? 'A alteração será replicada para os próximos meses.' :
+                        'A alteração será aplicada em todo o histórico deste lançamento.'}
                   </p>
                 </div>
               )}
@@ -854,13 +853,13 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                   type === 'income' ? "bg-success hover:bg-success/90 shadow-success/20" : "bg-danger hover:bg-danger/90 shadow-danger/20")}>
                   {isPending ? (
                     <div className="flex items-center gap-2">
-                      <RotateCw className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-5 h-5 animate-spin" />
                       <span>Processando...</span>
                     </div>
                   ) : (
-                    initialData ? 'Salvar Altera��es' :
+                    initialData ? 'Salvar Alterações' :
                       activeTab === 'renda_fixa' ? 'Confirmar Renda Fixa' :
-                        activeTab === 'transfer' ? 'Confirmar Transfer�ncia' : 'Concluir Lan�amento'
+                        activeTab === 'transfer' ? 'Confirmar Transferência' : 'Concluir Lançamento'
                   )}
                 </Button>
 
@@ -888,5 +887,3 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     </div>
   );
 }
-
-
