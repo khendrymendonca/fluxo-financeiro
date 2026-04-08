@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
 
+// UTF-8 Integrity Check: √Å√©√≠√≥√∫ √á √±
 export default function AuthPage() {
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
@@ -35,7 +36,7 @@ export default function AuthPage() {
                 if (error) throw error;
                 toast({
                     title: "Verifique seu email",
-                    description: "Enviamos um link de confirmaÁ„o para vocÍ.",
+                    description: "Enviamos um link de confirma√ß√£o para voc√™.",
                 });
             } else {
                 const { error } = await supabase.auth.signInWithPassword({
@@ -64,7 +65,7 @@ export default function AuthPage() {
                     </div>
                     <h1 className="text-2xl font-bold">{isSignUp ? 'Criar Conta' : 'Bem-vindo de volta'}</h1>
                     <p className="text-muted-foreground text-sm mt-2">
-                        {isSignUp ? 'Comece a controlar suas finanÁas hoje' : 'Entre para acessar seu dashboard'}
+                        {isSignUp ? 'Comece a controlar suas finan√ßas hoje' : 'Entre para acessar seu dashboard'}
                     </p>
                 </div>
 
@@ -100,7 +101,7 @@ export default function AuthPage() {
                         <Input
                             id="password"
                             type="password"
-                            placeholder="ïïïïïïïï"
+                            placeholder="‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
@@ -120,12 +121,12 @@ export default function AuthPage() {
                         onClick={() => setIsSignUp(!isSignUp)}
                         className="text-primary hover:underline"
                     >
-                        {isSignUp ? 'J· tem uma conta? Entrar' : 'N„o tem conta? Criar agora'}
+                        {isSignUp ? 'J√° tem uma conta? Entrar' : 'N√£o tem conta? Criar agora'}
                     </button>
                 </div>
 
                 <div className="mt-8 pt-6 border-t border-border/50">
-                    <p className="text-xs uppercase font-black tracking-widest text-muted-foreground text-center mb-4">AparÍncia do Sistema</p>
+                    <p className="text-xs uppercase font-black tracking-widest text-muted-foreground text-center mb-4">Apar√™ncia do Sistema</p>
                     <div className="flex items-center justify-center gap-2">
                         {[
                             { id: 'light', icon: Sun, label: 'Claro' },
@@ -154,5 +155,3 @@ export default function AuthPage() {
         </div>
     );
 }
-
-
