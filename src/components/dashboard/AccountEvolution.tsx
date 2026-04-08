@@ -30,7 +30,7 @@ export function ExpenseEvolution() {
         const monthExpenses = transactions
             .filter(t => {
                 if (t.type !== 'expense') return false;
-                // ? Só excluímos se for PAGAMENTO real (despesa), não estorno/abatimento (income)
+                // ? Sï¿½ excluï¿½mos se for PAGAMENTO real (despesa), nï¿½o estorno/abatimento (income)
                 if (t.isInvoicePayment && t.type === 'expense') return false;
                 const d = parseLocalDate(t.date);
                 return d >= startOfMonth(monthDate) && d <= endOfMonth(monthDate);
@@ -45,7 +45,7 @@ export function ExpenseEvolution() {
     });
 
     // Simple target (for demo, could be dynamic later)
-    // Média de gastos (ignora o mês atual incompleto para não enviesar)
+    // Mï¿½dia de gastos (ignora o mï¿½s atual incompleto para nï¿½o enviesar)
     const completedMonths = data.slice(0, 5);
     const averageExpense = completedMonths.length > 0
         ? completedMonths.reduce((sum, d) => sum + d.valor, 0) / completedMonths.length
@@ -59,7 +59,7 @@ export function ExpenseEvolution() {
 
     return (
         <div className="flex flex-col gap-6 w-full">
-            {/* Gráfico Principal em Destaque */}
+            {/* Grï¿½fico Principal em Destaque */}
             <div className="card-elevated p-4 sm:p-6 space-y-4 h-full flex flex-col">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -67,14 +67,14 @@ export function ExpenseEvolution() {
                             <TrendingUp className="w-5 h-5" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-base sm:text-lg">Evolução de Despesas</h3>
-                            <p className="text-xs sm:text-xs text-muted-foreground">Comparativo dos últimos 6 meses</p>
+                            <h3 className="font-bold text-base sm:text-lg">Evoluï¿½ï¿½o de Despesas</h3>
+                            <p className="text-xs sm:text-xs text-muted-foreground">Comparativo dos ï¿½ltimos 6 meses</p>
                         </div>
                     </div>
                 </div>
 
                 <div className="flex-1 min-h-[35dvh] sm:min-h-[300px] w-full mt-4">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minHeight={300}>
                         <LineChart data={data}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
                             <XAxis
@@ -119,24 +119,24 @@ export function ExpenseEvolution() {
                 trend === 'up' ? "border-danger" : "border-success"
             )}>
                 <div className="flex justify-between items-start mb-4">
-                    <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Tendência</h4>
+                    <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Tendï¿½ncia</h4>
                     <span className={cn(
                         "px-2 py-1 rounded-lg text-xs font-black uppercase",
                         trend === 'up' ? "bg-danger/10 text-danger" : "bg-success/10 text-success"
                     )}>
-                        {trend === 'up' ? 'Aumento' : 'Redução'}
+                        {trend === 'up' ? 'Aumento' : 'Reduï¿½ï¿½o'}
                     </span>
                 </div>
                 <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-black">
                         {Math.abs(percentChange).toFixed(1)}%
                     </span>
-                    <span className="text-xs text-muted-foreground">em relação ao mês anterior</span>
+                    <span className="text-xs text-muted-foreground">em relaï¿½ï¿½o ao mï¿½s anterior</span>
                 </div>
                 <p className="text-xs mt-4 text-muted-foreground leading-relaxed">
                     {trend === 'up'
                         ? "Seus gastos subiram. Tente revisar as categorias de 'Desejos' para economizar."
-                        : "Parabéns! Você está gastando menos que no mês passado. Continue assim!"}
+                        : "Parabï¿½ns! Vocï¿½ estï¿½ gastando menos que no mï¿½s passado. Continue assim!"}
                 </p>
             </div>
         </div>

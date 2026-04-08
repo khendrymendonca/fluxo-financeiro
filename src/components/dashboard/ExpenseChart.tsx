@@ -77,7 +77,7 @@ export function ExpenseChart({ data, categoryColors = {} }: ExpenseChartProps) {
       <div className="flex flex-col gap-4 flex-1 min-h-0">
         {/* Mini Pie - Esmagado para LG:col-span-1 */}
         <div className="w-full h-[180px]">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minHeight={180}>
             <PieChart>
               <Pie
                 data={finalChartData}

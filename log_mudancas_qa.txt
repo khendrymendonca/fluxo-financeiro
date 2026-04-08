@@ -45,4 +45,15 @@ PROMPT 10 — Deduplicação de invoiceremainder
 - CardsDashboard.tsx: Na função handleConfirmPayment, adicionada lógica de soft delete para qualquer 'invoiceremainder' existente do mesmo cartão/mês antes de criar um novo saldo remanescente.
 - CardsDashboard.tsx: Corrigido o transactionType do novo saldo remanescente para 'invoiceremainder'.
 
+TAREFA ADICIONAL — Edição Prospectiva de Conta Fixa (BillsManager)
+- src/hooks/useTransactionMutations.ts: Atualizada mutação `useUpdateTransaction` para suportar `applyScope` em transações recorrentes, garantindo que registros pagos (`is_paid: true`) nunca sejam alterados em massa. Adicionado suporte a `referenceDate` para corte preciso em projeções futuras.
+- src/components/accounts/EditBillForm.tsx: Criado novo componente de formulário simplificado para edição de valor e data de vencimento. Implementada lógica de `realId` para permitir edição via projeções virtuais.
+- src/components/accounts/BillsManager.tsx: Adicionado estado `editingBill`, botão "Editar" na listagem de contas recorrentes (incluindo futuras) e modal de edição prospectiva.
+
+CORREÇÕES CRÍTICAS E ESTABILIDADE (08/04/2026)
+- src/App.tsx: Reposicionado `FinanceProvider` para envolver toda a árvore de rotas, resolvendo erro de contexto no componente `Index`.
+- src/components/settings/CategoriesManager.tsx: Corrigido aviso de aninhamento ilegal de DOM ao mover botões de ação do `AccordionTrigger` para o `AccordionContent`.
+- Global Recharts: Adicionado `minHeight` em todos os `ResponsiveContainer` para evitar avisos de dimensões nulas e garantir renderização estável.
+- Global Date Inputs: Implementado `slice(0, 10)` em todos os estados que alimentam inputs do tipo data (`GoalForm`, `EditBillForm`, `ProjectDetailsModal`) para evitar erros de formato ISO com timezone.
+
 FIM DO LOG.

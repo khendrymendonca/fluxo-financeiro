@@ -291,7 +291,7 @@ export default function ReportsDashboard() {
             <h4 className="text-xs font-black uppercase tracking-widest text-gray-900 dark:text-zinc-50">Contas Fixas (6 Meses)</h4>
           </div>
           <div className="h-[80px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={80}>
               <AreaChart data={fixedEvolutionData}>
                 <defs>
                   <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
@@ -357,7 +357,7 @@ export default function ReportsDashboard() {
           </div>
           <div className="flex-1 flex flex-col md:flex-row items-center gap-4">
             <div className="h-[180px] w-full md:w-[180px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minHeight={200}>
                 <PieChart>
                   <Pie
                     data={groupDistribution}
@@ -405,7 +405,7 @@ export default function ReportsDashboard() {
           </div>
         </div>
         <div className="h-[250px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minHeight={200}>
             <BarChart data={fixedEvolutionData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
               <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700 }} dy={10} />

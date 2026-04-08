@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import {
     Receipt, Plus, Trash2, CheckCircle2, Clock, Calendar,
     AlertCircle, ArrowUpCircle, ArrowDownCircle, Filter,
-    ShieldAlert, CreditCard as CardIcon, RotateCcw
+    ShieldAlert, CreditCard as CardIcon, RotateCcw, Pencil, X
 } from 'lucide-react';
 import { Portal } from '@/components/ui/Portal';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,7 @@ import { parseLocalDate, todayLocalString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/formatters';
 import { Transaction } from '@/types/finance';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { EditBillForm } from './EditBillForm';
 
 export function BillsManager() {
     const {
@@ -57,6 +58,7 @@ export function BillsManager() {
     const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
     const [expandedTransactionId, setExpandedTransactionId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [editingBill, setEditingBill] = useState<Transaction | null>(null);
 
     const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
     const [billToConfirm, setBillToConfirm] = useState<{
@@ -378,6 +380,18 @@ export function BillsManager() {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
+                                            {(transaction.isRecurring || transaction.transactionType === 'recurring') && !transaction.isPaid && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    aria-label="Editar conta fixa"
+                                                    onClick={() => setEditingBill(transaction)}
+                                                    className="h-10 px-3 md:px-4 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 flex items-center gap-2 font-black uppercase text-[11px] tracking-wider"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                    <span className="hidden xs:inline">Editar</span>
+                                                </Button>
+                                            )}
                                             {!transaction.isPaid ? (
                                                 <Button size="sm" variant="ghost"
                                                     onClick={() => {
@@ -639,6 +653,48 @@ export function BillsManager() {
                     setItemToDelete(null);
                 }}
             />
+
+            {editingBill && (
+                <Portal>
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setEditingBill(null)}>
+                        <div
+                            className="bg-card rounded-2xl shadow-2xl w-full max-w-md border border-border animate-in zoom-in-95 duration-200"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                                <div>
+                                    <h2 className="text-lg font-black tracking-tight">Editar Conta Fixa</h2>
+                                    <p className="text-xs text-muted-foreground truncate max-w-[220px]">{editingBill.description}</p>
+                                </div>
+                                <button
+                                    onClick={() => setEditingBill(null)}
+                                    aria-label="Fechar"
+                                    className="p-2 rounded-xl hover:bg-muted transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Form */}
+                            <EditBillForm
+                                bill={editingBill}
+                                onClose={() => setEditingBill(null)}
+                                onSave={async (updates, applyScope, realId, referenceDate) => {
+                                    await updateTransactionMutation({
+                                        id: realId,
+                                        updates,
+                                        applyScope,
+                                        referenceDate,
+                                    });
+                                    setEditingBill(null);
+                                    toast({ title: "Conta atualizada com sucesso!" });
+                                }}
+                            />
+                        </div>
+                    </div>
+                </Portal>
+            )}
         </div>
     );
 }

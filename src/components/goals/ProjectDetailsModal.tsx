@@ -116,7 +116,7 @@ export function ProjectDetailsModal({
                                         {isSonho ? 'Sonho' : 'Projeto'}
                                     </span>
                                     {goal.created_at && (
-                                        <span className="text-xs font-bold text-zinc-400">Registrado em {format(new Date(goal.created_at), 'MM/yyyy')}</span>
+                                        <span className="text-xs font-bold text-zinc-400">Registrado em {format(new Date(goal.created_at.slice(0, 10)), 'MM/yyyy')}</span>
                                     )}
                                 </div>
                                 <h2 className="text-3xl font-black tracking-tight text-gray-900 dark:text-zinc-50">{goal.name}</h2>

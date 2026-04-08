@@ -18,9 +18,11 @@ Privacidade Absoluta: Os cartões NÃO devem exibir números fictícios (como '0
 Texturas Premium: Cartões suportam acabamentos visuais (texture: solid, black) aplicados via CSS (mix-blend-mode e gradientes) sobre a cor base.
 
 3. Navegação Mobile Customizável
-Bottom Nav Dinâmica: O usuário pode escolher quais atalhos aparecem na barra inferior mobile através das Configurações (limite de 5 itens). Se ele desmarcar todos, a barra desaparece completamente.
+Menu Orbital Semicircular (FAB): A barra inferior linear foi substituída por um menu flutuante semicircular. O usuário personaliza seus atalhos (até 13 opções) que orbitam ao redor do FAB principal. O menu utiliza glassmorphism (dark glass) e animações em cascata, priorizando a ergonomia do polegar e a limpeza visual.
 
-Menu Lateral (Drawer): O menu lateral esquerdo atua como 'cofre de segurança' da navegação, contendo SEMPRE todas as rotas do aplicativo, imune à personalização da barra inferior.
+Botão Home Estratégico: Como o FAB foca em atalhos dinâmicos, o retorno à Dashboard (Home) é garantido por um botão fixo no canto superior esquerdo do Header Mobile, visível em todas as telas exceto na própria Dashboard.
+
+Menu Lateral (Drawer): O menu lateral esquerdo atua como 'cofre de segurança' da navegação, contendo SEMPRE todas as rotas do aplicativo, imune à personalização do menu orbital.
 
 4. Motor de Lançamentos e Projeções
 Segregação de Responsabilidades (Pagamentos): A tela de 'Lançamentos' funciona apenas como um Extrato (Read-only para status). É estritamente proibido dar baixa (pagar) em contas fixas ou projeções por esta tela. A alteração do status isPaid de contas recorrentes/parceladas é exclusividade da tela 'Gestão de Contas'.

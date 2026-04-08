@@ -57,10 +57,10 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
 
   const [name, setName] = useState(initialData?.name || '');
   const [purpose, setPurpose] = useState(initialData?.purpose || '');
-  const [dreamStartDate, setDreamStartDate] = useState(initialData?.dreamStartDate || '');
+  const [dreamStartDate, setDreamStartDate] = useState(initialData?.dreamStartDate?.slice(0, 10) || '');
   const [items, setItems] = useState<GoalItem[]>(initialData?.items || []);
   const [currentAmount, setCurrentAmount] = useState(initialData?.currentAmount?.toString() || '0');
-  const [deadline, setDeadline] = useState(initialData?.deadline || '');
+  const [deadline, setDeadline] = useState(initialData?.deadline?.slice(0, 10) || '');
   const [selectedIcon, setSelectedIcon] = useState(initialData?.icon || 'Rocket');
   const [selectedColor, setSelectedColor] = useState(initialData?.color || APP_COLORS[0]);
 

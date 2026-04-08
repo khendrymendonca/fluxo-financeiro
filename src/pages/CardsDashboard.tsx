@@ -556,7 +556,7 @@ export default function CardsDashboard() {
                     </div>
                   </div>
                   <div className="h-52">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minHeight={200}>
                       <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                         <defs>
                           <linearGradient id="gradTeal" x1="0" y1="0" x2="0" y2="1">
@@ -816,7 +816,7 @@ export default function CardsDashboard() {
               <div className="bg-card border border-border rounded-2xl p-4">
                 <p className="text-xs font-black text-foreground mb-4">Evolução de Gastos</p>
                 <div className="h-40">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minHeight={200}>
                     <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
                       <defs>
                         <linearGradient id="gradTealM" x1="0" y1="0" x2="0" y2="1">

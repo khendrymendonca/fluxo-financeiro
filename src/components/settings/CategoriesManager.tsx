@@ -157,78 +157,85 @@ export function CategoriesManager() {
                             </div>
                         </div>
 
-                        <div className="flex gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    updateCategory({ id: cat.id, updates: { isFixed: !cat.isFixed } });
-                                }}
-                                className={cn(
-                                    "p-1.5 rounded-lg transition-colors",
-                                    cat.isFixed ? "text-primary hover:bg-muted" : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                                )}
-                                title={cat.isFixed ? "Remover de Contas Fixas" : "Marcar como Conta Fixa"}
-                            >
-                                {cat.isFixed ? <Pin className="w-3.5 h-3.5" /> : <PinOff className="w-3.5 h-3.5" />}
-                            </button>
-
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    const name = prompt('Nome da nova subcategoria:');
-                                    if (name) handleAddSubcategory(cat.id, name);
-                                }}
-                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-success/10 hover:text-success transition-colors"
-                                title="Adicionar Subcategoria"
-                            >
-                                <Plus className="w-3.5 h-3.5" />
-                            </button>
-
-                            {['Renegociação', 'Fatura de Cartão de Crédito', 'Outros'].includes(cat.name) ? null : (
-                                <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                                    <DialogTrigger asChild>
-                                        <button
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="p-1.5 rounded-lg text-muted-foreground hover:bg-danger/10 hover:text-danger transition-colors"
-                                            title="Excluir Categoria"
-                                        >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                        </button>
-                                    </DialogTrigger>
-                                    <DialogContent className="max-w-md rounded-3xl p-6" onClick={(e) => e.stopPropagation()}>
-                                        <DialogHeader>
-                                            <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-2 text-danger">
-                                                <Trash2 className="w-5 h-5" /> Excluir Categoria
-                                            </DialogTitle>
-                                        </DialogHeader>
-                                        <div className="space-y-4 mt-2">
-                                            <p className="text-sm text-foreground">
-                                                Tem certeza que deseja remover a categoria <strong>{cat.name}</strong>? Esta ação não pode ser desfeita.
-                                            </p>
-                                            <div className="flex gap-3 justify-end pt-2">
-                                                <Button variant="outline" className="h-12 rounded-xl" onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(false); }}>
-                                                    Cancelar
-                                                </Button>
-                                                <Button
-                                                    variant="destructive"
-                                                    className="h-12 rounded-xl"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        deleteCategory(cat.id);
-                                                        setIsDeleteDialogOpen(false);
-                                                    }}
-                                                >
-                                                    Sim, Excluir
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </DialogContent>
-                                </Dialog>
-                            )}
+                        <div className="flex gap-1 shrink-0">
+                            <Plus className={cn("w-4 h-4 text-muted-foreground transition-transform duration-300", "group-data-[state=open]:rotate-45")} />
                         </div>
                     </div>
                 </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4">
+                <AccordionContent className="px-4 pb-4 space-y-4">
+                    {/* Botões de Ação de Categoria */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-border/30">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mr-auto">Ações da Categoria</span>
+                        
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => updateCategory({ id: cat.id, updates: { isFixed: !cat.isFixed } })}
+                            className={cn(
+                                "h-8 px-3 rounded-lg text-[11px] font-black uppercase tracking-wider gap-2",
+                                cat.isFixed ? "bg-primary/5 text-primary hover:bg-primary/10" : "text-muted-foreground hover:bg-muted"
+                            )}
+                        >
+                            {cat.isFixed ? <Pin className="w-3 h-3" /> : <PinOff className="w-3 h-3" />}
+                            {cat.isFixed ? 'Fixa' : 'Tornar Fixa'}
+                        </Button>
+
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                                const name = prompt('Nome da nova subcategoria:');
+                                if (name) handleAddSubcategory(cat.id, name);
+                            }}
+                            className="h-8 px-3 rounded-lg text-[11px] font-black uppercase tracking-wider gap-2 text-success hover:bg-success/5 hover:text-success"
+                        >
+                            <Plus className="w-3 h-3" />
+                            Subcategoria
+                        </Button>
+
+                        {!['Renegociação', 'Fatura de Cartão de Crédito', 'Outros'].includes(cat.name) && (
+                            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 px-3 rounded-lg text-[11px] font-black uppercase tracking-wider gap-2 text-danger hover:bg-danger/5 hover:text-danger"
+                                    >
+                                        <Trash2 className="w-3 h-3" />
+                                        Excluir
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-md rounded-3xl p-6">
+                                    <DialogHeader>
+                                        <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-2 text-danger">
+                                            <Trash2 className="w-5 h-5" /> Excluir Categoria
+                                        </DialogTitle>
+                                    </DialogHeader>
+                                    <div className="space-y-4 mt-2">
+                                        <p className="text-sm text-foreground">
+                                            Tem certeza que deseja remover a categoria <strong>{cat.name}</strong>? Esta ação não pode ser desfeita.
+                                        </p>
+                                        <div className="flex gap-3 justify-end pt-2">
+                                            <Button variant="outline" className="h-12 rounded-xl" onClick={() => setIsDeleteDialogOpen(false)}>
+                                                Cancelar
+                                            </Button>
+                                            <Button
+                                                variant="destructive"
+                                                className="h-12 rounded-xl"
+                                                onClick={() => {
+                                                    deleteCategory(cat.id);
+                                                    setIsDeleteDialogOpen(false);
+                                                }}
+                                            >
+                                                Sim, Excluir
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+                        )}
+                    </div>
+
                     {catSubs.length === 0 ? (
                         <div className="flex flex-col items-center py-6 text-center">
                             <Layers className="w-5 h-5 text-muted-foreground mb-2" />

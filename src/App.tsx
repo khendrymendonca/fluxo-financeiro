@@ -40,14 +40,12 @@ const AppRoutes = () => {
   }
 
   return (
-    <FinanceProvider>
-      <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </div>
-    </FinanceProvider>
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </div>
   );
 };
 
@@ -58,10 +56,12 @@ const App = () => (
         <ThemeProvider>
           <ThemeColorProvider>
             <TooltipProvider>
-              <UpdatePrompt />
-              <Toaster />
-              <Sonner position="bottom-right" closeButton richColors expand={false} />
-              <AppRoutes />
+              <FinanceProvider>
+                <UpdatePrompt />
+                <Toaster />
+                <Sonner position="bottom-right" closeButton richColors expand={false} />
+                <AppRoutes />
+              </FinanceProvider>
             </TooltipProvider>
           </ThemeColorProvider>
         </ThemeProvider>

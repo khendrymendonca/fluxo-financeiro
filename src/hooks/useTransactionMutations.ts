@@ -261,7 +261,8 @@ export function useUpdateTransaction() {
       currentCardId,
       cardClosingDay,
       cardDueDay,
-      applyScope = 'this'
+      applyScope = 'this',
+      referenceDate
     }: {
       id: string;
       updates: Partial<Transaction>;
@@ -269,6 +270,7 @@ export function useUpdateTransaction() {
       cardClosingDay?: number;
       cardDueDay?: number;
       applyScope?: 'this' | 'future' | 'all';
+      referenceDate?: string;
     }) => {
       const effectiveCardId = updates.cardId !== undefined ? updates.cardId : currentCardId;
       let finalInvoiceMonthYear = updates.invoiceMonthYear;
@@ -302,8 +304,9 @@ export function useUpdateTransaction() {
       // Buscar o mestre para saber o grupo se necessário
       const { data: currentTx } = await supabase.from('transactions').select('*').eq('id', id).single();
       const groupId = currentTx?.installment_group_id;
+      const originalId = currentTx?.original_id || (currentTx?.is_recurring ? currentTx.id : null);
 
-      if (applyScope === 'this' || !groupId) {
+      if (applyScope === 'this' || (!groupId && !originalId)) {
         const { data, error } = await supabase
           .from('transactions')
           .update(dbUpdates)
@@ -317,10 +320,18 @@ export function useUpdateTransaction() {
       }
 
       // Se há escopo future ou all, aplicamos o filtro correspondente
-      let query = supabase.from('transactions').update(dbUpdates).eq('installment_group_id', groupId);
+      // 🛡️ REGRA DE OURO: Nunca alteramos registros já pagos em atualizações em lote!
+      let query = supabase.from('transactions').update(dbUpdates).eq('is_paid', false).is('deleted_at', null);
+
+      if (groupId) {
+        query = query.eq('installment_group_id', groupId);
+      } else if (originalId) {
+        // Para recorrentes, usamos o original_id (ou o próprio ID se ele for o pai)
+        query = query.or(`id.eq.${originalId},original_id.eq.${originalId}`);
+      }
 
       if (applyScope === 'future') {
-        query = query.gte('date', currentTx.date);
+        query = query.gte('date', referenceDate ?? currentTx.date);
       }
 
       const { data, error } = await query.select();

@@ -68,6 +68,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { EasterWelcome } from '@/components/layout/EasterWelcome';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
+import { FloatingNavMenu } from '@/components/layout/FloatingNavMenu';
 import EmergencyFund from './EmergencyFund';
 import { BillsManager } from '@/components/accounts/BillsManager';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -523,8 +524,19 @@ export default function Index() {
         />
       }
       headerMobile={
-        <>
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between w-full">
+          {/* Lado esquerdo: Home + Drawer */}
+          <div className="flex items-center gap-1">
+            {/* Botão Home — volta para dashboard */}
+            {currentView !== 'dashboard' && (
+              <button
+                onClick={() => setCurrentView('dashboard')}
+                className="p-2 rounded-xl text-zinc-500 hover:text-primary hover:bg-primary/5 transition-all"
+                aria-label="Voltar para início"
+              >
+                <Home className="w-5 h-5" />
+              </button>
+            )}
             <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-gray-500 dark:text-zinc-400">
@@ -609,37 +621,52 @@ export default function Index() {
                 </div>
               </SheetContent>
             </Sheet>
+          </div>
 
-            <div className="flex items-center gap-3">
+          {/* Lado direito: Avatar + toggle de visibilidade de saldo */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Avatar className="w-8 h-8">
                 <AvatarFallback className="bg-gray-100 dark:bg-zinc-900 text-gray-500 dark:text-zinc-400 font-bold text-xs">{userInitials}</AvatarFallback>
               </Avatar>
               <p className="font-bold text-sm">{userName}</p>
             </div>
+            <Button variant="ghost" size="icon" onClick={() => setIsBalanceVisible(!isBalanceVisible)}>
+              {isBalanceVisible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </Button>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setIsBalanceVisible(!isBalanceVisible)}>
-            {isBalanceVisible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-          </Button>
-        </>
+        </div>
       }
-      bottomNav={
-        <BottomNavigation
-          activeView={currentView}
-          onViewChange={(v) => setCurrentView(v as ViewType)}
-        />
-      }
+      bottomNav={null}
       fab={
-        ['dashboard', 'transactions'].includes(currentView) && (
-          <Button
-            onClick={() => {
-              setEditingTransaction(undefined);
-              setShowTransactionForm(true);
-            }}
-            className="fixed bottom-24 right-4 w-14 h-14 rounded-full shadow-2xl bg-primary text-primary-foreground z-40 md:hidden"
-          >
-            <Plus className="w-7 h-7" />
-          </Button>
-        )
+        <>
+          {/* FAB de navegação semicircular */}
+          <FloatingNavMenu
+            activeView={currentView}
+            onNavigate={(v) => setCurrentView(v as ViewType)}
+          />
+
+          {/* FAB de adicionar transação — só nas views de extrato/dashboard */}
+          {['dashboard', 'transactions'].includes(currentView) && (
+            <button
+              onClick={() => {
+                setEditingTransaction(undefined);
+                setShowTransactionForm(true);
+              }}
+              className={cn(
+                'fixed bottom-24 right-4 z-50 md:hidden',
+                'w-12 h-12 rounded-full',
+                'bg-primary text-primary-foreground',
+                'shadow-xl shadow-primary/30',
+                'flex items-center justify-center',
+                'active:scale-95 transition-all duration-200'
+              )}
+              aria-label="Novo lançamento"
+            >
+              <Plus className="w-6 h-6" />
+            </button>
+          )}
+        </>
       }
     >
       {renderView()}
