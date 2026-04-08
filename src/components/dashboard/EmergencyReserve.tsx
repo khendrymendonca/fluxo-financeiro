@@ -1,4 +1,4 @@
-﻿import { Shield, TrendingUp, AlertCircle, Edit2, ArrowRightLeft, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { Shield, TrendingUp, AlertCircle, Edit2, ArrowRightLeft, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -169,7 +169,7 @@ export function EmergencyReserve({ data, onMonthsChange, accounts = [], onTransf
 
                 {data.reserveAccounts && data.reserveAccounts.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-border">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3">Saldos da Reserva</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Saldos da Reserva</p>
                         <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
                             {data.reserveAccounts.map((acc: any) => (
                                 <div key={acc.id} className="flex items-center justify-between p-2.5 rounded-xl bg-background/50 border border-border/50 hover:border-primary/20 transition-all">
@@ -178,7 +178,7 @@ export function EmergencyReserve({ data, onMonthsChange, accounts = [], onTransf
                                         <div>
                                             <p className="text-xs font-bold">{acc.name}</p>
                                             {acc.monthlyYieldRate > 0 && (
-                                                <p className="text-[9px] text-success font-bold uppercase mt-0.5">+ {acc.monthlyYieldRate}% ao mês</p>
+                                                <p className="text-[11px] text-success font-bold uppercase mt-0.5">+ {acc.monthlyYieldRate}% ao mês</p>
                                             )}
                                         </div>
                                     </div>
@@ -236,7 +236,7 @@ export function EmergencyReserve({ data, onMonthsChange, accounts = [], onTransf
 
                                 <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">
+                                        <Label className="text-xs uppercase font-bold text-muted-foreground">
                                             {transferMode === 'deposit' ? 'Conta de Origem (Sairá daqui)' : 'Conta de Origem (Reserva)'}
                                         </Label>
                                         <select
@@ -258,7 +258,7 @@ export function EmergencyReserve({ data, onMonthsChange, accounts = [], onTransf
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">
+                                        <Label className="text-xs uppercase font-bold text-muted-foreground">
                                             {transferMode === 'deposit' ? 'Conta de Destino (Reserva)' : 'Conta de Destino (Receberá)'}
                                         </Label>
                                         <select
@@ -300,5 +300,3 @@ export function EmergencyReserve({ data, onMonthsChange, accounts = [], onTransf
         </div>
     );
 }
-
-

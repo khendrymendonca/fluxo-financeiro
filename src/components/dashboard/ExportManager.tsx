@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useAddTransaction } from '@/hooks/useTransactionMutations';
 import { Button } from '@/components/ui/button';
@@ -118,7 +118,7 @@ export function ExportManager() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Export Card */}
                 <div className="p-6 rounded-3xl border-2 border-dashed border-primary/20 bg-primary/5 dark:bg-primary/5 hover:bg-primary/10 transition-colors flex flex-col items-center text-center gap-4 group">
-                    <div className="w-16 h-16 rounded-full bg-white dark:bg-zinc-800 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <div className="w-16 h-16 rounded-full bg-white dark:bg-zinc-900 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                         <Download className="w-8 h-8 text-primary" />
                     </div>
                     <div>
@@ -162,7 +162,7 @@ export function ExportManager() {
                 <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                     <p className="text-xs font-bold text-amber-600 uppercase">Atenção ao Importar</p>
-                    <p className="text-[10px] text-amber-800 leading-tight">
+                    <p className="text-xs text-amber-800 leading-tight">
                         A importação espera um arquivo CSV com as colunas na ordem padrão: Data, Descrição, Valor, Tipo.
                         Registros duplicados não são removidos automaticamente.
                     </p>
@@ -171,6 +171,3 @@ export function ExportManager() {
         </div>
     );
 }
-
-
-

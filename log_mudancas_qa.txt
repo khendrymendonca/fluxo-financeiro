@@ -1,0 +1,48 @@
+LOG DE MUDANÇAS — AUDITORIA QA FLUXO (08/04/2026)
+
+PROMPT 1 — Textos abaixo de 12px (WCAG)
+- Modificados 33 arquivos no diretório src/.
+- Substituído 'text-[8px]' e 'text-[9px]' por 'text-[11px]'.
+- Substituído 'text-[10px]' por 'text-xs' (12px).
+- Objetivo: Garantir conformidade com WCAG AA (mínimo 12px preferencial).
+
+PROMPT 2 — Acessibilidade (aria-label)
+- GoalAportModal.tsx: Adicionado aria-label="Fechar" ao botão de fechar.
+- GoalForm.tsx: Adicionado aria-label="Voltar", aria-label="Fechar", aria-label="Remover item", aria-label="Pagar em dinheiro" e aria-label="Pagar no cartão".
+- ProjectDetailsModal.tsx: Adicionado aria-label="Fechar", aria-label="Editar projeto" e aria-label="Excluir projeto".
+- BillsManager.tsx: Adicionado aria-label="Ocultar detalhes"/"Ver detalhes", aria-label="Baixar conta", aria-label="Estornar conta" e aria-label="Excluir lançamento".
+- TransactionList.tsx: Adicionado aria-label="Estornar pagamento" e aria-label="Duplicar lançamento".
+
+PROMPT 3 — Validação de Valor (Bug Crítico)
+- TransactionForm.tsx: Adicionada validação em handleSubmit para impedir valores <= 0.
+- TransactionForm.tsx: Adicionado atributo min="0.01" aos inputs de valor (normal e transferência).
+
+PROMPT 4 — Proteção BottomNavigation (UX)
+- BottomNavigation.tsx: Importado ícone Menu.
+- BottomNavigation.tsx: Adicionada lógica de fallback que renderiza o botão "Menu" quando não há atalhos configurados, garantindo que o usuário consiga navegar.
+
+PROMPT 5 — onError com Rollback (Consistência de Dados)
+- useTransactionMutations.ts: Adicionado onError no useUpdateTransaction para reverter o cache otimista (previousTransactions) em caso de erro.
+- Outros arquivos (Account, Goal, Debt, CreditCard) verificados: Não utilizam onMutate, portanto mantiveram apenas a invalidação no onSettled/onSuccess.
+
+PROMPT 6 — Botão Voltar no GoalForm (UX)
+- GoalForm.tsx: Ajustada condição do botão de voltar para aparecer apenas se !initialData, evitando que o usuário retorne ao passo 1 durante a edição.
+
+PROMPT 7 — Datas Locais no TransactionForm (Bug)
+- useTransactionMutations.ts: Alterado o campo 'date' para enviar apenas a string "YYYY-MM-DD" local (tx.date.slice(0, 10)), evitando conversão para ISO que causava shift de fuso horário (UTC-3).
+
+PROMPT 8 — Confirmação de Baixa (UX)
+- BillsManager.tsx: Implementado estado billToConfirm.
+- BillsManager.tsx: Adicionado componente AlertDialog para confirmar a baixa de conta fixa antes de processar o pagamento.
+
+PROMPT 9 — Deep Linking useSearchParams (Navegação)
+- Index.tsx: Verificado. A visualização atual (currentView) já está 100% sincronizada com searchParams.get('view').
+- main.tsx / App.tsx: Verificado o uso do BrowserRouter.
+- vercel.json: Verificada a existência do rewrite para suporte a rotas client-side.
+
+PROMPT 10 — Deduplicação de invoiceremainder
+- CardsDashboard.tsx: Importado supabase.
+- CardsDashboard.tsx: Na função handleConfirmPayment, adicionada lógica de soft delete para qualquer 'invoiceremainder' existente do mesmo cartão/mês antes de criar um novo saldo remanescente.
+- CardsDashboard.tsx: Corrigido o transactionType do novo saldo remanescente para 'invoiceremainder'.
+
+FIM DO LOG.

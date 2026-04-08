@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   X,
   Target,
@@ -130,6 +130,7 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
             {step === 2 && !initialData && (
               <button
                 onClick={() => setStep(1)}
+                aria-label="Voltar"
                 className="p-2 hover:bg-muted rounded-xl transition-all"
               >
                 <ChevronLeft className="w-5 h-5" />
@@ -138,10 +139,10 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
             <h2 className="text-xl font-black italic tracking-tight">
               {initialData ? 'Ajustar Detalhes' : step === 1 ? 'Lançar Novo Registro' : `Novo ${projectType === 'sonho' ? 'Sonho' : 'Projeto'}`}
             </h2>
-          </div>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-muted transition-colors text-zinc-400">
+            </div>
+            <button onClick={onClose} aria-label="Fechar" className="p-2 rounded-xl hover:bg-muted transition-colors text-zinc-400">
             <X className="w-5 h-5" />
-          </button>
+            </button>
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar">
@@ -159,7 +160,7 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
                   </div>
                   <div>
                     <h3 className="font-black text-lg">É um Sonho</h3>
-                    <p className="text-[10px] uppercase font-black text-zinc-400 tracking-widest mt-1">Aspiracional • Sem data fixa</p>
+                    <p className="text-xs uppercase font-black text-zinc-400 tracking-widest mt-1">Aspiracional • Sem data fixa</p>
                   </div>
                 </button>
 
@@ -173,7 +174,7 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
                   </div>
                   <div>
                     <h3 className="font-black text-lg">É um Projeto</h3>
-                    <p className="text-[10px] uppercase font-black text-zinc-400 tracking-widest mt-1">Execução • Com prazo e foco</p>
+                    <p className="text-xs uppercase font-black text-zinc-400 tracking-widest mt-1">Execução • Com prazo e foco</p>
                   </div>
                 </button>
               </div>
@@ -183,7 +184,7 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
               {/* Common Fields */}
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Título do {projectType === 'sonho' ? 'Sonho' : 'Projeto'}</Label>
+                  <Label className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Título do {projectType === 'sonho' ? 'Sonho' : 'Projeto'}</Label>
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -194,7 +195,7 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">
+                  <Label className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">
                     {projectType === 'sonho' ? 'Qual é o seu sonho?' : 'Qual a finalidade deste projeto?'}
                   </Label>
                   <textarea
@@ -208,7 +209,7 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {projectType === 'sonho' ? (
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Desde quando sonha?</Label>
+                      <Label className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Desde quando sonha?</Label>
                       <Input
                         type="date"
                         value={dreamStartDate}
@@ -218,7 +219,7 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Previsão de Finalização</Label>
+                      <Label className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Previsão de Finalização</Label>
                       <Input
                         type="date"
                         value={deadline}
@@ -229,7 +230,7 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
                     </div>
                   )}
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Ícone Representativo</Label>
+                    <Label className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Ícone Representativo</Label>
                     <div className="flex gap-1 bg-muted/20 p-1 rounded-2xl overflow-x-auto no-scrollbar">
                       {icons.map(({ name: n, icon: Icon }) => (
                         <button
@@ -253,7 +254,7 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">Custo e Execução</h3>
-                  <Button type="button" onClick={addItem} variant="secondary" className="h-8 rounded-xl text-[9px] font-black px-4 uppercase">
+                  <Button type="button" onClick={addItem} variant="secondary" className="h-8 rounded-xl text-[11px] font-black px-4 uppercase">
                     <Plus className="w-3 h-3 mr-1" /> Adicionar Item
                   </Button>
                 </div>
@@ -268,13 +269,13 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
                           onChange={(e) => updateItem(item.id, { description: e.target.value })}
                           className="h-12 rounded-xl font-bold bg-white dark:bg-zinc-950 flex-1"
                         />
-                        <button type="button" onClick={() => removeItem(item.id)} className="text-red-500 hover:bg-red-50 p-3 rounded-xl transition-colors">
+                        <button type="button" onClick={() => removeItem(item.id)} aria-label="Remover item" className="text-red-500 hover:bg-red-50 p-3 rounded-xl transition-colors">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <Label className="text-[9px] font-black text-zinc-400 ml-1">VALOR (R$)</Label>
+                          <Label className="text-[11px] font-black text-zinc-400 ml-1">VALOR (R$)</Label>
                           <Input
                             type="number"
                             value={item.value === 0 ? '' : item.value}
@@ -289,8 +290,9 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
                             <button
                               type="button"
                               onClick={() => updateItem(item.id, { paymentMethod: 'cash' })}
+                              aria-label="Pagar em dinheiro"
                               className={cn(
-                                "flex-1 h-10 rounded-xl text-[9px] font-black uppercase border-2 transition-all",
+                                "flex-1 h-10 rounded-xl text-[11px] font-black uppercase border-2 transition-all",
                                 item.paymentMethod === 'cash' ? "bg-primary/10 border-primary text-primary" : "border-transparent text-zinc-400"
                               )}
                             >
@@ -299,8 +301,9 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
                             <button
                               type="button"
                               onClick={() => updateItem(item.id, { paymentMethod: 'credit' })}
+                              aria-label="Pagar no cartão"
                               className={cn(
-                                "flex-1 h-10 rounded-xl text-[9px] font-black uppercase border-2 transition-all",
+                                "flex-1 h-10 rounded-xl text-[11px] font-black uppercase border-2 transition-all",
                                 item.paymentMethod === 'credit' ? "bg-amber-500/10 border-amber-500 text-amber-500" : "border-transparent text-zinc-400"
                               )}
                             >
@@ -309,7 +312,7 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
                           </div>
                         ) : (
                           <div className="flex items-center justify-center pt-4">
-                            <span className="text-[9px] font-black uppercase text-zinc-400 italic">Tarefa Adm.</span>
+                            <span className="text-[11px] font-black uppercase text-zinc-400 italic">Tarefa Adm.</span>
                           </div>
                         )}
                       </div>
@@ -324,11 +327,11 @@ export function GoalForm({ initialData, onSubmit, onClose }: GoalFormProps) {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1 text-center">
-                    <p className="text-[9px] font-black uppercase text-zinc-400 mb-1">Custo Projetado</p>
+                    <p className="text-[11px] font-black uppercase text-zinc-400 mb-1">Custo Projetado</p>
                     <p className="text-xl font-black text-primary">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(targetAmount)}</p>
                   </div>
                   <div className="space-y-1 text-center">
-                    <p className="text-[9px] font-black uppercase text-zinc-400 mb-1">Limite Cartão</p>
+                    <p className="text-[11px] font-black uppercase text-zinc-400 mb-1">Limite Cartão</p>
                     <p className="text-xl font-black text-amber-600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(creditLimitNeeded)}</p>
                   </div>
                 </div>

@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { PageHeader } from '@/components/ui/PageHeader';
 import {
@@ -150,7 +150,7 @@ export default function ReportsDashboard() {
       .slice(0, 3);
   }, [periodTransactions, categories]);
 
-  // Dados para Evolução de Contas Fixas (últimos 6 meses independente do filtro)
+  // Dados para Evolução de Contas Fixas (Últimos 6 meses independente do filtro)
   const fixedEvolutionData = useMemo(() => {
     const sixMonthsAgo = subMonths(startOfMonth(viewDate), 5);
     const months = eachMonthOfInterval({ start: sixMonthsAgo, end: endOfMonth(viewDate) });
@@ -237,7 +237,7 @@ export default function ReportsDashboard() {
                 key={p}
                 onClick={() => setPeriod(p)}
                 className={cn(
-                  "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
+                  "px-4 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all",
                   period === p
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
@@ -256,7 +256,7 @@ export default function ReportsDashboard() {
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
             <TrendingDown className="w-16 h-16" />
           </div>
-          <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest mb-1">Total Despesas</p>
+          <p className="text-xs font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest mb-1">Total Despesas</p>
           <h3 className="text-3xl font-black tracking-tight text-gray-900 dark:text-zinc-50">{formatCurrency(metrics.totalExpenses)}</h3>
           <div className="flex items-center gap-1 mt-2">
             {metrics.trend > 0 ? (
@@ -268,7 +268,7 @@ export default function ReportsDashboard() {
                 <ArrowDownRight className="w-3 h-3 mr-0.5" /> {Math.abs(metrics.trend).toFixed(1)}%
               </span>
             )}
-            <span className="text-[10px] text-muted-foreground font-medium">vs. período anterior</span>
+            <span className="text-xs text-muted-foreground font-medium">vs. período anterior</span>
           </div>
         </div>
 
@@ -276,9 +276,9 @@ export default function ReportsDashboard() {
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
             <Zap className="w-16 h-16" />
           </div>
-          <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest mb-1">Contas Fixas</p>
+          <p className="text-xs font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest mb-1">Contas Fixas</p>
           <h3 className="text-3xl font-black tracking-tight text-amber-600 dark:text-amber-500">{formatCurrency(metrics.fixedExpenses)}</h3>
-          <p className="text-[10px] text-gray-500 dark:text-zinc-500 mt-2 font-medium">
+          <p className="text-xs text-gray-500 dark:text-zinc-500 mt-2 font-medium">
             Representa <span className="font-bold">{(metrics.totalExpenses > 0 ? (metrics.fixedExpenses / metrics.totalExpenses) * 100 : 0).toFixed(0)}%</span> dos gastos totais.
           </p>
         </div>
@@ -313,7 +313,7 @@ export default function ReportsDashboard() {
               <div className="w-1.5 h-4 bg-danger rounded-full" />
               <h3 className="text-sm font-black uppercase tracking-widest text-gray-900 dark:text-zinc-50">Maiores Despesas</h3>
             </div>
-            <p className="text-[10px] font-bold text-muted-foreground">Por Categoria</p>
+            <p className="text-xs font-bold text-muted-foreground">Por Categoria</p>
           </div>
 
           <div className="space-y-4">
@@ -342,7 +342,7 @@ export default function ReportsDashboard() {
 
           {topCategories.length > 0 && (
             <div className="mt-8 pt-4 border-t border-border/50">
-              <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground uppercase opacity-70">
+              <div className="flex items-center justify-between text-xs font-bold text-muted-foreground uppercase opacity-70">
                 <span>Concentração do Top 3</span>
                 <span>{((topCategories.reduce((s, v) => s + v.value, 0) / metrics.totalExpenses) * 100).toFixed(0)}% do total</span>
               </div>
@@ -431,7 +431,7 @@ export default function ReportsDashboard() {
           </div>
           <div>
             <p className="text-xs font-bold">Insight Preditivo: {insightData.isCurrentMonth ? "Projeção de Fechamento" : "Fechamento do Período"}</p>
-            <div className="text-[10px] text-muted-foreground mt-0.5">
+            <div className="text-xs text-muted-foreground mt-0.5">
               {insightData.isOverBudget ? (
                 <>
                   <span className="text-danger font-bold">Atenção:</span> No ritmo atual de gastos, você fechará o mês com uma despesa projetada de <span className="text-danger font-bold">{formatCurrency(insightData.projection)}</span>, o que supera sua receita atual de <span className="text-success font-bold">{formatCurrency(insightData.totalIncome)}</span>.

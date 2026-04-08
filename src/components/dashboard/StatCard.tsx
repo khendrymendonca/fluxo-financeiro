@@ -33,7 +33,7 @@ export function StatCard({
         <div className={cn("min-w-0 flex-1 overflow-hidden", isCompact ? "space-y-0" : "space-y-1")}>
           <p className={cn(
             "font-semibold text-muted-foreground uppercase tracking-wider truncate",
-            isCompact ? "text-[8px]" : "text-[10px] md:text-xs"
+            isCompact ? "text-[11px]" : "text-xs md:text-xs"
           )}>
             {title}
           </p>
@@ -49,7 +49,7 @@ export function StatCard({
             {displayValue}
           </p>
           {subtitle && !isCompact && (
-            <p className="text-[10px] md:text-xs text-muted-foreground line-clamp-1 mt-0.5 opacity-70 italic">{subtitle}</p>
+            <p className="text-xs md:text-xs text-muted-foreground line-clamp-1 mt-0.5 opacity-70 italic">{subtitle}</p>
           )}
         </div>
         <div className={cn(

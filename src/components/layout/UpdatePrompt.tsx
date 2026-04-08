@@ -71,7 +71,7 @@ export function UpdatePrompt() {
           </Button>
         </div>
         
-        <div className="text-[9px] text-center text-muted-foreground/50 uppercase font-black tracking-widest">
+        <div className="text-[11px] text-center text-muted-foreground/50 uppercase font-black tracking-widest">
           O login será mantido após a atualização
         </div>
       </div>

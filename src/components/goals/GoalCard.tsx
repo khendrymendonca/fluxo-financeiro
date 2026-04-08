@@ -1,4 +1,4 @@
-﻿import {
+import {
   Calendar,
   Cloud,
   Briefcase,
@@ -71,7 +71,7 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit, onEdit
               )}
 
               <div className={cn(
-                "absolute -top-2 -right-2 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest shadow-sm",
+                "absolute -top-2 -right-2 px-2 py-0.5 rounded-lg text-[11px] font-black uppercase tracking-widest shadow-sm",
                 isSonho ? "bg-sky-500 text-white" : "bg-primary text-white"
               )}>
                 {isSonho ? 'Sonho' : 'Projeto'}
@@ -82,7 +82,7 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit, onEdit
                 {goal.name}
               </h3>
               {(goal.deadline || goal.dreamStartDate) && (
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1 mt-1">
+                <p className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1 mt-1">
                   <Calendar className="w-3 h-3" />
                   {isSonho && goal.dreamStartDate
                     ? `Cultiva desde ${format(parseLocalDate(goal.dreamStartDate), "MMM/yy", { locale: ptBR })}`
@@ -103,19 +103,19 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit, onEdit
         <div className="space-y-3">
           <div className="flex justify-between items-end">
             <div className="space-y-1">
-              <span className="text-[9px] font-black uppercase text-zinc-400 tracking-[0.2em] block">
+              <span className="text-[11px] font-black uppercase text-zinc-400 tracking-[0.2em] block">
                 {hasFinance ? 'Status Financeiro' : 'Marcos de Execução'}
               </span>
               <span className="font-black text-2xl text-gray-900 dark:text-zinc-100 flex items-baseline gap-1">
                 {hasFinance ? (
                   <>
                     {formatCurrency(goal.currentAmount)}
-                    <span className="text-[10px] text-zinc-400 font-bold lowercase tracking-normal">de {formatCurrency(goal.targetAmount)}</span>
+                    <span className="text-xs text-zinc-400 font-bold lowercase tracking-normal">de {formatCurrency(goal.targetAmount)}</span>
                   </>
                 ) : (
                   <>
                     {goal.items?.filter(i => i.completed).length || 0}
-                    <span className="text-[10px] text-zinc-400 font-bold lowercase tracking-normal">de {goal.items?.length || 0} tarefas</span>
+                    <span className="text-xs text-zinc-400 font-bold lowercase tracking-normal">de {goal.items?.length || 0} tarefas</span>
                   </>
                 )}
               </span>
@@ -151,7 +151,7 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit, onEdit
           <div className="p-3 rounded-2xl bg-muted/20 border border-muted/10 space-y-1">
             <div className="flex items-center gap-1.5 mb-1">
               {hasFinance ? <TrendingUp className="w-3 h-3 text-emerald-500" /> : <CheckCircle2 className="w-3 h-3 text-sky-500" />}
-              <span className="text-[9px] font-black uppercase text-zinc-400">Objetivo</span>
+              <span className="text-[11px] font-black uppercase text-zinc-400">Objetivo</span>
             </div>
             <p className="text-xs font-black text-gray-700 dark:text-zinc-300">
               {isCompleted ? 'Alcançado! 🎉' : hasFinance ? `Faltam ${formatCurrency(goal.targetAmount - goal.currentAmount)}` : 'Em execução'}
@@ -162,7 +162,7 @@ export function GoalCard({ goal, accounts, onUpdate, onDelete, onDeposit, onEdit
             <div className="p-3 rounded-2xl bg-amber-500/5 border border-amber-500/10 space-y-1">
               <div className="flex items-center gap-1.5 mb-1">
                 <CreditCard className="w-3 h-3 text-amber-500" />
-                <span className="text-[9px] font-black uppercase text-amber-600/60">Limite Necessário</span>
+                <span className="text-[11px] font-black uppercase text-amber-600/60">Limite Necessário</span>
               </div>
               <p className="text-xs font-black text-amber-600">
                 {formatCurrency(creditLimitNeeded)}

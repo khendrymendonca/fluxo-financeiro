@@ -62,7 +62,7 @@ export function GoalAportModal({ goal, accounts, onClose }: GoalAportModalProps)
                         <PiggyBank className="w-5 h-5 text-primary" />
                         <h2 className="font-black text-lg tracking-tight">Guardar Dinheiro</h2>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-muted rounded-xl transition-colors">
+                    <button onClick={onClose} aria-label="Fechar" className="p-2 hover:bg-muted rounded-xl transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -70,7 +70,7 @@ export function GoalAportModal({ goal, accounts, onClose }: GoalAportModalProps)
                 <div className="p-6 space-y-6">
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Origem (De onde sai?)</Label>
+                            <Label className="text-xs font-black uppercase text-zinc-500 ml-1">Origem (De onde sai?)</Label>
                             <select
                                 value={fromAccountId}
                                 onChange={(e) => setFromAccountId(e.target.value)}
@@ -89,7 +89,7 @@ export function GoalAportModal({ goal, accounts, onClose }: GoalAportModalProps)
                         </div>
 
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Destino (Onde guardar?)</Label>
+                            <Label className="text-xs font-black uppercase text-zinc-500 ml-1">Destino (Onde guardar?)</Label>
                             <select
                                 value={toAccountId}
                                 onChange={(e) => setToAccountId(e.target.value)}
@@ -104,7 +104,7 @@ export function GoalAportModal({ goal, accounts, onClose }: GoalAportModalProps)
                     </div>
 
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Valor do Aporte</Label>
+                        <Label className="text-xs font-black uppercase text-zinc-500 ml-1">Valor do Aporte</Label>
                         <div className="relative">
                             <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-primary">R$</span>
                             <Input

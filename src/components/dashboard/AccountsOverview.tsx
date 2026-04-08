@@ -1,4 +1,4 @@
-Ôªøimport { CreditCard as CreditCardIcon, Building2 } from 'lucide-react';
+import { CreditCard as CreditCardIcon, Building2 } from 'lucide-react';
 import { Account, CreditCard } from '@/types/finance';
 import { cn } from '@/lib/utils';
 
@@ -24,7 +24,7 @@ export function AccountsOverview({ accounts, creditCards }: AccountsOverviewProp
 
   return (
     <div className={cn("card-elevated animate-fade-in h-full", "p-4 md:p-6")}>
-      <h3 className="text-lg font-semibold mb-4">Contas e Cart√µes</h3>
+      <h3 className="text-lg font-semibold mb-4">Contas e Cartıes</h3>
 
       {/* Bank Accounts */}
       <div className="mb-6">
@@ -58,7 +58,7 @@ export function AccountsOverview({ accounts, creditCards }: AccountsOverviewProp
       {/* Credit Cards */}
       {creditCards.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Cart√µes</p>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Cartıes</p>
           <div className="flex md:grid md:grid-cols-2 lg:grid-cols-2 gap-3 overflow-x-auto md:overflow-visible pb-2 md:pb-0 -mx-2 md:mx-0 px-2 md:px-0 no-scrollbar">
             {creditCards.map((card) => {
               const currentExpenses = getCardUsedLimit(card.id);
@@ -88,7 +88,7 @@ export function AccountsOverview({ accounts, creditCards }: AccountsOverviewProp
                       <p className="font-semibold text-sm text-danger">
                         {formatCurrency(currentExpenses)}
                       </p>
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         {formatCurrency(card.limit)}
                       </p>
                     </div>

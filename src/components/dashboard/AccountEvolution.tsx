@@ -1,4 +1,4 @@
-ï»¿import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { formatCurrency } from '@/utils/formatters';
 import {
     LineChart,
@@ -30,7 +30,7 @@ export function ExpenseEvolution() {
         const monthExpenses = transactions
             .filter(t => {
                 if (t.type !== 'expense') return false;
-                // âœ… SÃ³ excluÃ­mos se for PAGAMENTO real (despesa), nÃ£o estorno/abatimento (income)
+                // ? Só excluímos se for PAGAMENTO real (despesa), não estorno/abatimento (income)
                 if (t.isInvoicePayment && t.type === 'expense') return false;
                 const d = parseLocalDate(t.date);
                 return d >= startOfMonth(monthDate) && d <= endOfMonth(monthDate);
@@ -45,7 +45,7 @@ export function ExpenseEvolution() {
     });
 
     // Simple target (for demo, could be dynamic later)
-    // MÃ©dia de gastos (ignora o mÃªs atual incompleto para nÃ£o enviesar)
+    // Média de gastos (ignora o mês atual incompleto para não enviesar)
     const completedMonths = data.slice(0, 5);
     const averageExpense = completedMonths.length > 0
         ? completedMonths.reduce((sum, d) => sum + d.valor, 0) / completedMonths.length
@@ -59,7 +59,7 @@ export function ExpenseEvolution() {
 
     return (
         <div className="flex flex-col gap-6 w-full">
-            {/* GrÃ¡fico Principal em Destaque */}
+            {/* Gráfico Principal em Destaque */}
             <div className="card-elevated p-4 sm:p-6 space-y-4 h-full flex flex-col">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -67,8 +67,8 @@ export function ExpenseEvolution() {
                             <TrendingUp className="w-5 h-5" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-base sm:text-lg">EvoluÃ§Ã£o de Despesas</h3>
-                            <p className="text-[10px] sm:text-xs text-muted-foreground">Comparativo dos Ãºltimos 6 meses</p>
+                            <h3 className="font-bold text-base sm:text-lg">Evolução de Despesas</h3>
+                            <p className="text-xs sm:text-xs text-muted-foreground">Comparativo dos últimos 6 meses</p>
                         </div>
                     </div>
                 </div>
@@ -119,24 +119,24 @@ export function ExpenseEvolution() {
                 trend === 'up' ? "border-danger" : "border-success"
             )}>
                 <div className="flex justify-between items-start mb-4">
-                    <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">TendÃªncia</h4>
+                    <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Tendência</h4>
                     <span className={cn(
-                        "px-2 py-1 rounded-lg text-[10px] font-black uppercase",
+                        "px-2 py-1 rounded-lg text-xs font-black uppercase",
                         trend === 'up' ? "bg-danger/10 text-danger" : "bg-success/10 text-success"
                     )}>
-                        {trend === 'up' ? 'Aumento' : 'ReduÃ§Ã£o'}
+                        {trend === 'up' ? 'Aumento' : 'Redução'}
                     </span>
                 </div>
                 <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-black">
                         {Math.abs(percentChange).toFixed(1)}%
                     </span>
-                    <span className="text-xs text-muted-foreground">em relaÃ§Ã£o ao mÃªs anterior</span>
+                    <span className="text-xs text-muted-foreground">em relação ao mês anterior</span>
                 </div>
                 <p className="text-xs mt-4 text-muted-foreground leading-relaxed">
                     {trend === 'up'
                         ? "Seus gastos subiram. Tente revisar as categorias de 'Desejos' para economizar."
-                        : "ParabÃ©ns! VocÃª estÃ¡ gastando menos que no mÃªs passado. Continue assim!"}
+                        : "Parabéns! Você está gastando menos que no mês passado. Continue assim!"}
                 </p>
             </div>
         </div>

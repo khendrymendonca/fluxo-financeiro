@@ -41,7 +41,7 @@ export function useAddTransaction() {
           original_id: tx.originalId || tx.original_id || null,
           original_bill_id: tx.originalBillId || tx.original_bill_id || null,
           is_invoice_payment: tx.isInvoicePayment !== undefined ? tx.isInvoicePayment : (tx.is_invoice_payment || false),
-          date: tx.date ? parseLocalDate(tx.date.slice(0, 10)).toISOString() : new Date().toISOString(),
+          date: tx.date ? tx.date.slice(0, 10) : format(new Date(), 'yyyy-MM-dd'),
         };
 
         // Remove chaves CamelCase para não dar erro no Supabase
@@ -282,7 +282,7 @@ export function useUpdateTransaction() {
       const dbUpdates: any = {
         description: updates.description,
         amount: updates.amount,
-        date: updates.date ? parseLocalDate(updates.date.slice(0, 10)).toISOString() : undefined,
+        date: updates.date ? updates.date.slice(0, 10) : undefined,
         type: updates.type,
         category_id: updates.categoryId,
         subcategory_id: updates.subcategoryId || (updates as any).subcategory_id,
@@ -365,7 +365,10 @@ export function useUpdateTransaction() {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
       toast({ title: 'Alterações salvas!' });
     },
-    onError: (err) => {
+    onError: (err, variables, context) => {
+      if (context?.previousTransactions) {
+        queryClient.setQueryData(['transactions'], context.previousTransactions);
+      }
       console.error('Erro ao atualizar:', err);
       toast({ title: 'Erro ao atualizar lançamento', variant: 'destructive' });
     }

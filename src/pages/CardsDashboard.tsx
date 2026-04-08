@@ -31,6 +31,7 @@ import { getCardSettingsForDate, getInvoiceStatusDisplay } from "@/utils/creditC
 import { Transaction } from "@/types/finance";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/lib/supabase";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer,
@@ -45,7 +46,7 @@ function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-[#18181f] border border-white/10 rounded-xl px-4 py-2 shadow-2xl">
-      <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold mb-1">{label}</p>
+      <p className="text-xs text-zinc-400 uppercase tracking-widest font-bold mb-1">{label}</p>
       <p className="text-base font-black text-[#00d4aa]">{fmtBRL(payload[0].value)}</p>
     </div>
   );
@@ -61,7 +62,7 @@ function StatusBadge({ status }: { status: ReturnType<typeof getInvoiceStatusDis
   };
   return (
     <span className={cn(
-      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
+      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest border",
       status.color,
       "bg-white/5 border-current/20"
     )}>
@@ -235,15 +236,34 @@ export default function CardsDashboard() {
 
       // 2. Se parcial, criar saldo remanescente para o mês seguinte
       if (isParcial) {
+        const nextInvoiceMonthYear = format(addMonths(viewDate, 1), 'yyyy-MM');
+
+        // 🛡️ DEDUPLICAÇÃO: Buscar remainders existentes para este cartão no mesmo mês de fatura
+        const { data: existingRemainders } = await supabase
+          .from('transactions')
+          .select('id')
+          .eq('card_id', selectedCard.id)
+          .eq('transaction_type', 'invoiceremainder')
+          .eq('invoice_month_year', nextInvoiceMonthYear)
+          .is('deleted_at', null);
+
+        // Soft delete dos remainders existentes (padrão obrigatório do sistema)
+        if (existingRemainders && existingRemainders.length > 0) {
+          await supabase
+            .from('transactions')
+            .update({ deleted_at: new Date().toISOString() })
+            .in('id', existingRemainders.map(r => r.id));
+        }
+
         await addTransaction({
           description: `Saldo Fatura ${selectedCard.name} ${format(viewDate, 'MMM/yy', { locale: ptBR })}`,
           amount: saldoRestante,
           type: 'expense',
-          transactionType: 'punctual',
+          transactionType: 'invoiceremainder',
           is_invoice_payment: false,
           accountId: null,
           cardId: selectedCard.id,
-          invoiceMonthYear: format(addMonths(viewDate, 1), 'yyyy-MM'),
+          invoiceMonthYear: nextInvoiceMonthYear,
           isPaid: false,
           date: format(addMonths(parseLocalDate(payInvoiceDate), 1), 'yyyy-MM-dd')
         } as any);
@@ -342,7 +362,7 @@ export default function CardsDashboard() {
         <PageHeader title="Meus Cartões" icon={CreditCard}>
           <Button
             variant="outline" size="sm"
-            className="hidden md:flex rounded-xl border-primary/20 gap-2 font-bold uppercase text-[10px] tracking-widest h-10 px-4"
+            className="hidden md:flex rounded-xl border-primary/20 gap-2 font-bold uppercase text-xs tracking-widest h-10 px-4"
             onClick={() => setShowAddCard(true)}
           >
             <Plus className="w-4 h-4 text-primary" /> Novo Cartão
@@ -350,7 +370,7 @@ export default function CardsDashboard() {
         </PageHeader>
         <Button
           variant="outline"
-          className="md:hidden w-full rounded-xl border-primary/20 gap-2 font-bold uppercase text-[10px] tracking-widest h-12 mt-2 mb-4"
+          className="md:hidden w-full rounded-xl border-primary/20 gap-2 font-bold uppercase text-xs tracking-widest h-12 mt-2 mb-4"
           onClick={() => setShowAddCard(true)}
         >
           <Plus className="w-4 h-4 text-primary" /> Novo Cartão
@@ -426,14 +446,14 @@ export default function CardsDashboard() {
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline" size="sm"
-                      className="rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest h-9 px-3 border-white/10 hover:bg-white/5"
+                      className="rounded-xl gap-2 font-bold text-xs uppercase tracking-widest h-9 px-3 border-white/10 hover:bg-white/5"
                       onClick={handleExport}
                     >
                       <Download className="w-3.5 h-3.5" /> Exportar
                     </Button>
                     <Button
                       variant="outline" size="sm"
-                      className="rounded-xl gap-2 font-bold text-[10px] uppercase tracking-widest h-9 px-3 border-white/10 hover:bg-white/5"
+                      className="rounded-xl gap-2 font-bold text-xs uppercase tracking-widest h-9 px-3 border-white/10 hover:bg-white/5"
                       onClick={() => setShowEditCard(true)}
                     >
                       <Pencil className="w-3.5 h-3.5" /> Editar
@@ -446,7 +466,7 @@ export default function CardsDashboard() {
                   <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full opacity-[0.06] blur-3xl pointer-events-none" style={{ background: selectedCard.color ?? '#00d4aa' }} />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4">
-                      <p className="text-[10px] uppercase font-black text-muted-foreground tracking-[0.2em]">
+                      <p className="text-xs uppercase font-black text-muted-foreground tracking-[0.2em]">
                         Fatura · {format(viewDate, 'MMMM yyyy', { locale: ptBR })}
                       </p>
                       <StatusBadge status={dynamicStatus} />
@@ -461,7 +481,7 @@ export default function CardsDashboard() {
                             setPayInvoiceAmount(currentInvoiceTotal.toFixed(2));
                             setShowPayInvoice(true);
                           }}
-                          className="bg-[#00d4aa] hover:bg-[#00b894] text-[#0a0a0f] rounded-xl font-black uppercase text-[10px] tracking-widest px-6 h-11 shadow-lg shadow-[#00d4aa]/20 transition-all hover:scale-105 active:scale-95"
+                          className="bg-[#00d4aa] hover:bg-[#00b894] text-[#0a0a0f] rounded-xl font-black uppercase text-xs tracking-widest px-6 h-11 shadow-lg shadow-[#00d4aa]/20 transition-all hover:scale-105 active:scale-95"
                         >
                           Pagar Fatura
                         </Button>
@@ -473,7 +493,7 @@ export default function CardsDashboard() {
                       <span>Limite <strong className="text-foreground">{fmtBRL(stats.limit)}</strong></span>
                     </div>
                     <div className="mt-4">
-                      <div className="flex justify-between text-[10px] text-muted-foreground mb-1.5">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
                         <span>{stats.percentUsed.toFixed(0)}% usado</span>
                         <span>{fmtBRL(stats.available)} disponível</span>
                       </div>
@@ -490,18 +510,18 @@ export default function CardsDashboard() {
                 {/* Stats — 2 cards (sem Cashback) */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-card border border-border rounded-2xl p-5">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Gastos</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Gastos</p>
                     <p className="text-2xl font-black tabular-nums text-foreground">{fmtBRL(currentInvoiceTotal)}</p>
                   </div>
                   <div className="bg-card border border-border rounded-2xl p-5 relative group">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Disponível</p>
+                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Disponível</p>
                         <p className="text-2xl font-black tabular-nums text-foreground">{fmtBRL(stats.available)}</p>
                       </div>
                       <button
                         onClick={() => setShowAnticipatePayment(true)}
-                        className="px-3 py-1.5 rounded-xl border border-border text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all duration-300"
+                        className="px-3 py-1.5 rounded-xl border border-border text-[11px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all duration-300"
                       >
                         Abater Fatura
                       </button>
@@ -514,7 +534,7 @@ export default function CardsDashboard() {
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <p className="text-sm font-black text-foreground">Evolução de Gastos</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         Últimos {chartPeriod === "mensal" ? MONTHS_CHART : 12} meses
                       </p>
                     </div>
@@ -524,7 +544,7 @@ export default function CardsDashboard() {
                           key={p}
                           onClick={() => setChartPeriod(p)}
                           className={cn(
-                            "px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all",
+                            "px-3 py-1 rounded-md text-xs font-black uppercase tracking-widest transition-all",
                             chartPeriod === p
                               ? "bg-[#00d4aa] text-[#0a0a0f]"
                               : "text-zinc-500 hover:text-zinc-300"
@@ -575,7 +595,7 @@ export default function CardsDashboard() {
                 <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-black text-foreground">Lançamentos da Fatura</p>
-                    <span className="text-[10px] text-muted-foreground font-bold">
+                    <span className="text-xs text-muted-foreground font-bold">
                       {filteredTransactions.length} {filteredTransactions.length === 1 ? "item" : "itens"}
                     </span>
                   </div>
@@ -631,7 +651,7 @@ export default function CardsDashboard() {
                                 <p className="text-sm font-bold text-foreground leading-tight group-hover:text-primary truncate">
                                   {t.description}
                                 </p>
-                                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter mt-0.5">
+                                <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter mt-0.5">
                                   {category?.name ?? "Sem categoria"}
                                   {t.installmentNumber && t.installmentTotal
                                     ? ` · ${t.installmentNumber}/${t.installmentTotal}`
@@ -714,10 +734,10 @@ export default function CardsDashboard() {
                   </button>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="rounded-xl gap-1.5 text-[10px] font-black uppercase h-9 px-3 border-white/10" onClick={handleExport}>
+                  <Button variant="outline" size="sm" className="rounded-xl gap-1.5 text-xs font-black uppercase h-9 px-3 border-white/10" onClick={handleExport}>
                     <Download className="w-3 h-3" /> CSV
                   </Button>
-                  <Button variant="outline" size="sm" className="rounded-xl gap-1.5 text-[10px] font-black uppercase h-9 px-3 border-white/10" onClick={() => setShowEditCard(true)}>
+                  <Button variant="outline" size="sm" className="rounded-xl gap-1.5 text-xs font-black uppercase h-9 px-3 border-white/10" onClick={() => setShowEditCard(true)}>
                     <Pencil className="w-3 h-3" />
                   </Button>
                 </div>
@@ -729,7 +749,7 @@ export default function CardsDashboard() {
 
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
-                    <p className="text-[10px] uppercase font-black text-muted-foreground tracking-[0.2em]">Fatura atual</p>
+                    <p className="text-xs uppercase font-black text-muted-foreground tracking-[0.2em]">Fatura atual</p>
                     <StatusBadge status={dynamicStatus} />
                   </div>
 
@@ -743,20 +763,20 @@ export default function CardsDashboard() {
                           setPayInvoiceAmount(currentInvoiceTotal.toFixed(2));
                           setShowPayInvoice(true);
                         }}
-                        className="bg-[#00d4aa] hover:bg-[#00b894] text-[#0a0a0f] rounded-xl font-black uppercase text-[9px] tracking-widest px-4 h-10 shadow-lg shadow-[#00d4aa]/20"
+                        className="bg-[#00d4aa] hover:bg-[#00b894] text-[#0a0a0f] rounded-xl font-black uppercase text-[11px] tracking-widest px-4 h-10 shadow-lg shadow-[#00d4aa]/20"
                       >
                         Pagar
                       </Button>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-4 text-[10px] font-semibold text-muted-foreground">
+                  <div className="flex items-center gap-4 text-xs font-semibold text-muted-foreground">
                     <span>Fecha <strong className="text-foreground">dia {selectedCard.closingDay}</strong></span>
                     <span>Vence <strong className="text-foreground">dia {selectedCard.dueDay}</strong></span>
                   </div>
 
                   <div className="mt-4 pt-4 border-t border-border/50">
-                    <div className="flex justify-between text-[10px] text-muted-foreground mb-1.5">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
                       <span>{stats.percentUsed.toFixed(0)}% usado</span>
                       <span>{fmtBRL(stats.available)} disponível</span>
                     </div>
@@ -773,18 +793,18 @@ export default function CardsDashboard() {
               {/* Stats mobile */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-card border border-border rounded-2xl p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Gastos</p>
+                  <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Gastos</p>
                   <p className="text-xl font-black tabular-nums text-foreground">{fmtBRL(currentInvoiceTotal)}</p>
                 </div>
                 <div className="bg-card border border-border rounded-2xl p-4 relative group">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Disponível</p>
+                      <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Disponível</p>
                       <p className="text-xl font-black tabular-nums text-foreground">{fmtBRL(stats.available)}</p>
                     </div>
                     <button
                       onClick={() => setShowAnticipatePayment(true)}
-                      className="px-2 py-1 rounded-lg border border-border text-[8px] font-black uppercase tracking-widest text-muted-foreground"
+                      className="px-2 py-1 rounded-lg border border-border text-[11px] font-black uppercase tracking-widest text-muted-foreground"
                     >
                       Abater
                     </button>
@@ -851,7 +871,7 @@ export default function CardsDashboard() {
                             </div>
                             <div className="min-w-0">
                               <p className="text-xs font-bold text-foreground truncate">{t.description}</p>
-                              <p className="text-[9px] text-muted-foreground uppercase font-bold">
+                              <p className="text-[11px] text-muted-foreground uppercase font-bold">
                                 {format(parseLocalDate(t.date), "dd MMM", { locale: ptBR })}
                               </p>
                             </div>
@@ -919,7 +939,7 @@ export default function CardsDashboard() {
             <div className="space-y-6">
               {/* Seleção de Conta */}
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Pagar com</label>
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Pagar com</label>
                 <Select value={payInvoiceAccountId} onValueChange={setPayInvoiceAccountId}>
                   <SelectTrigger className="h-14 rounded-2xl border-2 border-muted bg-muted/30 font-bold text-sm">
                     <SelectValue placeholder="Selecione a conta" />
@@ -941,7 +961,7 @@ export default function CardsDashboard() {
 
               {/* Valor Pago */}
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Valor pago</label>
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Valor pago</label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-muted-foreground text-sm">R$</span>
                   <Input 
@@ -952,12 +972,12 @@ export default function CardsDashboard() {
                     className="h-14 rounded-2xl border-2 border-muted bg-muted/30 pl-10 font-black text-xl"
                   />
                 </div>
-                <p className="text-[10px] text-muted-foreground font-bold ml-1">Total da fatura: {fmtBRL(currentInvoiceTotal)}</p>
+                <p className="text-xs text-muted-foreground font-bold ml-1">Total da fatura: {fmtBRL(currentInvoiceTotal)}</p>
               </div>
 
               {/* Data do Pagamento */}
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Data do pagamento</label>
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Data do pagamento</label>
                 <Input 
                   type="date"
                   value={payInvoiceDate}

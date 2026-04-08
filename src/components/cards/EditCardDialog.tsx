@@ -125,7 +125,7 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
                                     >
                                         <div className={cn("absolute inset-0", CARD_TEXTURES[t].className)} style={CARD_TEXTURES[t].style} />
                                     </div>
-                                    <span className="text-[9px] font-bold uppercase truncate">{CARD_TEXTURES[t].label}</span>
+                                    <span className="text-[11px] font-bold uppercase truncate">{CARD_TEXTURES[t].label}</span>
                                 </button>
                             ))}
                         </div>
@@ -158,7 +158,7 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
                                     type="button"
                                     onClick={() => setProgressColor(opt.value)}
                                     className={cn(
-                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
+                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest border transition-all",
                                         progressColor === opt.value
                                             ? "border-primary/40 bg-primary/10 text-primary"
                                             : "border-border/50 text-muted-foreground hover:border-border"
@@ -183,7 +183,7 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
                             <div className="space-y-2">
                                 <Label className="text-xs font-bold opacity-70">Dia Fechamento</Label>
                                 <Input type="number" min="1" max="31" value={closingDay} onChange={e => setClosingDay(e.target.value)} className="h-11 rounded-xl bg-background" />
-                                <p className="text-[10px] text-primary font-bold flex items-center gap-1 mt-1">
+                                <p className="text-xs text-primary font-bold flex items-center gap-1 mt-1">
                                     <Sparkles className="w-3 h-3" /> Melhor dia: {(parseInt(closingDay) % 31) + 1}
                                 </p>
                             </div>
@@ -195,7 +195,7 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
                         {showEffectiveDate && (
                             <div className="pt-4 mt-2 border-t border-dashed border-border/50 animate-in slide-in-from-top-2">
                                 <Label className="text-primary font-bold text-xs uppercase">A partir de quando?</Label>
-                                <p className="text-[10px] text-muted-foreground mb-3 leading-tight">As faturas anteriores a esta data manterão os dias antigos.</p>
+                                <p className="text-xs text-muted-foreground mb-3 leading-tight">As faturas anteriores a esta data manterão os dias antigos.</p>
                                 <Input
                                     type="date"
                                     min={format(new Date(), 'yyyy-MM-dd')}

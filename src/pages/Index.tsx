@@ -1,4 +1,5 @@
-﻿import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+// UTF-8 Integrity Check
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useSearchParams } from 'react-router-dom';
@@ -281,7 +282,7 @@ export default function Index() {
           <div className="flex flex-col h-full animate-in slide-in-from-bottom-4 duration-500 overflow-hidden">
             {/* Bloco Superior: Saldo */}
             <div className="flex flex-col gap-1 shrink-0 mb-4 min-w-0 flex-1 overflow-hidden relative">
-              <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-black uppercase tracking-widest">Patrimônio Total</p>
+              <p className="text-xs text-gray-500 dark:text-zinc-500 font-black uppercase tracking-widest">Patrimônio Total</p>
               {accentColor === 'pascoa' && <Rabbit className="absolute right-4 top-0 w-8 h-8 text-primary animate-bounce duration-1000" />}
               <h1
                 className="text-[clamp(1.5rem,4vw,3rem)] font-black tracking-tighter truncate block w-full max-w-[90vw] md:max-w-md text-gray-900 dark:text-white"
@@ -312,7 +313,7 @@ export default function Index() {
                   <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center border shadow-sm dark:shadow-none", action.color)}>
                     <action.icon className="w-6 h-6" />
                   </div>
-                  <span className="text-[10px] font-bold text-gray-500 dark:text-zinc-500">{action.label}</span>
+                  <span className="text-xs font-bold text-gray-500 dark:text-zinc-500">{action.label}</span>
                 </button>
               ))}
             </div>
@@ -323,7 +324,7 @@ export default function Index() {
               <div className="grid grid-cols-1 gap-3">
                 <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-900 p-5 rounded-[2rem] shadow-sm">
                   <div className="flex items-center justify-between mb-1">
-                    <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest">Saldo Projetado</p>
+                    <p className="text-xs font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest">Saldo Projetado</p>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -346,15 +347,15 @@ export default function Index() {
                 </div>
 
                 <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-900 p-5 rounded-[2rem] shadow-sm">
-                  <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest mb-2">Fluxo do Mês</p>
+                  <p className="text-xs font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest mb-2">Fluxo do Mês</p>
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
-                      <p className="text-[9px] text-emerald-500 font-black uppercase">Entradas</p>
+                      <p className="text-[11px] text-emerald-500 font-black uppercase">Entradas</p>
                       <p className="font-bold text-sm">{isBalanceVisible ? formatCurrency(cashflow.totalIncome) : '••••'}</p>
                     </div>
                     <div className="w-[1px] h-6 bg-gray-100 dark:bg-zinc-800" />
                     <div className="flex flex-col">
-                      <p className="text-[9px] text-danger font-black uppercase">Saídas</p>
+                      <p className="text-[11px] text-danger font-black uppercase">Saídas</p>
                       <p className="font-bold text-sm">{isBalanceVisible ? formatCurrency(cashflow.totalExpenses) : '••••'}</p>
                     </div>
                   </div>
@@ -364,8 +365,8 @@ export default function Index() {
               {/* Últimos Lançamentos */}
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between px-1">
-                  <p className="text-[10px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest">Últimos Lançamentos</p>
-                  <button onClick={() => setCurrentView('transactions')} className="text-[10px] font-bold text-primary px-2">Ver tudo</button>
+                  <p className="text-xs font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest">Últimos Lançamentos</p>
+                  <button onClick={() => setCurrentView('transactions')} className="text-xs font-bold text-primary px-2">Ver tudo</button>
                 </div>
                 <div className="space-y-2">
                   {currentMonthTransactions.slice(0, 3).map(tx => (
@@ -376,7 +377,7 @@ export default function Index() {
                         </div>
                         <div>
                           <p className="text-xs font-bold leading-none mb-1">{tx.description}</p>
-                          <p className="text-[10px] text-gray-500 dark:text-zinc-500 uppercase font-black">
+                          <p className="text-xs text-gray-500 dark:text-zinc-500 uppercase font-black">
                             {categories.find(c => c.id === tx.categoryId)?.name || 'Geral'}
                           </p>
                         </div>
@@ -541,7 +542,7 @@ export default function Index() {
                         {userName}
                         {accentColor === 'pascoa' && <Rabbit className="w-4 h-4 text-primary" />}
                       </SheetTitle>
-                      <SheetDescription className="text-[10px] uppercase font-black tracking-widest text-zinc-500">
+                      <SheetDescription className="text-xs uppercase font-black tracking-widest text-zinc-500">
                         {accentColor === 'pascoa' ? '🐰 Feliz Páscoa!' : 'Menu Principal'}
                       </SheetDescription>
                     </div>
@@ -571,7 +572,7 @@ export default function Index() {
 
                 <div className="mt-auto border-t border-gray-100 dark:border-zinc-900 p-6 space-y-6">
                   <div className="space-y-4">
-                    <p className="text-[10px] uppercase font-black tracking-widest text-zinc-500">Temas Especiais</p>
+                    <p className="text-xs uppercase font-black tracking-widest text-zinc-500">Temas Especiais</p>
                     <button
                       onClick={() => setAccentColor(accentColor === 'pascoa' ? 'teal' : 'pascoa')}
                       className={cn(
@@ -588,7 +589,7 @@ export default function Index() {
                   </div>
 
                   <div>
-                    <p className="text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-4">Aparência</p>
+                    <p className="text-xs uppercase font-black tracking-widest text-zinc-500 mb-4">Aparência</p>
                     <div className="grid grid-cols-3 gap-2">
                       {[{ id: 'light', icon: Sun, label: 'Claro' }, { id: 'dark', icon: Moon, label: 'Escuro' }, { id: 'amoled', icon: Zap, label: 'AMOLED' }].map((t) => (
                         <button
@@ -600,7 +601,7 @@ export default function Index() {
                           )}
                         >
                           <t.icon className="w-4 h-4" />
-                          <span className="text-[9px] font-bold">{t.label}</span>
+                          <span className="text-[11px] font-bold">{t.label}</span>
                         </button>
                       ))}
                     </div>
@@ -611,7 +612,7 @@ export default function Index() {
 
             <div className="flex items-center gap-3">
               <Avatar className="w-8 h-8">
-                <AvatarFallback className="bg-gray-100 dark:bg-zinc-900 text-gray-500 dark:text-zinc-400 font-bold text-[10px]">{userInitials}</AvatarFallback>
+                <AvatarFallback className="bg-gray-100 dark:bg-zinc-900 text-gray-500 dark:text-zinc-400 font-bold text-xs">{userInitials}</AvatarFallback>
               </Avatar>
               <p className="font-bold text-sm">{userName}</p>
             </div>

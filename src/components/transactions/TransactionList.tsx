@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { formatCurrency } from '@/utils/formatters';
 import { ArrowUpRight, ArrowDownRight, Trash2, Pencil, FastForward, ChevronDown, ChevronUp, Plus, RotateCcw, ArrowRight } from 'lucide-react';
 import { Transaction } from '@/types/finance';
@@ -81,7 +81,7 @@ export function TransactionList({
     parseLocalDate(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' });
 
   const displayItems = transactions.map(t => {
-    // ✅ REGRA DE NEGÓCIO: Compras pontuais no cartão (débito do limite) consomem saldo/limite na hora.
+    // 🛡️ REGRA DE NEGÓCIO: Compras pontuais no cartão (débito do limite) consomem saldo/limite na hora.
     // Elas nunca são marcadas como pendentes no extrato para evitar confusão.
     // Apenas Recorrentes, Parcelamentos e Faturas seguem o status isPaid.
     const isRecurringOrInstallment = t.isRecurring || t.transactionType === 'recurring' || t.installmentGroupId;
@@ -313,7 +313,7 @@ export function TransactionList({
           <Button
             variant={isSelectionMode ? "default" : "outline"}
             onClick={toggleSelectionMode}
-            className={cn("h-9 px-4 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all",
+            className={cn("h-9 px-4 rounded-xl font-black uppercase text-xs tracking-wider transition-all",
               isSelectionMode ? "bg-primary text-white" : "border-danger/30 text-danger hover:bg-danger/10")}
           >
             <Trash2 className="w-4 h-4 mr-2" />
@@ -329,13 +329,13 @@ export function TransactionList({
             </span>
             <div className="flex flex-wrap gap-2">
               <button onClick={() => setSpecificSourceId('all')}
-                className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase transition-all border",
+                className={cn("px-3 py-1 rounded-full text-xs font-black uppercase transition-all border",
                   specificSourceId === 'all' ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}>
                 Todos
               </button>
               {(sourceFilter === 'account' ? accounts : creditCards).map((item: any) => (
                 <button key={item.id} onClick={() => setSpecificSourceId(item.id)}
-                  className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase transition-all border flex items-center gap-2",
+                  className={cn("px-3 py-1 rounded-full text-xs font-black uppercase transition-all border flex items-center gap-2",
                     specificSourceId === item.id ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}>
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
                   {item.name}
@@ -356,7 +356,7 @@ export function TransactionList({
           .sort((a, b) => parseLocalDate(b).getTime() - parseLocalDate(a).getTime())
           .map(date => (
             <div key={date} className="space-y-3 pt-2">
-              <p className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest px-4">{formatDate(date)}</p>
+              <p className="text-xs font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest px-4">{formatDate(date)}</p>
               <div className="divide-y divide-gray-100 dark:divide-zinc-800 bg-transparent">
                 {groupedItems[date].map(item => {
                   const isIncome = item.type === 'income';
@@ -412,9 +412,9 @@ export function TransactionList({
                           <div>
                             <div className="flex items-center gap-2">
                               <p className="font-bold text-gray-900 dark:text-white text-sm">{item.description}</p>
-                              {isPending && <span className="text-[8px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Pendente</span>}
-                              {item.isVirtual && <span className="text-[8px] bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Projetado</span>}
-                              {isManagedByBills && <span className="text-[8px] bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Gestão de Contas</span>}
+                              {isPending && <span className="text-[11px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Pendente</span>}
+                              {item.isVirtual && <span className="text-[11px] bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Projetado</span>}
+                              {isManagedByBills && <span className="text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Gestão de Contas</span>}
                             </div>
                             <div className="flex items-center gap-1.5 text-xs text-zinc-500">
                               <span>
@@ -446,6 +446,7 @@ export function TransactionList({
                                   e.stopPropagation();
                                   onUndoPayment(item as Transaction);
                                 }}
+                                aria-label="Estornar pagamento"
                                 className="p-2 rounded-xl border border-amber-100 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-900/10 text-amber-600 hover:text-amber-700 hover:border-amber-200 transition-all active:scale-90"
                                 title="Estornar pagamento"
                               >
@@ -460,6 +461,7 @@ export function TransactionList({
                                   e.stopPropagation();
                                   onCopy(item as Transaction);
                                 }}
+                                aria-label="Duplicar lançamento"
                                 className="p-2 rounded-xl border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 text-gray-400 dark:text-zinc-400 hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all active:scale-90"
                                 title="Duplicar lançamento"
                               >
@@ -482,10 +484,10 @@ export function TransactionList({
                               <h4 className={cn("text-xs font-black uppercase tracking-wider flex items-center gap-2", isIncome ? "text-success" : "text-info")}>
                                 <FastForward className="w-4 h-4" /> {isIncome ? 'Receber Parcelas Futuras' : 'Antecipar Parcelas Futuras'}
                               </h4>
-                              <p className="text-[10px] text-zinc-500 mt-1">{futureInstallments.length} parcela(s) pendente(s).</p>
+                              <p className="text-xs text-zinc-500 mt-1">{futureInstallments.length} parcela(s) pendente(s).</p>
                             </div>
                             <div className="flex items-center gap-2">
-                              <select className="h-8 rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1 text-[10px] font-bold text-white flex-1 md:w-40"
+                              <select className="h-8 rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs font-bold text-white flex-1 md:w-40"
                                 value={anticipateAccount} onChange={e => setAnticipateAccount(e.target.value)}>
                                 <option value="">{isIncome ? 'Entrar na conta...' : 'Debitar de...'}</option>
                                 {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
@@ -493,13 +495,13 @@ export function TransactionList({
                               {anticipatingIds.size > 0 && (
                                 <Button size="sm"
                                   onClick={() => handleAnticipateSelected(futureInstallments)}
-                                  className={cn("h-8 px-3 rounded-lg text-white font-black uppercase text-[9px] tracking-wider", isIncome ? "bg-success/80 hover:bg-success/70" : "bg-info/80 hover:bg-info/70")}>
+                                  className={cn("h-8 px-3 rounded-lg text-white font-black uppercase text-[11px] tracking-wider", isIncome ? "bg-success/80 hover:bg-success/70" : "bg-info/80 hover:bg-info/70")}>
                                   Selecionadas ({anticipatingIds.size})
                                 </Button>
                               )}
                               <Button size="sm"
                                 onClick={() => handleAnticipateAll(futureInstallments)}
-                                className={cn("h-8 px-3 rounded-lg text-white font-black uppercase text-[9px] tracking-wider", isIncome ? "bg-success hover:bg-success/90" : "bg-info hover:bg-info/90")}>
+                                className={cn("h-8 px-3 rounded-lg text-white font-black uppercase text-[11px] tracking-wider", isIncome ? "bg-success hover:bg-success/90" : "bg-info hover:bg-info/90")}>
                                 Tudo ({futureInstallments.length})
                               </Button>
                             </div>
@@ -521,15 +523,15 @@ export function TransactionList({
                                       });
                                     }} />
                                   <div>
-                                    <span className={cn("text-[10px] font-black", isIncome ? "text-success" : "text-info")}>Parcela {inst.installmentNumber}/{inst.installmentTotal}</span>
-                                    <p className="text-[10px] text-zinc-500">Vence em {formatShortDate(inst.date)}</p>
+                                    <span className={cn("text-xs font-black", isIncome ? "text-success" : "text-info")}>Parcela {inst.installmentNumber}/{inst.installmentTotal}</span>
+                                    <p className="text-xs text-zinc-500">Vence em {formatShortDate(inst.date)}</p>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className={cn("text-xs font-black", isIncome ? "text-success" : "text-white")}>{formatCurrency(inst.amount)}</span>
                                   <Button size="sm" variant="outline"
                                     onClick={() => handleAnticipatePayment(inst)}
-                                    className={cn("h-7 px-2 rounded-lg text-[9px] font-black uppercase", isIncome ? "border-success/30 text-success" : "border-info/30 text-info")}>
+                                    className={cn("h-7 px-2 rounded-lg text-[11px] font-black uppercase", isIncome ? "border-success/30 text-success" : "border-info/30 text-info")}>
                                     {isIncome ? 'Receber' : 'Pagar'}
                                   </Button>
                                 </div>
@@ -562,7 +564,7 @@ export function TransactionList({
                   <p className="text-xs text-muted-foreground mt-0.5">
                     <span className={cn("font-bold", payingItem.type === 'income' ? "text-success" : "text-danger")}>
                       {formatCurrency(payingItem.amount)}
-                    </span>{' — '}{payingItem.description}
+                    </span>{' • '}{payingItem.description}
                   </p>
                 </div>
                 <div className="p-4 space-y-4">
@@ -609,7 +611,7 @@ export function TransactionList({
                                 <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: acc.color }} />
                                 <div>
                                   <p className="font-bold text-sm leading-tight">{acc.name}</p>
-                                  <p className="text-[10px] text-muted-foreground font-bold uppercase">{acc.bank}</p>
+                                  <p className="text-xs text-muted-foreground font-bold uppercase">{acc.bank}</p>
                                 </div>
                               </div>
                               <div className="text-right">
@@ -617,9 +619,9 @@ export function TransactionList({
                                   {formatCurrency(acc.balance)}
                                 </p>
                                 {acc.hasOverdraft && (acc.overdraftLimit || 0) > 0 && (
-                                  <p className="text-[9px] text-amber-600 font-bold">Limite: {formatCurrency(acc.overdraftLimit || 0)}</p>
+                                  <p className="text-[11px] text-amber-600 font-bold">Limite: {formatCurrency(acc.overdraftLimit || 0)}</p>
                                 )}
-                                {insufficientFunds && <p className="text-[9px] text-danger font-bold">Saldo inadequado</p>}
+                                {insufficientFunds && <p className="text-[11px] text-danger font-bold">Saldo inadequado</p>}
                               </div>
                             </div>
                           </button>
@@ -638,7 +640,7 @@ export function TransactionList({
                             <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: card.color }} />
                             <div>
                               <p className="font-bold text-sm leading-tight">{card.name}</p>
-                              <p className="text-[10px] text-muted-foreground font-bold uppercase">{card.bank}</p>
+                              <p className="text-xs text-muted-foreground font-bold uppercase">{card.bank}</p>
                             </div>
                           </div>
                         </button>
@@ -711,7 +713,7 @@ export function TransactionList({
                     variant="destructive"
                     size="sm"
                     onClick={() => setShowBulkDeleteDialog(true)}
-                    className="bg-danger hover:bg-danger/90 text-white font-black uppercase text-[10px] tracking-widest px-6 rounded-xl"
+                    className="bg-danger hover:bg-danger/90 text-white font-black uppercase text-xs tracking-widest px-6 rounded-xl"
                   >
                     Remover
                   </Button>
@@ -760,5 +762,3 @@ export function TransactionList({
     </div >
   );
 }
-
-

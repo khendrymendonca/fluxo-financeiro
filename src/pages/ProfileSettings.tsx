@@ -199,7 +199,7 @@ export function ProfileSettings() {
                                     placeholder="seu@email.com"
                                 />
                             </div>
-                            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-bold italic ml-1">
+                            <p className="text-xs text-zinc-400 dark:text-zinc-500 font-bold italic ml-1">
                                 Uma confirmação será enviada para o novo e-mail.
                             </p>
                         </div>
@@ -238,10 +238,10 @@ export function ProfileSettings() {
                             </div>
                             <div>
                                 <h2 className="text-xl font-bold">Menu Inferior (Mobile)</h2>
-                                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Escolha até 5 atalhos para sua barra de navegação</p>
+                                <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Escolha até 5 atalhos para sua barra de navegação</p>
                             </div>
                         </div>
-                        <div className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase">
+                        <div className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-black uppercase">
                             {shortcuts.length}/5
                         </div>
                     </div>
@@ -312,7 +312,7 @@ export function ProfileSettings() {
                                 )}
                             >
                                 <t.icon className={cn("w-6 h-6", theme === t.id ? "scale-110" : "")} />
-                                <span className="text-[10px] font-black uppercase tracking-widest">{t.label}</span>
+                                <span className="text-xs font-black uppercase tracking-widest">{t.label}</span>
                             </button>
                         ))}
                     </div>
@@ -357,7 +357,7 @@ export function ProfileSettings() {
                         <div className="flex items-center justify-between p-4 bg-gray-50/50 dark:bg-zinc-950/50 rounded-3xl border border-gray-100 dark:border-zinc-800 transition-all hover:border-gray-200 dark:hover:border-zinc-700">
                             <div className="space-y-0.5">
                                 <Label className="text-sm font-black">Lembretes de Vencimento</Label>
-                                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Avisa 1 dia antes da conta vencer</p>
+                                <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Avisa 1 dia antes da conta vencer</p>
                             </div>
                             <Switch
                                 checked={remindersEnabled}
@@ -368,7 +368,7 @@ export function ProfileSettings() {
                         <div className="flex items-center justify-between p-4 bg-gray-50/50 dark:bg-zinc-950/50 rounded-3xl border border-gray-100 dark:border-zinc-800 transition-all hover:border-gray-200 dark:hover:border-zinc-700">
                             <div className="space-y-0.5">
                                 <Label className="text-sm font-black">Atualizações de Projetos</Label>
-                                <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Avisos sobre prazos de sonhos</p>
+                                <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Avisos sobre prazos de sonhos</p>
                             </div>
                             <Switch
                                 checked={projectUpdatesEnabled}
@@ -381,13 +381,13 @@ export function ProfileSettings() {
                         <div className="pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
                             <Button
                                 onClick={handleUpdatePermission}
-                                className="w-full h-12 rounded-2xl bg-rose-500 text-white font-black uppercase tracking-widest text-[10px] shadow-lg shadow-rose-500/20 gap-2"
+                                className="w-full h-12 rounded-2xl bg-rose-500 text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-rose-500/20 gap-2"
                             >
                                 <Zap className="w-4 h-4 fill-white" />
                                 Ativar Notificações no Dispositivo
                             </Button>
                             {!('Notification' in window) && (
-                                <p className="text-[9px] text-center mt-3 text-zinc-400 font-bold italic leading-tight">
+                                <p className="text-[11px] text-center mt-3 text-zinc-400 font-bold italic leading-tight">
                                     Notificações não suportadas. No iOS, use "Adicionar à Tela de Início" pelo Safari.
                                 </p>
                             )}
@@ -395,7 +395,7 @@ export function ProfileSettings() {
                     ) : (
                         <div className="pt-4 flex items-center justify-center gap-2 text-emerald-500 bg-emerald-500/5 py-3 rounded-2xl border border-emerald-500/10">
                             <CheckCircle2 className="w-4 h-4" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Notificações Ativadas</span>
+                            <span className="text-xs font-black uppercase tracking-widest">Notificações Ativadas</span>
                         </div>
                     )}
                 </div>
@@ -421,11 +421,11 @@ export function ProfileSettings() {
 
                     <div className="mt-8 pt-6 border-t border-gray-100 dark:border-zinc-800 space-y-3">
                         <div className="flex flex-col gap-1">
-                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                            <div className="flex justify-between items-center text-xs font-black uppercase tracking-widest">
                                 <span className="text-zinc-400 dark:text-zinc-600">Versão</span>
                                 <span className="text-zinc-600 dark:text-zinc-400">{appVersion} | Estável</span>
                             </div>
-                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                            <div className="flex justify-between items-center text-xs font-black uppercase tracking-widest">
                                 <span className="text-zinc-400 dark:text-zinc-600">Última Atualização</span>
                                 <span className="text-zinc-600 dark:text-zinc-400">{lastUpdateDate.toLocaleDateString('pt-BR')}</span>
                             </div>

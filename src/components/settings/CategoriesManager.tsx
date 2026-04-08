@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useCategories, useSubcategories, useCategoryGroups } from '@/hooks/useFinanceQueries';
 import {
@@ -146,11 +146,11 @@ export function CategoriesManager() {
                                 <span className="font-bold text-sm truncate">{cat.name}</span>
                                 <div className="flex items-center gap-2 mt-0.5">
                                     {cat.isFixed && (
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1 bg-background px-1.5 py-0.5 rounded-full">
+                                        <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1 bg-background px-1.5 py-0.5 rounded-full">
                                             <Pin className="w-2.5 h-2.5" /> Fixa
                                         </span>
                                     )}
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-background px-1.5 py-0.5 rounded-full">
+                                    <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground bg-background px-1.5 py-0.5 rounded-full">
                                         {catSubs.length} subs
                                     </span>
                                 </div>
@@ -331,7 +331,7 @@ export function CategoriesManager() {
 
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Nome</Label>
+                                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Nome</Label>
                                     <Input
                                         value={newCatName}
                                         onChange={e => setNewCatName(e.target.value)}
@@ -342,7 +342,7 @@ export function CategoriesManager() {
 
                                 {newCatType === 'expense' && (
                                     <div className="space-y-2 animate-in slide-in-from-top-2">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Grupo de Orçamento</Label>
+                                        <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Grupo de Orçamento</Label>
                                         <select
                                             className="w-full h-12 rounded-xl border-2 border-input bg-muted/20 px-4 text-sm font-bold focus:border-primary transition-colors"
                                             value={newCatBudgetGroup}
@@ -358,7 +358,7 @@ export function CategoriesManager() {
                                 <div className="flex items-center justify-between p-4 rounded-2xl border-2 border-dashed bg-muted/10">
                                     <div className="flex flex-col">
                                         <Label className="text-[11px] font-black uppercase">Conta Fixa</Label>
-                                        <span className="text-[9px] text-muted-foreground">Repete todos os meses</span>
+                                        <span className="text-[11px] text-muted-foreground">Repete todos os meses</span>
                                     </div>
                                     <Switch checked={newCatIsFixed} onCheckedChange={setNewCatIsFixed} />
                                 </div>
@@ -384,10 +384,10 @@ export function CategoriesManager() {
             <div className="flex flex-col gap-6">
                 <div className="flex gap-1 p-1 bg-muted rounded-2xl w-fit">
                     <button onClick={() => setActiveTab('expense')} className={cn('px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all', activeTab === 'expense' ? 'bg-background shadow-sm text-danger' : 'text-muted-foreground hover:text-foreground')}>
-                        Despesas <span className="ml-2 text-[9px] bg-background/50 text-foreground rounded-full px-1.5 py-0.5">{expenseCategories.length}</span>
+                        Despesas <span className="ml-2 text-[11px] bg-background/50 text-foreground rounded-full px-1.5 py-0.5">{expenseCategories.length}</span>
                     </button>
                     <button onClick={() => setActiveTab('income')} className={cn('px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all', activeTab === 'income' ? 'bg-background shadow-sm text-success' : 'text-muted-foreground hover:text-foreground')}>
-                        Receitas <span className="ml-2 text-[9px] bg-background/50 text-foreground rounded-full px-1.5 py-0.5">{incomeCategories.length}</span>
+                        Receitas <span className="ml-2 text-[11px] bg-background/50 text-foreground rounded-full px-1.5 py-0.5">{incomeCategories.length}</span>
                     </button>
                 </div>
 
@@ -404,5 +404,3 @@ export function CategoriesManager() {
         </div>
     );
 }
-
-

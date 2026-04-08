@@ -1,4 +1,4 @@
-ï»¿import { useState } from 'react';
+import { useState } from 'react';
 import { format } from 'date-fns';
 import { TrendingDown, Plus, Trash2, X, AlertTriangle, Edit2 } from 'lucide-react';
 import { useRenegotiateDebt } from '@/hooks/useDebtMutations';
@@ -149,7 +149,7 @@ export function DebtsManager({
             <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">Nenhum acordo cadastrado</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Que bom! Continue assim ðŸŽ‰
+              Que bom! Continue assim ??
             </p>
           </div>
         ) : (
@@ -171,7 +171,7 @@ export function DebtsManager({
                         <div>
                           <h3 className="font-semibold text-lg text-gray-900 dark:text-zinc-50">{debt.name}</h3>
                           <p className="text-xs text-gray-500 dark:text-zinc-500 uppercase font-bold tracking-tighter">
-                            {debt.dueDay && `Vence dia ${debt.dueDay} â€¢ `}
+                            {debt.dueDay && `Vence dia ${debt.dueDay} • `}
                             ~{monthsRemaining} parcelas estimadas
                           </p>
                         </div>
@@ -187,18 +187,18 @@ export function DebtsManager({
 
                       <div className="flex justify-between items-center py-2 border-y border-gray-100 dark:border-zinc-800">
                         <div>
-                          <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-bold uppercase">Saldo Devedor</p>
+                          <p className="text-xs text-gray-500 dark:text-zinc-500 font-bold uppercase">Saldo Devedor</p>
                           <p className="text-xl font-black text-danger">{formatCurrency(debt.remainingAmount)}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-bold uppercase">Valor Sugerido Parcela</p>
+                          <p className="text-xs text-gray-500 dark:text-zinc-500 font-bold uppercase">Valor Sugerido Parcela</p>
                           <p className="text-lg font-bold text-gray-900 dark:text-zinc-50">{formatCurrency(debt.installmentAmount || 0)}</p>
                         </div>
                       </div>
 
                       <Button
                         onClick={() => renegotiateDebt({ debt, firstInstallmentDate: format(new Date(), 'yyyy-MM-dd') })}
-                        className="w-full rounded-xl bg-warning hover:bg-warning/90 text-warning-foreground font-black uppercase text-[10px] tracking-widest h-11"
+                        className="w-full rounded-xl bg-warning hover:bg-warning/90 text-warning-foreground font-black uppercase text-xs tracking-widest h-11"
                       >
                         Gerar Parcelas do Acordo
                       </Button>
@@ -225,9 +225,9 @@ export function DebtsManager({
                         <div>
                           <h3 className="font-semibold text-lg text-gray-900 dark:text-zinc-50">{debt.name}</h3>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="px-1.5 py-0.5 rounded bg-success/10 text-success text-[8px] font-black uppercase">Acordo Ativo</span>
-                            <p className="text-[10px] text-gray-500 dark:text-zinc-500 font-bold">
-                              {debt.totalInstallments} parcelas â€¢ Dia {debt.dueDay}
+                            <span className="px-1.5 py-0.5 rounded bg-success/10 text-success text-[11px] font-black uppercase">Acordo Ativo</span>
+                            <p className="text-xs text-gray-500 dark:text-zinc-500 font-bold">
+                              {debt.totalInstallments} parcelas • Dia {debt.dueDay}
                             </p>
                           </div>
                         </div>
@@ -242,7 +242,7 @@ export function DebtsManager({
                       </div>
 
                       <div className="space-y-2">
-                        <div className="flex justify-between text-[10px] font-black uppercase">
+                        <div className="flex justify-between text-xs font-black uppercase">
                           <span className="text-muted-foreground">Pago: {formatCurrency(Math.max(0, (Number(debt.totalAmount) || 0) - (Number(debt.remainingAmount) || 0)))}</span>
                           <span className="text-danger">Restante: {formatCurrency(Number(debt.remainingAmount) || 0)}</span>
                         </div>
@@ -252,8 +252,8 @@ export function DebtsManager({
                       </div>
 
                       <div className="p-3 rounded-xl bg-success/5 border border-success/10 text-center">
-                        <p className="text-[10px] font-bold text-success select-none">
-                          As parcelas deste acordo estÃ£o na sua GestÃ£o de Contas para pagamento.
+                        <p className="text-xs font-bold text-success select-none">
+                          As parcelas deste acordo estão na sua Gestão de Contas para pagamento.
                         </p>
                       </div>
                     </div>
@@ -282,7 +282,7 @@ export function DebtsManager({
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="space-y-2">
-                <Label>Nome/DescriÃ§Ã£o</Label>
+                <Label>Nome/Descrição</Label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -329,7 +329,7 @@ export function DebtsManager({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>NÂº de Parcelas</Label>
+                  <Label>Nº de Parcelas</Label>
                   <Input
                     type="number"
                     min="1"
@@ -342,7 +342,7 @@ export function DebtsManager({
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Data da 1Âª Parcela</Label>
+                <Label>Data da 1ª Parcela</Label>
                 <Input
                   type="date"
                   value={firstInstallmentDate}

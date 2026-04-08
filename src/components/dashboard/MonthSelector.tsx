@@ -1,4 +1,5 @@
-﻿import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+// UTF-8 Integrity Check
+import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { format } from 'date-fns';
@@ -50,7 +51,7 @@ export function MonthSelector() {
                         size="sm"
                         onClick={() => setViewMode(mode)}
                         className={cn(
-                            "h-7 px-3 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all",
+                            "h-7 px-3 text-xs font-bold uppercase tracking-wider rounded-lg transition-all",
                             viewMode === mode ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
                         )}
                     >
@@ -63,7 +64,7 @@ export function MonthSelector() {
             {viewMode === 'all' ? (
                 <div className="flex items-center gap-2 bg-primary/10 text-primary px-4 py-1.5 rounded-xl border border-primary/20 animate-fade-in h-10">
                     <Calendar className="w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Visualizando Todo o Período</span>
+                    <span className="text-xs font-black uppercase tracking-widest">Visualizando Todo o Período</span>
                 </div>
             ) : (
                 <div className="flex items-center gap-2 bg-card p-1 rounded-xl shadow-sm border border-border">
@@ -136,5 +137,3 @@ function CalendarPicker({ className, classNames, showOutsideDays = true, ...prop
         />
     );
 }
-
-

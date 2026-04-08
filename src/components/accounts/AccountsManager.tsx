@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 // formatCurrency local from '@/utils/formatters';
 import { Building2, Plus, Trash2, X, Wallet, Pencil, ShieldCheck, ArrowRightLeft, TrendingUp } from 'lucide-react';
 import { Account, AccountType } from '@/types/finance';
@@ -146,7 +146,7 @@ export function AccountsManager({
         const diferenca = parsedNewBalance - currentRealBalance;
         const type = diferenca > 0 ? 'income' : 'expense';
         
-        // 🛡️ Busca categoria de ajuste ou a primeira compatível
+        // ??? Busca categoria de ajuste ou a primeira compatível
         let adjustmentCategoryId = categories.find(c => c.name.toLowerCase().includes('ajuste'))?.id;
         if (!adjustmentCategoryId) {
           adjustmentCategoryId = categories.find(c => c.type === type)?.id || categories[0]?.id;
@@ -164,7 +164,7 @@ export function AccountsManager({
             type,
             transactionType: 'adjustment',
             isPaid: true,
-            date: todayLocalString(), // ✅ Uso de local string padronizada
+            date: todayLocalString(), // ? Uso de local string padronizada
             accountId: editingAccount.id,
             categoryId: adjustmentCategoryId
           });
@@ -296,7 +296,7 @@ export function AccountsManager({
           <div>
             <p className="text-sm font-bold text-primary/70 uppercase tracking-widest mb-1">Patrimônio (Soma das Carteiras)</p>
             <h2 className="text-4xl font-black tracking-tight text-gray-900 dark:text-white">{formatCurrency(totalNetWorth)}</h2>
-            <p className="text-[10px] text-muted-foreground mt-1 font-medium">
+            <p className="text-xs text-muted-foreground mt-1 font-medium">
               Apenas Contas Corrente e Benefícios. Poupança e Investimentos não inclusos.
             </p>
           </div>
@@ -352,11 +352,11 @@ export function AccountsManager({
                         </Avatar>
                         <div className="min-w-0">
                           <h3 className="font-bold text-lg text-gray-900 dark:text-zinc-50 truncate">{institution}</h3>
-                          <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground truncate">{instAccounts.length} {instAccounts.length === 1 ? 'conta' : 'contas'}</p>
+                          <p className="text-xs uppercase font-black tracking-widest text-muted-foreground truncate">{instAccounts.length} {instAccounts.length === 1 ? 'conta' : 'contas'}</p>
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground mb-1">Saldo Consolidado</p>
+                        <p className="text-xs uppercase font-black tracking-widest text-muted-foreground mb-1">Saldo Consolidado</p>
                         <p className="font-bold text-lg md:text-xl text-primary">{formatCurrency(instTotal)}</p>
                       </div>
                     </div>
@@ -378,15 +378,15 @@ export function AccountsManager({
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className={cn(
-                                    "text-[8px] font-black uppercase px-2 py-0.5 rounded-full border",
+                                    "text-[11px] font-black uppercase px-2 py-0.5 rounded-full border",
                                     account.accountType === 'corrente' ? "bg-blue-500/10 text-blue-500 border-blue-500/20" :
-                                      ['benefit_vr', 'benefit_va', 'benefit_flex'].includes(account.accountType) ? "bg-orange-500/10 text-orange-500 border-orange-500/20" :
+                                      ['benefit_vr', 'benefit_va', 'benefit_flex'].includes(account.accountType) ? "bg-orange-500/10 text-orange- Orange-500/20" :
                                         "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
                                   )}>
                                     {typeLabel}
                                   </span>
                                   {account.hasOverdraft && (
-                                    <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                                    <span className="text-[11px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
                                       Limite
                                     </span>
                                   )}
@@ -406,7 +406,7 @@ export function AccountsManager({
 
                             <div className="flex items-end justify-between mt-auto">
                               <div>
-                                <p className="text-[10px] uppercase font-black text-zinc-400 tracking-tighter">Saldo Disponível</p>
+                                <p className="text-xs uppercase font-black text-zinc-400 tracking-tighter">Saldo Disponível</p>
                                 <p className={cn(
                                   "font-black text-xl tracking-tighter",
                                   viewAccountBalance < 0 ? "text-danger" : "text-zinc-900 dark:text-zinc-50"
@@ -449,22 +449,22 @@ export function AccountsManager({
               <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5 col-span-2 md:col-span-1">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Apelido da Conta (Opcional)</Label>
+                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Apelido da Conta (Opcional)</Label>
                     <Input value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="Ex: Principal" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4" />
                   </div>
                   <div className="space-y-1.5 col-span-2 md:col-span-1">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Instituição (Banco)</Label>
+                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Instituição (Banco)</Label>
                     <Input value={accountInstitution} onChange={(e) => setAccountInstitution(e.target.value)} placeholder="Ex: Itaú, Nubank" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4" required />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{isEditing ? 'Saldo Atual (R$)' : 'Saldo Inicial (R$)'}</Label>
+                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">{isEditing ? 'Saldo Atual (R$)' : 'Saldo Inicial (R$)'}</Label>
                     <Input type="number" step="0.01" value={accountBalance} onChange={(e) => setAccountBalance(e.target.value)} placeholder="0.00" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4 font-bold" required />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tipo de Conta</Label>
+                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Tipo de Conta</Label>
                     <select
                       value={accountType}
                       onChange={(e) => {
@@ -486,11 +486,11 @@ export function AccountsManager({
 
                 {showYieldRateInput && (
                   <div className="space-y-1.5 p-3 rounded-xl bg-success/5 border border-success/20 animate-fade-in">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-success flex items-center gap-1">
+                    <Label className="text-xs font-black uppercase tracking-widest text-success flex items-center gap-1">
                       <TrendingUp className="w-3 h-3" /> Rendimento Mensal (% a.m.)
                     </Label>
                     <Input type="number" step="0.01" min="0" value={monthlyYieldRate} onChange={(e) => setMonthlyYieldRate(e.target.value)} placeholder="Ex: 0.85" className="h-10 rounded-xl border-2 border-success/30 focus:border-success/50 transition-colors px-4 font-bold" />
-                    <p className="text-[9px] text-muted-foreground">O rendimento é projetado sobre o saldo positivo.</p>
+                    <p className="text-[11px] text-muted-foreground">O rendimento é projetado sobre o saldo positivo.</p>
                   </div>
                 )}
 
@@ -498,8 +498,8 @@ export function AccountsManager({
                 <div className="space-y-3 p-4 rounded-xl bg-muted/30 border border-border/50">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Limite da Conta</Label>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Permite saldo negativo (tipo cheque especial)</p>
+                      <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Limite da Conta</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">Permite saldo negativo (tipo cheque especial)</p>
                     </div>
                     <button type="button" onClick={() => setHasOverdraft(!hasOverdraft)} className={cn("relative w-12 h-7 rounded-full transition-colors duration-200 focus:outline-none", hasOverdraft ? "bg-primary" : "bg-muted-foreground/30")}>
                       <span className={cn("absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-200", hasOverdraft && "translate-x-5")} />
@@ -508,9 +508,9 @@ export function AccountsManager({
 
                   {hasOverdraft && (
                     <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-200">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-amber-600">Valor do Limite (R$)</Label>
+                      <Label className="text-xs font-black uppercase tracking-widest text-amber-600">Valor do Limite (R$)</Label>
                       <Input type="number" step="0.01" min="0" value={overdraftLimit} onChange={(e) => setOverdraftLimit(e.target.value)} placeholder="Ex: 1000.00" className="h-10 rounded-xl border-2 border-amber-500/30 focus:border-amber-500/50 transition-colors px-4 font-bold" />
-                      <p className="text-[9px] text-muted-foreground">Seu saldo poderá ir até <strong className="text-amber-600">-{formatCurrency(parseFloat(overdraftLimit || '0'))}</strong></p>
+                      <p className="text-[11px] text-muted-foreground">Seu saldo poderá ir até <strong className="text-amber-600">-{formatCurrency(parseFloat(overdraftLimit || '0'))}</strong></p>
                     </div>
                   )}
                 </div>
@@ -541,7 +541,7 @@ export function AccountsManager({
               <form onSubmit={handleTransferSubmit} className="px-5 py-4 space-y-4">
 
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Conta de Origem (Debitar)</Label>
+                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Conta de Origem (Debitar)</Label>
                   <select
                     value={transferFrom}
                     onChange={(e) => setTransferFrom(e.target.value)}
@@ -560,7 +560,7 @@ export function AccountsManager({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Conta de Destino (Creditar)</Label>
+                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Conta de Destino (Creditar)</Label>
                   <select
                     value={transferTo}
                     onChange={(e) => setTransferTo(e.target.value)}
@@ -573,12 +573,12 @@ export function AccountsManager({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Valor (R$)</Label>
+                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Valor (R$)</Label>
                   <Input type="number" step="0.01" min="0.01" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} placeholder="0.00" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4 font-bold text-lg" required />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Descrição (Opcional)</Label>
+                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Descrição (Opcional)</Label>
                   <Input value={transferDescription} onChange={(e) => setTransferDescription(e.target.value)} placeholder="Ex: Transferência para caixinha" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4" required />
                 </div>
 
@@ -594,5 +594,3 @@ export function AccountsManager({
     </div>
   );
 }
-
-

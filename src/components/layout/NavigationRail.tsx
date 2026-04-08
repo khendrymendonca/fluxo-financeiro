@@ -1,4 +1,4 @@
-﻿import {
+import {
   ArrowUpDown,
   Calculator,
   Database,
@@ -98,7 +98,7 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
 
       <div className="mt-auto pt-6 border-t border-gray-100 dark:border-zinc-800 flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <p className="text-[10px] uppercase font-black tracking-widest text-gray-400 dark:text-zinc-500 mb-2 px-2">Aparência</p>
+          <p className="text-xs uppercase font-black tracking-widest text-gray-400 dark:text-zinc-500 mb-2 px-2">Aparência</p>
           <div className="grid grid-cols-3 gap-1">
             {[
               { id: 'light', icon: Sun, label: 'Claro' },
@@ -116,7 +116,7 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
                 )}
               >
                 <t.icon className="w-4 h-4" />
-                <span className="text-[8px] font-bold">{t.label}</span>
+                <span className="text-[11px] font-bold">{t.label}</span>
               </button>
             ))}
           </div>
@@ -125,5 +125,3 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
     </nav>
   );
 }
-
-

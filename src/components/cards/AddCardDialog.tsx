@@ -130,7 +130,7 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
                                 className="h-11 rounded-xl"
                                 required
                             />
-                            <p className="text-[10px] text-primary font-bold flex items-center gap-1 mt-1">
+                            <p className="text-xs text-primary font-bold flex items-center gap-1 mt-1">
                                 <Sparkles className="w-3 h-3" /> Melhor dia: {parseInt(closingDay) === 31 ? 1 : parseInt(closingDay) + 1}
                             </p>
                         </div>
@@ -171,7 +171,7 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
                                     >
                                         <div className={cn("absolute inset-0", CARD_TEXTURES[t].className)} style={CARD_TEXTURES[t].style} />
                                     </div>
-                                    <span className="text-[9px] font-bold uppercase truncate">{CARD_TEXTURES[t].label}</span>
+                                    <span className="text-[11px] font-bold uppercase truncate">{CARD_TEXTURES[t].label}</span>
                                 </button>
                             ))}
                         </div>
@@ -204,7 +204,7 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
                                     type="button"
                                     onClick={() => setProgressColor(opt.value)}
                                     className={cn(
-                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
+                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest border transition-all",
                                         progressColor === opt.value
                                             ? "border-primary/40 bg-primary/10 text-primary"
                                             : "border-border/50 text-muted-foreground hover:border-border"

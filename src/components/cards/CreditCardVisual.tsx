@@ -57,14 +57,14 @@ export function CreditCardVisual({
                 {/* Topo: Instituição */}
                 <div className="flex justify-between items-start">
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70 mb-1 drop-shadow-sm">
+                        <span className="text-xs font-black uppercase tracking-[0.2em] opacity-70 mb-1 drop-shadow-sm">
                             {cardBank}
                         </span>
                     </div>
 
                     {invoiceStatus && (
                         <div className={cn(
-                            "text-[9px] font-black uppercase px-2.5 py-1 rounded-lg bg-white/10 backdrop-blur-md border border-white/10 transition-colors shadow-sm",
+                            "text-[11px] font-black uppercase px-2.5 py-1 rounded-lg bg-white/10 backdrop-blur-md border border-white/10 transition-colors shadow-sm",
                             invoiceStatus.text === 'Vencida' ? "bg-red-500/30 text-white animate-pulse" : "text-white/90"
                         )}>
                             {invoiceStatus.text}
@@ -84,12 +84,12 @@ export function CreditCardVisual({
                     <div className="space-y-1">
                         <div className="flex justify-between items-end">
                             <div className="flex flex-col">
-                                <span className="text-[8px] font-bold uppercase tracking-wider opacity-60 drop-shadow-sm">Limite Disponível</span>
+                                <span className="text-[11px] font-bold uppercase tracking-wider opacity-60 drop-shadow-sm">Limite Disponível</span>
                                 <span className="font-bold text-sm tabular-nums drop-shadow-md">
                                     {formatCurrency(availableLimit)}
                                 </span>
                             </div>
-                            <span className="text-[9px] font-black opacity-60 tabular-nums">
+                            <span className="text-[11px] font-black opacity-60 tabular-nums">
                                 {Math.min(percentageUsed, 100).toFixed(0)}%
                             </span>
                         </div>

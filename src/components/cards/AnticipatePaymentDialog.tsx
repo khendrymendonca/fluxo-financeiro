@@ -67,7 +67,7 @@ export function AnticipatePaymentDialog({ card, isOpen, onClose }: AnticipatePay
         <div className="px-8 pt-8 pb-4 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 italic">Abatimento de Fatura</h2>
-            <p className="text-[10px] uppercase font-black tracking-[0.2em] text-zinc-400 mt-1">Ajuste de Saldo Devedor</p>
+            <p className="text-xs uppercase font-black tracking-[0.2em] text-zinc-400 mt-1">Ajuste de Saldo Devedor</p>
           </div>
           <button 
             onClick={onClose} 
@@ -87,17 +87,17 @@ export function AnticipatePaymentDialog({ card, isOpen, onClose }: AnticipatePay
             <div className="relative z-10 flex flex-col justify-between h-24 text-white">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Cartão</p>
+                  <p className="text-xs font-black uppercase tracking-widest opacity-60">Cartão</p>
                   <p className="font-bold text-lg">{card.name}</p>
                 </div>
                 <CardIcon className="w-6 h-6 opacity-40" />
               </div>
               <div className="flex justify-between items-end">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest opacity-60 leading-none">Limite Total</p>
+                  <p className="text-xs font-black uppercase tracking-widest opacity-60 leading-none">Limite Total</p>
                   <p className="font-black text-xl">{formatCurrency(card.limit)}</p>
                 </div>
-                <div className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-1 rounded-lg">
+                <div className="text-xs font-black uppercase tracking-widest bg-white/20 px-2 py-1 rounded-lg">
                   {card.bank}
                 </div>
               </div>
@@ -108,7 +108,7 @@ export function AnticipatePaymentDialog({ card, isOpen, onClose }: AnticipatePay
           {/* Form */}
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Valor do Pagamento</Label>
+              <Label className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Valor do Pagamento</Label>
               <div className="relative">
                 <Banknote className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-300" />
                 <Input
@@ -123,7 +123,7 @@ export function AnticipatePaymentDialog({ card, isOpen, onClose }: AnticipatePay
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Data</Label>
+                <Label className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Data</Label>
                 <div className="relative">
                   <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
                   <Input
@@ -136,7 +136,7 @@ export function AnticipatePaymentDialog({ card, isOpen, onClose }: AnticipatePay
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Origem</Label>
+                <Label className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Origem</Label>
                 <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
                   <SelectTrigger className="h-12 rounded-xl border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/30 font-bold text-xs">
                     <SelectValue placeholder="Escolher conta" />
@@ -178,7 +178,7 @@ export function AnticipatePaymentDialog({ card, isOpen, onClose }: AnticipatePay
             
             <button 
               onClick={onClose}
-              className="h-12 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 hover:text-zinc-600 transition-colors"
+              className="h-12 text-xs font-black uppercase tracking-[0.2em] text-zinc-400 hover:text-zinc-600 transition-colors"
             >
               Cancelar e Voltar
             </button>

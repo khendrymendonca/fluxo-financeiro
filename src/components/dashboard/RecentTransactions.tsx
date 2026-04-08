@@ -95,12 +95,12 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
                   <div className="flex items-center gap-2">
                     <p className="font-bold text-xs md:text-sm truncate text-foreground tracking-tight">{transaction.description}</p>
                     {sourceLabel && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground/70 font-black uppercase tracking-tighter shrink-0 max-w-[80px] truncate border border-border/30">
+                      <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground/70 font-black uppercase tracking-tighter shrink-0 max-w-[80px] truncate border border-border/30">
                         {sourceLabel}
                       </span>
                     )}
                   </div>
-                  <p className="text-[10px] md:text-xs text-muted-foreground truncate font-medium">
+                  <p className="text-xs md:text-xs text-muted-foreground truncate font-medium">
                     {category?.label} • {formatDate(transaction.date)}
                   </p>
                 </div>

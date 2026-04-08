@@ -52,7 +52,7 @@ export function EasterWelcome() {
           <div className="space-y-2">
             <div className="flex items-center justify-center gap-2">
               <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Edição Especial</p>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-primary">Edição Especial</p>
               <Sparkles className="w-4 h-4 text-primary animate-pulse" />
             </div>
             <DialogTitle className="text-2xl font-black tracking-tight leading-tight">
@@ -81,7 +81,7 @@ export function EasterWelcome() {
           </Button>
         </div>
 
-        <p className="text-[9px] text-center text-muted-foreground/40 font-black uppercase tracking-widest">
+        <p className="text-[11px] text-center text-muted-foreground/40 font-black uppercase tracking-widest">
           Você pode desativar a qualquer momento no menu lateral
         </p>
       </DialogContent>

@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useUpdateTransaction, useDeleteTransaction, useAddTransaction, useToggleTransactionPaid } from '@/hooks/useTransactionMutations';
 import { toast } from '@/components/ui/use-toast';
@@ -16,6 +16,16 @@ import { ptBR } from 'date-fns/locale';
 import { getCardSettingsForDate, calcInvoiceMonthYear } from '@/utils/creditCardUtils';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
 import { BulkDeleteDialog } from '../transactions/BulkDeleteDialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { parseLocalDate, todayLocalString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/formatters';
@@ -49,6 +59,13 @@ export function BillsManager() {
     const [searchQuery, setSearchQuery] = useState('');
 
     const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
+    const [billToConfirm, setBillToConfirm] = useState<{
+        id: string;
+        date: string;
+        amount: number;
+        accountId?: string;
+        cardId?: string;
+    } | null>(null);
 
     const handleMarkAsPaid = async (targetId: string, isCard: boolean) => {
         if (!isPaying) return;
@@ -211,7 +228,7 @@ export function BillsManager() {
                 <div className="flex flex-wrap items-center gap-3">
                     <MonthSelector />
                     <div className="px-4 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 shadow-sm dark:shadow-none">
-                        <p className="text-[10px] uppercase font-bold text-gray-500 dark:text-zinc-500">A Pagar Pendente</p>
+                        <p className="text-xs uppercase font-bold text-gray-500 dark:text-zinc-500">A Pagar Pendente</p>
                         <p className="text-lg font-bold text-danger">{formatCurrency(totalPendingPayable)}</p>
                     </div>
                 </div>
@@ -232,7 +249,7 @@ export function BillsManager() {
                             onClick={() => setSearchQuery('')}
                             className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-full text-muted-foreground"
                         >
-                            <Plus className="w-4 h-4 rotate-45" />
+                            <Plus className="w-5 h-5 rotate-45" />
                         </button>
                     )}
                 </div>
@@ -285,7 +302,8 @@ export function BillsManager() {
                                                 {transaction.categoryId === 'card-payment' && (
                                                     <button
                                                         onClick={e => { e.stopPropagation(); setExpandedTransactionId(expandedTransactionId === transaction.id ? null : transaction.id); }}
-                                                        className="shrink-0 px-2 py-0.5 bg-primary/10 hover:bg-primary/20 rounded-md text-[10px] font-black uppercase text-primary transition-all flex items-center gap-1">
+                                                        aria-label={expandedTransactionId === transaction.id ? 'Ocultar detalhes' : 'Ver detalhes'}
+                                                        className="shrink-0 px-2 py-0.5 bg-primary/10 hover:bg-primary/20 rounded-md text-xs font-black uppercase text-primary transition-all flex items-center gap-1">
                                                         {expandedTransactionId === transaction.id ? 'Ocultar' : 'Detalhes'}
                                                         <Plus className={cn("w-3 h-3 transition-transform", expandedTransactionId === transaction.id && "rotate-45")} />
                                                     </button>
@@ -314,7 +332,7 @@ export function BillsManager() {
                                                         <ShieldAlert className="w-3 h-3" />
                                                         <span className="truncate max-w-[100px]">{(() => {
                                                             const acc = accounts.find(a => a.id === transaction.accountId);
-                                                            if (!acc) return categories.find(c => c.id === transaction.categoryId)?.name ?? '—';
+                                                            if (!acc) return '•';
                                                             return acc.name ? `${(acc as any).institution ?? (acc as any).bank ?? ''} - ${acc.name}`.trim().replace(/^- /, '') : ((acc as any).institution ?? (acc as any).bank ?? acc.name);
                                                         })()}</span>
                                                     </div>
@@ -327,7 +345,7 @@ export function BillsManager() {
                                                     </div>
                                                 )}
                                                 <span className={cn(
-                                                    "px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase shrink-0",
+                                                    "px-1.5 py-0.5 rounded-md text-xs font-bold uppercase shrink-0",
                                                     (transaction.debtId || transaction.transactionType === 'installment')
                                                         ? "bg-info/10 text-info"
                                                         : "bg-primary/10 text-primary"
@@ -345,15 +363,15 @@ export function BillsManager() {
                                             </p>
                                             <div className="flex items-center gap-1 justify-start md:justify-end">
                                                 {transaction.isPaid ? (
-                                                    <span className="flex items-center gap-1 text-[10px] font-bold text-success uppercase">
+                                                    <span className="flex items-center gap-1 text-xs font-bold text-success uppercase">
                                                         <CheckCircle2 className="w-3 h-3" /> Pago
                                                     </span>
                                                 ) : isLate ? (
-                                                    <span className="flex items-center gap-1 text-[10px] font-bold text-danger uppercase animate-pulse">
+                                                    <span className="flex items-center gap-1 text-xs font-bold text-danger uppercase animate-pulse">
                                                         <AlertCircle className="w-3 h-3" /> Atrasado
                                                     </span>
                                                 ) : (
-                                                    <span className="flex items-center gap-1 text-[10px] font-bold text-info uppercase">
+                                                    <span className="flex items-center gap-1 text-xs font-bold text-info uppercase">
                                                         <Clock className="w-3 h-3" /> Pendente
                                                     </span>
                                                 )}
@@ -363,19 +381,22 @@ export function BillsManager() {
                                             {!transaction.isPaid ? (
                                                 <Button size="sm" variant="ghost"
                                                     onClick={() => {
-                                                        setIsPaying(transaction);
-                                                        setPaymentDate(transaction.date?.split('T')[0] || todayLocalString());
-                                                        setPaymentAmount(transaction.amount.toFixed(2));
-                                                        setPaymentMethod('account');
+                                                        setBillToConfirm({
+                                                            id: transaction.id,
+                                                            date: transaction.date?.split('T')[0] || todayLocalString(),
+                                                            amount: transaction.amount,
+                                                            accountId: transaction.accountId,
+                                                            cardId: transaction.cardId
+                                                        });
                                                     }}
-                                                    className="h-10 px-3 md:px-4 rounded-xl bg-success/5 text-success hover:bg-success/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider">
+                                                    aria-label="Baixar conta"
+                                                    className="h-10 px-3 md:px-4 rounded-xl bg-success/5 text-success hover:bg-success/10 flex items-center gap-2 font-black uppercase text-xs tracking-wider">
                                                     <CheckCircle2 className="w-4 h-4" /> <span className="hidden xs:inline">Baixar</span>
                                                 </Button>
                                             ) : (
                                                 <Button size="sm" variant="ghost"
                                                     onClick={() => {
-                                                        // 🚨 ESTORNO INTELIGENTE: Se veio de uma recorrente e NÃO é parcelamento (fixa),
-                                                        // deletamos para voltar a ser apenas uma "Projeção Virtual".
+                                                        // 🛡️ ESTORNO INTELIGENTE:
                                                         if (transaction.originalId && !transaction.installmentGroupId) {
                                                             deleteTransactionMutation({ transaction, applyScope: 'this' });
                                                             toast({ title: "Lançamento estornado para o estado projetado." });
@@ -383,13 +404,15 @@ export function BillsManager() {
                                                             togglePaidMutation({ id: transaction.id, isPaid: false });
                                                         }
                                                     }}
-                                                    className="h-10 px-3 md:px-4 rounded-xl bg-amber-500/5 text-amber-600 hover:bg-amber-500/10 flex items-center gap-2 font-black uppercase text-[10px] tracking-wider">
+                                                    aria-label="Estornar conta"
+                                                    className="h-10 px-3 md:px-4 rounded-xl bg-amber-500/5 text-amber-600 hover:bg-amber-500/10 flex items-center gap-2 font-black uppercase text-xs tracking-wider">
                                                     <RotateCcw className="w-4 h-4" /> <span className="hidden xs:inline">Estornar</span>
                                                 </Button>
                                             )}
                                             {!(transaction.debtId || transaction.transactionType === 'installment') && (
                                                 <Button size="sm" variant="ghost"
                                                     onClick={() => setItemToDelete(transaction)}
+                                                    aria-label="Excluir lançamento"
                                                     className="h-10 w-10 p-0 rounded-xl hover:bg-danger/10 text-danger shrink-0"
                                                     title="Excluir lançamento">
                                                     <Trash2 className="w-4 h-4" />
@@ -402,7 +425,7 @@ export function BillsManager() {
                                 {/* Detalhes da Fatura (Expansão) */}
                                 {expandedTransactionId === transaction.id && transaction.categoryId === 'card-payment' && (
                                     <div className="card-elevated bg-muted/20 border-t-0 rounded-t-none p-4 -mt-1 ml-4 mr-2 animate-in slide-in-from-top-2 duration-200">
-                                        <h5 className="text-[10px] font-black uppercase text-muted-foreground mb-3 flex items-center gap-2">
+                                        <h5 className="text-xs font-black uppercase text-muted-foreground mb-3 flex items-center gap-2">
                                             <Plus className="w-3 h-3" /> Itens desta Fatura (Recorrentes)
                                         </h5>
                                         <div className="space-y-2">
@@ -420,7 +443,7 @@ export function BillsManager() {
                                                             <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                                                             <div>
                                                                 <p className="text-xs font-bold">{b.description}</p>
-                                                                <p className="text-[10px] text-muted-foreground">
+                                                                <p className="text-xs text-muted-foreground">
                                                                     {format(parseLocalDate(b.date), "dd/MM")}
                                                                 </p>
                                                             </div>
@@ -437,7 +460,7 @@ export function BillsManager() {
                                                 (t.isRecurring || t.transactionType === 'recurring') &&
                                                 t.invoiceMonthYear === viewDateStr
                                             ).length === 0 && (
-                                                    <p className="text-[10px] text-muted-foreground text-center py-2 italic">Nenhuma compra listada para esta fatura.</p>
+                                                    <p className="text-xs text-muted-foreground text-center py-2 italic">Nenhuma compra listada para esta fatura.</p>
                                                 )}
                                         </div>
                                     </div>
@@ -462,7 +485,7 @@ export function BillsManager() {
                                 <p className="text-xs text-muted-foreground mt-0.5">
                                     <span className={cn("font-bold", isPaying.type === 'income' ? "text-success" : "text-danger")}>
                                         {formatCurrency(isPaying.amount)}
-                                    </span>{' — '}{isPaying.description}
+                                    </span>{' • '}{isPaying.description}
                                 </p>
                             </div>
 
@@ -521,7 +544,7 @@ export function BillsManager() {
                                                             <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: acc.color }} />
                                                             <div>
                                                                 <p className="font-bold text-sm">{acc.name}</p>
-                                                                <p className="text-[10px] text-muted-foreground font-bold uppercase">{acc.bank}</p>
+                                                                <p className="text-xs text-muted-foreground font-bold uppercase">{acc.bank}</p>
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
@@ -529,11 +552,11 @@ export function BillsManager() {
                                                                 {formatCurrency(acc.balance)}
                                                             </p>
                                                             {acc.hasOverdraft && (acc.overdraftLimit || 0) > 0 && (
-                                                                <p className="text-[9px] text-amber-600 font-bold">
+                                                                <p className="text-[11px] text-amber-600 font-bold">
                                                                     Limite: {formatCurrency(acc.overdraftLimit || 0)}
                                                                 </p>
                                                             )}
-                                                            {insufficientFunds && <p className="text-[9px] text-danger font-bold">Saldo inadequado</p>}
+                                                            {insufficientFunds && <p className="text-[11px] text-danger font-bold">Saldo inadequado</p>}
                                                         </div>
                                                     </div>
                                                 </button>
@@ -552,7 +575,7 @@ export function BillsManager() {
                                                     <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: card.color }} />
                                                     <div>
                                                         <p className="font-bold text-sm">{card.name}</p>
-                                                        <p className="text-[10px] text-muted-foreground font-bold uppercase">{card.bank}</p>
+                                                        <p className="text-xs text-muted-foreground font-bold uppercase">{card.bank}</p>
                                                     </div>
                                                 </div>
                                             </button>
@@ -572,6 +595,37 @@ export function BillsManager() {
             )}
 
             {/* Modal de Exclusão Individual */}
+            <AlertDialog open={!!billToConfirm} onOpenChange={(open) => !open && setBillToConfirm(null)}>
+                <AlertDialogContent className="rounded-3xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="font-black italic">Confirmar Pagamento</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Tem certeza que deseja marcar esta conta como paga? Esta ação pode ser desfeita pelo estorno.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="flex flex-col gap-2">
+                        <AlertDialogCancel className="rounded-2xl font-bold">Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                if (billToConfirm) {
+                                    const tx = transactions.find(t => t.id === billToConfirm.id);
+                                    if (tx) {
+                                        setIsPaying(tx);
+                                        setPaymentDate(billToConfirm.date);
+                                        setPaymentAmount(billToConfirm.amount.toFixed(2));
+                                        setPaymentMethod(billToConfirm.cardId ? 'credit_card' : 'account');
+                                    }
+                                    setBillToConfirm(null);
+                                }
+                            }}
+                            className="rounded-2xl font-black uppercase tracking-widest bg-success hover:bg-success/90"
+                        >
+                            Confirmar Pagamento
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             <BulkDeleteDialog
                 isOpen={!!itemToDelete}
                 onClose={() => setItemToDelete(null)}
@@ -588,6 +642,3 @@ export function BillsManager() {
         </div>
     );
 }
-
-
-

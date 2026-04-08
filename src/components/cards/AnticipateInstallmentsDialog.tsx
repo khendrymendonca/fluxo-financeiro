@@ -88,7 +88,7 @@ export function AnticipateInstallmentsDialog({ isOpen, onClose, transaction }: A
                                 className="h-16 pl-12 text-2xl font-black rounded-2xl border-2 border-primary bg-primary/5 focus:ring-0 focus:border-primary"
                             />
                         </div>
-                        <p className="text-[10px] text-muted-foreground font-bold flex items-center gap-1 ml-1">
+                        <p className="text-xs text-muted-foreground font-bold flex items-center gap-1 ml-1">
                             <AlertCircle className="w-3 h-3" /> Valor sem antecipação: {formatCurrency(transaction.amount * (installmentsToAnticipate + 1))}
                         </p>
                     </div>

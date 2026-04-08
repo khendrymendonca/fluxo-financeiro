@@ -96,7 +96,7 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
                             key={p}
                             onClick={() => setPeriod(p)}
                             className={cn(
-                                "px-2 py-1 text-[9px] font-black uppercase tracking-wider rounded-md transition-all",
+                                "px-2 py-1 text-[11px] font-black uppercase tracking-wider rounded-md transition-all",
                                 period === p
                                     ? "bg-background text-primary shadow-sm"
                                     : "text-muted-foreground hover:text-foreground"
@@ -128,11 +128,11 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
                                         <span className="text-sm font-bold uppercase leading-none">
                                             {formatDate(t.date)}
                                         </span>
-                                        {isOverdue && <span className="text-[8px] font-black uppercase tracking-tighter mt-0.5">Atrasado</span>}
+                                        {isOverdue && <span className="text-[11px] font-black uppercase tracking-tighter mt-0.5">Atrasado</span>}
                                     </div>
                                     <div className="flex flex-col">
                                         <p className="font-bold text-xs md:text-sm text-foreground leading-tight">{t.description}</p>
-                                        <p className="text-[10px] md:text-xs text-muted-foreground font-medium uppercase tracking-tight">{getSourceLabel(t)}</p>
+                                        <p className="text-xs md:text-xs text-muted-foreground font-medium uppercase tracking-tight">{getSourceLabel(t)}</p>
                                     </div>
                                 </div>
 
@@ -140,7 +140,7 @@ export function PendingPayments({ transactions, accounts, creditCards }: Pending
                                     <span className={cn("text-sm font-semibold tabular-nums tracking-tight", isOverdue ? "text-rose-600 dark:text-rose-400" : "text-foreground")}>
                                         {formatCurrency(t.amount)}
                                     </span>
-                                    <div className="flex items-center gap-1 text-[8px] md:text-[9px] font-black text-rose-500/60 dark:text-rose-400/60 uppercase tracking-widest">
+                                    <div className="flex items-center gap-1 text-[11px] md:text-[11px] font-black text-rose-500/60 dark:text-rose-400/60 uppercase tracking-widest">
                                         <Clock className="w-2.5 h-2.5" /> Pendente
                                     </div>
                                 </div>

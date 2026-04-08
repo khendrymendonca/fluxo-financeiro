@@ -69,7 +69,7 @@ export function ExpenseChart({ data, categoryColors = {} }: ExpenseChartProps) {
 
   return (
     <div className="bg-card rounded-[2rem] p-4 border border-border/40 animate-fade-in h-full flex flex-col w-full shadow-sm dark:shadow-none">
-      <h3 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+      <h3 className="text-xs md:text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
         <div className="w-1.5 h-4 bg-primary rounded-full" />
         Distribuição
       </h3>
@@ -102,7 +102,7 @@ export function ExpenseChart({ data, categoryColors = {} }: ExpenseChartProps) {
         {/* Legend - Vertical space efficient */}
         <div className="space-y-1.5 min-w-0 mt-auto">
           {finalChartData.map((item, idx) => (
-            <div key={idx} className="flex items-center gap-2 text-[10px] md:text-xs">
+            <div key={idx} className="flex items-center gap-2 text-xs md:text-xs">
               <div className="w-2 h-2 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: item.color }} />
               <span className="truncate text-muted-foreground font-semibold flex-1 tracking-tight">{item.name}</span>
               <span className="font-black text-foreground tabular-nums opacity-90">
