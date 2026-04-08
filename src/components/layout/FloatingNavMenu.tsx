@@ -52,7 +52,7 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
     .map(id => ({ id, ...SHORTCUT_META[id] }))
     .filter(item => !!item.icon);
 
-  // Geometria aprimorada: Arco Superior centralizado (Expandido para as laterais)
+  // Geometria aprimorada: Arco Superior centralizado (180° a 0°)
   const RADIUS = 100;
   const START_ANGLE = 180; // Totalmente à esquerda
   const END_ANGLE = 0;     // Totalmente à direita
@@ -87,36 +87,38 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
           return (
             <div
               key={item.id}
-              className="absolute flex flex-col items-center gap-1.5"
+              className="absolute -translate-x-1/2"
               style={{
-                left: `calc(50% + ${x}px - 24px)`,
-                bottom: `calc(32px + ${y}px - 24px)`,
+                left: `calc(50% + ${x}px)`,
+                bottom: `calc(32px + ${y}px)`,
                 animation: `scaleIn 250ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards ${index * 40}ms`,
                 opacity: 0,
               }}
             >
-              <button
-                onClick={() => { onNavigate(item.id); setIsOpen(false); }}
-                className={cn(
-                  'w-12 h-12 rounded-full flex items-center justify-center',
-                  'backdrop-blur-xl border transition-all duration-300',
-                  'shadow-xl active:scale-90 group',
-                  isActive
-                    ? 'bg-primary border-primary/50 ring-4 ring-primary/20 text-white'
-                    : 'bg-zinc-900/90 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
-                )}
-              >
-                <Icon className={cn("w-5 h-5 transition-transform duration-300", !isActive && "group-hover:scale-110")} />
-              </button>
-              
-              <span className={cn(
-                'text-[9px] font-black uppercase tracking-widest whitespace-nowrap px-2 py-0.5 rounded-full',
-                isActive 
-                  ? 'bg-primary/10 text-primary' 
-                  : 'bg-zinc-900/50 text-zinc-500 border border-zinc-800/50'
-              )}>
-                {item.label}
-              </span>
+              <div className="flex flex-col items-center gap-1.5 -translate-y-1/2">
+                <button
+                  onClick={() => { onNavigate(item.id); setIsOpen(false); }}
+                  className={cn(
+                    'w-12 h-12 rounded-full flex items-center justify-center',
+                    'backdrop-blur-xl border transition-all duration-300',
+                    'shadow-xl active:scale-90 group',
+                    isActive
+                      ? 'bg-primary border-primary/50 ring-4 ring-primary/20 text-white'
+                      : 'bg-zinc-900/90 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
+                  )}
+                >
+                  <Icon className={cn("w-5 h-5 transition-transform duration-300", !isActive && "group-hover:scale-110")} />
+                </button>
+                
+                <span className={cn(
+                  'text-[9px] font-black uppercase tracking-widest whitespace-nowrap px-2 py-0.5 rounded-full',
+                  isActive 
+                    ? 'bg-primary/10 text-primary' 
+                    : 'bg-zinc-900/50 text-zinc-500 border border-zinc-800/50'
+                )}>
+                  {item.label}
+                </span>
+              </div>
             </div>
           );
         })}
