@@ -100,6 +100,9 @@ Quando uma conta fixa é paga via cartão de crédito no BillsManager, o sistema
 
 Isso consome o limite do cartão no mês correto via getCardUsedLimit (que já filtra por invoiceMonthYear). Nunca definir invoice_month_year manualmente fora dessa lógica.
 
+### Controle de Versão (Build)
+Convenção Alfabética Cíclica: Todas as atualizações de build devem conter uma letra do alfabeto ao final do código da versão (ex: 3007082612K). A sequência segue de A a Z e reinicia em A (A -> B -> ... -> Z -> A). Isso permite o controle visual imediato da build ativa no dispositivo do usuário.
+
 ### Proteção de Integridade — Extrato (Lançamentos)
 Lançamentos originados na Gestão de Contas (recorrentes, parcelados, pagamentos de fatura ou materializados) são protegidos na aba 'Lançamentos'.
 - Cópia e Edição: Proibidas para estes itens nesta tela.
