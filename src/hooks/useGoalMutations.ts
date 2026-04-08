@@ -4,6 +4,7 @@ import { toast } from '@/components/ui/use-toast';
 import { SavingsGoal } from '@/types/finance';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
+import { todayLocalString } from '@/utils/dateUtils';
 
 // --- 1. ADICIONAR META ---
 export function useAddGoal() {
@@ -140,7 +141,7 @@ export function useDepositToGoal() {
       if (updateError) throw updateError;
 
       // 3. Cria a transação (Débito se for depósito, Crédito se for retirada)
-      const today = format(new Date(), 'yyyy-MM-dd');
+      const today = todayLocalString();
       const { error: txError } = await supabase.from('transactions').insert({
         user_id: user.id,
         description: isWithdrawal ? `Retirada: Meta ${finalGoalName}` : `Depósito: Meta ${finalGoalName}`,

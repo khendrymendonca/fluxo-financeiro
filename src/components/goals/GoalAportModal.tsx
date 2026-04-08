@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Account, SavingsGoal } from '@/types/finance';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { toast } from '@/components/ui/use-toast';
+import { todayLocalString } from '@/utils/dateUtils';
 
 interface GoalAportModalProps {
     goal: SavingsGoal;
@@ -39,7 +40,7 @@ export function GoalAportModal({ goal, accounts, onClose }: GoalAportModalProps)
                 toAccountId,
                 val,
                 `Aporte Projeto: ${goal.name}`,
-                new Date().toISOString().split('T')[0]
+                todayLocalString()
             );
 
             // 2. Atualiza o saldo Virtual do Projeto

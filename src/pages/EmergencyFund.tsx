@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { useTransferBetweenAccounts } from '@/hooks/useAccountMutations';
 import { toast } from '@/components/ui/use-toast';
 import { EmergencyReserve } from '@/components/dashboard/EmergencyReserve';
+import { todayLocalString } from '@/utils/dateUtils';
 
 export default function EmergencyFund() {
     const {
@@ -50,7 +51,7 @@ export default function EmergencyFund() {
                 to: toId,
                 amount,
                 description,
-                date: new Date().toISOString().split('T')[0]
+                date: todayLocalString()
             });
             toast({ title: "Transferência realizada!", description: "Os saldos foram atualizados com sucesso." });
         } catch (error) {
