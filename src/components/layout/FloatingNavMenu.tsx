@@ -52,10 +52,10 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
     .map(id => ({ id, ...SHORTCUT_META[id] }))
     .filter(item => !!item.icon);
 
-  // Geometria aprimorada: Arco Superior centralizado
+  // Geometria aprimorada: Arco Superior centralizado (Expandido para as laterais)
   const RADIUS = 100;
-  const START_ANGLE = 150; 
-  const END_ANGLE = 30;    
+  const START_ANGLE = 180; // Totalmente à esquerda
+  const END_ANGLE = 0;     // Totalmente à direita
 
   return (
     <>
