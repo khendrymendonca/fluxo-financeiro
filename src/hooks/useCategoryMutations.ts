@@ -19,6 +19,7 @@ export function useAddCategory() {
         group_id: category.groupId,
         budget_group: category.budgetGroup,
         is_fixed: category.isFixed || false,
+        budgetlimit: category.budgetLimit ?? null,
         user_id: user.id
       }).select();
 
@@ -51,7 +52,8 @@ export function useUpdateCategory() {
           group_id: updates.groupId,
           budget_group: updates.budgetGroup,
           is_fixed: updates.isFixed,
-          is_active: updates.isActive
+          is_active: updates.isActive,
+          budgetlimit: updates.budgetLimit !== undefined ? updates.budgetLimit : undefined
         })
         .eq('id', id)
         .select();

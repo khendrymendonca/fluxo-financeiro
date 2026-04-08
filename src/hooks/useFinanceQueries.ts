@@ -111,7 +111,8 @@ export function useCategories() {
         groupId: c.group_id,
         isActive: c.is_active,
         budgetGroup: c.budget_group,
-        isFixed: c.is_fixed
+        isFixed: c.is_fixed,
+        budgetLimit: c.budgetlimit ?? null
       })) as Category[];
     }
   });

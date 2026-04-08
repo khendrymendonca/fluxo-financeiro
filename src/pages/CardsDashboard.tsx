@@ -946,7 +946,7 @@ export default function CardsDashboard() {
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-2 border-primary/10 bg-card">
                     {accounts
-                      .filter(acc => acc.accountType !== 'investment' && acc.accountType !== 'savings_goal')
+                      .filter(acc => acc.accountType !== 'investment' && acc.accountType !== 'metas')
                       .map(acc => (
                         <SelectItem key={acc.id} value={acc.id} className="rounded-xl font-bold py-3">
                           <div className="flex items-center gap-2">

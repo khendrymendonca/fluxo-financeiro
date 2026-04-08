@@ -665,7 +665,7 @@ export function TransactionList({
         onClose={() => setItemToDelete(null)}
         isPending={isDeletingTransaction}
         selectedCount={1}
-        hasInstallments={!!itemToDelete?.installmentGroupId || (itemToDelete?.installmentTotal && itemToDelete.installmentTotal > 1)}
+        hasInstallments={Boolean(itemToDelete?.installmentGroupId || (itemToDelete?.installmentTotal && itemToDelete.installmentTotal > 1))}
         hasRecurring={itemToDelete?.isRecurring === true || itemToDelete?.transactionType === 'recurring'}
         onConfirm={async (options) => {
           if (!itemToDelete) return;

@@ -12,6 +12,7 @@ import { ptBR } from 'date-fns/locale';
 import { parseLocalDate } from '@/utils/dateUtils';
 
 const SHORTCUT_META: Record<ShortcutId, { icon: any; label: string }> = {
+  dashboard:    { icon: LayoutDashboard, label: 'Início' },
   transactions: { icon: ArrowUpDown,    label: 'Lançamentos' },
   cards:        { icon: CreditCard,     label: 'Cartões' },
   bills:        { icon: Receipt,        label: 'Fixas' },

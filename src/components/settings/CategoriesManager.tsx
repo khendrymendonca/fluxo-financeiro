@@ -65,6 +65,7 @@ export function CategoriesManager() {
     const [newCatBudgetGroup, setNewCatBudgetGroup] = useState<BudgetGroup>('essential');
     const [newCatColor, setNewCatColor] = useState(APP_COLORS[0]);
     const [newCatIsFixed, setNewCatIsFixed] = useState(false);
+    const [newCatBudgetLimit, setNewCatBudgetLimit] = useState<string>('');
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -100,11 +101,13 @@ export function CategoriesManager() {
             icon: 'Tag',
             color: newCatColor,
             isActive: true,
-            isFixed: newCatIsFixed
+            isFixed: newCatIsFixed,
+            budgetLimit: newCatBudgetLimit ? parseFloat(newCatBudgetLimit) : null
         }, {
             onSuccess: () => {
                 setNewCatName('');
                 setNewCatIsFixed(false);
+                setNewCatBudgetLimit('');
                 setIsModalOpen(false);
                 // O toast já é disparado pelo hook da mutation
             }
@@ -236,6 +239,13 @@ export function CategoriesManager() {
                         )}
                     </div>
 
+                    {/* Limite de orçamento */}
+                    {cat.type === 'expense' && (
+                        <div className="pt-2 border-t border-border/30">
+                            <BudgetLimitEditor cat={cat} />
+                        </div>
+                    )}
+
                     {catSubs.length === 0 ? (
                         <div className="flex flex-col items-center py-6 text-center">
                             <Layers className="w-5 h-5 text-muted-foreground mb-2" />
@@ -348,18 +358,37 @@ export function CategoriesManager() {
                                 </div>
 
                                 {newCatType === 'expense' && (
-                                    <div className="space-y-2 animate-in slide-in-from-top-2">
-                                        <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Grupo de Orçamento</Label>
-                                        <select
-                                            className="w-full h-12 rounded-xl border-2 border-input bg-muted/20 px-4 text-sm font-bold focus:border-primary transition-colors"
-                                            value={newCatBudgetGroup}
-                                            onChange={e => setNewCatBudgetGroup(e.target.value as BudgetGroup)}
-                                        >
-                                            <option value="essential">Essenciais (Custos)</option>
-                                            <option value="lifestyle">Estilo de Vida (Lazer)</option>
-                                            <option value="financial">Objetivos (Reserva/Dívida)</option>
-                                        </select>
-                                    </div>
+                                    <>
+                                        <div className="space-y-2 animate-in slide-in-from-top-2">
+                                            <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Grupo de Orçamento</Label>
+                                            <select
+                                                className="w-full h-12 rounded-xl border-2 border-input bg-muted/20 px-4 text-sm font-bold focus:border-primary transition-colors"
+                                                value={newCatBudgetGroup}
+                                                onChange={e => setNewCatBudgetGroup(e.target.value as BudgetGroup)}
+                                            >
+                                                <option value="essential">Essenciais (Custos)</option>
+                                                <option value="lifestyle">Estilo de Vida (Lazer)</option>
+                                                <option value="financial">Objetivos (Reserva/Dívida)</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2 animate-in slide-in-from-top-2">
+                                            <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">
+                                                Limite Mensal (R$) — opcional
+                                            </Label>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                value={newCatBudgetLimit}
+                                                onChange={e => setNewCatBudgetLimit(e.target.value)}
+                                                placeholder="Ex: 500,00 — deixe vazio para sem limite"
+                                                className="h-12 rounded-xl border-2 bg-muted/20 focus:bg-background transition-all font-bold"
+                                            />
+                                            <p className="text-[11px] text-muted-foreground px-1">
+                                                Um alerta será exibido no Dashboard quando os gastos se aproximarem deste valor.
+                                            </p>
+                                        </div>
+                                    </>
                                 )}
 
                                 <div className="flex items-center justify-between p-4 rounded-2xl border-2 border-dashed bg-muted/10">
@@ -410,4 +439,60 @@ export function CategoriesManager() {
             </div>
         </div>
     );
+}
+
+function BudgetLimitEditor({ cat }: { cat: Category }) {
+  const { mutate: updateCategory } = useUpdateCategory();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(
+    cat.budgetLimit ? cat.budgetLimit.toFixed(2) : ''
+  );
+
+  const handleSave = () => {
+    updateCategory({
+      id: cat.id,
+      updates: { budgetLimit: value ? parseFloat(value) : null }
+    });
+    setEditing(false);
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">
+        Limite:
+      </span>
+      {editing ? (
+        <>
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            value={value}
+            onChange={e => setValue(e.target.value)}
+            className="h-8 w-32 rounded-lg text-sm font-bold"
+            autoFocus
+            onKeyDown={e => {
+              if (e.key === 'Enter') handleSave();
+              if (e.key === 'Escape') setEditing(false);
+            }}
+          />
+          <button onClick={handleSave} className="p-1.5 rounded-lg text-primary hover:bg-primary/10">
+            <Check className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={() => setEditing(false)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </>
+      ) : (
+        <button
+          onClick={() => setEditing(true)}
+          className="text-[11px] font-bold text-primary hover:underline"
+        >
+          {cat.budgetLimit
+            ? `R$ ${cat.budgetLimit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+            : '+ Definir limite'}
+        </button>
+      )}
+    </div>
+  );
 }

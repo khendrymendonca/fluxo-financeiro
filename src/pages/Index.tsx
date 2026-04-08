@@ -66,12 +66,13 @@ import { CategoriesManager } from '@/components/settings/CategoriesManager';
 import { ProfileSettings } from './ProfileSettings';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EasterWelcome } from '@/components/layout/EasterWelcome';
+import { toast } from '@/components/ui/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BottomNavigation } from '@/components/layout/BottomNavigation';
 import { FloatingNavMenu } from '@/components/layout/FloatingNavMenu';
 import EmergencyFund from './EmergencyFund';
 import { BillsManager } from '@/components/accounts/BillsManager';
 import { StatCard } from '@/components/dashboard/StatCard';
+import { BudgetAlerts } from '@/components/dashboard/BudgetAlerts';
 import { ExpenseChart } from '@/components/dashboard/ExpenseChart';
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { PendingPayments } from '@/components/dashboard/PendingPayments';
@@ -252,6 +253,9 @@ export default function Index() {
                   </div>
                 </div>
               </div>
+
+              {/* Alertas de Orçamento */}
+              <BudgetAlerts />
 
               {/* Linha 1: Métricas principais - 4 cards lado a lado */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-500">
@@ -520,7 +524,7 @@ export default function Index() {
       sidebar={
         <NavigationRail
           currentView={currentView}
-          onNavigate={setCurrentView}
+          onNavigate={(v) => setCurrentView(v as ViewType)}
         />
       }
       headerMobile={

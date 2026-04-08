@@ -23,6 +23,7 @@ export interface Category {
   isActive: boolean;
   targetAmount?: number;
   isFixed?: boolean;
+  budgetLimit?: number | null;
 }
 
 export interface Subcategory {

@@ -278,7 +278,7 @@ export function useUpdateTransaction() {
       if (finalInvoiceMonthYear === undefined && effectiveCardId && updates.date && cardClosingDay != null && cardDueDay != null) {
         finalInvoiceMonthYear = calcInvoiceMonthYear(parseLocalDate(updates.date), { closingDay: cardClosingDay, dueDay: cardDueDay });
       } else if (updates.accountId) {
-        finalInvoiceMonthYear = null;
+        finalInvoiceMonthYear = undefined;
       }
 
       const dbUpdates: any = {
@@ -516,6 +516,8 @@ export function useAnticipateInstallments() {
         .select('description, installment_number, installment_total')
         .eq('id', transactionId)
         .single();
+
+      if (!currentTx) throw new Error('Transaction not found');
 
       const newDescription = `${currentTx.description} (Antecipação +${installmentsToAnticipate})`;
 

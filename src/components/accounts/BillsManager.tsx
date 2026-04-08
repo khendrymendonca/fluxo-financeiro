@@ -124,9 +124,9 @@ export function BillsManager() {
                     updates: {
                         isPaid: true,
                         paymentDate: paymentDate,
-                        accountId: isCard ? null : targetId,
-                        cardId: isCard ? targetId : null,
-                        invoiceMonthYear: isCard ? finalInvoiceMonthYear : null,
+                        accountId: isCard ? undefined : targetId,
+                        cardId: isCard ? targetId : undefined,
+                        invoiceMonthYear: isCard ? finalInvoiceMonthYear : undefined,
                         amount: amountValue
                     }
                 });

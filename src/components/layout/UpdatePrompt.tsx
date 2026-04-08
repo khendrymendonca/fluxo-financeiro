@@ -1,3 +1,4 @@
+// @ts-expect-error - virtual module from vite-plugin-pwa
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Button } from '@/components/ui/button';
 import { Rocket, RefreshCw, X } from 'lucide-react';
@@ -10,10 +11,10 @@ export function UpdatePrompt() {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
-    onRegistered(r) {
+    onRegistered(r: any) {
       console.log('SW Registered:', r);
     },
-    onRegisterError(error) {
+    onRegisterError(error: any) {
       console.log('SW registration error', error);
     },
   });
