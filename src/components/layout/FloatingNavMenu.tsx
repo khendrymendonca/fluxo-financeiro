@@ -87,15 +87,18 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
           return (
             <div
               key={item.id}
-              className="absolute -translate-x-1/2"
+              className="absolute"
               style={{
                 left: `calc(50% + ${x}px)`,
                 bottom: `calc(32px + ${y}px)`,
-                animation: `scaleIn 250ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards ${index * 40}ms`,
+                // A animação scaleInOrbital agora lida com o translate(-50%, -24px)
+                // -50% centraliza horizontalmente (botão + label)
+                // -24px sobe o container para que o CENTRO do botão (48px) fique no ponto (x,y)
+                animation: `scaleInOrbital 250ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards ${index * 40}ms`,
                 opacity: 0,
               }}
             >
-              <div className="flex flex-col items-center gap-1.5 -translate-y-1/2">
+              <div className="flex flex-col items-center gap-1.5">
                 <button
                   onClick={() => { onNavigate(item.id); setIsOpen(false); }}
                   className={cn(
