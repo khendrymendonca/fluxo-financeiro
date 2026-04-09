@@ -188,6 +188,7 @@ export default function Index() {
 
   const { cashflow, categoryExpenses } = useDashboardMetrics(viewDate, currentMonthTransactions);
   const { ...emergencyData } = useEmergencyFund(currentMonthTransactions);
+  const isMobile = useIsMobile();
   const easterEnabled = useFeatureFlag('theme_easter');
 
   const totalNetWorth = useMemo(() => accounts.reduce((sum, acc) => sum + Number(acc.balance), 0), [accounts]);
