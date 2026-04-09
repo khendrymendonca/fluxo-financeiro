@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, logSafeError } from '@/lib/supabase';
-import { toast } from '@/components/ui/use-toast';
+import { toast, useToast } from '@/components/ui/use-toast';
 import { Account } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -174,5 +174,42 @@ export function useTransferBetweenAccounts() {
       logSafeError('useTransferBetweenAccounts', err);
       toast({ title: 'Erro ao realizar transferência', variant: 'destructive' });
     }
+  });
+}
+
+// ============================================================
+// LGPD Art. 18 VI — Excluir conta e todos os dados do usuário
+// ============================================================
+export function useDeleteUserAccount() {
+  const { signOut } = useAuth();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.rpc('delete_user_data', {
+        target_user_id: userId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      try {
+        localStorage.clear();
+      } catch {
+        // Modo privado — ignorar
+      }
+      await signOut();
+      toast({
+        title: 'Conta excluída com sucesso',
+        description: 'Todos os seus dados foram permanentemente removidos.',
+      });
+    },
+    onError: (err) => {
+      logSafeError('useDeleteUserAccount', err);
+      toast({
+        title: 'Erro ao excluir conta',
+        description: 'Tente novamente ou entre em contato com o suporte.',
+        variant: 'destructive',
+      });
+    },
   });
 }

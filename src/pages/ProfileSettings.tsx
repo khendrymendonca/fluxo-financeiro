@@ -5,6 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useMobileShortcuts, ShortcutId } from '@/hooks/useMobileShortcuts';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useDeleteUserAccount } from '@/hooks/useAccountMutations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,7 +28,8 @@ import {
     Wallet,
     Rocket,
     Smartphone,
-    AlertCircle
+    AlertCircle,
+    Loader2
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
@@ -40,17 +42,22 @@ export function ProfileSettings() {
     const isMobile = useIsMobile();
 
     // Lógica de Versão Dinâmica
-    const lastUpdateDate = new Date('2026-03-30');
+    const lastUpdateDate = new Date('2026-04-09');
     const dayVersion = String(lastUpdateDate.getUTCDate()).padStart(2, '0');
     const monthVersion = String(lastUpdateDate.getUTCMonth() + 1).padStart(2, '0');
     const yearVersion = String(lastUpdateDate.getUTCFullYear()).slice(-2);
-    const appVersion = `${dayVersion}07${monthVersion}08${yearVersion}12S`;
+    const appVersion = `${dayVersion}07${monthVersion}08${yearVersion}12T`;
 
     // Estados para o formulário
     const [name, setName] = useState(user?.user_metadata?.full_name || '');
     const [email, setEmail] = useState(user?.email || '');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+
+    // LGPD — Estados de exclusão de conta
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleteConfirmText, setDeleteConfirmText] = useState('');
+    const { mutate: deleteUserAccount, isPending: isDeletingAccount } = useDeleteUserAccount();
 
     const toggleShortcut = async (id: ShortcutId) => {
         let newShortcuts: ShortcutId[];
@@ -332,6 +339,98 @@ export function ProfileSettings() {
                                 <span className="text-zinc-400 dark:text-zinc-600">Última Atualização</span>
                                 <span className="text-zinc-600 dark:text-zinc-400">{lastUpdateDate.toLocaleDateString('pt-BR')}</span>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ZONA DE PERIGO — LGPD Art. 18 VI */}
+                <div className="mt-8 pt-8 border-t border-danger/20">
+                    <div className="space-y-4">
+                        <div>
+                            <h3 className="text-sm font-black uppercase tracking-widest text-danger">
+                                Zona de Perigo
+                            </h3>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Ações irreversíveis. Leia com atenção antes de prosseguir.
+                            </p>
+                        </div>
+
+                        <div className="p-5 rounded-2xl border border-danger/20 bg-danger/5 space-y-4">
+                            <div>
+                                <p className="text-sm font-bold text-foreground">
+                                    Excluir minha conta permanentemente
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                    Remove <strong>todos os seus dados</strong> do Fluxo:
+                                    transações, contas, cartões, metas, dívidas e categorias.
+                                    Esta ação é <strong>irreversível</strong> e está em
+                                    conformidade com a{' '}
+                                    <strong>LGPD (Art. 18, VI)</strong>.
+                                </p>
+                            </div>
+
+                            {!showDeleteConfirm ? (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    className="h-10 rounded-xl border-danger/30 text-danger
+                                             hover:bg-danger/10 hover:border-danger/50
+                                             font-bold text-xs uppercase tracking-widest"
+                                >
+                                    Excluir minha conta
+                                </Button>
+                            ) : (
+                                <div className="space-y-3 animate-in fade-in duration-200">
+                                    <p className="text-xs font-bold text-danger">
+                                        Para confirmar, digite{' '}
+                                        <strong className="font-black">EXCLUIR</strong> abaixo:
+                                    </p>
+                                    <Input
+                                        value={deleteConfirmText}
+                                        onChange={(e) => setDeleteConfirmText(e.target.value)}
+                                        placeholder="Digite EXCLUIR para confirmar"
+                                        className="h-10 rounded-xl border-danger/30 focus:border-danger
+                                                   font-bold text-sm"
+                                        autoFocus
+                                    />
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => {
+                                                setShowDeleteConfirm(false);
+                                                setDeleteConfirmText('');
+                                            }}
+                                            className="flex-1 h-10 rounded-xl font-bold text-xs"
+                                            disabled={isDeletingAccount}
+                                        >
+                                            Cancelar
+                                        </Button>
+                                        <Button
+                                            onClick={() => {
+                                                if (deleteConfirmText === 'EXCLUIR' && user?.id) {
+                                                    deleteUserAccount(user.id);
+                                                }
+                                            }}
+                                            disabled={
+                                                deleteConfirmText !== 'EXCLUIR' || isDeletingAccount
+                                            }
+                                            className="flex-1 h-10 rounded-xl font-black text-xs
+                                                       uppercase tracking-widest bg-danger
+                                                       hover:bg-danger/90 text-white
+                                                       disabled:opacity-40"
+                                        >
+                                            {isDeletingAccount ? (
+                                                <>
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                                                    Excluindo...
+                                                </>
+                                            ) : (
+                                                'Confirmar Exclusão'
+                                            )}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

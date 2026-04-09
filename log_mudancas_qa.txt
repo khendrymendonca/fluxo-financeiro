@@ -56,4 +56,11 @@ CORREÇÕES CRÍTICAS E ESTABILIDADE (08/04/2026)
 - Global Recharts: Adicionado `minHeight` em todos os `ResponsiveContainer` para evitar avisos de dimensões nulas e garantir renderização estável.
 - Global Date Inputs: Implementado `slice(0, 10)` em todos os estados que alimentam inputs do tipo data (`GoalForm`, `EditBillForm`, `ProjectDetailsModal`) para evitar erros de formato ISO com timezone.
 
+SEGURANÇA / LGPD — Fase 3 (09/04/2026)
+- supabase/migrations/0016_delete_user_data.sql: Criada função `delete_user_data(UUID)` com `SECURITY DEFINER` para exclusão em cascata de todos os dados do usuário e remoção da conta `auth.users`.
+- src/hooks/useAccountMutations.ts: Implementado hook `useDeleteUserAccount` integrando a chamada RPC do Supabase com limpeza de `localStorage` e logout.
+- src/pages/ProfileSettings.tsx: Adicionada seção "Zona de Perigo" com UI de confirmação estrita (digitação de "EXCLUIR"). Versão do app atualizada para 'T'.
+- src/pages/AuthPage.tsx: Adicionado checkbox de consentimento obrigatório no formulário de cadastro, bloqueando o botão de registro se não marcado.
+- public/robots.txt: Atualizado para bloquear a indexação de buscadores (`Disallow: /`), protegendo a privacidade dos dados.
+
 FIM DO LOG.

@@ -15,6 +15,7 @@ export default function AuthPage() {
     const [password, setPassword] = useState('');
     const [nickname, setNickname] = useState('');
     const [isSignUp, setIsSignUp] = useState(false);
+    const [consentAccepted, setConsentAccepted] = useState(false);
     const { theme, setTheme } = useTheme();
     const { toast } = useToast();
 
@@ -110,7 +111,36 @@ export default function AuthPage() {
                         />
                     </div>
 
-                    <Button type="submit" className="w-full rounded-xl py-6 font-semibold" disabled={loading}>
+                    {/* Renderizar APENAS no modo cadastro */}
+                    {isSignUp && (
+                        <div className="flex items-start gap-3 p-4 rounded-xl bg-muted/30 border border-border/50 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <input
+                                type="checkbox"
+                                id="lgpd-consent"
+                                checked={consentAccepted}
+                                onChange={(e) => setConsentAccepted(e.target.checked)}
+                                className="mt-0.5 w-4 h-4 rounded accent-primary cursor-pointer shrink-0"
+                            />
+                            <label
+                                htmlFor="lgpd-consent"
+                                className="text-xs text-muted-foreground leading-relaxed cursor-pointer"
+                            >
+                                Concordo com o tratamento dos meus dados financeiros para
+                                fins de gestão financeira pessoal, conforme a{' '}
+                                <strong className="text-foreground">
+                                    LGPD (Lei 13.709/2018)
+                                </strong>
+                                . Você pode solicitar a exclusão dos seus dados a qualquer
+                                momento em Configurações → Zona de Perigo.
+                            </label>
+                        </div>
+                    )}
+
+                    <Button 
+                        type="submit" 
+                        className="w-full rounded-xl py-6 font-semibold" 
+                        disabled={loading || (isSignUp && !consentAccepted)}
+                    >
                         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (isSignUp ? 'Criar Conta' : 'Entrar')}
                     </Button>
                 </form>
@@ -118,7 +148,10 @@ export default function AuthPage() {
                 <div className="mt-6 text-center text-sm">
                     <button
                         type="button"
-                        onClick={() => setIsSignUp(!isSignUp)}
+                        onClick={() => {
+                            setIsSignUp(!isSignUp);
+                            setConsentAccepted(false);
+                        }}
                         className="text-primary hover:underline"
                     >
                         {isSignUp ? 'Já tem uma conta? Entrar' : 'Não tem conta? Criar agora'}
