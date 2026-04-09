@@ -9,4 +9,20 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+/**
+ * SEGURANÇA: Nunca logar o objeto de erro bruto do Supabase em produção.
+ * Ele contém URL do banco, query SQL e dados do payload.
+ * Este helper extrai apenas o que é seguro exibir.
+ */
+export function logSafeError(context: string, err: unknown): void {
+  if (import.meta.env.DEV) {
+    // Em desenvolvimento, log completo para depuração
+    console.error(`[${context}]`, err);
+    return;
+  }
+  // Em produção: apenas mensagem sem dados internos
+  const message = err instanceof Error ? err.message : 'Erro desconhecido';
+  console.error(`[${context}] ${message}`);
+}
+
 

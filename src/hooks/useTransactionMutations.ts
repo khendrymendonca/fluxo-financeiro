@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { supabase, logSafeError } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
 import { Transaction } from '@/types/finance';
@@ -20,8 +20,12 @@ export function useAddTransaction() {
 
       const txs = Array.isArray(data) ? data : [data];
       const txsWithUser = txs.map(tx => {
+        // Sanitizar description
+        const safeDescription = (tx.description ?? '').trim().slice(0, 200);
+
         const mapped: any = {
           ...tx,
+          description: safeDescription,
           user_id: user.id,
           category_id: tx.categoryId || tx.category_id,
           subcategory_id: tx.subcategoryId || tx.subcategory_id || null,
@@ -75,7 +79,7 @@ export function useAddTransaction() {
       toast({ title: 'Transação guardada!' });
     },
     onError: (err) => {
-      console.error('Erro ao adicionar:', err);
+      logSafeError('useAddTransaction', err);
       toast({ title: 'Erro ao guardar', variant: 'destructive' });
     },
   });
@@ -178,6 +182,7 @@ export function useDeleteTransaction() {
       if (context?.previousTransactions) {
         queryClient.setQueryData(['transactions'], context.previousTransactions);
       }
+      logSafeError('useDeleteTransaction', err);
       toast({ title: 'Erro ao remover lançamento', variant: 'destructive' });
     },
     onSettled: () => {
@@ -238,7 +243,7 @@ export function useToggleTransactionPaid() {
       if (context?.previousTransactions) {
         queryClient.setQueryData(['transactions'], context.previousTransactions);
       }
-      console.error('Erro ao alterar status:', err);
+      logSafeError('useToggleTransactionPaid', err);
       toast({ title: 'Erro ao alterar status de pagamento', variant: 'destructive' });
     },
     onSettled: () => {
@@ -313,7 +318,7 @@ export function useUpdateTransaction() {
           .eq('id', id)
           .select();
         if (error) {
-          console.error('Supabase Update Error:', error);
+          logSafeError('useUpdateTransaction (single)', error);
           throw error;
         }
         return data;
@@ -336,7 +341,7 @@ export function useUpdateTransaction() {
 
       const { data, error } = await query.select();
       if (error) {
-        console.error('Supabase Bulk Update Error:', error);
+        logSafeError('useUpdateTransaction (bulk)', error);
         throw error;
       }
       return data;
@@ -380,7 +385,7 @@ export function useUpdateTransaction() {
       if (context?.previousTransactions) {
         queryClient.setQueryData(['transactions'], context.previousTransactions);
       }
-      console.error('Erro ao atualizar:', err);
+      logSafeError('useUpdateTransaction', err);
       toast({ title: 'Erro ao atualizar lançamento', variant: 'destructive' });
     }
   });
@@ -464,7 +469,7 @@ export function useBulkDeleteTransactions() {
       toast({ title: 'Lançamentos removidos com sucesso!' });
     },
     onError: (err) => {
-      console.error('Erro na remoção em massa:', err);
+      logSafeError('useBulkDeleteTransactions', err);
       toast({ title: 'Erro ao remover lançamentos', variant: 'destructive' });
     }
   });
@@ -542,7 +547,7 @@ export function useAnticipateInstallments() {
       toast({ title: 'Parcelas antecipadas com sucesso!' });
     },
     onError: (err) => {
-      console.error('Erro ao antecipar parcelas:', err);
+      logSafeError('useAnticipateInstallments', err);
       toast({ title: 'Erro ao processar antecipação', variant: 'destructive' });
     }
   });
@@ -572,5 +577,8 @@ export const useBulkUpdateTransactions = () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
     },
+    onError: (err) => {
+      logSafeError('useBulkUpdateTransactions', err);
+    }
   });
 };

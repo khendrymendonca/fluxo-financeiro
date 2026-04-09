@@ -44,7 +44,7 @@ export function ProfileSettings() {
     const dayVersion = String(lastUpdateDate.getUTCDate()).padStart(2, '0');
     const monthVersion = String(lastUpdateDate.getUTCMonth() + 1).padStart(2, '0');
     const yearVersion = String(lastUpdateDate.getUTCFullYear()).slice(-2);
-    const appVersion = `${dayVersion}07${monthVersion}08${yearVersion}12R`;
+    const appVersion = `${dayVersion}07${monthVersion}08${yearVersion}12S`;
 
     // Estados para o formulário
     const [name, setName] = useState(user?.user_metadata?.full_name || '');

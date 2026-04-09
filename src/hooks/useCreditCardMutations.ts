@@ -1,11 +1,25 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { supabase, logSafeError } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { CreditCard } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 import { parseISO } from 'date-fns';
 import { calcInvoiceMonthYear } from '@/utils/creditCardUtils';
 import { anticipateCardPayment } from '@/services/transactionService';
+
+interface CreditCardDbPayload {
+  name?: string;
+  bank?: string;
+  limit?: number;
+  color?: string;
+  texture?: string;
+  progresscolor?: string;
+  due_day?: number;
+  closing_day?: number;
+  is_closing_date_fixed?: boolean;
+  history?: unknown;
+  is_active?: boolean;
+}
 
 // --- 1. ADICIONAR CARTÃO DE CRÉDITO ---
 export function useAddCreditCard() {
@@ -41,7 +55,7 @@ export function useAddCreditCard() {
       toast({ title: 'Cartão de crédito adicionado!' });
     },
     onError: (err) => {
-      console.error('Erro ao adicionar cartão:', err);
+      logSafeError('useAddCreditCard', err);
       toast({ title: 'Erro ao adicionar cartão', variant: 'destructive' });
     }
   });
@@ -58,7 +72,7 @@ export function useUpdateCreditCard() {
       }
 
       const { id, updates } = payload;
-      const dbPayload: any = {};
+      const dbPayload: CreditCardDbPayload = {};
 
       if (updates.name !== undefined) dbPayload.name = updates.name;
       if (updates.bank !== undefined) dbPayload.bank = updates.bank;
@@ -85,7 +99,7 @@ export function useUpdateCreditCard() {
       toast({ title: 'Cartão atualizado!' });
     },
     onError: (err) => {
-      console.error('Erro ao atualizar cartão:', err);
+      logSafeError('useUpdateCreditCard', err);
       toast({ title: 'Erro ao atualizar cartão', variant: 'destructive' });
     }
   });
@@ -108,7 +122,7 @@ export function useDeleteCreditCard() {
       toast({ title: 'Cartão removido.' });
     },
     onError: (err) => {
-      console.error('Erro ao remover cartão:', err);
+      logSafeError('useDeleteCreditCard', err);
       toast({ title: 'Erro ao remover cartão', variant: 'destructive' });
     }
   });
@@ -139,7 +153,7 @@ export function useAnticipateCardPayment() {
       toast({ title: 'Abatimento processado com sucesso!' });
     },
     onError: (err: any) => {
-      console.error('Erro ao processar abatimento:', err);
+      logSafeError('useAnticipateCardPayment', err);
       toast({ title: err.message || 'Erro ao processar abatimento', variant: 'destructive' });
     }
   });

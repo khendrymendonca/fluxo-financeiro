@@ -1,5 +1,5 @@
-﻿import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase, logSafeError } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { SavingsGoal } from '@/types/finance';
 import { format } from 'date-fns';
@@ -15,16 +15,19 @@ export function useAddGoal() {
     mutationFn: async (goal: Omit<SavingsGoal, 'id' | 'userId'>) => {
       if (!user) throw new Error('Utilizador não autenticado');
 
+      const safeName = (goal.name ?? '').trim().slice(0, 150);
+      const safeDescription = (goal.purpose ?? '').trim().slice(0, 500);
+
       const payload: any = {
         user_id: user.id,
-        name: goal.name,
+        name: safeName,
         target_amount: goal.targetAmount,
         current_amount: goal.currentAmount || 0,
         deadline: goal.deadline,
         color: goal.color,
         icon: goal.icon,
         project_type: goal.projectType || 'projeto',
-        purpose: goal.purpose,
+        purpose: safeDescription,
         dream_start_date: goal.dreamStartDate,
         items: goal.items || []
       };
@@ -38,7 +41,7 @@ export function useAddGoal() {
       toast({ title: 'Sonho/Projeto lançado com sucesso!' });
     },
     onError: (err) => {
-      console.error('Erro ao adicionar meta:', err);
+      logSafeError('useAddGoal', err);
       toast({ title: 'Erro ao criar meta', variant: 'destructive' });
     }
   });
@@ -51,28 +54,26 @@ export function useUpdateGoal() {
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string, updates: Partial<SavingsGoal> }) => {
       const payload: any = { ...updates };
+      
+      // Sanitização se fornecido
+      if (updates.name !== undefined) payload.name = updates.name.trim().slice(0, 150);
+      if (updates.purpose !== undefined) payload.purpose = updates.purpose.trim().slice(0, 500);
+
       if (updates.targetAmount !== undefined) {
         payload.target_amount = updates.targetAmount;
-        delete payload.targetAmount;
+        delete (payload as any).targetAmount;
       }
       if (updates.currentAmount !== undefined) {
         payload.current_amount = updates.currentAmount;
-        delete payload.currentAmount;
+        delete (payload as any).currentAmount;
       }
       if (updates.projectType !== undefined) {
         payload.project_type = updates.projectType;
-        delete payload.projectType;
-      }
-      if (updates.purpose !== undefined) {
-        payload.purpose = updates.purpose;
-        delete payload.purpose;
+        delete (payload as any).projectType;
       }
       if (updates.dreamStartDate !== undefined) {
         payload.dream_start_date = updates.dreamStartDate;
-        delete payload.dreamStartDate;
-      }
-      if (updates.items !== undefined) {
-        payload.items = updates.items;
+        delete (payload as any).dreamStartDate;
       }
 
       const { error } = await supabase.from('savings_goals').update(payload).eq('id', id);
@@ -84,7 +85,7 @@ export function useUpdateGoal() {
       toast({ title: 'Sonho/Projeto atualizado!' });
     },
     onError: (err) => {
-      console.error('Erro ao atualizar meta:', err);
+      logSafeError('useUpdateGoal', err);
       toast({ title: 'Erro ao atualizar meta', variant: 'destructive' });
     }
   });
@@ -105,7 +106,7 @@ export function useDeleteGoal() {
       toast({ title: 'Sonho/Projeto removido com sucesso!' });
     },
     onError: (err) => {
-      console.error('Erro ao remover meta:', err);
+      logSafeError('useDeleteGoal', err);
       toast({ title: 'Erro ao remover meta', variant: 'destructive' });
     }
   });
@@ -166,10 +167,8 @@ export function useDepositToGoal() {
       toast({ title: 'Depósito realizado!' });
     },
     onError: (err) => {
-      console.error('Erro no depósito:', err);
+      logSafeError('useDepositToGoal', err);
       toast({ title: 'Erro ao realizar depósito', variant: 'destructive' });
     }
   });
 }
-
-

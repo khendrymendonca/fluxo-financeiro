@@ -1,11 +1,24 @@
-﻿import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase, logSafeError } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { Debt } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 import { addMonths, format } from 'date-fns';
 import { parseLocalDate } from '@/utils/dateUtils';
 import { useFinanceStore } from './useFinanceStore';
+
+interface DebtDbPayload {
+  name?: string;
+  total_amount?: number;
+  remaining_amount?: number;
+  installment_amount?: number;
+  interest_rate_monthly?: number;
+  minimum_payment?: number;
+  due_day?: number;
+  strategy_priority?: number;
+  status?: string;
+  total_installments?: number;
+}
 
 // --- 1. ADICIONAR DÃ VIDA ---
 export function useAddDebt() {
@@ -16,9 +29,11 @@ export function useAddDebt() {
     mutationFn: async (debt: Omit<Debt, 'id' | 'userId'>) => {
       if (!user) throw new Error('Utilizador não autenticado');
 
+      const safeName = (debt.name ?? '').trim().slice(0, 150);
+
       const payload = {
         user_id: user.id,
-        name: debt.name,
+        name: safeName,
         total_amount: debt.totalAmount,
         remaining_amount: debt.remainingAmount,
         installment_amount: debt.installmentAmount,
@@ -39,7 +54,7 @@ export function useAddDebt() {
       toast({ title: 'Acordo registrado!' });
     },
     onError: (err) => {
-      console.error('Erro ao adicionar acordo:', err);
+      logSafeError('useAddDebt', err);
       toast({ title: 'Erro ao registrar acordo', variant: 'destructive' });
     }
   });
@@ -51,7 +66,7 @@ export function useUpdateDebt() {
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string, updates: Partial<Debt> }) => {
-      const payload: any = {};
+      const payload: DebtDbPayload = {};
 
       if (updates.name !== undefined) payload.name = updates.name;
       if (updates.totalAmount !== undefined) payload.total_amount = updates.totalAmount;
@@ -116,7 +131,7 @@ export function useUpdateDebt() {
       toast({ title: 'Acordo atualizado!' });
     },
     onError: (err) => {
-      console.error('Erro ao atualizar acordo:', err);
+      logSafeError('useUpdateDebt', err);
       toast({ title: 'Erro ao atualizar acordo', variant: 'destructive' });
     }
   });
@@ -142,7 +157,7 @@ export function useDeleteDebt() {
       toast({ title: 'Acordo removido e saldos estornados.' });
     },
     onError: (err) => {
-      console.error('Erro ao remover acordo:', err);
+      logSafeError('useDeleteDebt', err);
       toast({ title: 'Erro ao remover acordo', variant: 'destructive' });
     }
   });
@@ -211,10 +226,8 @@ export function useRenegotiateDebt() {
       toast({ title: 'Acordo gerado com sucesso!' });
     },
     onError: (err) => {
-      console.error('Erro na renegociação:', err);
+      logSafeError('useRenegotiateDebt', err);
       toast({ title: 'Erro ao renegociar acordo', variant: 'destructive' });
     }
   });
 }
-
-

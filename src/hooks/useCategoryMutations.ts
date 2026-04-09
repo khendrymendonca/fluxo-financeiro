@@ -1,5 +1,5 @@
-﻿import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase, logSafeError } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { Category, Subcategory } from '@/types/finance';
 
@@ -11,8 +11,10 @@ export function useAddCategory() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Utilizador não autenticado');
 
+      const safeName = (category.name ?? '').trim().slice(0, 100);
+
       const { data, error } = await supabase.from('categories').insert({
-        name: category.name,
+        name: safeName,
         type: category.type,
         icon: category.icon,
         color: category.color,
@@ -31,7 +33,7 @@ export function useAddCategory() {
       toast({ title: 'Categoria criada!' });
     },
     onError: (err) => {
-      console.error('Erro ao adicionar categoria:', err);
+      logSafeError('useAddCategory', err);
       toast({ title: 'Erro ao criar categoria', variant: 'destructive' });
     }
   });
@@ -42,19 +44,24 @@ export function useUpdateCategory() {
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string, updates: Partial<Category> }) => {
+      const dbUpdates: any = {
+        type: updates.type,
+        icon: updates.icon,
+        color: updates.color,
+        group_id: updates.groupId,
+        budget_group: updates.budgetGroup,
+        is_fixed: updates.isFixed,
+        is_active: updates.isActive,
+        budgetlimit: updates.budgetLimit !== undefined ? updates.budgetLimit : undefined
+      };
+
+      if (updates.name !== undefined) {
+        dbUpdates.name = updates.name.trim().slice(0, 100);
+      }
+
       const { data, error } = await supabase
         .from('categories')
-        .update({
-          name: updates.name,
-          type: updates.type,
-          icon: updates.icon,
-          color: updates.color,
-          group_id: updates.groupId,
-          budget_group: updates.budgetGroup,
-          is_fixed: updates.isFixed,
-          is_active: updates.isActive,
-          budgetlimit: updates.budgetLimit !== undefined ? updates.budgetLimit : undefined
-        })
+        .update(dbUpdates)
         .eq('id', id)
         .select();
 
@@ -66,7 +73,7 @@ export function useUpdateCategory() {
       toast({ title: 'Categoria atualizada!' });
     },
     onError: (err) => {
-      console.error('Erro ao atualizar categoria:', err);
+      logSafeError('useUpdateCategory', err);
       toast({ title: 'Erro ao atualizar categoria', variant: 'destructive' });
     }
   });
@@ -86,7 +93,7 @@ export function useDeleteCategory() {
       toast({ title: 'Categoria removida.' });
     },
     onError: (err) => {
-      console.error('Erro ao remover categoria:', err);
+      logSafeError('useDeleteCategory', err);
       toast({ title: 'Erro ao remover categoria', variant: 'destructive' });
     }
   });
@@ -97,8 +104,10 @@ export function useAddSubcategory() {
 
   return useMutation({
     mutationFn: async (subcategory: Omit<Subcategory, 'id'>) => {
+      const safeName = (subcategory.name ?? '').trim().slice(0, 100);
+
       const { data, error } = await supabase.from('subcategories').insert({
-        name: subcategory.name,
+        name: safeName,
         category_id: subcategory.categoryId
       }).select();
 
@@ -110,7 +119,7 @@ export function useAddSubcategory() {
       toast({ title: 'Subcategoria criada!' });
     },
     onError: (err) => {
-      console.error('Erro ao adicionar subcategoria:', err);
+      logSafeError('useAddSubcategory', err);
       toast({ title: 'Erro ao criar subcategoria', variant: 'destructive' });
     }
   });
@@ -130,7 +139,7 @@ export function useDeleteSubcategory() {
       toast({ title: 'Subcategoria removida.' });
     },
     onError: (err) => {
-      console.error('Erro ao remover subcategoria:', err);
+      logSafeError('useDeleteSubcategory', err);
       toast({ title: 'Erro ao remover subcategoria', variant: 'destructive' });
     }
   });
@@ -141,7 +150,8 @@ export function useUpdateSubcategory() {
 
   return useMutation({
     mutationFn: async ({ id, name }: { id: string, name: string }) => {
-      const { data, error } = await supabase.from('subcategories').update({ name }).eq('id', id).select();
+      const safeName = (name ?? '').trim().slice(0, 100);
+      const { data, error } = await supabase.from('subcategories').update({ name: safeName }).eq('id', id).select();
 
       if (error) throw error;
       return data;
@@ -151,7 +161,7 @@ export function useUpdateSubcategory() {
       toast({ title: 'Subcategoria atualizada!' });
     },
     onError: (err) => {
-      console.error('Erro ao atualizar subcategoria:', err);
+      logSafeError('useUpdateSubcategory', err);
       toast({ title: 'Erro ao atualizar subcategoria', variant: 'destructive' });
     }
   });
@@ -180,10 +190,8 @@ export function useUpdateBudgetRule() {
       toast({ title: 'Regra de orçamento atualizada!' });
     },
     onError: (err) => {
-      console.error('Erro ao atualizar regra:', err);
+      logSafeError('useUpdateBudgetRule', err);
       toast({ title: 'Erro ao atualizar regra de orçamento', variant: 'destructive' });
     }
   });
 }
-
-

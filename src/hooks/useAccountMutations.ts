@@ -1,5 +1,5 @@
-﻿import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase, logSafeError } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { Account } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,14 +13,17 @@ export function useAddAccount() {
     mutationFn: async (account: Omit<Account, 'id' | 'userId'>) => {
       if (!user) throw new Error('Utilizador não autenticado');
 
+      const safeName = (account.name ?? '').trim().slice(0, 100);
+      const safeInstitution = (account.institution ?? (account as any).bank ?? '').trim().slice(0, 100);
+
       const supabasePayload: any = {
-        name: account.name,
+        name: safeName,
         balance: account.balance,
         color: account.color,
         icon: account.icon,
         user_id: user.id,
-        institution: (account as any).institution || (account as any).bank,
-        bank: (account as any).institution || (account as any).bank,
+        institution: safeInstitution,
+        bank: safeInstitution,
       };
 
       if (account.accountType !== undefined) supabasePayload.account_type = account.accountType;
@@ -36,6 +39,10 @@ export function useAddAccount() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       toast({ title: 'Conta criada com sucesso!' });
+    },
+    onError: (err) => {
+      logSafeError('useAddAccount', err);
+      toast({ title: 'Erro ao criar conta', variant: 'destructive' });
     }
   });
 }
@@ -47,6 +54,15 @@ export function useUpdateAccount() {
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string, updates: Partial<Account> }) => {
       const supabasePayload: any = { ...updates };
+
+      // Sanitização
+      if (updates.name !== undefined) {
+        supabasePayload.name = updates.name.trim().slice(0, 100);
+      }
+      if (updates.institution !== undefined || (updates as any).bank !== undefined) {
+        const rawInst = updates.institution || (updates as any).bank || '';
+        supabasePayload.bank = rawInst.trim().slice(0, 100);
+      }
 
       // 1. Conversão de camelCase para snake_case (Padrão do Postgres)
       if (supabasePayload.accountType !== undefined) {
@@ -81,6 +97,10 @@ export function useUpdateAccount() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       toast({ title: 'Conta atualizada!' });
+    },
+    onError: (err) => {
+      logSafeError('useUpdateAccount', err);
+      toast({ title: 'Erro ao atualizar conta', variant: 'destructive' });
     }
   });
 }
@@ -98,6 +118,10 @@ export function useDeleteAccount() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       toast({ title: 'Conta removida.' });
+    },
+    onError: (err) => {
+      logSafeError('useDeleteAccount', err);
+      toast({ title: 'Erro ao remover conta', variant: 'destructive' });
     }
   });
 }
@@ -145,8 +169,10 @@ export function useTransferBetweenAccounts() {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       toast({ title: 'Transferência realizada!' });
+    },
+    onError: (err) => {
+      logSafeError('useTransferBetweenAccounts', err);
+      toast({ title: 'Erro ao realizar transferência', variant: 'destructive' });
     }
   });
 }
-
-
