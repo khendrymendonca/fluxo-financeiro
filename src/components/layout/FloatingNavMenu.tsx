@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMobileShortcuts, ShortcutId } from '@/hooks/useMobileShortcuts';
+import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import {
   LayoutDashboard, ArrowUpDown, Receipt, CreditCard,
   Wallet, Rocket, TrendingDown, LineChart,
@@ -11,21 +12,33 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { parseLocalDate } from '@/utils/dateUtils';
 
-const SHORTCUT_META: Record<ShortcutId, { icon: any; label: string }> = {
+const SHORTCUT_META: Record<ShortcutId, { icon: any; label: string; featureKey?: string }> = {
   dashboard:    { icon: LayoutDashboard, label: 'Início' },
-  transactions: { icon: ArrowUpDown,    label: 'Lançamentos' },
-  cards:        { icon: CreditCard,     label: 'Cartões' },
-  bills:        { icon: Receipt,        label: 'Fixas' },
-  accounts:     { icon: Wallet,         label: 'Contas' },
-  goals:        { icon: Rocket,         label: 'Metas' },
-  debts:        { icon: TrendingDown,   label: 'Dívidas' },
-  reports:      { icon: LineChart,      label: 'Gráficos' },
+  transactions: { icon: ArrowUpDown,    label: 'Lançamentos', featureKey: 'transactions' },
+  cards:        { icon: CreditCard,     label: 'Cartões',     featureKey: 'cards_dashboard' },
+  bills:        { icon: Receipt,        label: 'Fixas',       featureKey: 'accounts' },
+  accounts:     { icon: Wallet,         label: 'Contas',      featureKey: 'accounts' },
+  goals:        { icon: Rocket,         label: 'Metas',       featureKey: 'goals_manager' },
+  debts:        { icon: TrendingDown,   label: 'Dívidas',     featureKey: 'debts_manager' },
+  reports:      { icon: LineChart,      label: 'Gráficos',    featureKey: 'reports_dashboard' },
   categories:   { icon: Settings2,      label: 'Categ.' },
   export:       { icon: Database,       label: 'Dados' },
-  simulator:    { icon: Calculator,     label: 'Simulador' },
-  emergency:    { icon: Shield,         label: 'Reserva' },
+  simulator:    { icon: Calculator,     label: 'Simulador',   featureKey: 'simulator' },
+  emergency:    { icon: Shield,         label: 'Reserva',     featureKey: 'emergency_fund' },
   profile:      { icon: User,           label: 'Perfil' },
 };
+
+function NavItemGuard({
+  item,
+  children,
+}: {
+  item: { featureKey?: string };
+  children: ReactNode;
+}) {
+  const isEnabled = useFeatureFlag(item.featureKey ?? '');
+  if (item.featureKey && !isEnabled) return null;
+  return <>{children}</>;
+}
 
 interface FloatingNavMenuProps {
   activeView: string;
@@ -87,45 +100,42 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
           const Icon = item.icon;
 
           return (
-            <div
-              key={item.id}
-              className="absolute"
-              style={{
-                left: `calc(50% + ${x}px)`,
-                // Posicionamento Centralizado Verticalmente:
-                // 32px é o centro do botão Plus de 64px.
-                // Subtraímos 46px (offset empírico para que o CENTRO do ícone orbital 
-                // fique alinhado ao centro do Plus quando y=0).
-                bottom: `calc(32px + ${y}px - 46px)`,
-                animation: `scaleInOrbital 250ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards ${index * 40}ms`,
-                opacity: 0,
-              }}
-            >
-              <div className="flex flex-col items-center gap-1.5">
-                <button
-                  onClick={() => { onNavigate(item.id); setIsOpen(false); }}
-                  className={cn(
-                    'w-12 h-12 rounded-full flex items-center justify-center',
-                    'backdrop-blur-xl border transition-all duration-300',
-                    'shadow-xl active:scale-90 group',
-                    isActive
-                      ? 'bg-primary border-primary/50 ring-4 ring-primary/20 text-white'
-                      : 'bg-zinc-900/90 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
-                  )}
-                >
-                  <Icon className={cn("w-5 h-5 transition-transform duration-300", !isActive && "group-hover:scale-110")} />
-                </button>
-                
-                <span className={cn(
-                  'text-[9px] font-black uppercase tracking-widest whitespace-nowrap px-2 py-0.5 rounded-full',
-                  isActive 
-                    ? 'bg-primary/10 text-primary' 
-                    : 'bg-zinc-900/50 text-zinc-500 border border-zinc-800/50'
-                )}>
-                  {item.label}
-                </span>
+            <NavItemGuard key={item.id} item={item}>
+              <div
+                className="absolute"
+                style={{
+                  left: `calc(50% + ${x}px)`,
+                  bottom: `calc(32px + ${y}px - 46px)`,
+                  animation: `scaleInOrbital 250ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards ${index * 40}ms`,
+                  opacity: 0,
+                }}
+              >
+                <div className="flex flex-col items-center gap-1.5">
+                  <button
+                    onClick={() => { onNavigate(item.id); setIsOpen(false); }}
+                    className={cn(
+                      'w-12 h-12 rounded-full flex items-center justify-center',
+                      'backdrop-blur-xl border transition-all duration-300',
+                      'shadow-xl active:scale-90 group',
+                      isActive
+                        ? 'bg-primary border-primary/50 ring-4 ring-primary/20 text-white'
+                        : 'bg-zinc-900/90 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
+                    )}
+                  >
+                    <Icon className={cn("w-5 h-5 transition-transform duration-300", !isActive && "group-hover:scale-110")} />
+                  </button>
+                  
+                  <span className={cn(
+                    'text-[9px] font-black uppercase tracking-widest whitespace-nowrap px-2 py-0.5 rounded-full',
+                    isActive 
+                      ? 'bg-primary/10 text-primary' 
+                      : 'bg-zinc-900/50 text-zinc-500 border border-zinc-800/50'
+                  )}>
+                    {item.label}
+                  </span>
+                </div>
               </div>
-            </div>
+            </NavItemGuard>
           );
         })}
 

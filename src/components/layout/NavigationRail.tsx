@@ -24,22 +24,36 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
+import { useFeatureFlag } from '@/hooks/useFeatureFlags';
+import { ReactNode } from 'react';
 
 const navItems = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Início' },
-  { id: 'transactions', icon: List, label: 'Lançamentos' },
-  { id: 'bills', icon: Receipt, label: 'Gestão de Contas' },
-  { id: 'cards', icon: CardIcon, label: 'Cartões' },
-  { id: 'accounts', icon: Wallet, label: 'Minhas Contas (Carteira)' },
-  { id: 'emergency', icon: Shield, label: 'Reserva de Emergência' },
-  { id: 'goals', icon: Rocket, label: 'Sonhos & Projetos' },
-  { id: 'debts', icon: History, label: 'Acordos' },
-  { id: 'reports', icon: BarChart3, label: 'Relatórios' },
+  { id: 'transactions', icon: List, label: 'Lançamentos', featureKey: 'transactions' },
+  { id: 'bills', icon: Receipt, label: 'Gestão de Contas', featureKey: 'accounts' },
+  { id: 'cards', icon: CardIcon, label: 'Cartões', featureKey: 'cards_dashboard' },
+  { id: 'accounts', icon: Wallet, label: 'Minhas Contas (Carteira)', featureKey: 'accounts' },
+  { id: 'emergency', icon: Shield, label: 'Reserva de Emergência', featureKey: 'emergency_fund' },
+  { id: 'goals', icon: Rocket, label: 'Sonhos & Projetos', featureKey: 'goals_manager' },
+  { id: 'debts', icon: History, label: 'Acordos', featureKey: 'debts_manager' },
+  { id: 'reports', icon: BarChart3, label: 'Relatórios', featureKey: 'reports_dashboard' },
   { id: 'categories', icon: Settings2, label: 'Categorias' },
-  { id: 'simulator', icon: Calculator, label: 'Simulador' },
+  { id: 'simulator', icon: Calculator, label: 'Simulador', featureKey: 'simulator' },
   { id: 'export', icon: Database, label: 'Exportar' },
   { id: 'profile', icon: User, label: 'Meu Perfil' },
 ];
+
+function NavItemGuard({
+  item,
+  children,
+}: {
+  item: { featureKey?: string };
+  children: ReactNode;
+}) {
+  const isEnabled = useFeatureFlag(item.featureKey ?? '');
+  if (item.featureKey && !isEnabled) return null;
+  return <>{children}</>;
+}
 
 interface NavigationRailProps {
   currentView: string;
@@ -73,25 +87,26 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
           const isActive = currentView === item.id;
 
           return (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              className={cn(
-                "flex items-center rounded-2xl transition-all duration-200 group relative px-4 py-3 gap-3 w-full",
-                isActive
-                  ? "bg-primary/10 text-primary shadow-sm"
-                  : "text-gray-500 hover:bg-gray-100 dark:text-zinc-500 dark:hover:bg-zinc-900 hover:text-gray-900 dark:hover:text-zinc-50"
-              )}
-            >
-              <Icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
+            <NavItemGuard key={item.id} item={item}>
+              <button
+                onClick={() => onNavigate(item.id)}
+                className={cn(
+                  "flex items-center rounded-2xl transition-all duration-200 group relative px-4 py-3 gap-3 w-full",
+                  isActive
+                    ? "bg-primary/10 text-primary shadow-sm"
+                    : "text-gray-500 hover:bg-gray-100 dark:text-zinc-500 dark:hover:bg-zinc-900 hover:text-gray-900 dark:hover:text-zinc-300"
+                )}
+              >
+                <Icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
 
-              <span className={cn(
-                "font-medium whitespace-nowrap overflow-hidden transition-all duration-300",
-                isActive ? "text-primary opacity-100" : "opacity-80 group-hover:opacity-100"
-              )}>
-                {item.label}
-              </span>
-            </button>
+                <span className={cn(
+                  "font-medium whitespace-nowrap overflow-hidden transition-all duration-300",
+                  isActive ? "text-primary opacity-100" : "opacity-80 group-hover:opacity-100"
+                )}>
+                  {item.label}
+                </span>
+              </button>
+            </NavItemGuard>
           );
         })}
       </div>

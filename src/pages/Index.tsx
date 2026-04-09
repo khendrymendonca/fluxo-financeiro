@@ -41,6 +41,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFeatureFlag, useIsSuperAdmin } from '@/hooks/useFeatureFlags';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -49,6 +50,8 @@ import { useEmergencyFund } from '@/hooks/useEmergencyFund';
 import { todayLocalString, parseLocalDate } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
+import { Navigate } from 'react-router-dom';
+import { ReactNode } from 'react';
 import { NavigationRail } from '@/components/layout/NavigationRail';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { TransactionList } from '@/components/transactions/TransactionList';
@@ -94,6 +97,40 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export' | 'emergency' | 'menu' | 'profile';
+
+// Mapa de views que requerem feature flag
+const PROTECTED_VIEWS: Record<string, string> = {
+  transactions: 'transactions',
+  bills: 'accounts',
+  accounts: 'accounts',
+  cards: 'cards_dashboard',
+  goals: 'goals_manager',
+  debts: 'debts_manager',
+  emergency: 'emergency_fund',
+  reports: 'reports_dashboard',
+  simulator: 'simulator',
+};
+
+function ViewGuard({
+  view,
+  children,
+}: {
+  view: string;
+  children: ReactNode;
+}) {
+  const featureKey = PROTECTED_VIEWS[view];
+  const isEnabled = useFeatureFlag(featureKey ?? '');
+
+  // Se não tem feature key associada (ex: dashboard, profile), sempre libera
+  if (!featureKey) return <>{children}</>;
+
+  if (!isEnabled) {
+    // Redirecionar para dashboard
+    return <Navigate to="/?view=dashboard" replace />;
+  }
+
+  return <>{children}</>;
+}
 
 export default function Index() {
   const { user } = useAuth();
@@ -208,19 +245,51 @@ export default function Index() {
 
   const navigationItems = [
     { id: 'dashboard', icon: Home, label: 'Início' },
-    { id: 'transactions', icon: List, label: 'Lançamentos' },
-    { id: 'cards', icon: CardIcon, label: 'Cartões' },
-    { id: 'bills', icon: Receipt, label: 'Gestão de Contas' },
-    { id: 'accounts', icon: Wallet, label: 'Minhas Contas (Carteira)' },
-    { id: 'emergency', icon: Shield, label: 'Reserva de Emergência' },
-    { id: 'goals', icon: Rocket, label: 'Sonhos & Projetos' },
-    { id: 'debts', icon: History, label: 'Acordos' },
-    { id: 'reports', icon: BarChart3, label: 'Relatórios' },
+    { id: 'transactions', icon: List, label: 'Lançamentos', featureKey: 'transactions' },
+    { id: 'cards', icon: CardIcon, label: 'Cartões', featureKey: 'cards_dashboard' },
+    { id: 'bills', icon: Receipt, label: 'Gestão de Contas', featureKey: 'accounts' },
+    { id: 'accounts', icon: Wallet, label: 'Minhas Contas (Carteira)', featureKey: 'accounts' },
+    { id: 'emergency', icon: Shield, label: 'Reserva de Emergência', featureKey: 'emergency_fund' },
+    { id: 'goals', icon: Rocket, label: 'Sonhos & Projetos', featureKey: 'goals_manager' },
+    { id: 'debts', icon: History, label: 'Acordos', featureKey: 'debts_manager' },
+    { id: 'reports', icon: BarChart3, label: 'Relatórios', featureKey: 'reports_dashboard' },
     { id: 'categories', icon: Settings2, label: 'Categorias' },
-    { id: 'simulator', icon: Calculator, label: 'Simulador' },
+    { id: 'simulator', icon: Calculator, label: 'Simulador', featureKey: 'simulator' },
     { id: 'export', icon: Database, label: 'Exportar' },
     { id: 'profile', icon: Settings2, label: 'Ajustes de Perfil' },
   ];
+
+  function NavItemGuard({
+    item,
+    children,
+  }: {
+    item: { featureKey?: string };
+    children: ReactNode;
+  }) {
+    const isEnabled = useFeatureFlag(item.featureKey ?? '');
+    if (item.featureKey && !isEnabled) return null;
+    return <>{children}</>;
+  }
+
+  function SuperAdminLink({ onNavigate }: { onNavigate: () => void }) {
+    const isSuperAdmin = useIsSuperAdmin();
+    const navigate = useNavigate();
+
+    if (!isSuperAdmin) return null;
+
+    return (
+      <button
+        onClick={() => {
+          navigate('/super');
+          onNavigate();
+        }}
+        className="w-full flex items-center gap-4 px-6 py-4 text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-gray-50 dark:hover:bg-zinc-900 transition-all border-t border-gray-100 dark:border-zinc-900 mt-2"
+      >
+        <Shield className="w-5 h-5 text-primary" />
+        <span>Super</span>
+      </button>
+    );
+  }
 
   const renderView = () => {
     switch (currentView) {
@@ -398,117 +467,143 @@ export default function Index() {
         );
       case 'transactions':
         return (
-          <div className="space-y-4 pt-2">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <PageHeader title="Lançamentos" icon={List} />
-              <div className="flex items-center gap-3">
-                <Button
-                  onClick={() => {
-                    setEditingTransaction(undefined);
-                    setShowTransactionForm(true);
-                  }}
-                  className="bg-primary hover:bg-primary/90 text-white shadow-md hidden md:flex rounded-xl font-bold"
-                >
-                  <Plus className="w-4 h-4 mr-2" /> Novo Lançamento
-                </Button>
-                <MonthSelector />
+          <ViewGuard view="transactions">
+            <div className="space-y-4 pt-2">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <PageHeader title="Lançamentos" icon={List} />
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={() => {
+                      setEditingTransaction(undefined);
+                      setShowTransactionForm(true);
+                    }}
+                    className="bg-primary hover:bg-primary/90 text-white shadow-md hidden md:flex rounded-xl font-bold"
+                  >
+                    <Plus className="w-4 h-4 mr-2" /> Novo Lançamento
+                  </Button>
+                  <MonthSelector />
+                </div>
               </div>
+              <TransactionList
+                transactions={currentMonthTransactions}
+                onEdit={handleEditTransaction}
+                onCopy={handleCopyTransaction}
+                onUndoPayment={handleUndoPayment}
+                onPayBill={async (tx) => {
+                  await updateTransaction({
+                    id: tx.id,
+                    updates: {
+                      isPaid: true,
+                      paymentDate: todayLocalString(),
+                      accountId: tx.accountId,
+                      cardId: tx.cardId
+                    }
+                  });
+                }}
+              />
             </div>
-            <TransactionList
-              transactions={currentMonthTransactions}
-              onEdit={handleEditTransaction}
-              onCopy={handleCopyTransaction}
-              onUndoPayment={handleUndoPayment}
-              onPayBill={async (tx) => {
-                await updateTransaction({
-                  id: tx.id,
-                  updates: {
-                    isPaid: true,
-                    paymentDate: todayLocalString(),
-                    accountId: tx.accountId,
-                    cardId: tx.cardId
-                  }
-                });
-              }}
-            />
-          </div>
+          </ViewGuard>
         );
       case 'goals':
         return (
-          <div className="space-y-6 pt-2">
-            <div className="flex items-center justify-between px-2">
-              <h2 className="text-2xl font-black tracking-tight">Sonhos & Projetos</h2>
-              <Button size="sm" className="rounded-xl font-bold bg-primary text-white" onClick={() => setShowGoalForm(true)}>Lançar Novo Projeto</Button>
+          <ViewGuard view="goals">
+            <div className="space-y-6 pt-2">
+              <div className="flex items-center justify-between px-2">
+                <h2 className="text-2xl font-black tracking-tight">Sonhos & Projetos</h2>
+                <Button size="sm" className="rounded-xl font-bold bg-primary text-white" onClick={() => setShowGoalForm(true)}>Lançar Novo Projeto</Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {savingsGoals.map(goal => (
+                  <GoalCard
+                    key={goal.id}
+                    goal={goal}
+                    accounts={accounts}
+                    onUpdate={(id, updates) => {
+                      console.log('Update Goal:', id, updates);
+                      updateSavingsGoal({ id, updates });
+                    }}
+                    onDelete={deleteSavingsGoal}
+                    onDeposit={depositToGoal}
+                    onEdit={(goal) => {
+                      setEditingGoal(goal);
+                      setShowGoalForm(true);
+                    }}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {savingsGoals.map(goal => (
-                <GoalCard
-                  key={goal.id}
-                  goal={goal}
-                  accounts={accounts}
-                  onUpdate={(id, updates) => {
-                    console.log('Update Goal:', id, updates);
-                    updateSavingsGoal({ id, updates });
-                  }}
-                  onDelete={deleteSavingsGoal}
-                  onDeposit={depositToGoal}
-                  onEdit={(goal) => {
-                    setEditingGoal(goal);
-                    setShowGoalForm(true);
-                  }}
-                />
-              ))}
-            </div>
-          </div>
+          </ViewGuard>
         );
       case 'debts':
         return (
-          <div className="max-w-2xl mx-auto">
-            <DebtsManager
-              debts={debts}
-              onAddDebt={addDebt}
-              onUpdateDebt={(id, updates) => {
-                console.log('Update Debt:', id, updates);
-                updateDebt({ id, updates });
-              }}
-              onDeleteDebt={deleteDebt}
-            />
-          </div>
+          <ViewGuard view="debts">
+            <div className="max-w-2xl mx-auto">
+              <DebtsManager
+                debts={debts}
+                onAddDebt={addDebt}
+                onUpdateDebt={(id, updates) => {
+                  console.log('Update Debt:', id, updates);
+                  updateDebt({ id, updates });
+                }}
+                onDeleteDebt={deleteDebt}
+              />
+            </div>
+          </ViewGuard>
         );
       case 'simulator':
         return (
-          <div className="w-full">
-            <WhatIfSimulator
-              totalIncome={cashflow.totalIncome}
-              totalExpenses={cashflow.totalExpenses}
-              categoryExpenses={Object.fromEntries(categoryExpenses.map(c => [c.name, c.value]))}
-            />
-          </div>
+          <ViewGuard view="simulator">
+            <div className="w-full">
+              <WhatIfSimulator
+                totalIncome={cashflow.totalIncome}
+                totalExpenses={cashflow.totalExpenses}
+                categoryExpenses={Object.fromEntries(categoryExpenses.map(c => [c.name, c.value]))}
+              />
+            </div>
+          </ViewGuard>
         );
       case 'categories':
         return <div className="max-w-2xl mx-auto"><CategoriesManager /></div>;
       case 'reports':
-        return <ReportsDashboard />;
+        return (
+          <ViewGuard view="reports">
+            <ReportsDashboard />
+          </ViewGuard>
+        );
       case 'cards':
-        return <div className="w-full"><CardsDashboard /></div>;
+        return (
+          <ViewGuard view="cards">
+            <div className="w-full"><CardsDashboard /></div>
+          </ViewGuard>
+        );
       case 'accounts':
         return (
-          <div className="w-full max-w-5xl mx-auto">
-            <AccountsManager
-              accounts={accounts}
-              onAddAccount={addAccount}
-              onUpdateAccount={(id, updates) => {
-                console.log('Disparando update para conta:', id, updates);
-                updateAccount({ id, updates });
-              }}
-              onDeleteAccount={deleteAccount}
-            />
-          </div>
+          <ViewGuard view="accounts">
+            <div className="w-full max-w-5xl mx-auto">
+              <AccountsManager
+                accounts={accounts}
+                onAddAccount={addAccount}
+                onUpdateAccount={(id, updates) => {
+                  console.log('Disparando update para conta:', id, updates);
+                  updateAccount({ id, updates });
+                }}
+                onDeleteAccount={deleteAccount}
+              />
+            </div>
+          </ViewGuard>
         );
       case 'bills':
-        return <BillsManager />;
+        return (
+          <ViewGuard view="bills">
+            <BillsManager />
+          </ViewGuard>
+        );
       case 'emergency':
-        return <EmergencyFund />;
+        return (
+          <ViewGuard view="emergency">
+            <EmergencyFund />
+          </ViewGuard>
+        );
       case 'export':
         return <ExportManager />;
       case 'profile':
@@ -566,23 +661,29 @@ export default function Index() {
 
                 <div className="flex-1 overflow-y-auto py-4 space-y-1 no-scrollbar">
                   {navigationItems.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        setCurrentView(item.id as ViewType);
-                        setIsDrawerOpen(false);
-                      }}
-                      className={cn(
-                        "w-full flex items-center gap-4 px-6 py-4 text-sm font-bold transition-all",
-                        currentView === item.id
-                          ? "text-primary bg-primary/5 border-r-4 border-primary"
-                          : "text-gray-500 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-900"
-                      )}
-                    >
-                      <item.icon className="w-5 h-5" />
-                      <span>{item.label}</span>
-                    </button>
+                    <NavItemGuard key={item.id} item={item}>
+                      <button
+                        onClick={() => {
+                          setCurrentView(item.id as ViewType);
+                          setIsDrawerOpen(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-4 px-6 py-4 text-sm font-bold transition-all",
+                          currentView === item.id
+                            ? "text-primary bg-primary/5 border-r-4 border-primary"
+                            : "text-gray-500 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-900"
+                        )}
+                      >
+                        <item.icon className="w-5 h-5" />
+                        <span>{item.label}</span>
+                      </button>
+                    </NavItemGuard>
                   ))}
+
+                  {/* Link Super Admin */}
+                  <NavItemGuard item={{ featureKey: undefined }}>
+                    <SuperAdminLink onNavigate={() => setIsDrawerOpen(false)} />
+                  </NavItemGuard>
                 </div>
 
                 <div className="mt-auto border-t border-gray-100 dark:border-zinc-900 p-6 space-y-6">
