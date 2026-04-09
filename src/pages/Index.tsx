@@ -25,7 +25,6 @@ import {
   Calculator,
   Eye,
   EyeOff,
-  Bell,
   ArrowRight,
   Send,
   History,

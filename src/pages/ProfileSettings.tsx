@@ -19,7 +19,6 @@ import {
     Zap,
     Monitor,
     CheckCircle2,
-    Bell,
     LayoutDashboard,
     ArrowUpDown,
     Receipt,
@@ -50,47 +49,6 @@ export function ProfileSettings() {
     const [email, setEmail] = useState(user?.email || '');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-
-    // Estados de Notificações
-    const [permissionStatus, setPermissionStatus] = useState<NotificationPermission>(
-        typeof window !== 'undefined' ? Notification.permission : 'default'
-    );
-    const [remindersEnabled, setRemindersEnabled] = useState(() =>
-        localStorage.getItem('push_reminders') === 'true'
-    );
-    const [projectUpdatesEnabled, setProjectUpdatesEnabled] = useState(() =>
-        localStorage.getItem('push_projects') === 'true'
-    );
-
-    const handleUpdatePermission = async () => {
-        if (!('Notification' in window)) {
-            toast.error('Notificações não são suportadas neste navegador.');
-            return;
-        }
-
-        try {
-            const permission = await Notification.requestPermission();
-            setPermissionStatus(permission);
-            if (permission === 'granted') {
-                toast.success('Notificações ativadas com sucesso!');
-            } else if (permission === 'denied') {
-                toast.error('Você bloqueou as notificações. Libere nas configurações do seu navegador.');
-            }
-        } catch (error) {
-            console.error('Erro ao pedir permissão:', error);
-            toast.error('Erro ao solicitar permissão.');
-        }
-    };
-
-    const toggleReminder = (checked: boolean) => {
-        setRemindersEnabled(checked);
-        localStorage.setItem('push_reminders', String(checked));
-    };
-
-    const toggleProjects = (checked: boolean) => {
-        setProjectUpdatesEnabled(checked);
-        localStorage.setItem('push_projects', String(checked));
-    };
 
     const toggleShortcut = async (id: ShortcutId) => {
         let newShortcuts: ShortcutId[];
@@ -341,62 +299,6 @@ export function ProfileSettings() {
                             ))}
                         </div>
                     </div>
-                </div>
-
-                {/* Card 3: Notificações */}
-                <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm space-y-6">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
-                            <Bell className="w-5 h-5" />
-                        </div>
-                        <h2 className="text-xl font-bold">Notificações</h2>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between p-4 bg-gray-50/50 dark:bg-zinc-950/50 rounded-3xl border border-gray-100 dark:border-zinc-800 transition-all hover:border-gray-200 dark:hover:border-zinc-700">
-                            <div className="space-y-0.5">
-                                <Label className="text-sm font-black">Lembretes de Vencimento</Label>
-                                <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Avisa 1 dia antes da conta vencer</p>
-                            </div>
-                            <Switch
-                                checked={remindersEnabled}
-                                onCheckedChange={toggleReminder}
-                            />
-                        </div>
-
-                        <div className="flex items-center justify-between p-4 bg-gray-50/50 dark:bg-zinc-950/50 rounded-3xl border border-gray-100 dark:border-zinc-800 transition-all hover:border-gray-200 dark:hover:border-zinc-700">
-                            <div className="space-y-0.5">
-                                <Label className="text-sm font-black">Atualizações de Projetos</Label>
-                                <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Avisos sobre prazos de sonhos</p>
-                            </div>
-                            <Switch
-                                checked={projectUpdatesEnabled}
-                                onCheckedChange={toggleProjects}
-                            />
-                        </div>
-                    </div>
-
-                    {permissionStatus !== 'granted' ? (
-                        <div className="pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                            <Button
-                                onClick={handleUpdatePermission}
-                                className="w-full h-12 rounded-2xl bg-rose-500 text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-rose-500/20 gap-2"
-                            >
-                                <Zap className="w-4 h-4 fill-white" />
-                                Ativar Notificações no Dispositivo
-                            </Button>
-                            {!('Notification' in window) && (
-                                <p className="text-[11px] text-center mt-3 text-zinc-400 font-bold italic leading-tight">
-                                    Notificações não suportadas. No iOS, use "Adicionar à Tela de Início" pelo Safari.
-                                </p>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="pt-4 flex items-center justify-center gap-2 text-emerald-500 bg-emerald-500/5 py-3 rounded-2xl border border-emerald-500/10">
-                            <CheckCircle2 className="w-4 h-4" />
-                            <span className="text-xs font-black uppercase tracking-widest">Notificações Ativadas</span>
-                        </div>
-                    )}
                 </div>
 
                 {/* Card 4: Sobre */}
