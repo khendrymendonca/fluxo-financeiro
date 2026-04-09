@@ -606,7 +606,9 @@ export default function Index() {
                   <div>
                     <p className="text-xs uppercase font-black tracking-widest text-zinc-500 mb-4">Aparência</p>
                     <div className="grid grid-cols-3 gap-2">
-                      {[{ id: 'light', icon: Sun, label: 'Claro' }, { id: 'dark', icon: Moon, label: 'Escuro' }, { id: 'amoled', icon: Zap, label: 'AMOLED' }].map((t) => (
+                      {[{ id: 'light', icon: Sun, label: 'Claro' }, { id: 'dark', icon: Moon, label: 'Escuro' }, { id: 'amoled', icon: Zap, label: 'AMOLED' }]
+                        .filter(t => isMobile || t.id !== 'amoled')
+                        .map((t) => (
                         <button
                           key={t.id}
                           onClick={() => setTheme(t.id as any)}

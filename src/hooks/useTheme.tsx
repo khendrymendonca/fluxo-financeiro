@@ -39,6 +39,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                 effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             }
 
+            // 🛡️ REGRA DE NEGÓCIO: AMOLED disponível apenas para Mobile
+            const isMobileDevice = window.innerWidth < 1024;
+            if (effectiveTheme === 'amoled' && !isMobileDevice) {
+                effectiveTheme = 'dark';
+            }
+
             if (effectiveTheme === 'dark') {
                 root.classList.add('dark');
             } else if (effectiveTheme === 'amoled') {

@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useMobileShortcuts, ShortcutId } from '@/hooks/useMobileShortcuts';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,7 +43,7 @@ export function ProfileSettings() {
     const dayVersion = String(lastUpdateDate.getUTCDate()).padStart(2, '0');
     const monthVersion = String(lastUpdateDate.getUTCMonth() + 1).padStart(2, '0');
     const yearVersion = String(lastUpdateDate.getUTCFullYear()).slice(-2);
-    const appVersion = `${dayVersion}07${monthVersion}08${yearVersion}12N`;
+    const appVersion = `${dayVersion}07${monthVersion}08${yearVersion}12P`;
 
     // Estados para o formulário
     const [name, setName] = useState(user?.user_metadata?.full_name || '');
@@ -257,7 +258,7 @@ export function ProfileSettings() {
                             { id: 'dark', icon: Moon, label: 'Escuro' },
                             { id: 'amoled', icon: Zap, label: 'AMOLED' },
                             { id: 'system', icon: Monitor, label: 'Sistema' },
-                        ].map((t) => (
+                        ].filter(t => isMobile || t.id !== 'amoled').map((t) => (
                             <button
                                 key={t.id}
                                 onClick={() => setTheme(t.id as any)}
