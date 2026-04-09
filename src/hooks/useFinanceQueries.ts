@@ -19,7 +19,8 @@ export function useAccounts() {
         hasOverdraft: acc.has_overdraft || false,
         overdraftLimit: acc.overdraft_limit || 0
       })) as Account[];
-    }
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
 
@@ -66,7 +67,8 @@ export function useTransactions(viewDate: Date) {
         originalId: t.original_id,
         originalBillId: t.original_bill_id
       })) as Transaction[];
-    }
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
 
@@ -88,7 +90,8 @@ export function useCreditCards() {
         history: c.history ?? [],
         limit: Number(c.limit || 0)
       })) as CreditCard[];
-    }
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
 
@@ -114,7 +117,8 @@ export function useCategories() {
         isFixed: c.is_fixed,
         budgetLimit: c.budgetlimit ?? null
       })) as Category[];
-    }
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
 
@@ -129,7 +133,8 @@ export function useSubcategories() {
         categoryId: s.category_id,
         isActive: s.is_active
       })) as Subcategory[];
-    }
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
 
@@ -154,7 +159,8 @@ export function useDebts() {
         totalInstallments: d.total_installments,
         strategyPriority: d.strategy_priority
       })) as Debt[];
-    }
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
 
@@ -170,7 +176,8 @@ export function useSavingsGoals() {
         targetAmount: g.target_amount,
         currentAmount: g.current_amount
       })) as SavingsGoal[];
-    }
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
 

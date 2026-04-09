@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { useUpdateTransaction, useDeleteTransaction, useAddTransaction, useToggleTransactionPaid } from '@/hooks/useTransactionMutations';
+import { useUpdateTransaction, useDeleteTransaction, useAddTransaction, useToggleTransactionPaid, useBulkUpdateTransactions } from '@/hooks/useTransactionMutations';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +48,7 @@ export function BillsManager() {
     const { mutateAsync: deleteTransactionMutation } = useDeleteTransaction();
     const { mutateAsync: addTransactionMutation } = useAddTransaction();
     const { mutateAsync: togglePaidMutation } = useToggleTransactionPaid();
+    const { mutateAsync: bulkUpdateMutation } = useBulkUpdateTransactions();
 
     const viewDateStr = format(viewDate, 'yyyy-MM');
 
@@ -106,7 +107,7 @@ export function BillsManager() {
                 });
 
                 if (isCardInvoice) {
-                    // 2. Marcar transações individuais da fatura como pagas
+                    // 2. Marcar transações individuais da fatura como pagas em lote
                     const txsToMarkAsPaid = transactions.filter(t =>
                         t.cardId === isPaying.cardId &&
                         !t.isPaid &&
@@ -114,8 +115,11 @@ export function BillsManager() {
                         t.invoiceMonthYear === isPaying.invoiceMonthYear
                     );
 
-                    for (const tx of txsToMarkAsPaid) {
-                        await togglePaidMutation({ id: tx.id, isPaid: true });
+                    if (txsToMarkAsPaid.length > 0) {
+                        await bulkUpdateMutation({
+                            ids: txsToMarkAsPaid.map(tx => tx.id),
+                            updates: { isPaid: true, paymentDate: paymentDate }
+                        });
                     }
                 }
             } else {
