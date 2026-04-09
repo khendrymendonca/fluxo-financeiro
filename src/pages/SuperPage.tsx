@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, Search, Star, X, Loader2, ChevronLeft } from 'lucide-react';
+import { Shield, Search, Star, X, Loader2, ChevronLeft, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
@@ -58,7 +58,8 @@ export default function SuperPage() {
     overrides.some((o) => o.feature_key === featureKey);
 
   const screens = FEATURES.filter((f) => f.type === 'screen');
-  const premium = FEATURES.filter((f) => f.type === 'premium');
+  const premium = FEATURES.filter((f) => f.type === 'premium' && !f.key.startsWith('theme_'));
+  const specialThemes = FEATURES.filter((f) => f.type === 'premium' && f.key.startsWith('theme_'));
 
   return (
     <div className="min-h-screen bg-background text-foreground animate-in fade-in duration-500">
@@ -315,6 +316,78 @@ export default function SuperPage() {
                     })}
                   </div>
                 </div>
+
+                {/* Temas Especiais */}
+                {specialThemes.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-xs font-black uppercase tracking-widest
+                                  text-muted-foreground flex items-center gap-2 ml-1">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                      Temas Especiais
+                    </p>
+                    <div className="space-y-2">
+                      {specialThemes.map((feature) => {
+                        const isEnabled = getState(feature.key, feature.enabledByDefault);
+                        const overridden = hasOverride(feature.key);
+
+                        return (
+                          <div
+                            key={feature.key}
+                            className={cn(
+                              'flex items-center justify-between',
+                              'p-4 rounded-2xl border transition-all duration-300',
+                              isEnabled
+                                ? 'border-purple-400/30 bg-purple-400/5'
+                                : 'border-border/40 bg-muted/20 grayscale opacity-60'
+                            )}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <Sparkles className={cn(
+                                'w-4 h-4 shrink-0 transition-colors',
+                                isEnabled ? 'text-purple-400' : 'text-muted-foreground'
+                              )} />
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className={cn(
+                                    'text-sm font-bold transition-colors',
+                                    !isEnabled && 'text-muted-foreground'
+                                  )}>
+                                    {feature.label}
+                                  </p>
+                                  {overridden && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[9px] font-black px-1.5 h-4
+                                                 border-purple-400/40 text-purple-400
+                                                 uppercase tracking-widest"
+                                    >
+                                      editado
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground truncate font-medium">
+                                  {feature.description}
+                                </p>
+                              </div>
+                            </div>
+                            <Switch
+                              checked={isEnabled}
+                              onCheckedChange={() =>
+                                toggleFeature({
+                                  userId: selectedUser.id,
+                                  featureKey: feature.key,
+                                  enabled: !isEnabled,
+                                })
+                              }
+                              disabled={isToggling}
+                              className="shrink-0 ml-4"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Reset overrides */}
                 {overrides.length > 0 && (

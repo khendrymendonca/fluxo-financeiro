@@ -7,6 +7,7 @@ export type ThemeType = 'light' | 'dark' | 'amoled' | 'system';
 interface ThemeContextType {
     theme: ThemeType;
     setTheme: (theme: ThemeType) => void;
+    cycleTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -25,6 +26,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             await supabase.auth.updateUser({
                 data: { ...user.user_metadata, theme: newTheme }
             });
+        }
+    };
+
+    const cycleTheme = () => {
+        const root = document.documentElement;
+        const isDark = root.classList.contains('dark');
+        const isAmoled = root.classList.contains('theme-amoled');
+        const isMobile = window.innerWidth < 1024;
+
+        if (!isDark) {
+            setTheme('dark');
+        } else if (isDark && !isAmoled && isMobile) {
+            setTheme('amoled');
+        } else {
+            setTheme('light');
         }
     };
 
@@ -71,7 +87,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }, [user]);
 
     return (
-        <ThemeContext.Provider value={{ theme, setTheme }}>
+        <ThemeContext.Provider value={{ theme, setTheme, cycleTheme }}>
             {children}
         </ThemeContext.Provider>
     );

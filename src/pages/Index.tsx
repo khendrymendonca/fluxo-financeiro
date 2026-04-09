@@ -186,9 +186,9 @@ export default function Index() {
     viewDate
   } = useFinanceStore();
 
-  const isMobile = useIsMobile();
   const { cashflow, categoryExpenses } = useDashboardMetrics(viewDate, currentMonthTransactions);
   const { ...emergencyData } = useEmergencyFund(currentMonthTransactions);
+  const easterEnabled = useFeatureFlag('theme_easter');
 
   const totalNetWorth = useMemo(() => accounts.reduce((sum, acc) => sum + Number(acc.balance), 0), [accounts]);
 
@@ -731,6 +731,15 @@ export default function Index() {
 
           {/* Lado direito: Avatar + toggle de visibilidade de saldo */}
           <div className="flex items-center gap-3">
+            {isSuperAdmin && (
+              <button
+                onClick={() => navigate('/super')}
+                className="p-2 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                aria-label="Painel Super"
+              >
+                <Shield className="w-5 h-5" />
+              </button>
+            )}
             <div className="flex items-center gap-2">
               <Avatar className="w-8 h-8">
                 <AvatarFallback className="bg-gray-100 dark:bg-zinc-900 text-gray-500 dark:text-zinc-400 font-bold text-xs">{userInitials}</AvatarFallback>
