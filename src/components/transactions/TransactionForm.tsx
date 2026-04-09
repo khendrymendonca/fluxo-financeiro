@@ -733,6 +733,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                             className="h-10 rounded-xl"
                           />
                         </div>
+
                         <div className="flex flex-col gap-2 justify-center">
                           <div className="flex items-center justify-between">
                             <Label className="text-xs font-black uppercase text-muted-foreground cursor-pointer" htmlFor="equal-inst">Iguais?</Label>

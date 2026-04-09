@@ -171,9 +171,10 @@ export function DebtsManager({
                         <div>
                           <h3 className="font-semibold text-lg text-gray-900 dark:text-zinc-50">{debt.name}</h3>
                           <p className="text-xs text-gray-500 dark:text-zinc-500 uppercase font-bold tracking-tighter">
-                            {debt.dueDay && `Vence dia ${debt.dueDay} • `}
+                            {debt.dueDay && `Vence dia ${debt.dueDay} â€¢ `}
                             ~{monthsRemaining} parcelas estimadas
                           </p>
+
                         </div>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                           <button onClick={() => handleEdit(debt)} className="p-2 rounded-lg hover:bg-info/10 text-info" title="Editar">
@@ -227,8 +228,9 @@ export function DebtsManager({
                           <div className="flex items-center gap-2 mt-1">
                             <span className="px-1.5 py-0.5 rounded bg-success/10 text-success text-[11px] font-black uppercase">Acordo Ativo</span>
                             <p className="text-xs text-gray-500 dark:text-zinc-500 font-bold">
-                              {debt.totalInstallments} parcelas • Dia {debt.dueDay}
+                              {debt.totalInstallments} parcelas â€¢ Dia {debt.dueDay}
                             </p>
+
                           </div>
                         </div>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
@@ -253,9 +255,10 @@ export function DebtsManager({
 
                       <div className="p-3 rounded-xl bg-success/5 border border-success/10 text-center">
                         <p className="text-xs font-bold text-success select-none">
-                          As parcelas deste acordo estão na sua Gestão de Contas para pagamento.
+                          As parcelas deste acordo estÃ£o na sua GestÃ£o de Contas para pagamento.
                         </p>
                       </div>
+
                     </div>
                   );
                 })}
@@ -282,7 +285,8 @@ export function DebtsManager({
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="space-y-2">
-                <Label>Nome/Descrição</Label>
+                <Label>Nome/DescriÃ§Ã£o</Label>
+
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -329,7 +333,8 @@ export function DebtsManager({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Nº de Parcelas</Label>
+                  <Label>NÂº de Parcelas</Label>
+
                   <Input
                     type="number"
                     min="1"
@@ -342,7 +347,8 @@ export function DebtsManager({
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Data da 1ª Parcela</Label>
+                <Label>Data da 1Âª Parcela</Label>
+
                 <Input
                   type="date"
                   value={firstInstallmentDate}
