@@ -6,9 +6,11 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useMobileShortcuts, ShortcutId } from '@/hooks/useMobileShortcuts';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useDeleteUserAccount } from '@/hooks/useAccountMutations';
+import { useFeatureFlag, useUserProfile } from '@/hooks/useFeatureFlags';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
     User,
@@ -46,7 +48,11 @@ export function ProfileSettings() {
     const dayVersion = String(lastUpdateDate.getUTCDate()).padStart(2, '0');
     const monthVersion = String(lastUpdateDate.getUTCMonth() + 1).padStart(2, '0');
     const yearVersion = String(lastUpdateDate.getUTCFullYear()).slice(-2);
-    const appVersion = `${dayVersion}07${monthVersion}08${yearVersion}12T`;
+    const appVersion = `${dayVersion}07${monthVersion}08${yearVersion}12U`;
+
+    // Feature Flags & Profile
+    const canCustomizeTheme = useFeatureFlag('theme_customization');
+    const { data: profile } = useUserProfile();
 
     // Estados para o formulário
     const [name, setName] = useState(user?.user_metadata?.full_name || '');
@@ -136,6 +142,22 @@ export function ProfileSettings() {
                         </div>
                         <h2 className="text-xl font-bold">Meus Dados</h2>
                     </div>
+
+                    {profile?.user_code && (
+                        <div className="flex items-center justify-between p-5 rounded-2xl bg-gray-50/50 dark:bg-zinc-950/50 border border-gray-100 dark:border-zinc-800 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div>
+                                <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest mb-1">
+                                    Seu código de acesso
+                                </p>
+                                <p className="text-2xl font-black tracking-widest text-foreground leading-none">
+                                    {profile.user_code}
+                                </p>
+                            </div>
+                            <Badge variant="outline" className="font-bold text-[10px] uppercase tracking-widest border-zinc-200 dark:border-zinc-700">
+                                Fluxo ID
+                            </Badge>
+                        </div>
+                    )}
 
                     <form onSubmit={handleUpdateProfile} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
@@ -285,28 +307,43 @@ export function ProfileSettings() {
 
                     <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-zinc-800">
                         <Label className="text-xs font-black uppercase tracking-widest text-zinc-500 ml-1">Cor de Destaque</Label>
-                        <div className="grid grid-cols-6 gap-3">
-                            {accentColors.map((color) => (
-                                <button
-                                    key={color.id}
-                                    onClick={() => setAccentColor(color.id)}
-                                    className={cn(
-                                        "relative w-full aspect-square rounded-full transition-all duration-300 flex items-center justify-center overflow-hidden border-4",
-                                        accentColor === color.id
-                                            ? "scale-110 shadow-lg border-white dark:border-zinc-800"
-                                            : "hover:scale-105 border-transparent opacity-80 hover:opacity-100"
-                                    )}
-                                    style={{ backgroundColor: `hsl(${color.hsl})` }}
-                                    title={color.name}
-                                >
-                                    {accentColor === color.id && (
-                                        <div className="bg-white/30 backdrop-blur-sm w-full h-full flex items-center justify-center">
-                                            <CheckCircle2 className="w-5 h-5 text-white drop-shadow-md" />
-                                        </div>
-                                    )}
-                                </button>
-                            ))}
-                        </div>
+                        
+                        {canCustomizeTheme ? (
+                            <div className="grid grid-cols-6 gap-3">
+                                {accentColors.map((color) => (
+                                    <button
+                                        key={color.id}
+                                        onClick={() => setAccentColor(color.id)}
+                                        className={cn(
+                                            "relative w-full aspect-square rounded-full transition-all duration-300 flex items-center justify-center overflow-hidden border-4",
+                                            accentColor === color.id
+                                                ? "scale-110 shadow-lg border-white dark:border-zinc-800"
+                                                : "hover:scale-105 border-transparent opacity-80 hover:opacity-100"
+                                        )}
+                                        style={{ backgroundColor: `hsl(${color.hsl})` }}
+                                        title={color.name}
+                                    >
+                                        {accentColor === color.id && (
+                                            <div className="bg-white/30 backdrop-blur-sm w-full h-full flex items-center justify-center">
+                                                <CheckCircle2 className="w-5 h-5 text-white drop-shadow-md" />
+                                            </div>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="p-4 rounded-2xl bg-gray-50/50 dark:bg-zinc-950/50 border border-gray-100 dark:border-zinc-800 flex items-center gap-4 animate-in fade-in duration-300">
+                                <div className="w-10 h-10 rounded-full shrink-0 shadow-lg border-4 border-white dark:border-zinc-800"
+                                     style={{ backgroundColor: '#0d9488' }} />
+                                <div>
+                                    <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Verde Água (Padrão)</p>
+                                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                                        Personalização de cores é um recurso premium
+                                    </p>
+                                </div>
+                                <Star className="w-4 h-4 text-warning ml-auto" />
+                            </div>
+                        )}
                     </div>
                 </div>
 

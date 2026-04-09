@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { FinanceProvider } from "./hooks/useFinanceStore";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
+import SuperPage from "./pages/SuperPage";
 import NotFound from "./pages/NotFound";
 import { UpdatePrompt } from "./components/layout/UpdatePrompt";
 
@@ -43,6 +44,7 @@ const AppRoutes = () => {
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/super" element={<SuperPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </div>
