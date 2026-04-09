@@ -37,13 +37,14 @@ export function ProfileSettings() {
     const { theme, setTheme } = useTheme();
     const { accentColor, setAccentColor, accentColors } = useThemeColor();
     const { shortcuts, saveShortcuts } = useMobileShortcuts();
+    const isMobile = useIsMobile();
 
     // Lógica de Versão Dinâmica
     const lastUpdateDate = new Date('2026-03-30');
     const dayVersion = String(lastUpdateDate.getUTCDate()).padStart(2, '0');
     const monthVersion = String(lastUpdateDate.getUTCMonth() + 1).padStart(2, '0');
     const yearVersion = String(lastUpdateDate.getUTCFullYear()).slice(-2);
-    const appVersion = `${dayVersion}07${monthVersion}08${yearVersion}12Q`;
+    const appVersion = `${dayVersion}07${monthVersion}08${yearVersion}12R`;
 
     // Estados para o formulário
     const [name, setName] = useState(user?.user_metadata?.full_name || '');
