@@ -19,10 +19,11 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ['favicon.ico', 'fluxo_logo.png', 'robots.txt'],
       workbox: {
         cleanupOutdatedCaches: true,
-        // Removidos skipWaiting e clientsClaim para permitir o controle via prompt
+        skipWaiting: true,
+        clientsClaim: true,
       },
       manifest: {
-        name: 'Fluxo - Gestão Financeira',
+        name: 'Fluxo - Gestao Financeira',
         short_name: 'Fluxo',
         description: 'Seu controle financeiro inteligente e simplificado.',
         start_url: '/',
