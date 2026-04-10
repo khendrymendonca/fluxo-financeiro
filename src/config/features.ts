@@ -80,13 +80,6 @@ export const FEATURES: FeatureDefinition[] = [
     type: 'premium',
     enabledByDefault: false, // bloqueado por padrão
   },
-  {
-    key: 'theme_easter',
-    label: 'Tema de Páscoa',
-    description: 'Ativa o tema especial de Páscoa para este usuário',
-    type: 'premium',
-    enabledByDefault: false,
-  },
 ];
 
 export const FEATURE_KEYS = FEATURES.map((f) => f.key);

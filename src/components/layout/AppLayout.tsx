@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useGlobalFlag } from '@/hooks/useFeatureFlags';
+import { EasterWelcome } from '@/components/layout/EasterWelcome';
 
 interface AppLayoutProps {
     children: React.ReactNode;
@@ -18,6 +20,20 @@ export function AppLayout({
     fab
 }: AppLayoutProps) {
     const isMobile = useIsMobile();
+    const easterEnabled = useGlobalFlag('theme_easter');
+    const [showEaster, setShowEaster] = useState(false);
+
+    // Controlar a exibição para que apareça apenas uma vez por sessão 
+    // ou conforme a lógica desejada. Aqui seguiremos a flag.
+    useEffect(() => {
+        if (easterEnabled) {
+            // Verificar se já foi fechado nesta sessão para não ser invasivo
+            const closed = sessionStorage.getItem('easter_welcome_closed');
+            if (!closed) {
+                setShowEaster(true);
+            }
+        }
+    }, [easterEnabled]);
 
     return (
         <div className="flex h-[100dvh] overflow-hidden bg-background transition-colors font-sans selection:bg-primary/30 text-gray-900 dark:text-zinc-50">
@@ -59,6 +75,16 @@ export function AppLayout({
             <div className={cn("md:hidden flex-shrink-0", !bottomNav && "hidden")}>
                 {bottomNav}
             </div>
+
+            {/* Temas Globais */}
+            {showEaster && (
+                <EasterWelcome 
+                    onClose={() => {
+                        setShowEaster(false);
+                        sessionStorage.setItem('easter_welcome_closed', 'true');
+                    }} 
+                />
+            )}
         </div>
     );
 }

@@ -67,7 +67,6 @@ import { Transaction, SavingsGoal } from '@/types/finance';
 import { CategoriesManager } from '@/components/settings/CategoriesManager';
 import { ProfileSettings } from './ProfileSettings';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { EasterWelcome } from '@/components/layout/EasterWelcome';
 import { toast } from '@/components/ui/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FloatingNavMenu } from '@/components/layout/FloatingNavMenu';
@@ -189,7 +188,7 @@ export default function Index() {
   const { cashflow, categoryExpenses } = useDashboardMetrics(viewDate, currentMonthTransactions);
   const { ...emergencyData } = useEmergencyFund(currentMonthTransactions);
   const isMobile = useIsMobile();
-  const easterEnabled = useFeatureFlag('theme_easter');
+  const isSuperAdmin = useIsSuperAdmin();
 
   const totalNetWorth = useMemo(() => accounts.reduce((sum, acc) => sum + Number(acc.balance), 0), [accounts]);
 
@@ -786,7 +785,6 @@ export default function Index() {
       }
     >
       {renderView()}
-      <EasterWelcome />
 
       {showTransactionForm && (
         <TransactionForm

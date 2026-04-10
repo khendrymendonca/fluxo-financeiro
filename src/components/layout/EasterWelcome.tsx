@@ -3,7 +3,11 @@ import { Rabbit, Sparkles, ArrowRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
-export function EasterWelcome() {
+interface EasterWelcomeProps {
+  onClose?: () => void;
+}
+
+export function EasterWelcome({ onClose }: EasterWelcomeProps) {
   const [open, setOpen] = useState(false);
   const { setAccentColor } = useThemeColor();
 
@@ -18,10 +22,12 @@ export function EasterWelcome() {
   const handleEnableEaster = () => {
     setAccentColor('pascoa');
     setOpen(false);
+    if (onClose) onClose();
   };
 
   const handleClose = () => {
     setOpen(false);
+    if (onClose) onClose();
   };
 
   if (!open) return null;
