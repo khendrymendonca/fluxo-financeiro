@@ -44,11 +44,11 @@ export function ProfileSettings() {
     const isMobile = useIsMobile();
 
     // Lógica de Versão Dinâmica
-    const lastUpdateDate = new Date('2026-04-09');
+    const lastUpdateDate = new Date('2026-04-10');
     const dayVersion = String(lastUpdateDate.getUTCDate()).padStart(2, '0');
     const monthVersion = String(lastUpdateDate.getUTCMonth() + 1).padStart(2, '0');
     const yearVersion = String(lastUpdateDate.getUTCFullYear()).slice(-2);
-    const appVersion = `${dayVersion}07${monthVersion}08${yearVersion}12Y`;
+    const appVersion = `${dayVersion}07${monthVersion}08${yearVersion}12Z`;
 
     // Feature Flags & Profile
     const canCustomizeTheme = useFeatureFlag('theme_customization');
