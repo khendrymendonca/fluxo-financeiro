@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import {
   Home,
@@ -41,7 +41,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useFeatureFlag, useIsSuperAdmin } from '@/hooks/useFeatureFlags';
+import { useFeatureFlag, useIsSuperAdmin, useGlobalFlag } from '@/hooks/useFeatureFlags';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -133,6 +133,7 @@ function ViewGuard({
 
 export default function Index() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -189,6 +190,7 @@ export default function Index() {
   const { ...emergencyData } = useEmergencyFund(currentMonthTransactions);
   const isMobile = useIsMobile();
   const isSuperAdmin = useIsSuperAdmin();
+  const easterEnabled = useGlobalFlag('theme_easter');
 
   const totalNetWorth = useMemo(() => accounts.reduce((sum, acc) => sum + Number(acc.balance), 0), [accounts]);
 
@@ -687,22 +689,24 @@ export default function Index() {
                 </div>
 
                 <div className="mt-auto border-t border-gray-100 dark:border-zinc-900 p-6 space-y-6">
-                  <div className="space-y-4">
-                    <p className="text-xs uppercase font-black tracking-widest text-zinc-500">Temas Especiais</p>
-                    <button
-                      onClick={() => setAccentColor(accentColor === 'pascoa' ? 'teal' : 'pascoa')}
-                      className={cn(
-                        "w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all",
-                        accentColor === 'pascoa' ? "bg-primary/10 border-primary text-primary" : "bg-gray-50 dark:bg-zinc-900 border-transparent text-zinc-500"
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Rabbit className="w-5 h-5" />
-                        <span className="text-sm font-bold">Modo Páscoa</span>
-                      </div>
-                      {accentColor === 'pascoa' && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
-                    </button>
-                  </div>
+                  {easterEnabled && (
+                    <div className="space-y-4">
+                      <p className="text-xs uppercase font-black tracking-widest text-zinc-500">Temas Especiais</p>
+                      <button
+                        onClick={() => setAccentColor(accentColor === 'pascoa' ? 'teal' : 'pascoa')}
+                        className={cn(
+                          "w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all",
+                          accentColor === 'pascoa' ? "bg-primary/10 border-primary text-primary" : "bg-gray-50 dark:bg-zinc-900 border-transparent text-zinc-500"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Rabbit className="w-5 h-5" />
+                          <span className="text-sm font-bold">Modo Páscoa</span>
+                        </div>
+                        {accentColor === 'pascoa' && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+                      </button>
+                    </div>
+                  )}
 
                   <div>
                     <p className="text-xs uppercase font-black tracking-widest text-zinc-500 mb-4">Aparência</p>
@@ -710,18 +714,18 @@ export default function Index() {
                       {[{ id: 'light', icon: Sun, label: 'Claro' }, { id: 'dark', icon: Moon, label: 'Escuro' }, { id: 'amoled', icon: Zap, label: 'AMOLED' }]
                         .filter(t => isMobile || t.id !== 'amoled')
                         .map((t) => (
-                        <button
-                          key={t.id}
-                          onClick={() => setTheme(t.id as any)}
-                          className={cn(
-                            "flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all",
-                            theme === t.id ? "bg-primary/10 border-primary text-primary" : "bg-gray-50 dark:bg-zinc-900 border-transparent text-zinc-500"
-                          )}
-                        >
-                          <t.icon className="w-4 h-4" />
-                          <span className="text-[11px] font-bold">{t.label}</span>
-                        </button>
-                      ))}
+                          <button
+                            key={t.id}
+                            onClick={() => setTheme(t.id as any)}
+                            className={cn(
+                              "flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all",
+                              theme === t.id ? "bg-primary/10 border-primary text-primary" : "bg-gray-50 dark:bg-zinc-900 border-transparent text-zinc-500"
+                            )}
+                          >
+                            <t.icon className="w-4 h-4" />
+                            <span className="text-[11px] font-bold">{t.label}</span>
+                          </button>
+                        ))}
                     </div>
                   </div>
                 </div>

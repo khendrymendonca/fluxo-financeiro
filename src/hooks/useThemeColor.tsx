@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { useGlobalFlag } from '@/hooks/useFeatureFlags';
 
 export const accentColors = [
     { id: 'blue', name: 'Azul Real', hsl: '221.2 83.2% 53.3%' },
@@ -32,6 +33,15 @@ export function ThemeColorProvider({ children }: { children: React.ReactNode }) 
     });
 
     const { user } = useAuth();
+    const easterEnabled = useGlobalFlag('theme_easter');
+
+    // Se o admin desabilitar o tema de Páscoa globalmente,
+    // reseta automaticamente quem ainda tiver 'pascoa' como cor ativa
+    useEffect(() => {
+        if (!easterEnabled && accentColor === 'pascoa') {
+            setAccentColor('teal');
+        }
+    }, [easterEnabled]);
 
     const setAccentColor = async (color: string) => {
         setAccentColorState(color);
