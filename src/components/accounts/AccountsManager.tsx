@@ -59,7 +59,6 @@ export function AccountsManager({
   const [accountColor, setAccountColor] = useState(APP_COLORS[0]);
   const [hasOverdraft, setHasOverdraft] = useState(false);
   const [overdraftLimit, setOverdraftLimit] = useState('');
-  const [monthlyYieldRate, setMonthlyYieldRate] = useState('');
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -94,7 +93,6 @@ export function AccountsManager({
     setAccountColor(APP_COLORS[0]);
     setHasOverdraft(false);
     setOverdraftLimit('');
-    setMonthlyYieldRate('');
     setEditingAccount(null);
   };
 
@@ -112,7 +110,6 @@ export function AccountsManager({
     setAccountColor(account.color);
     setHasOverdraft(account.hasOverdraft || false);
     setOverdraftLimit(account.overdraftLimit?.toString() || '');
-    setMonthlyYieldRate(account.monthlyYieldRate?.toString() || '');
     setShowAccountForm(true);
   };
 
@@ -145,7 +142,7 @@ export function AccountsManager({
       if (parsedNewBalance !== currentRealBalance) {
         const diferenca = parsedNewBalance - currentRealBalance;
         const type = diferenca > 0 ? 'income' : 'expense';
-        
+
         // ??? Busca categoria de ajuste ou a primeira compatível
         let adjustmentCategoryId = categories.find(c => c.name.toLowerCase().includes('ajuste'))?.id;
         if (!adjustmentCategoryId) {
@@ -188,13 +185,12 @@ export function AccountsManager({
       }
 
       const accountDataToUpdate = {
-        name: accountName, // Deixe o hook tratar se estiver vazio
+        name: accountName,
         bank: accountInstitution,
         color: accountColor,
         accountType: accountType as AccountType,
         hasOverdraft: hasOverdraft,
         overdraftLimit: hasOverdraft ? parseFloat(overdraftLimit || '0') : 0,
-        monthlyYieldRate: ['metas', 'caixinha', 'investment'].includes(accountType) ? parseFloat(monthlyYieldRate || '0') : 0,
       };
 
       onUpdateAccount(editingAccount.id, accountDataToUpdate);
@@ -213,7 +209,6 @@ export function AccountsManager({
         accountType: accountType as AccountType,
         hasOverdraft: hasOverdraft,
         overdraftLimit: hasOverdraft ? parseFloat(overdraftLimit || '0') : 0,
-        monthlyYieldRate: ['metas', 'caixinha', 'investment'].includes(accountType) ? parseFloat(monthlyYieldRate || '0') : 0,
       };
       onAddAccount(accountData);
     }
@@ -484,15 +479,6 @@ export function AccountsManager({
                   </div>
                 </div>
 
-                {showYieldRateInput && (
-                  <div className="space-y-1.5 p-3 rounded-xl bg-success/5 border border-success/20 animate-fade-in">
-                    <Label className="text-xs font-black uppercase tracking-widest text-success flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3" /> Rendimento Mensal (% a.m.)
-                    </Label>
-                    <Input type="number" step="0.01" min="0" value={monthlyYieldRate} onChange={(e) => setMonthlyYieldRate(e.target.value)} placeholder="Ex: 0.85" className="h-10 rounded-xl border-2 border-success/30 focus:border-success/50 transition-colors px-4 font-bold" />
-                    <p className="text-[11px] text-muted-foreground">O rendimento é projetado sobre o saldo positivo.</p>
-                  </div>
-                )}
 
                 {/* Overdraft / Limite da Conta */}
                 <div className="space-y-3 p-4 rounded-xl bg-muted/30 border border-border/50">

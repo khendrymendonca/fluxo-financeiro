@@ -29,7 +29,6 @@ export function useAddAccount() {
       if (account.accountType !== undefined) supabasePayload.account_type = account.accountType;
       if (account.hasOverdraft !== undefined) supabasePayload.has_overdraft = account.hasOverdraft;
       if (account.overdraftLimit !== undefined) supabasePayload.overdraft_limit = account.overdraftLimit;
-      if ((account as any).monthlyYieldRate !== undefined) supabasePayload.monthly_yield_rate = (account as any).monthlyYieldRate;
 
       const { data, error } = await supabase.from('accounts').insert(supabasePayload).select();
 
@@ -74,15 +73,11 @@ export function useUpdateAccount() {
       if (supabasePayload.overdraftLimit !== undefined) {
         supabasePayload.overdraft_limit = supabasePayload.overdraftLimit;
       }
-      if (supabasePayload.monthlyYieldRate !== undefined) {
-        supabasePayload.monthly_yield_rate = supabasePayload.monthlyYieldRate;
-      }
 
       // 2. Extermínio de colunas camelCase e colunas fantasmas que causam o Erro 400
       delete supabasePayload.accountType;
       delete supabasePayload.hasOverdraft;
       delete supabasePayload.overdraftLimit;
-      delete supabasePayload.monthlyYieldRate;
       delete supabasePayload.institution; // O Supabase usa apenas 'bank'
 
       // 3. Trava anti-string vazia (Se o usuário apagar o apelido)

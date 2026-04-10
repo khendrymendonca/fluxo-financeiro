@@ -127,7 +127,7 @@ export function useDeleteTransaction() {
       }
 
       // --- FLUXO NORMAL: Transação real ou exclusão em massa ---
-      if (applyScope === 'this' || !installmentGroupId) {
+      if (applyScope === 'this') {
         const { error } = await supabase
           .from('transactions')
           .update({ deleted_at: now })
@@ -135,42 +135,63 @@ export function useDeleteTransaction() {
         if (error) throw error;
       }
       else if (applyScope === 'future') {
-        const { error } = await supabase
-          .from('transactions')
-          .update({ deleted_at: now })
-          .eq('installment_group_id', installmentGroupId)
-          .gte('date', date);
-        if (error) throw error;
+        if (installmentGroupId) {
+          // Parcelamento: futuros do mesmo grupo a partir desta data
+          const { error } = await supabase
+            .from('transactions')
+            .update({ deleted_at: now })
+            .eq('installment_group_id', installmentGroupId)
+            .gte('date', date);
+          if (error) throw error;
+        } else {
+          // Recorrente: este + todos os futuros com mesmo original_id
+          const { error } = await supabase
+            .from('transactions')
+            .update({ deleted_at: now })
+            .or(`id.eq.${targetId},original_id.eq.${targetId}`)
+            .gte('date', date);
+          if (error) throw error;
+        }
       }
       else if (applyScope === 'all') {
-        const { error } = await supabase
-          .from('transactions')
-          .update({ deleted_at: now })
-          .eq('installment_group_id', installmentGroupId);
-        if (error) throw error;
+        if (installmentGroupId) {
+          // Parcelamento: todos do grupo
+          const { error } = await supabase
+            .from('transactions')
+            .update({ deleted_at: now })
+            .eq('installment_group_id', installmentGroupId);
+          if (error) throw error;
+        } else {
+          // Recorrente: todos com mesmo original_id ou o próprio
+          const { error } = await supabase
+            .from('transactions')
+            .update({ deleted_at: now })
+            .or(`id.eq.${targetId},original_id.eq.${targetId}`);
+          if (error) throw error;
+        }
       }
 
       return id;
     },
     onMutate: async ({ transaction, applyScope = 'this' }) => {
       const { id, installmentGroupId, date } = transaction;
+      const targetId = transaction.isVirtual ? (transaction.originalId || id.split('-virtual')[0]) : id;
       await queryClient.cancelQueries({ queryKey: ['transactions'] });
       const previousTransactions = queryClient.getQueryData(['transactions']);
 
       queryClient.setQueryData(['transactions'], (oldData: any) => {
         if (!oldData) return;
         return oldData.filter((tx: any) => {
-          if (applyScope === 'this' || !installmentGroupId) {
+          if (applyScope === 'this') {
             return tx.id !== id;
           }
           if (applyScope === 'all') {
-            return tx.installmentGroupId !== installmentGroupId;
+            if (installmentGroupId) return tx.installmentGroupId !== installmentGroupId;
+            return tx.id !== targetId && tx.originalId !== targetId;
           }
           if (applyScope === 'future') {
-            return (
-              tx.installmentGroupId !== installmentGroupId ||
-              tx.date < date
-            );
+            if (installmentGroupId) return !(tx.installmentGroupId === installmentGroupId && tx.date >= date);
+            return !((tx.id === targetId || tx.originalId === targetId) && tx.date >= date);
           }
           return true;
         });
@@ -221,17 +242,17 @@ export function useToggleTransactionPaid() {
     onMutate: async ({ id, isPaid, date, accountId }) => {
       await queryClient.cancelQueries({ queryKey: ['transactions'] });
       const previousTransactions = queryClient.getQueryData(['transactions']);
-      
+
       const paymentDate = isPaid ? (date || format(new Date(), 'yyyy-MM-dd')) : null;
 
       queryClient.setQueryData(['transactions'], (oldData: any) => {
         if (!oldData) return [];
         return oldData.map((tx: any) =>
-          tx.id === id ? { 
-            ...tx, 
-            isPaid, 
-            is_paid: isPaid, 
-            paymentDate, 
+          tx.id === id ? {
+            ...tx,
+            isPaid,
+            is_paid: isPaid,
+            paymentDate,
             payment_date: paymentDate,
             accountId: isPaid ? (accountId || tx.accountId) : tx.accountId
           } : tx
@@ -357,16 +378,24 @@ export function useUpdateTransaction() {
         if (!targetTx) return oldData;
 
         return oldData.map((tx: any) => {
-          if (applyScope === 'this' || !targetTx.installmentGroupId) {
+          if (applyScope === 'this') {
             return tx.id === id ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid } : tx;
           }
           if (applyScope === 'all') {
-            return tx.installmentGroupId === targetTx.installmentGroupId ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid } : tx;
+            if (targetTx.installmentGroupId) {
+              return tx.installmentGroupId === targetTx.installmentGroupId ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid } : tx;
+            }
+            // Recorrente: atualiza o próprio e todos com originalId apontando para ele
+            return (tx.id === id || tx.originalId === id) ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid } : tx;
           }
           if (applyScope === 'future') {
-            return (tx.installmentGroupId === targetTx.installmentGroupId && tx.date >= targetTx.date)
-              ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid }
-              : tx;
+            if (targetTx.installmentGroupId) {
+              return (tx.installmentGroupId === targetTx.installmentGroupId && tx.date >= targetTx.date)
+                ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid } : tx;
+            }
+            // Recorrente: atualiza futuras com mesmo originalId
+            return ((tx.id === id || tx.originalId === id) && tx.date >= targetTx.date)
+              ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid } : tx;
           }
           return tx;
         });
@@ -559,7 +588,7 @@ export const useBulkUpdateTransactions = () => {
   return useMutation({
     mutationFn: async ({ ids, updates }: { ids: string[]; updates: Partial<Transaction> }) => {
       const data: any = { ...updates };
-      
+
       // Mapeamento Snake Case
       if (data.isPaid !== undefined) { data.is_paid = data.isPaid; delete data.isPaid; }
       if (data.paymentDate !== undefined) { data.payment_date = data.paymentDate; delete data.paymentDate; }

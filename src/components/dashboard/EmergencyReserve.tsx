@@ -177,9 +177,6 @@ export function EmergencyReserve({ data, onMonthsChange, accounts = [], onTransf
                                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: acc.color }} />
                                         <div>
                                             <p className="text-xs font-bold">{acc.name}</p>
-                                            {acc.monthlyYieldRate > 0 && (
-                                                <p className="text-[11px] text-success font-bold uppercase mt-0.5">+ {acc.monthlyYieldRate}% ao mês</p>
-                                            )}
                                         </div>
                                     </div>
                                     <span className="text-xs font-black">{formatCurrency(acc.balance)}</span>

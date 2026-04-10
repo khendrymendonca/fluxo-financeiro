@@ -75,7 +75,6 @@ export interface Account {
   accountType: AccountType;
   hasOverdraft?: boolean;
   overdraftLimit?: number;
-  monthlyYieldRate?: number;
 }
 
 export type CardTexture = 'solid' | 'holographic' | 'black';

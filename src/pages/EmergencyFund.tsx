@@ -1,7 +1,6 @@
-import { useMemo } from 'react';
 import { Shield, AlertCircle } from 'lucide-react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
+import { useEmergencyFund } from '@/hooks/useEmergencyFund';
 import { formatCurrency } from '@/utils/formatters';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useTransferBetweenAccounts } from '@/hooks/useAccountMutations';
@@ -12,37 +11,21 @@ import { todayLocalString } from '@/utils/dateUtils';
 export default function EmergencyFund() {
     const {
         accounts,
-        categories,
         currentMonthTransactions,
-        viewDate,
-        emergencyMonths,
-        setEmergencyMonths
     } = useFinanceStore();
 
-    const { cashflow } = useDashboardMetrics(viewDate, currentMonthTransactions);
     const { mutateAsync: transferBetweenAccounts } = useTransferBetweenAccounts();
 
-    // Cálculo do Custo Fixo baseado em categorias marcadas como isFixed
-    const monthlyFixedCosts = useMemo(() => {
-        return categories
-            .filter(c => c.isFixed && c.type === 'expense')
-            .reduce((sum, cat) => {
-                const catTotal = currentMonthTransactions
-                    .filter(t => t.categoryId === cat.id && t.type === 'expense')
-                    .reduce((s, t) => s + t.amount, 0);
-                return sum + catTotal;
-            }, 0);
-    }, [categories, currentMonthTransactions]);
-
-    const fallbackFixedCosts = monthlyFixedCosts > 0 ? monthlyFixedCosts : (cashflow.totalExpenses * 0.7);
-    const targetAmount = fallbackFixedCosts * emergencyMonths;
-
-    const reserveAccounts = accounts.filter(acc =>
-        ['caixinha', 'poupanca', 'investment', 'metas'].includes(acc.accountType) ||
-        acc.name.toLowerCase().includes('reserva')
-    );
-
-    const currentAmount = reserveAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
+    // useEmergencyFund é a única fonte de verdade para todos os cálculos
+    const {
+        monthlyFixed,
+        targetAmount,
+        currentAmount,
+        progress,
+        months,
+        reserveAccounts,
+        setEmergencyMonths
+    } = useEmergencyFund(currentMonthTransactions);
 
     const handleTransfer = async (fromId: string, toId: string, amount: number, description: string) => {
         try {
@@ -60,11 +43,11 @@ export default function EmergencyFund() {
     };
 
     const reserveData = {
-        monthlyFixed: fallbackFixedCosts,
+        monthlyFixed,
         targetAmount,
         currentAmount,
-        progress: targetAmount > 0 ? (currentAmount / targetAmount) * 100 : 0,
-        months: emergencyMonths,
+        progress,
+        months,
         reserveAccounts
     };
 
@@ -87,7 +70,7 @@ export default function EmergencyFund() {
                     <div>
                         <p className="font-bold text-amber-900 dark:text-amber-200">Continue focado!</p>
                         <p className="text-sm text-amber-700 dark:text-amber-400">
-                            Sua reserva cobre aproximadamente {(currentAmount / (fallbackFixedCosts || 1)).toFixed(1)} meses de custos básicos.
+                            Sua reserva cobre aproximadamente {(currentAmount / (monthlyFixed || 1)).toFixed(1)} meses de custos básicos.
                             Faltam {formatCurrency(Math.max(0, targetAmount - currentAmount))} para sua meta.
                         </p>
                     </div>

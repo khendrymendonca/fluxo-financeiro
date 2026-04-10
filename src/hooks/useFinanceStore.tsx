@@ -293,8 +293,6 @@ function useFinanceProvider() {
 
     fetchInitialData: async () => { },
     getTransactionTargetDate: (t: Transaction) => new Date(t.date),
-    getEmergencyFundData: () => ({ monthlyFixed: 0, targetAmount: 0, currentAmount: 0, progress: 0, months: emergencyMonths, reserveAccounts: [] }),
-    seedCoach: async () => { },
 
     getAccountViewBalance: (id: string) => accounts.find(a => a.id === id)?.balance || 0,
     getCardExpenses: (id: string) => {

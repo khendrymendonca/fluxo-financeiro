@@ -71,22 +71,40 @@ export function ExportManager() {
                     return;
                 }
 
+                // Helpers de resolução
+                const resolveCategoryId = (categoryName: string) => {
+                    if (!categoryName?.trim()) return null;
+                    const found = categories.find(
+                        (c) => c.name.toLowerCase().trim() === categoryName.toLowerCase().trim()
+                    );
+                    return found?.id ?? null;
+                };
+
+                const resolveAccountId = (accountName: string) => {
+                    if (accountName?.trim()) {
+                        const found = accounts.find(
+                            (a) => a.name.toLowerCase().trim() === accountName.toLowerCase().trim()
+                        );
+                        if (found) return found.id;
+                    }
+                    // Fallback: conta padrão ou null — nunca accounts[0]
+                    return null;
+                };
+
                 // Skip header and process lines
                 for (let i = 1; i < lines.length; i++) {
                     if (!lines[i].trim()) continue;
                     const values = lines[i].split(',');
 
-                    // Map basic fields (approximation)
                     await addTransaction({
                         date: values[0] || new Date().toISOString().split('T')[0],
                         description: values[1] || 'Importado',
                         amount: parseFloat(values[2]) || 0,
                         type: (values[3] as 'income' | 'expense') || 'expense',
-                        transactionType: 'punctual',
-                        isPaid: true,
-                        // Simplified: we don't map cat/acc IDs perfectly yet
-                        categoryId: '',
-                        accountId: accounts[0]?.id || '',
+                        transactionType: (values[6] as any) || 'punctual',
+                        isPaid: values[7]?.trim() === 'Sim',
+                        categoryId: resolveCategoryId(values[4]) ?? undefined,
+                        accountId: resolveAccountId(values[5]) ?? undefined,
                         userId: '' // Handled by store
                     });
                     importedCount++;

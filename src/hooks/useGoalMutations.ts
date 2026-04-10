@@ -54,7 +54,7 @@ export function useUpdateGoal() {
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string, updates: Partial<SavingsGoal> }) => {
       const payload: any = { ...updates };
-      
+
       // Sanitização se fornecido
       if (updates.name !== undefined) payload.name = updates.name.trim().slice(0, 150);
       if (updates.purpose !== undefined) payload.purpose = updates.purpose.trim().slice(0, 500);
@@ -148,7 +148,7 @@ export function useDepositToGoal() {
         description: isWithdrawal ? `Retirada: Meta ${finalGoalName}` : `Depósito: Meta ${finalGoalName}`,
         amount: Math.abs(amount), // Valor absoluto
         type: isWithdrawal ? 'income' : 'expense', // Entrada/Saída na contabilidade principal
-        transaction_type: isWithdrawal ? 'income' : 'expense', // Ajusta a classificação
+        transaction_type: 'adjustment', // Tipo correto para movimentações de meta
         date: today,
         account_id: accountId,
         is_paid: true,
