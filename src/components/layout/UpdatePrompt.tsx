@@ -9,7 +9,6 @@ export function UpdatePrompt() {
   const {
     offlineReady: [offlineReady, setOfflineReady],
     needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r: any) {
       console.log('SW Registered:', r);
@@ -33,6 +32,12 @@ export function UpdatePrompt() {
     setIsVisible(false);
   };
 
+  // SW ja atualizou em background (skipWaiting: true no workbox)
+  // O botao apenas recarrega a pagina para o usuario ver a nova versao
+  const handleUpdate = () => {
+    window.location.reload();
+  };
+
   if (!isVisible) return null;
 
   return (
@@ -44,9 +49,9 @@ export function UpdatePrompt() {
               <Rocket className="w-6 h-6 animate-pulse" />
             </div>
             <div className="space-y-1">
-              <h3 className="font-black text-sm tracking-tight">Nova versão disponível!</h3>
+              <h3 className="font-black text-sm tracking-tight">Nova versao disponivel!</h3>
               <p className="text-[11px] text-muted-foreground leading-relaxed font-medium">
-                Uma nova versão do Fluxo foi detectada. Atualize agora para receber as novidades e melhorias.
+                Uma nova versao do Fluxo foi detectada. Atualize agora para receber as novidades e melhorias.
               </p>
             </div>
           </div>
@@ -54,26 +59,25 @@ export function UpdatePrompt() {
             <X className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
-
         <div className="flex gap-2">
-          <Button 
-            onClick={() => updateServiceWorker(true)}
+          <Button
+            onClick={handleUpdate}
             className="flex-1 bg-primary hover:bg-primary/90 text-white rounded-2xl font-bold h-11 shadow-lg shadow-primary/20 group"
           >
             <RefreshCw className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500" />
             Atualizar Agora
           </Button>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             onClick={close}
             className="rounded-2xl h-11 font-bold px-4"
           >
             Depois
           </Button>
         </div>
-        
+
         <div className="text-[11px] text-center text-muted-foreground/50 uppercase font-black tracking-widest">
-          O login será mantido após a atualização
+          O login sera mantido apos a atualizacao
         </div>
       </div>
     </div>
