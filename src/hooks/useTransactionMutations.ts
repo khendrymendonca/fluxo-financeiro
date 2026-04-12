@@ -395,25 +395,55 @@ export function useUpdateTransaction() {
 
       // Se há escopo future ou all, aplicamos o filtro correspondente
       // 🛡️ REGRA DE OURO: Nunca alteramos registros já pagos em atualizações em lote!
-      let query = supabase.from('transactions').update(dbUpdates).eq('is_paid', false).is('deleted_at', null);
+      const targetDateToApply = referenceDate ?? currentTx.date;
 
-      if (groupId) {
-        query = query.eq('installment_group_id', groupId);
-      } else if (originalId) {
-        // Para recorrentes, usamos o original_id (ou o próprio ID se ele for o pai)
-        query = query.or(`id.eq.${originalId},original_id.eq.${originalId}`);
+      if (applyScope === 'all') {
+        let query = supabase.from('transactions').update(dbUpdates).eq('is_paid', false).is('deleted_at', null);
+        if (groupId) {
+          query = query.eq('installment_group_id', groupId);
+        } else if (originalId) {
+          query = query.or(`id.eq.${originalId},original_id.eq.${originalId}`);
+        }
+        const { data, error } = await query.select();
+        if (error) { logSafeError('useUpdateTransaction (bulk)', error); throw error; }
+        return data;
       }
 
       if (applyScope === 'future') {
-        query = query.gte('date', referenceDate ?? currentTx.date);
-      }
+        if (groupId) {
+          const { data, error } = await supabase.from('transactions')
+            .update(dbUpdates)
+            .eq('installment_group_id', groupId)
+            .gte('date', targetDateToApply)
+            .eq('is_paid', false)
+            .is('deleted_at', null)
+            .select();
+          if (error) { logSafeError('useUpdateTransaction (future-group)', error); throw error; }
+          return data;
+        } else if (originalId) {
+          // Atualizar a mãe sem o filtro .gte de data (essencial para que as projeções mudem no frontend)
+          const { error: motherErr } = await supabase.from('transactions')
+            .update(dbUpdates)
+            .eq('id', originalId)
+            .eq('is_paid', false)
+            .is('deleted_at', null);
 
-      const { data, error } = await query.select();
-      if (error) {
-        logSafeError('useUpdateTransaction (bulk)', error);
-        throw error;
+          if (motherErr) { logSafeError('useUpdateTransaction (future-mother)', motherErr); throw motherErr; }
+
+          // Atualizar filhos físicos subsequentes
+          const { data, error: childErr } = await supabase.from('transactions')
+            .update(dbUpdates)
+            .eq('original_id', originalId)
+            .gte('date', targetDateToApply)
+            .eq('is_paid', false)
+            .is('deleted_at', null)
+            .select();
+
+          if (childErr) { logSafeError('useUpdateTransaction (future-child)', childErr); throw childErr; }
+          return data;
+        }
       }
-      return data;
+      return [];
     },
     onMutate: async ({ id, updates, applyScope = 'this' }) => {
       await queryClient.cancelQueries({ queryKey: ['transactions'] });
@@ -441,8 +471,10 @@ export function useUpdateTransaction() {
               return (tx.installmentGroupId === targetTx.installmentGroupId && tx.date >= targetTx.date)
                 ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid } : tx;
             }
-            // Recorrente: atualiza futuras com mesmo originalId
-            return ((tx.id === id || tx.originalId === id) && tx.date >= targetTx.date)
+            // Recorrente: atualiza a mãe incondicionalmente no onMutate, mas filhos só no future range
+            const isMother = tx.id === targetTx.originalId || tx.id === targetTx.id.split('-virtual')[0];
+            const isFutureChild = tx.originalId === targetTx.originalId && tx.date >= targetTx.date;
+            return (isMother || isFutureChild)
               ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid } : tx;
           }
           return tx;
