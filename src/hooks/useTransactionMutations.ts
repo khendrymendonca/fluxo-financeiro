@@ -343,17 +343,26 @@ export function useUpdateTransaction() {
 
         if (!madre) throw new Error('Transação mãe não encontrada');
 
+        let targetDate = madre.date.slice(0, 10);
+        const virtualParts = id.split('-virtual-');
+        if (virtualParts.length === 2) {
+          const [yearStr, monthStr] = virtualParts[1].split('-');
+          const year = parseInt(yearStr);
+          const month = parseInt(monthStr); // 0-based
+          const originalDay = new Date(madre.date).getDate();
+          const lastDay = new Date(year, month + 1, 0).getDate();
+          const safeDay = Math.min(originalDay, lastDay);
+          targetDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
+        }
+
         const { error } = await supabase
           .from('transactions')
           .insert({
             ...madre,
             id: undefined,
-            // Aplica os novos valores passados em `updates`
             amount: updates.amount ?? madre.amount,
-            date: updates.date ? updates.date.slice(0, 10) : madre.date,
-            // Marca como filho da mãe para deduplicação
+            date: targetDate,
             original_id: realId,
-            // Quebra a recorrência desta instância específica
             is_recurring: false,
             transaction_type: 'punctual',
             is_paid: false,
