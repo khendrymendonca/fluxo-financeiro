@@ -932,6 +932,7 @@ export default function CardsDashboard() {
         <InstallInvoiceDialog
           card={selectedCard}
           currentInvoiceAmount={currentInvoiceTotal}
+          invoiceMonthYear={format(viewDate, "yyyy-MM")}
           isOpen={showInstallInvoice}
           onClose={() => setShowInstallInvoice(false)}
         />

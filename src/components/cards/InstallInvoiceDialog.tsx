@@ -2,20 +2,16 @@ import React, { useState } from 'react';
 import {
     X,
     Banknote,
-    Calendar as CalendarIcon,
     CreditCard as CardIcon,
     Loader2,
     ListOrdered
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { useAddDebt } from '@/hooks/useDebtMutations';
-import { useAddTransaction } from '@/hooks/useTransactionMutations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatCurrency } from '@/utils/formatters';
-import { todayLocalString, parseLocalDate } from '@/utils/dateUtils';
 import { cn } from '@/lib/utils';
 import { CreditCard } from '@/types/finance';
 import { format, addMonths } from 'date-fns';
@@ -26,11 +22,12 @@ import { useQueryClient } from '@tanstack/react-query';
 interface InstallInvoiceDialogProps {
     card: CreditCard;
     currentInvoiceAmount: number;
+    invoiceMonthYear: string;
     isOpen: boolean;
     onClose: () => void;
 }
 
-export function InstallInvoiceDialog({ card, currentInvoiceAmount, isOpen, onClose }: InstallInvoiceDialogProps) {
+export function InstallInvoiceDialog({ card, currentInvoiceAmount, invoiceMonthYear, isOpen, onClose }: InstallInvoiceDialogProps) {
     const { user } = useAuth();
     const { categories } = useFinanceStore();
     const queryClient = useQueryClient();
@@ -38,10 +35,6 @@ export function InstallInvoiceDialog({ card, currentInvoiceAmount, isOpen, onClo
     const [downPayment, setDownPayment] = useState<string>(''); // entrada
     const [installmentAmount, setInstallmentAmount] = useState<string>(''); // valor da parcela
     const [totalInstallments, setTotalInstallments] = useState<string>('2'); // numero parcelas
-    const [dueDay, setDueDay] = useState<string>(card.dueDay.toString()); // vencimento
-    const [firstInstallmentDate, setFirstInstallmentDate] = useState<string>(
-        format(addMonths(new Date(), 1), 'yyyy-MM-dd')
-    );
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -55,20 +48,24 @@ export function InstallInvoiceDialog({ card, currentInvoiceAmount, isOpen, onClo
     const handleConfirm = async () => {
         if (!user) return;
 
-        const down = parseFloat(downPayment);
+        const down = parseFloat(downPayment) || 0;
         const instAmount = parseFloat(installmentAmount);
         const numInstallments = parseInt(totalInstallments);
-        const day = parseInt(dueDay);
 
-        if (isNaN(down) || isNaN(instAmount) || isNaN(numInstallments) || numInstallments < 2 || isNaN(day)) {
+        if (isNaN(instAmount) || isNaN(numInstallments) || numInstallments < 2) {
             toast({ title: 'Preencha todos os campos corretamente.', variant: 'destructive' });
             return;
         }
 
         setIsSubmitting(true);
         try {
-            const today = todayLocalString();
-            const mesAnoAtual = format(new Date(), 'yyyy-MM'); // fatura atual do cartão q originou o parcelamento
+            const today = format(new Date(), 'yyyy-MM-dd');
+
+            const [yearStr, monthStr] = invoiceMonthYear.split('-');
+            // O mês no JS Date é 0-indexed. parseInt('04') -> 4. month=4 -> index 3.
+            const mesDaFatura = new Date(parseInt(yearStr), parseInt(monthStr) - 1, card.dueDay);
+            const startParcelaDate = addMonths(mesDaFatura, 1);
+            const startParcelaStr = format(startParcelaDate, 'yyyy-MM-dd');
 
             // PASSO 1: Pagamento da Entrada
             if (down > 0) {
@@ -81,7 +78,7 @@ export function InstallInvoiceDialog({ card, currentInvoiceAmount, isOpen, onClo
                     date: today,
                     card_id: card.id,
                     is_invoice_payment: true,
-                    invoice_month_year: mesAnoAtual,
+                    invoice_month_year: invoiceMonthYear,
                     is_paid: true,
                     payment_date: today,
                 });
@@ -91,29 +88,28 @@ export function InstallInvoiceDialog({ card, currentInvoiceAmount, isOpen, onClo
             // PASSO 2: Criar Acordo (Invoice Installment)
             const { data: debtData, error: debtError } = await supabase.from('debts').insert({
                 user_id: user.id,
-                name: `Fatura parcelada ${card.name} ${mesAnoAtual}`,
+                name: `Fatura parcelada ${card.name} ${invoiceMonthYear}`,
                 total_amount: instAmount * numInstallments,
                 remaining_amount: instAmount * numInstallments,
                 installment_amount: instAmount,
                 interest_rate_monthly: 0,
-                due_day: day,
+                due_day: card.dueDay,
                 status: 'renegotiated',
                 total_installments: numInstallments,
                 card_id: card.id,
                 debt_type: 'invoice_installment',
-                start_date: firstInstallmentDate,
+                start_date: startParcelaStr,
             }).select().single();
 
             if (debtError) throw debtError;
 
             // PASSO 3: Gerar as parcelas como transações para a fatura do cartão
             const groupId = crypto.randomUUID();
-            const baseDate = parseLocalDate(firstInstallmentDate);
             const categoryId = categories.find(c => c.name === 'Metas/Acordos' || c.name === 'Renegociação')?.id;
 
             const installmentsData = [];
             for (let i = 0; i < numInstallments; i++) {
-                const dt = addMonths(baseDate, i);
+                const dt = addMonths(startParcelaDate, i);
                 installmentsData.push({
                     user_id: user.id,
                     type: 'expense',
@@ -150,7 +146,7 @@ export function InstallInvoiceDialog({ card, currentInvoiceAmount, isOpen, onClo
         }
     };
 
-    const isFormValid = parseFloat(downPayment) >= 0 && parseFloat(installmentAmount) > 0 && parseInt(totalInstallments) >= 2;
+    const isFormValid = parseFloat(downPayment) >= 0 || downPayment === '' ? (parseFloat(installmentAmount) > 0 && parseInt(totalInstallments) >= 2) : false;
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/20 backdrop-blur-sm animate-in fade-in duration-300">
@@ -180,7 +176,7 @@ export function InstallInvoiceDialog({ card, currentInvoiceAmount, isOpen, onClo
                         <div className="relative z-10 flex flex-col justify-between h-20 text-white">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <p className="text-xs font-black uppercase tracking-widest opacity-60">Fatura Atual</p>
+                                    <p className="text-xs font-black uppercase tracking-widest opacity-60">Fatura {invoiceMonthYear}</p>
                                     <p className="font-bold text-lg">{card.name}</p>
                                 </div>
                                 <CardIcon className="w-6 h-6 opacity-40" />
@@ -199,7 +195,7 @@ export function InstallInvoiceDialog({ card, currentInvoiceAmount, isOpen, onClo
                     {/* Form */}
                     <div className="space-y-5">
                         <div className="space-y-2">
-                            <Label className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Valor da Entrada</Label>
+                            <Label className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Valor da Entrada (opcional)</Label>
                             <div className="relative">
                                 <Banknote className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-300" />
                                 <Input
@@ -211,8 +207,8 @@ export function InstallInvoiceDialog({ card, currentInvoiceAmount, isOpen, onClo
                                 />
                             </div>
                             <div className="flex justify-between px-2 pt-1 text-xs font-black tracking-widest uppercase">
-                                <span className="text-zinc-400">Restante a parcelar (A base do banco pode ter juros)</span>
-                                <span className="text-zinc-600 dark:text-zinc-300">{formatCurrency(getRemainingAmount())}</span>
+                                <span className="text-zinc-400">A base do banco pode ter juros</span>
+                                <span className="text-zinc-600 dark:text-zinc-300 min-w-max ml-2">Restante a parcelar: {formatCurrency(getRemainingAmount())}</span>
                             </div>
                         </div>
 
@@ -243,32 +239,6 @@ export function InstallInvoiceDialog({ card, currentInvoiceAmount, isOpen, onClo
                                         className="h-12 pl-9 rounded-xl border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/30 font-bold text-sm"
                                     />
                                 </div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">1ª Parcela em</Label>
-                                <div className="relative">
-                                    <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" />
-                                    <Input
-                                        type="date"
-                                        value={firstInstallmentDate}
-                                        onChange={(e) => setFirstInstallmentDate(e.target.value)}
-                                        className="h-12 pl-9 rounded-xl border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/30 font-bold text-xs"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Dia Vencimento</Label>
-                                <Input
-                                    type="number"
-                                    min={1} max={31}
-                                    value={dueDay}
-                                    onChange={(e) => setDueDay(e.target.value)}
-                                    className="h-12 rounded-xl border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/30 font-bold text-sm text-center"
-                                />
                             </div>
                         </div>
 
