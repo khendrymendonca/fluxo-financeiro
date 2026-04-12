@@ -337,14 +337,15 @@ export function useUpdateTransaction() {
 
       const groupId = currentTx.installment_group_id;
       const originalId = currentTx.original_id || (currentTx.is_recurring ? currentTx.id : null);
-
+      
       const isRecurringMother = !isVirtual && currentTx.is_recurring && !currentTx.original_id;
 
-      // 🛡️ CASO ESPECIAL: "Apenas este mês" em transações recorrentes (mãe base ou projeções virtuais)
-      // Em vez de editar a mãe, criamos uma transação física filha apenas para esta ocorrência
+      // ======================================================================
+      // CASO A e C: isVirtual ou isRecurringMother + applyScope='this'
+      // ======================================================================
       if (applyScope === 'this' && (isVirtual || isRecurringMother)) {
         let targetDate = currentTx.date.slice(0, 10);
-
+        
         if (isVirtual) {
           const virtualParts = id.split('-virtual-');
           if (virtualParts.length === 2) {
@@ -357,155 +358,131 @@ export function useUpdateTransaction() {
             targetDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
           }
         } else {
-          // Mãe real: usar a data que vem em updates (mês atual da tela de edição)
           targetDate = updates.date ? updates.date.slice(0, 10) : currentTx.date.slice(0, 10);
         }
 
-        const { error } = await supabase
-          .from('transactions')
-          .insert({
-            ...currentTx,
-            id: undefined,
-            amount: updates.amount ?? currentTx.amount,
-            date: targetDate,
-            original_id: realId,
-            is_recurring: false,
-            transaction_type: 'punctual',
-            is_paid: false,
-            payment_date: null,
-            deleted_at: null,
-            created_at: undefined,
-          });
-
+        const { error } = await supabase.from('transactions').insert({
+          ...currentTx,
+          id: undefined,
+          amount: updates.amount ?? currentTx.amount,
+          date: targetDate,
+          original_id: realId,
+          is_recurring: false,
+          transaction_type: 'punctual',
+          is_paid: false,
+          payment_date: null,
+          deleted_at: null,
+          created_at: undefined,
+        });
         if (error) throw error;
         return [];
       }
 
-      if (applyScope === 'this' || (!groupId && !originalId)) {
-        const { data, error } = await supabase
-          .from('transactions')
-          .update(dbUpdates)
-          .eq('id', realId)
-          .select();
-        if (error) {
-          logSafeError('useUpdateTransaction (single)', error);
-          throw error;
-        }
-        return data;
-      }
+      // ======================================================================
+      // CASO B e D: isVirtual ou isRecurringMother + applyScope='future'
+      // ======================================================================
+      if (applyScope === 'future' && (isVirtual || isRecurringMother)) {
+        await supabase.from('transactions').update({ deleted_at: new Date().toISOString() }).eq('id', realId);
 
-      // Se há escopo future ou all, aplicamos o filtro correspondente
-      // 🛡️ REGRA DE OURO: Nunca alteramos registros já pagos em atualizações em lote!
-      const targetDateToApply = referenceDate ?? currentTx.date;
-
-
-
-      if (applyScope === 'all') {
-        const { date: _ignoredDate, ...motherUpdates } = dbUpdates;
-        let query = supabase.from('transactions').update(motherUpdates).eq('is_paid', false).is('deleted_at', null);
-        if (groupId) {
-          query = query.eq('installment_group_id', groupId);
-        } else if (originalId) {
-          query = query.or(`id.eq.${originalId},original_id.eq.${originalId}`);
-        }
-        const { data, error } = await query.select();
-        if (error) { logSafeError('useUpdateTransaction (bulk)', error); throw error; }
-        return data;
-      }
-
-      if (applyScope === 'future') {
+        let targetDate = currentTx.date.slice(0, 10);
         if (isVirtual) {
-          const { data: madre } = await supabase
-            .from('transactions')
-            .select('*')
-            .eq('id', realId)
-            .single();
-
-          if (!madre) throw new Error('Mãe não encontrada');
-
-          // 1. Soft-delete a mãe original
-          await supabase.from('transactions')
-            .update({ deleted_at: new Date().toISOString() })
-            .eq('id', realId);
-
-          let targetDate = madre.date.slice(0, 10);
           const parts = id.split('-virtual-');
           if (parts.length === 2) {
             const [yearStr, monthStr] = parts[1].split('-');
             const year = parseInt(yearStr);
-            const month = parseInt(monthStr); // 0-based
-            const originalDay = new Date(madre.date).getDate();
+            const month = parseInt(monthStr);
+            const originalDay = new Date(currentTx.date).getDate();
             const lastDay = new Date(year, month + 1, 0).getDate();
             const safeDay = Math.min(originalDay, lastDay);
             targetDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
           }
+        } else {
+          targetDate = updates.date ? updates.date.slice(0, 10) : currentTx.date.slice(0, 10);
+        }
 
-          // Caso o usuário tenha também mudado a data base no form, aproveitamos essa edição, senão usamos targetDate.
-          const finalDate = updates.date ? updates.date.slice(0, 10) : targetDate;
+        const finalDate = updates.date ? updates.date.slice(0, 10) : targetDate;
 
-          // 2. Criar nova mãe com os novos valores a partir do mês alvo
-          await supabase.from('transactions').insert({
-            ...madre,
-            id: undefined,
-            amount: updates.amount ?? madre.amount,
-            date: finalDate,
-            description: updates.description ?? madre.description,
-            is_recurring: true,
-            original_id: null,
-            is_paid: false,
-            payment_date: null,
-            deleted_at: null,
-            created_at: undefined,
-          });
+        await supabase.from('transactions').insert({
+          ...currentTx,
+          id: undefined,
+          amount: updates.amount ?? currentTx.amount,
+          date: finalDate,
+          description: updates.description ?? currentTx.description,
+          is_recurring: true,
+          original_id: null,
+          is_paid: false,
+          payment_date: null,
+          deleted_at: null,
+          created_at: undefined,
+        });
 
-          // 3. Atualizar filhos físicos existentes com date >= targetDate
-          const { date: _d, ...childUpdates } = dbUpdates;
+        const { date: _d, ...childUpdates } = dbUpdates;
+        if (Object.keys(childUpdates).length > 0) {
           await supabase.from('transactions')
-            .update({ ...childUpdates, original_id: null }) // Filhos futuros teoricamente teriam q apontar pra null ou nova mãe? Re-associação é complexa, apenas evitamos q sumam.
+            .update(childUpdates)
             .eq('original_id', realId)
             .gte('date', targetDate)
             .eq('is_paid', false)
             .is('deleted_at', null);
-
-          // Mas calma, eles estavam vinculados à antiga mãe. Deixar apontar pra null evita query confusion 
-          // ou pode apenas deixar apontar pro realId (q agora tá deleted) e o DB pode reclamar? O DB geralmente aceita.
-
-          return [];
         }
+        return [];
+      }
 
-        if (groupId) {
+      // ======================================================================
+      // CASO E: isVirtual ou isRecurringMother + applyScope='all'
+      // ======================================================================
+      if (applyScope === 'all' && (isVirtual || isRecurringMother)) {
+        const { date: _ignoredDate, ...motherUpdates } = dbUpdates;
+        if (Object.keys(motherUpdates).length > 0) {
           const { data, error } = await supabase.from('transactions')
-            .update(dbUpdates)
-            .eq('installment_group_id', groupId)
-            .gte('date', targetDateToApply)
-            .eq('is_paid', false)
-            .is('deleted_at', null)
-            .select();
-          if (error) { logSafeError('useUpdateTransaction (future-group)', error); throw error; }
-          return data;
-        } else if (originalId) {
-          // Atualizar a mãe sem o filtro .gte de data (essencial para que as projeções mudem no frontend)
-          const { date: _ignoredDate, ...motherUpdates } = dbUpdates;
-
-          const { error: motherErr } = await supabase.from('transactions')
             .update(motherUpdates)
-            .eq('id', originalId)
-            .eq('is_paid', false)
-            .is('deleted_at', null);
-
-          if (motherErr) { logSafeError('useUpdateTransaction (future-mother)', motherErr); throw motherErr; }
-
-          // Atualizar filhos físicos subsequentes
-          const { data, error: childErr } = await supabase.from('transactions')
-            .update(dbUpdates)
-            .eq('original_id', originalId)
-            .gte('date', targetDateToApply)
+            .or(`id.eq.${realId},original_id.eq.${realId}`)
             .eq('is_paid', false)
             .is('deleted_at', null)
             .select();
+          if (error) { logSafeError('useUpdateTransaction (bulk all)', error); throw error; }
+          return data || [];
+        }
+        return [];
+      }
 
-          if (childErr) { logSafeError('useUpdateTransaction (future-child)', childErr); throw childErr; }
-          return data;
+      // ======================================================================
+      // CASO F: Transação normal pontual ou Fluxo de Cartão/Parcelamento
+      // ======================================================================
+      if (applyScope === 'this' || (!groupId && !originalId)) {
+        const { data, error } = await supabase.from('transactions').update(dbUpdates).eq('id', realId).select();
+        if (error) { logSafeError('useUpdateTransaction (single)', error); throw error; }
+        return data || [];
+      }
+
+      const targetDateToApply = referenceDate ?? currentTx.date;
+      
+      if (applyScope === 'all') {
+        let query = supabase.from('transactions').update(dbUpdates).eq('is_paid', false).is('deleted_at', null);
+        if (groupId) query = query.eq('installment_group_id', groupId);
+        else if (originalId) query = query.or(`id.eq.${originalId},original_id.eq.${originalId}`);
+        const { data, error } = await query.select();
+        if (error) throw error;
+        return data || [];
+      }
+
+      if (applyScope === 'future') {
+        if (groupId) {
+          const { data, error } = await supabase.from('transactions').update(dbUpdates)
+            .eq('installment_group_id', groupId).gte('date', targetDateToApply).eq('is_paid', false).is('deleted_at', null).select();
+          if (error) throw error;
+          return data || [];
+        } else if (originalId) {
+          const { date: _d, ...motherUpdates } = dbUpdates;
+          if (Object.keys(motherUpdates).length > 0) {
+            await supabase.from('transactions').update(motherUpdates).eq('id', originalId).eq('is_paid', false).is('deleted_at', null);
+          }
+          if (Object.keys(dbUpdates).length > 0) {
+            const { data, error } = await supabase.from('transactions').update(dbUpdates).eq('original_id', originalId)
+              .gte('date', targetDateToApply).eq('is_paid', false).is('deleted_at', null).select();
+            if (error) throw error;
+            return data || [];
+          }
         }
       }
       return [];
