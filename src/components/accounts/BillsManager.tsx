@@ -201,7 +201,7 @@ export function BillsManager() {
         if (t.cardId && t.categoryId !== 'card-payment' && !t.isRecurring && t.transactionType !== 'recurring' && !t.originalId) return false;
 
         const txDate = parseLocalDate(t.date.slice(0, 10));
-        
+
         // Fix: Usar uma margem de segurança para comparação de meses (evita bugs de fuso horário no limite do mês)
         const isCurrentMonth = (txDate.getMonth() === viewDate.getMonth() && txDate.getFullYear() === viewDate.getFullYear());
 
@@ -384,7 +384,7 @@ export function BillsManager() {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            {(transaction.isRecurring || transaction.transactionType === 'recurring') && !transaction.isPaid && (
+                                            {!(transaction.transactionType === 'installment' && transaction.debtId) && !transaction.isPaid && (
                                                 <Button
                                                     size="sm"
                                                     variant="ghost"
