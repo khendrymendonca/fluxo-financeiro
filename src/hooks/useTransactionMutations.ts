@@ -397,14 +397,11 @@ export function useUpdateTransaction() {
       // 🛡️ REGRA DE OURO: Nunca alteramos registros já pagos em atualizações em lote!
       const targetDateToApply = referenceDate ?? currentTx.date;
 
-      // O campo date só é intencionalmente recriado no escopo "this" (por meio de transação física isolada).
-      // Nos escopos agrupados, mexer em date moverá todas juntas para o exato mesmo dia, destruindo o ciclo.
-      if (applyScope === 'future' || applyScope === 'all') {
-        delete dbUpdates.date;
-      }
+
 
       if (applyScope === 'all') {
-        let query = supabase.from('transactions').update(dbUpdates).eq('is_paid', false).is('deleted_at', null);
+        const { date: _ignoredDate, ...motherUpdates } = dbUpdates;
+        let query = supabase.from('transactions').update(motherUpdates).eq('is_paid', false).is('deleted_at', null);
         if (groupId) {
           query = query.eq('installment_group_id', groupId);
         } else if (originalId) {
@@ -428,8 +425,10 @@ export function useUpdateTransaction() {
           return data;
         } else if (originalId) {
           // Atualizar a mãe sem o filtro .gte de data (essencial para que as projeções mudem no frontend)
+          const { date: _ignoredDate, ...motherUpdates } = dbUpdates;
+
           const { error: motherErr } = await supabase.from('transactions')
-            .update(dbUpdates)
+            .update(motherUpdates)
             .eq('id', originalId)
             .eq('is_paid', false)
             .is('deleted_at', null);
@@ -477,11 +476,18 @@ export function useUpdateTransaction() {
               return (tx.installmentGroupId === targetTx.installmentGroupId && tx.date >= targetTx.date)
                 ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid } : tx;
             }
-            // Recorrente: atualiza a mãe incondicionalmente no onMutate, mas filhos só no future range
+            // Recorrente: atualiza a mãe incondicionalmente no onMutate, mas SEM a data, e filhos só no future range
             const isMother = tx.id === targetTx.originalId || tx.id === targetTx.id.split('-virtual')[0];
             const isFutureChild = tx.originalId === targetTx.originalId && tx.date >= targetTx.date;
-            return (isMother || isFutureChild)
-              ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid } : tx;
+
+            if (isMother) {
+              const { date: _ignoredDateMutate, ...safeUpdates } = updates;
+              return { ...tx, ...safeUpdates, is_paid: updates.isPaid ?? tx.is_paid };
+            }
+            if (isFutureChild) {
+              return { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid };
+            }
+            return tx;
           }
           return tx;
         });
