@@ -25,7 +25,8 @@ export function EditBillForm({ bill, onClose, onSave }: EditBillFormProps) {
   const [applyScope, setApplyScope] = useState<'this' | 'future' | 'all'>('future');
   const [isSaving, setIsSaving] = useState(false);
 
-  const realId = bill.isVirtual ? (bill.originalId || bill.id) : bill.id;
+  // Preservamos o ID exato (mesmo que seja virtual) para que o backend/mutações consigam detectar e desmembrar
+  const idToUpdate = bill.id;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +46,7 @@ export function EditBillForm({ bill, onClose, onSave }: EditBillFormProps) {
 
     setIsSaving(true);
     try {
-      await onSave(updates, applyScope, realId, bill.date);
+      await onSave(updates, applyScope, idToUpdate, bill.date);
     } finally {
       setIsSaving(false);
     }
