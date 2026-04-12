@@ -7,6 +7,7 @@ import { AddCardDialog } from "@/components/cards/AddCardDialog";
 import { EditCardDialog } from "@/components/cards/EditCardDialog";
 import { AnticipateInstallmentsDialog } from "@/components/cards/AnticipateInstallmentsDialog";
 import { AnticipatePaymentDialog } from "@/components/cards/AnticipatePaymentDialog";
+import { InstallInvoiceDialog } from "@/components/cards/InstallInvoiceDialog";
 import { Button } from "@/components/ui/button";
 import { Portal } from "@/components/ui/Portal";
 import { Progress } from "@/components/ui/progress";
@@ -77,7 +78,7 @@ export default function CardsDashboard() {
   const {
     creditCards, transactions, accounts, categories,
     updateCreditCard, addCreditCard, getCardUsedLimit,
-    viewDate, setViewDate 
+    viewDate, setViewDate
   } = useFinanceStore();
 
   const { mutateAsync: addTransaction } = useAddTransaction();
@@ -90,13 +91,14 @@ export default function CardsDashboard() {
     () => [...creditCards].sort((a, b) => a.id.localeCompare(b.id)),
     [creditCards]
   );
-  
+
   const [showAddCard, setShowAddCard] = useState(false);
   const [showEditCard, setShowEditCard] = useState(false);
   const [showPayInvoice, setShowPayInvoice] = useState(false);
   const [showAnticipatePayment, setShowAnticipatePayment] = useState(false);
+  const [showInstallInvoice, setShowInstallInvoice] = useState(false);
   const [selectedCardForAnticipation, setSelectedCardForAnticipation] = useState<any>(null);
-  
+
   // Pay Invoice State
   const [payInvoiceAccountId, setPayInvoiceAccountId] = useState<string>("");
   const [payInvoiceAmount, setPayInvoiceAmount] = useState<string>("");
@@ -173,7 +175,7 @@ export default function CardsDashboard() {
       const d = subMonths(viewDate, n - 1 - i);
       const label = format(d, "MMM", { locale: ptBR });
       const mStr = format(d, "yyyy-MM");
-      
+
       const total = transactions
         .filter((t) => {
           // 🛡️ REGRA DE ABATIMENTO: Só excluímos se for PAGAMENTO real (despesa), não estorno/abatimento (income)
@@ -476,7 +478,7 @@ export default function CardsDashboard() {
                         {fmtBRL(currentInvoiceTotal)}
                       </h2>
                       {dynamicStatus?.text !== 'Paga' && currentInvoiceTotal > 0 && (
-                        <Button 
+                        <Button
                           onClick={() => {
                             setPayInvoiceAmount(currentInvoiceTotal.toFixed(2));
                             setShowPayInvoice(true);
@@ -519,12 +521,20 @@ export default function CardsDashboard() {
                         <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Disponível</p>
                         <p className="text-2xl font-black tabular-nums text-foreground">{fmtBRL(stats.available)}</p>
                       </div>
-                      <button
-                        onClick={() => setShowAnticipatePayment(true)}
-                        className="px-3 py-1.5 rounded-xl border border-border text-[11px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all duration-300"
-                      >
-                        Abater Fatura
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setShowInstallInvoice(true)}
+                          className="px-3 py-1.5 rounded-xl border border-border text-[11px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all duration-300"
+                        >
+                          Parcelar
+                        </button>
+                        <button
+                          onClick={() => setShowAnticipatePayment(true)}
+                          className="px-3 py-1.5 rounded-xl border border-border text-[11px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all duration-300"
+                        >
+                          Abater
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -758,7 +768,7 @@ export default function CardsDashboard() {
                       {fmtBRL(currentInvoiceTotal)}
                     </h2>
                     {dynamicStatus?.text !== 'Paga' && currentInvoiceTotal > 0 && (
-                      <Button 
+                      <Button
                         onClick={() => {
                           setPayInvoiceAmount(currentInvoiceTotal.toFixed(2));
                           setShowPayInvoice(true);
@@ -802,12 +812,20 @@ export default function CardsDashboard() {
                       <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Disponível</p>
                       <p className="text-xl font-black tabular-nums text-foreground">{fmtBRL(stats.available)}</p>
                     </div>
-                    <button
-                      onClick={() => setShowAnticipatePayment(true)}
-                      className="px-2 py-1 rounded-lg border border-border text-[11px] font-black uppercase tracking-widest text-muted-foreground"
-                    >
-                      Abater
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setShowInstallInvoice(true)}
+                        className="px-2 py-1 rounded-lg border border-border text-[11px] font-black uppercase tracking-widest text-muted-foreground"
+                      >
+                        Parcelar
+                      </button>
+                      <button
+                        onClick={() => setShowAnticipatePayment(true)}
+                        className="px-2 py-1 rounded-lg border border-border text-[11px] font-black uppercase tracking-widest text-muted-foreground"
+                      >
+                        Abater
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -910,6 +928,14 @@ export default function CardsDashboard() {
           />
         </Portal>
       )}
+      {showInstallInvoice && selectedCard && (
+        <InstallInvoiceDialog
+          card={selectedCard}
+          currentInvoiceAmount={currentInvoiceTotal}
+          isOpen={showInstallInvoice}
+          onClose={() => setShowInstallInvoice(false)}
+        />
+      )}
       {transactionToAnticipate && (
         <Portal>
           <AnticipateInstallmentsDialog
@@ -964,7 +990,7 @@ export default function CardsDashboard() {
                 <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Valor pago</label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-muted-foreground text-sm">R$</span>
-                  <Input 
+                  <Input
                     type="number"
                     step="0.01"
                     value={payInvoiceAmount}
@@ -978,7 +1004,7 @@ export default function CardsDashboard() {
               {/* Data do Pagamento */}
               <div className="space-y-2">
                 <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Data do pagamento</label>
-                <Input 
+                <Input
                   type="date"
                   value={payInvoiceDate}
                   onChange={(e) => setPayInvoiceDate(e.target.value)}
@@ -988,15 +1014,15 @@ export default function CardsDashboard() {
             </div>
 
             <div className="flex flex-col gap-3 mt-8">
-              <Button 
+              <Button
                 onClick={handleConfirmPayment}
                 disabled={isProcessingPayment}
                 className="w-full h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl font-black text-base shadow-lg shadow-primary/20"
               >
                 {isProcessingPayment ? "Processando..." : "Confirmar Pagamento"}
               </Button>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={() => setShowPayInvoice(false)}
                 className="w-full h-12 rounded-2xl font-bold text-muted-foreground hover:text-foreground"
               >

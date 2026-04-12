@@ -226,7 +226,11 @@ export function DebtsManager({
                         <div>
                           <h3 className="font-semibold text-lg text-gray-900 dark:text-zinc-50">{debt.name}</h3>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="px-1.5 py-0.5 rounded bg-success/10 text-success text-[11px] font-black uppercase">Acordo Ativo</span>
+                            {debt.debtType === 'invoice_installment' ? (
+                              <span className="px-1.5 py-0.5 rounded bg-info/10 text-info text-[11px] font-black uppercase">Fatura Parcelada</span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded bg-success/10 text-success text-[11px] font-black uppercase">Acordo Ativo</span>
+                            )}
                             <p className="text-xs text-gray-500 dark:text-zinc-500 font-bold">
                               {debt.totalInstallments} parcelas • Dia {debt.dueDay}
                             </p>

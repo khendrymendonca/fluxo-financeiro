@@ -120,6 +120,9 @@ export interface Debt {
   // ✅ ADICIONADO: controle de renegociação
   status?: 'active' | 'renegotiated' | 'paid';
   totalInstallments?: number;
+  // ✅ ADICIONADO: vínculo de fatura parcelada
+  cardId?: string;
+  debtType?: 'agreement' | 'invoice_installment';
 }
 
 export type GoalPaymentMethod = 'cash' | 'credit';

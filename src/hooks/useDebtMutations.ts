@@ -18,6 +18,8 @@ interface DebtDbPayload {
   strategy_priority?: number;
   status?: string;
   total_installments?: number;
+  card_id?: string;
+  debt_type?: string;
 }
 
 // --- 1. ADICIONAR DÃ VIDA ---
@@ -41,7 +43,9 @@ export function useAddDebt() {
         due_day: debt.dueDay,
         strategy_priority: debt.strategyPriority,
         status: debt.status || 'active',
-        total_installments: debt.totalInstallments
+        total_installments: debt.totalInstallments,
+        card_id: debt.cardId,
+        debt_type: debt.debtType,
       };
 
       const { data, error } = await supabase.from('debts').insert(payload).select();
@@ -78,6 +82,8 @@ export function useUpdateDebt() {
       if (updates.strategyPriority !== undefined) payload.strategy_priority = updates.strategyPriority;
       if (updates.status !== undefined) payload.status = updates.status;
       if (updates.totalInstallments !== undefined) payload.total_installments = updates.totalInstallments;
+      if (updates.cardId !== undefined) payload.card_id = updates.cardId;
+      if (updates.debtType !== undefined) payload.debt_type = updates.debtType;
 
       // 1. Atualizar a dívida
       const { error } = await supabase.from('debts').update(payload).eq('id', id);
