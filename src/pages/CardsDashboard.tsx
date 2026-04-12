@@ -22,7 +22,8 @@ import {
 import {
   Plus, Receipt, Calendar, CreditCard, Pencil, Download,
   ChevronLeft, ChevronRight, Search, TrendingUp, TrendingDown,
-  AlertCircle, CheckCircle2, Clock, XCircle, Check
+  AlertCircle, CheckCircle2, Clock, XCircle, Check,
+  Banknote, ListOrdered
 } from "lucide-react";
 import { parseLocalDate, todayLocalString } from "@/utils/dateUtils";
 import { cn } from "@/lib/utils";
@@ -521,21 +522,32 @@ export default function CardsDashboard() {
                         <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Disponível</p>
                         <p className="text-2xl font-black tabular-nums text-foreground">{fmtBRL(stats.available)}</p>
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setShowInstallInvoice(true)}
-                          className="px-3 py-1.5 rounded-xl border border-border text-[11px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all duration-300"
-                        >
-                          Parcelar
-                        </button>
-                        <button
-                          onClick={() => setShowAnticipatePayment(true)}
-                          className="px-3 py-1.5 rounded-xl border border-border text-[11px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all duration-300"
-                        >
-                          Abater
-                        </button>
-                      </div>
                     </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Ações</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setShowAnticipatePayment(true)}
+                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-primary/40 hover:bg-primary/5 transition-all group"
+                    >
+                      <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
+                        <Banknote className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-widest text-center leading-tight">Abater Fatura</span>
+                    </button>
+
+                    <button
+                      onClick={() => setShowInstallInvoice(true)}
+                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-info/40 hover:bg-info/5 transition-all group"
+                    >
+                      <div className="p-2 rounded-xl bg-info/10 text-info group-hover:bg-info/20 transition-colors">
+                        <ListOrdered className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-widest text-center leading-tight">Parcelar Fatura</span>
+                    </button>
                   </div>
                 </div>
 
@@ -812,21 +824,32 @@ export default function CardsDashboard() {
                       <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Disponível</p>
                       <p className="text-xl font-black tabular-nums text-foreground">{fmtBRL(stats.available)}</p>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setShowInstallInvoice(true)}
-                        className="px-2 py-1 rounded-lg border border-border text-[11px] font-black uppercase tracking-widest text-muted-foreground"
-                      >
-                        Parcelar
-                      </button>
-                      <button
-                        onClick={() => setShowAnticipatePayment(true)}
-                        className="px-2 py-1 rounded-lg border border-border text-[11px] font-black uppercase tracking-widest text-muted-foreground"
-                      >
-                        Abater
-                      </button>
-                    </div>
                   </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Ações</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setShowAnticipatePayment(true)}
+                    className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-primary/40 hover:bg-primary/5 transition-all group"
+                  >
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
+                      <Banknote className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-black uppercase tracking-widest text-center leading-tight">Abater Fatura</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowInstallInvoice(true)}
+                    className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-info/40 hover:bg-info/5 transition-all group"
+                  >
+                    <div className="p-2 rounded-xl bg-info/10 text-info group-hover:bg-info/20 transition-colors">
+                      <ListOrdered className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-black uppercase tracking-widest text-center leading-tight">Parcelar Fatura</span>
+                  </button>
                 </div>
               </div>
 
