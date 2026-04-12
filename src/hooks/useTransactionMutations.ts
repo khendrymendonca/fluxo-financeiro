@@ -397,6 +397,12 @@ export function useUpdateTransaction() {
       // 🛡️ REGRA DE OURO: Nunca alteramos registros já pagos em atualizações em lote!
       const targetDateToApply = referenceDate ?? currentTx.date;
 
+      // O campo date só é intencionalmente recriado no escopo "this" (por meio de transação física isolada).
+      // Nos escopos agrupados, mexer em date moverá todas juntas para o exato mesmo dia, destruindo o ciclo.
+      if (applyScope === 'future' || applyScope === 'all') {
+        delete dbUpdates.date;
+      }
+
       if (applyScope === 'all') {
         let query = supabase.from('transactions').update(dbUpdates).eq('is_paid', false).is('deleted_at', null);
         if (groupId) {
