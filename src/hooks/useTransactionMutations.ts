@@ -327,8 +327,47 @@ export function useUpdateTransaction() {
       // Remover undefined para não sobrescrever dados existentes com null acidentalmente
       Object.keys(dbUpdates).forEach(key => dbUpdates[key] === undefined && delete dbUpdates[key]);
 
+      // Detectar se é uma transação virtual
+      const isVirtual = id.includes('-virtual-');
+      const realId = isVirtual ? id.split('-virtual-')[0] : id;
+
+      // 🛡️ CASO ESPECIAL: "Apenas este mês" em uma projeção virtual
+      // Em vez de editar a mãe, criamos uma transação física para este mês específico
+      // com os novos valores — mesma abordagem do useDeleteTransaction
+      if (applyScope === 'this' && isVirtual) {
+        const { data: madre } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('id', realId)
+          .single();
+
+        if (!madre) throw new Error('Transação mãe não encontrada');
+
+        const { error } = await supabase
+          .from('transactions')
+          .insert({
+            ...madre,
+            id: undefined,
+            // Aplica os novos valores passados em `updates`
+            amount: updates.amount ?? madre.amount,
+            date: updates.date ? updates.date.slice(0, 10) : madre.date,
+            // Marca como filho da mãe para deduplicação
+            original_id: realId,
+            // Quebra a recorrência desta instância específica
+            is_recurring: false,
+            transaction_type: 'punctual',
+            is_paid: false,
+            payment_date: null,
+            deleted_at: null,
+            created_at: undefined,
+          });
+
+        if (error) throw error;
+        return [];
+      }
+
       // Buscar o mestre para saber o grupo se necessário
-      const { data: currentTx } = await supabase.from('transactions').select('*').eq('id', id).single();
+      const { data: currentTx } = await supabase.from('transactions').select('*').eq('id', realId).single();
       const groupId = currentTx?.installment_group_id;
       const originalId = currentTx?.original_id || (currentTx?.is_recurring ? currentTx.id : null);
 
@@ -336,7 +375,7 @@ export function useUpdateTransaction() {
         const { data, error } = await supabase
           .from('transactions')
           .update(dbUpdates)
-          .eq('id', id)
+          .eq('id', realId)
           .select();
         if (error) {
           logSafeError('useUpdateTransaction (single)', error);
