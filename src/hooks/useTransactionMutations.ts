@@ -331,36 +331,42 @@ export function useUpdateTransaction() {
       const isVirtual = id.includes('-virtual-');
       const realId = isVirtual ? id.split('-virtual-')[0] : id;
 
-      // 🛡️ CASO ESPECIAL: "Apenas este mês" em uma projeção virtual
-      // Em vez de editar a mãe, criamos uma transação física para este mês específico
-      // com os novos valores — mesma abordagem do useDeleteTransaction
-      if (applyScope === 'this' && isVirtual) {
-        const { data: madre } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('id', realId)
-          .single();
+      // Buscar a transação base no banco
+      const { data: currentTx } = await supabase.from('transactions').select('*').eq('id', realId).single();
+      if (!currentTx) throw new Error('Transação base não encontrada');
 
-        if (!madre) throw new Error('Transação mãe não encontrada');
+      const groupId = currentTx.installment_group_id;
+      const originalId = currentTx.original_id || (currentTx.is_recurring ? currentTx.id : null);
 
-        let targetDate = madre.date.slice(0, 10);
-        const virtualParts = id.split('-virtual-');
-        if (virtualParts.length === 2) {
-          const [yearStr, monthStr] = virtualParts[1].split('-');
-          const year = parseInt(yearStr);
-          const month = parseInt(monthStr); // 0-based
-          const originalDay = new Date(madre.date).getDate();
-          const lastDay = new Date(year, month + 1, 0).getDate();
-          const safeDay = Math.min(originalDay, lastDay);
-          targetDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
+      const isRecurringMother = !isVirtual && currentTx.is_recurring && !currentTx.original_id;
+
+      // 🛡️ CASO ESPECIAL: "Apenas este mês" em transações recorrentes (mãe base ou projeções virtuais)
+      // Em vez de editar a mãe, criamos uma transação física filha apenas para esta ocorrência
+      if (applyScope === 'this' && (isVirtual || isRecurringMother)) {
+        let targetDate = currentTx.date.slice(0, 10);
+
+        if (isVirtual) {
+          const virtualParts = id.split('-virtual-');
+          if (virtualParts.length === 2) {
+            const [yearStr, monthStr] = virtualParts[1].split('-');
+            const year = parseInt(yearStr);
+            const month = parseInt(monthStr); // 0-based
+            const originalDay = new Date(currentTx.date).getDate();
+            const lastDay = new Date(year, month + 1, 0).getDate();
+            const safeDay = Math.min(originalDay, lastDay);
+            targetDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
+          }
+        } else {
+          // Mãe real: usar a data que vem em updates (mês atual da tela de edição)
+          targetDate = updates.date ? updates.date.slice(0, 10) : currentTx.date.slice(0, 10);
         }
 
         const { error } = await supabase
           .from('transactions')
           .insert({
-            ...madre,
+            ...currentTx,
             id: undefined,
-            amount: updates.amount ?? madre.amount,
+            amount: updates.amount ?? currentTx.amount,
             date: targetDate,
             original_id: realId,
             is_recurring: false,
@@ -374,11 +380,6 @@ export function useUpdateTransaction() {
         if (error) throw error;
         return [];
       }
-
-      // Buscar o mestre para saber o grupo se necessário
-      const { data: currentTx } = await supabase.from('transactions').select('*').eq('id', realId).single();
-      const groupId = currentTx?.installment_group_id;
-      const originalId = currentTx?.original_id || (currentTx?.is_recurring ? currentTx.id : null);
 
       if (applyScope === 'this' || (!groupId && !originalId)) {
         const { data, error } = await supabase
