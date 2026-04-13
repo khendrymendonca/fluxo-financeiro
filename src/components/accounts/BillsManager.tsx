@@ -205,10 +205,8 @@ export function BillsManager() {
         // Fix: Usar uma margem de segurança para comparação de meses (evita bugs de fuso horário no limite do mês)
         const isCurrentMonth = (txDate.getMonth() === viewDate.getMonth() && txDate.getFullYear() === viewDate.getFullYear());
 
-        // Inclui: itens de meses anteriores ainda não pagos (atrasados)
-        const isOverdue = isBefore(txDate, startOfMonth(viewDate)) && !t.isPaid;
-
-        if (!isCurrentMonth && !isOverdue) return false;
+        // 🛡️ CORREÇÃO TECH LEAD: Filtro estritamente mensal para evitar poluição de meses passados
+        if (!isCurrentMonth) return false;
 
         // Busca por Texto
         if (searchQuery.trim() !== '') {

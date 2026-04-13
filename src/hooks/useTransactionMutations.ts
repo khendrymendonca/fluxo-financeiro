@@ -382,8 +382,6 @@ export function useUpdateTransaction() {
       // CASO B e D: isVirtual ou isRecurringMother + applyScope='future'
       // ======================================================================
       if (applyScope === 'future' && (isVirtual || isRecurringMother)) {
-        await supabase.from('transactions').update({ deleted_at: new Date().toISOString() }).eq('id', realId);
-
         let targetDate = currentTx.date.slice(0, 10);
         if (isVirtual) {
           const parts = id.split('-virtual-');
@@ -401,27 +399,44 @@ export function useUpdateTransaction() {
         }
 
         const finalDate = updates.date ? updates.date.slice(0, 10) : targetDate;
+        const rootDate = currentTx.date.slice(0, 10);
 
-        await supabase.from('transactions').insert({
+        // 🛡️ CORREÇÃO CRÍTICA: Se o corte é no futuro, não deletamos a mãe (Abril).
+        // Apenas paramos a recorrência dela para preservar o histórico.
+        if (rootDate < finalDate) {
+          await supabase.from('transactions')
+            .update({ is_recurring: false, transaction_type: 'recurring' })
+            .eq('id', realId);
+        } else {
+          // Se o corte é na própria data da mãe ou antes, aí sim deletamos
+          await supabase.from('transactions')
+            .update({ deleted_at: new Date().toISOString() })
+            .eq('id', realId);
+        }
+
+        // Criar a nova "Raiz" da série a partir de agora
+        const { data: newRoot, error: insertError } = await supabase.from('transactions').insert({
           ...currentTx,
           id: undefined,
-          amount: updates.amount ?? currentTx.amount,
+          ...dbUpdates, // Aplica todas as atualizações (amount, description, category_id, etc)
           date: finalDate,
-          description: updates.description ?? currentTx.description,
           is_recurring: true,
           original_id: null,
           is_paid: false,
           payment_date: null,
           deleted_at: null,
           created_at: undefined,
-        });
+        }).select().single();
 
+        if (insertError) throw insertError;
+
+        // Atualizar filhos físicos existentes que agora devem pertencer à nova raiz
         const { date: _d, ...childUpdates } = dbUpdates;
         if (Object.keys(childUpdates).length > 0) {
           await supabase.from('transactions')
-            .update(childUpdates)
+            .update({ ...childUpdates, original_id: newRoot.id })
             .eq('original_id', realId)
-            .gte('date', targetDate)
+            .gte('date', finalDate)
             .eq('is_paid', false)
             .is('deleted_at', null);
         }

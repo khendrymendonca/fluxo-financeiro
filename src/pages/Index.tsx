@@ -487,7 +487,7 @@ export default function Index() {
                 </div>
               </div>
               <TransactionList
-                transactions={currentMonthTransactions}
+                transactions={currentMonthTransactions.filter(t => t.isPaid)}
                 onEdit={handleEditTransaction}
                 onCopy={handleCopyTransaction}
                 onUndoPayment={handleUndoPayment}

@@ -39,7 +39,7 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
       if ((tx as any).deleted_at && !isShadow) return;
       if (isShadow) return; // Sombras apenas bloqueiam, não projetam.
 
-      const isRecurring = tx.isRecurring || tx.transactionType === 'recurring';
+      const isRecurring = tx.isRecurring; // 🛡️ Siga estritamente o booleano para projeções
       const txDate = parseLocalDate(tx.date.slice(0, 10));
 
       if (isRecurring) {
@@ -116,27 +116,11 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
         }
       }
 
-      // Sempre incluímos a própria transação se ela for do mês alvo e REAL
-      const isInTargetMonth = (() => {
-        const matchesDate = isSameMonth(txDate, viewDate) && targetYear === txDate.getFullYear();
-        
-        // Se tem invoiceMonthYear, verificamos se ele também bate com o mês alvo (para Cartão de Crédito)
-        // 🛡️ TRAVA: Apenas para transações PONTUAIS ou PARCELAS REAIS. 
-        // Transações recorrentes mestres (fixas) não devem ser puxadas para o mês real pelo invoiceMonthYear, 
-        // pois elas devem ser projetadas como virtuais para manter a integridade da série.
-        if (tx.cardId && tx.invoiceMonthYear && !isRecurring) {
-          const [y, m] = tx.invoiceMonthYear.split('-').map(Number);
-          const matchesInvoice = (m - 1 === targetMonth && y === targetYear);
-          return matchesDate || matchesInvoice;
-        }
-        
-        return matchesDate;
-      })();
-
-      if (!tx.isVirtual && isInTargetMonth) {
-        // 🛡️ AJUSTE DE REGRA: Incluímos a transação real no array de retorno sempre.
-        // A filtragem de "Só mostrar no extrato se estiver paga" deve ser feita 
-        // no componente TransactionList, e não aqui, para não sumir da Gestão de Contas.
+      // Decidimos se incluímos a transação no retorno
+      // 🛡️ REGRA DE OURO: Transações REAIS (não virtuais) SEMPRE devem ser incluídas no retorno 
+      // se estiverem no array, para permitir comparativos de meses anteriores nos relatórios.
+      // O filtro de visualização por mês deve ser feito pelos componentes (TransactionList, etc).
+      if (!tx.isVirtual) {
         if (!projected.some(p => p.id === tx.id)) {
           projected.push(tx);
         }
