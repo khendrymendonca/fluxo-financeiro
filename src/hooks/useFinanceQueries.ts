@@ -42,6 +42,7 @@ export function useTransactions(viewDate: Date) {
           `and(deleted_at.is.null,installment_group_id.not.is.null),` +
           `and(deleted_at.is.null,invoice_month_year.eq.${viewDateStr}),` +
           `and(deleted_at.is.null,card_id.not.is.null,is_paid.eq.false),` +
+          `and(deleted_at.is.null,original_id.not.is.null),` +
           `and(deleted_at.not.is.null,original_id.not.is.null,is_recurring.eq.false)`
         );
 

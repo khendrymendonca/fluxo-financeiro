@@ -208,6 +208,9 @@ export function BillsManager() {
         // 🛡️ CORREÇÃO TECH LEAD: Filtro estritamente mensal para evitar poluição de meses passados
         if (!isCurrentMonth) return false;
 
+        // 🛡️ NOVO: Se é um filho físico já pago, não aparece na Gestão de Contas (já está no extrato)
+        if (t.originalId && t.isPaid) return false;
+
         // Busca por Texto
         if (searchQuery.trim() !== '') {
             const query = searchQuery.toLowerCase();

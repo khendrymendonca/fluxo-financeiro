@@ -42,20 +42,14 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
           const safeDay = Math.min(originalDay, daysInTarget);
           const virtualDate = new Date(targetYear, targetMonth, safeDay);
 
-          // 🛡️ TRAVA DE CONCORRÊNCIA TECH LEAD (Blindagem contra duplicidade):
-          // Não projetamos se houver vínculo de ID OU se houver uma transação PAGA com mesma descrição/valor no mês.
+          // 🛡️ REGRA DE OURO DEDUPLICAÇÃO:
+          // Não projetamos se houver vínculo de ID (filho físico real já existe para este mês)
           const hasRealEquivalent = realTransactions.some(real =>
             real.originalId === tx.id ||
             (real.id === tx.id && isSameMonth(parseLocalDate(real.date.slice(0, 10)), viewDate))
           );
 
-          const hasConcurrenceDuplicate = realTransactions.some(real =>
-            real.isPaid && 
-            real.description.toLowerCase() === tx.description.toLowerCase() &&
-            Math.abs(Number(real.amount)) === Math.abs(Number(tx.amount))
-          );
-
-          if (!hasRealEquivalent && !hasConcurrenceDuplicate) {
+          if (!hasRealEquivalent) {
             projected.push({
               ...tx,
               id: `${tx.id}-virtual-${targetYear}-${targetMonth}`,

@@ -402,17 +402,35 @@ export function useUpdateTransaction() {
         const rootDate = currentTx.date.slice(0, 10);
 
         // 🛡️ REFENO TECH LEAD: Só faz o 'Corte de Série' (split) se for em MÊS DIFERENTE.
-        // Se for no mesmo mês, apenas atualizamos o registro original para evitar duplicidade.
+        // Se for no mesmo mês, apenas atualizamos o registro original (se físico) ou criamos materialização (se virtual).
         const isSameMonthYear = finalDate.slice(0, 7) === rootDate.slice(0, 7);
 
-        if (isSameMonthYear && !isVirtual) {
-          const { error } = await supabase.from('transactions').update(dbUpdates).eq('id', id);
-          if (error) throw error;
+        if (isSameMonthYear) {
+          if (!isVirtual) {
+            const { error } = await supabase.from('transactions').update(dbUpdates).eq('id', id);
+            if (error) throw error;
+          } else {
+            // Se for virtual no mesmo mês, apenas materializamos ela como pontual
+            const { error } = await supabase.from('transactions').insert({
+              ...currentTx,
+              id: undefined,
+              ...dbUpdates,
+              date: finalDate,
+              original_id: realId,
+              is_recurring: false,
+              transaction_type: 'punctual',
+              is_paid: false,
+              payment_date: null,
+              deleted_at: null,
+              created_at: undefined,
+            });
+            if (error) throw error;
+          }
           return [];
         }
 
         // Se o corte é no futuro (mês posterior), preservamos a mãe como pontual
-        if (rootDate < finalDate && !isSameMonthYear) {
+        if (rootDate < finalDate) {
           await supabase.from('transactions')
             .update({ is_recurring: false, transaction_type: 'recurring' })
             .eq('id', realId);
