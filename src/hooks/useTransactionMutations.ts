@@ -401,9 +401,18 @@ export function useUpdateTransaction() {
         const finalDate = updates.date ? updates.date.slice(0, 10) : targetDate;
         const rootDate = currentTx.date.slice(0, 10);
 
-        // 🛡️ CORREÇÃO CRÍTICA: Se o corte é no futuro, não deletamos a mãe (Abril).
-        // Apenas paramos a recorrência dela para preservar o histórico.
-        if (rootDate < finalDate) {
+        // 🛡️ REFENO TECH LEAD: Só faz o 'Corte de Série' (split) se for em MÊS DIFERENTE.
+        // Se for no mesmo mês, apenas atualizamos o registro original para evitar duplicidade.
+        const isSameMonthYear = finalDate.slice(0, 7) === rootDate.slice(0, 7);
+
+        if (isSameMonthYear && !isVirtual) {
+          const { error } = await supabase.from('transactions').update(dbUpdates).eq('id', id);
+          if (error) throw error;
+          return [];
+        }
+
+        // Se o corte é no futuro (mês posterior), preservamos a mãe como pontual
+        if (rootDate < finalDate && !isSameMonthYear) {
           await supabase.from('transactions')
             .update({ is_recurring: false, transaction_type: 'recurring' })
             .eq('id', realId);

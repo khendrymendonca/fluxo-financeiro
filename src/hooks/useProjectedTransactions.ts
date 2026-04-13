@@ -1,4 +1,4 @@
-﻿import { useMemo } from 'react';
+import { useMemo } from 'react';
 import { isBefore, isSameMonth, getDaysInMonth, format, startOfMonth } from 'date-fns';
 import { Transaction } from '@/types/finance';
 import { parseLocalDate } from '@/utils/dateUtils';
@@ -13,60 +13,56 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
 
     // 1. Separamos o que é REAL (transações normais do banco) do mês alvo
     const realTransactions = transactions.filter(tx => {
-      // Sombras de exceção (deleted_at preenchido + originalId + não recorrente)
-      // Estas servem apenas para bloquear a projeção de um mês específico
       const isShadow = !!(tx as any).deleted_at && !!tx.originalId && !tx.isRecurring;
-
       if (!isShadow && tx.isVirtual) return false;
       if (!isShadow && (tx as any).deleted_at) return false;
 
-      // ✅ Pagamento de Fatura (Baixa): usar invoiceMonthYear como referência
       if (tx.categoryId === 'card-payment' && tx.invoiceMonthYear) {
         const [year, month] = tx.invoiceMonthYear.split('-').map(Number);
         return month - 1 === targetMonth && year === targetYear;
       }
 
-      // ✅ Demais transações (incluindo compras de cartão): usar date normalmente (Extrato Real)
       const txDate = parseLocalDate(tx.date.slice(0, 10));
       return isSameMonth(txDate, viewDate);
     });
 
     // 2. Processamos todas as transações para buscar recorrentes que precisam ser projetadas
     transactions.forEach(tx => {
-      // 🛡️ TRAVA DE SEGURANÇA: Não projeta se o item original estiver marcado como deletado
-      // EXCETO se for uma sombra (que já está deletada por definição e não gera projeção própria)
       const isShadow = !!(tx as any).deleted_at && !!tx.originalId && !tx.isRecurring;
       if ((tx as any).deleted_at && !isShadow) return;
-      if (isShadow) return; // Sombras apenas bloqueiam, não projetam.
+      if (isShadow) return;
 
-      const isRecurring = tx.isRecurring; // 🛡️ Siga estritamente o booleano para projeções
+      const isRecurring = tx.isRecurring;
       const txDate = parseLocalDate(tx.date.slice(0, 10));
 
       if (isRecurring) {
-        // Se a transação original começou antes ou no mês alvo
         if (isBefore(txDate, startOfMonth(viewDate)) || isSameMonth(txDate, viewDate)) {
-
-          // Cálculo da data segura no mês alvo
           const originalDay = txDate.getDate();
           const daysInTarget = getDaysInMonth(new Date(targetYear, targetMonth));
           const safeDay = Math.min(originalDay, daysInTarget);
           const virtualDate = new Date(targetYear, targetMonth, safeDay);
 
-          // Deduplicação: Não projetamos se já houver uma transação REAL neste mês 
-          // que seja filha desta recorrente ou a própria recorrente original neste mês
+          // 🛡️ TRAVA DE CONCORRÊNCIA TECH LEAD (Blindagem contra duplicidade):
+          // Não projetamos se houver vínculo de ID OU se houver uma transação PAGA com mesma descrição/valor no mês.
           const hasRealEquivalent = realTransactions.some(real =>
             real.originalId === tx.id ||
             (real.id === tx.id && isSameMonth(parseLocalDate(real.date.slice(0, 10)), viewDate))
           );
 
-          if (!hasRealEquivalent) {
+          const hasConcurrenceDuplicate = realTransactions.some(real =>
+            real.isPaid && 
+            real.description.toLowerCase() === tx.description.toLowerCase() &&
+            Math.abs(Number(real.amount)) === Math.abs(Number(tx.amount))
+          );
+
+          if (!hasRealEquivalent && !hasConcurrenceDuplicate) {
             projected.push({
               ...tx,
               id: `${tx.id}-virtual-${targetYear}-${targetMonth}`,
               originalId: tx.id,
               date: format(virtualDate, 'yyyy-MM-dd'),
               isVirtual: true,
-              isPaid: false, // Projeções futuras nunca estão pagas
+              isPaid: false,
             } as any);
           }
         }
@@ -75,7 +71,6 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
       // 3. Projeção de Parcelamentos (Installments)
       if (!isRecurring && tx.installmentGroupId && tx.installmentNumber && tx.installmentTotal && tx.installmentNumber < tx.installmentTotal) {
         if (isBefore(txDate, startOfMonth(viewDate))) {
-          // Deduplicar: só a parcela real mais recente (antes do mês alvo) projeta
           const hasMoreRecentInPast = transactions.some(other =>
             !other.isVirtual &&
             other.installmentGroupId === tx.installmentGroupId &&
@@ -116,10 +111,6 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
         }
       }
 
-      // Decidimos se incluímos a transação no retorno
-      // 🛡️ REGRA DE OURO: Transações REAIS (não virtuais) SEMPRE devem ser incluídas no retorno 
-      // se estiverem no array, para permitir comparativos de meses anteriores nos relatórios.
-      // O filtro de visualização por mês deve ser feito pelos componentes (TransactionList, etc).
       if (!tx.isVirtual) {
         if (!projected.some(p => p.id === tx.id)) {
           projected.push(tx);

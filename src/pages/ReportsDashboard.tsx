@@ -43,6 +43,7 @@ import {
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/utils/formatters';
+import { parseLocalDate } from '@/utils/dateUtils';
 
 type Period = 'month' | 'semester' | 'year';
 
@@ -58,11 +59,13 @@ export default function ReportsDashboard() {
   const [period, setPeriod] = useState<Period>('month');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
 
-  // Navegação de Período
+  const handleExportPDF = () => {
+    window.print();
+  };
+
   const handlePrevMonth = () => setViewDate(subMonths(viewDate, 1));
   const handleNextMonth = () => setViewDate(addMonths(viewDate, 1));
 
-  // Intervalos de tempo robustos
   const intervals = useMemo(() => {
     const end = endOfMonth(viewDate);
     let start = startOfMonth(viewDate);
@@ -87,7 +90,6 @@ export default function ReportsDashboard() {
     return { start, end, prevStart, prevEnd };
   }, [viewDate, period]);
 
-  // 🛡️ MOTOR DE CÁLCULO ROBUSTO
   const getPeriodData = useCallback((start: Date, end: Date) => {
     const months = eachMonthOfInterval({ start, end });
     let total = 0;
@@ -102,12 +104,15 @@ export default function ReportsDashboard() {
       const monthReal = transactions.filter(t => {
         if (t.isVirtual) return false;
         if (selectedAccountId !== 'all' && t.accountId !== selectedAccountId) return false;
-        const d = new Date(t.date);
+        
+        const d = parseLocalDate(t.date);
+        const matchesDate = d.getMonth() === targetMonth && d.getFullYear() === targetYear;
+        
         if (t.categoryId === 'card-payment' && t.invoiceMonthYear) {
           const [y, m] = t.invoiceMonthYear.split('-').map(Number);
           return m - 1 === targetMonth && y === targetYear;
         }
-        return d.getMonth() === targetMonth && d.getFullYear() === targetYear;
+        return matchesDate;
       });
 
       monthReal.forEach(t => {
@@ -125,14 +130,20 @@ export default function ReportsDashboard() {
       const recurringMothers = transactions.filter(t => t.isRecurring && !t.isVirtual);
       recurringMothers.forEach(mother => {
         if (selectedAccountId !== 'all' && mother.accountId !== selectedAccountId) return;
-        const motherDate = new Date(mother.date);
+        
+        const motherDate = parseLocalDate(mother.date);
         if (isBefore(startOfMonth(motherDate), addMonths(startOfMonth(month), 1))) {
-          const hasReal = monthReal.some(r => r.originalId === mother.id || (r.id === mother.id && isSameMonth(new Date(r.date), month)));
+          const hasReal = monthReal.some(r => r.originalId === mother.id || (r.id === mother.id && isSameMonth(parseLocalDate(r.date), month)));
+          
           if (!hasReal) {
             const val = Number(mother.amount);
-            total += val;
-            const cat = categories.find(c => c.id === mother.categoryId);
-            if (cat?.isFixed) fixed += val;
+            if (mother.type === 'expense') {
+              total += val;
+              const cat = categories.find(c => c.id === mother.categoryId);
+              if (cat?.isFixed) fixed += val;
+            } else if (mother.type === 'income') {
+              income += val;
+            }
           }
         }
       });
@@ -162,7 +173,8 @@ export default function ReportsDashboard() {
       const data = getPeriodData(startOfMonth(monthDate), endOfMonth(monthDate));
       return {
         name: format(monthDate, 'MMM', { locale: ptBR }),
-        valor: data.total,
+        despesa: data.total,
+        receita: data.income,
         isCurrent: i === 5
       };
     });
@@ -177,7 +189,7 @@ export default function ReportsDashboard() {
       const targetYear = month.getFullYear();
       const monthTransactions = transactions.filter(t => {
         if (selectedAccountId !== 'all' && t.accountId !== selectedAccountId) return false;
-        const d = new Date(t.date);
+        const d = parseLocalDate(t.date);
         return d.getMonth() === targetMonth && d.getFullYear() === targetYear && t.type === 'expense' && !t.isInvoicePayment;
       });
 
@@ -193,6 +205,26 @@ export default function ReportsDashboard() {
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
   }, [transactions, categories, intervals, selectedAccountId]);
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl shadow-2xl">
+          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">{label || 'Valor'}</p>
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center justify-between gap-4 mb-1 last:mb-0">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color || entry.fill }} />
+                <span className="text-xs font-bold text-zinc-300 capitalize">{entry.name}</span>
+              </div>
+              <span className="text-xs font-black text-white">{formatCurrency(entry.value)}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="space-y-8 animate-fade-in max-w-6xl mx-auto pb-10 px-4 md:px-0">
@@ -299,14 +331,23 @@ export default function ReportsDashboard() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h3 className="text-lg font-black tracking-tight">Evolução Mensal</h3>
-              <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">Gastos Totais</p>
+              <div className="flex items-center gap-4 mt-1">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Receitas</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Despesas</span>
+                </div>
+              </div>
             </div>
             <Calendar className="text-muted-foreground w-5 h-5 opacity-20" />
           </div>
 
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }} barGap={8}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
                 <XAxis 
                   dataKey="name" 
@@ -321,20 +362,41 @@ export default function ReportsDashboard() {
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="bg-zinc-900 text-white px-4 py-2 rounded-2xl shadow-xl border border-white/10 text-xs font-bold">
-                          {formatCurrency(payload[0].value as number)}
+                        <div className="bg-zinc-900 text-white p-3 rounded-2xl shadow-xl border border-white/10 text-[10px] space-y-1.5 min-w-[140px]">
+                          {payload.map((p, idx) => (
+                            <div key={idx} className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.fill }} />
+                                <span className="font-bold uppercase tracking-widest opacity-70">{p.name}</span>
+                              </div>
+                              <span className="font-black">{formatCurrency(p.value as number)}</span>
+                            </div>
+                          ))}
+                          <div className="pt-1.5 mt-1.5 border-t border-white/10 flex justify-between items-center">
+                            <span className="font-bold uppercase tracking-widest opacity-70">Saldo</span>
+                            <span className={cn("font-black", (payload[0].value as number - (payload[1]?.value as number || 0)) >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                              {formatCurrency((payload[0].value as number) - (payload[1]?.value as number || 0))}
+                            </span>
+                          </div>
                         </div>
                       );
                     }
                     return null;
                   }}
                 />
-                <Bar dataKey="valor" radius={[10, 10, 10, 10]} barSize={40}>
+                <Bar name="Receita" dataKey="receita" radius={[6, 6, 6, 6]} barSize={16}>
                   {chartData.map((entry, index) => (
                     <Cell 
-                      key={`cell-${index}`} 
+                      key={`cell-income-${index}`} 
+                      fill={entry.isCurrent ? '#10b981' : 'rgba(16, 185, 129, 0.2)'} 
+                    />
+                  ))}
+                </Bar>
+                <Bar name="Despesa" dataKey="despesa" radius={[6, 6, 6, 6]} barSize={16}>
+                  {chartData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-expense-${index}`} 
                       fill={entry.isCurrent ? 'hsl(var(--primary))' : 'rgba(161, 161, 170, 0.2)'} 
-                      className="transition-all duration-500 hover:opacity-80"
                     />
                   ))}
                 </Bar>
