@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Transaction } from '@/types/finance';
@@ -50,9 +50,9 @@ export function AnticipateInstallmentsDialog({ isOpen, onClose, transaction }: A
                     <DialogTitle className="flex items-center gap-2 text-2xl font-black">
                         <Zap className="w-6 h-6 text-primary" /> Antecipar Parcelas
                     </DialogTitle>
-                    <p className="text-muted-foreground text-sm">
+                    <DialogDescription className="text-muted-foreground text-sm">
                         Selecione quantas parcelas de <strong>{transaction.description}</strong> deseja antecipar para esta fatura.
-                    </p>
+                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="py-6 space-y-6">

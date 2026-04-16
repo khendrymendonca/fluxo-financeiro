@@ -1,3 +1,15 @@
+## LEITURA OBRIGATÓRIA — INÍCIO DE SESSÃO
+
+Antes de qualquer resposta técnica, você deve:
+1. Confirmar que leu este arquivo
+2. Citar os 4 protocolos pelos nomes (não parafraseado, pelos títulos exatos)
+3. Só então perguntar qual é a tarefa
+
+Se o usuário vier direto com uma tarefa, pare e diga:
+"Antes de começar, preciso confirmar que li o memorias.md desta sessão."
+
+---
+
 Memórias e Decisões de Arquitetura - Fluxo
 Este documento serve como a fonte da verdade para decisões de UI/UX, regras de negócio e correções de bugs críticos. ASSISTENTE DE IA: Leia este arquivo antes de sugerir refatorações estruturais ou criar novas telas.
 
@@ -184,5 +196,48 @@ Data	Arquivo	Mudança
 12/04/2026 | Bugfix Projeções | Refino crítico no motor de virtualização: Escopo 'this' cria filha física isolada. Escopo 'future' teve arquitetura evoluída para "Corte de Série": a raiz nativa de cálculo recebe soft-delete para isolamento contábil e a nova diretriz de persistência vira a nova raiz projetando do alvo vigente em diante perpetuando as validações TypeScript. BillsManager libera edição e id `-virtual-` escapa completo via frontend. Build avança para série AB-13.
 12/04/2026 | Relatórios & UX (Build AB-14) | (1) Relatórios Analíticos 2.0: Nova UI "Escultural" com containers 2.5rem e motor de Projeção Multimeses corrigindo comparativos retroativos. (2) Blindagem do Extrato: Lançamentos pendentes (isPaid: false) agora são ocultados da aba 'Lançamentos' para manter fidelidade ao saldo real. (3) Gestão de Contas: Filtro ajustado para visão estritamente mensal. (4) Corte de Série Histórico: Edição 'future' converte mãe antiga em pontual preservando o passado contábil. Build avança para série AB-14.
 12/04/2026 | Estabilidade & Receitas (Build AB-15) | (1) Trava de Concorrência: Motor de projeção agora impede duplicidade visual/física de virtuais se houver transação real paga idêntica no mês. (2) Refino Reports: Suporte a receitas recorrentes e normalização de data via parseLocalDate. (3) Split Inteligente: Edições no mesmo mês não geram mais 'Corte de Série', apenas atualização simples. Build avança para série AB-15.
+15/04/2026 | Bugfix & Acessibilidade | (1) Correção Crítica de Banco: Renomeada coluna `budgetlimit` para `budget_limit` no código e criada migration `0020` para seguir o padrão snake_case, resolvendo erro HTTP 400. (2) Acessibilidade: Adicionados `aria-describedby` e `DialogDescription` em componentes de Dialog para eliminar avisos no console. (3) Recharts: Adicionado `minHeight` em `ReportsDashboard.tsx` para evitar avisos de largura/altura zero. Build avança para série AB-16.
+16/04/2026 | UI Overhaul: Arquitetura de Categorias | (1) Novo Sistema de Ícones: Implementado `IconSelector` com 28 ícones específicos e lógica de contraste inteligente (preto/branco) baseada na cor da categoria. (2) Grid de Luxo: Substituído Accordion por um Grid responsivo com cards centralizados (Ícone + Nome). (3) Agrupamento Estrutural: Categorias agora são divididas visualmente por relevância (Essenciais, Estilo de Vida, Objetivos). (4) Editor Avançado: Modal de edição expandido com gestão de subcategorias integrada. Build avança para série AB-17.
 
+1. Regra de confirmação obrigatória no memorias.md
+Adicione uma seção de protocolo que o modelo deve seguir antes de qualquer alteração:
+markdown## PROTOCOLO OBRIGATÓRIO ANTES DE QUALQUER ALTERAÇÃO
+
+1. Ler o arquivo completo que será alterado
+2. Mostrar o trecho ATUAL (antes) explicitamente
+3. Mostrar o trecho NOVO (depois) explicitamente  
+4. Aguardar confirmação antes de aplicar
+5. Após aplicar, ler o arquivo novamente e confirmar que a mudança está lá
+6. NUNCA reportar sucesso sem ter feito a leitura de confirmação
+
+PROIBIDO:
+- Alterar mais de um arquivo por mensagem sem confirmação entre eles
+- Deletar ou sobrescrever lógica existente sem mostrar o que será perdido
+- Rodar scripts no banco de dados sem mostrar o resultado de um SELECT antes
+- Reportar "corrigido com sucesso" sem reler o arquivo alterado
+2. Checklist de alteração no banco
+markdown## PROTOCOLO PARA ALTERAÇÕES NO BANCO
+
+Antes de qualquer DELETE ou UPDATE no Supabase:
+1. Rodar SELECT com os mesmos filtros e mostrar o resultado
+2. Aguardar confirmação do usuário
+3. Só então executar a operação destrutiva
+4. Rodar SELECT novamente para confirmar o estado final
+
+NUNCA assumir que uma operação teve efeito pelo status HTTP.
+3. Seção de arquitetura imutável
+markdown## REGRAS DE NEGÓCIO — NÃO ALTERAR SEM APROVAÇÃO EXPLÍCITA
+
+- Transações mãe (is_recurring=true, original_id=null) NUNCA são deletadas, apenas convertidas em pontuais
+- Sombras de exclusão (deleted_at preenchido + original_id + is_recurring=false) são o mecanismo de bloqueio de projeção — não remover
+- O motor de virtualização (useProjectedTransactions) é o único responsável por gerar virtuais — não duplicar essa lógica em componentes
+- Filhos físicos (original_id preenchido, is_recurring=false) representam baixas — não confundir com mães
+4. Testes de regressão descritivos
+markdown## CASOS DE TESTE — VERIFICAR APÓS CADA ALTERAÇÃO
+
+- [ ] Marcar salário recorrente como recebido: deve aparecer UMA vez no mês, pago
+- [ ] Alterar data de recorrente no mesmo mês (escopo futuro): não deve criar duplicata
+- [ ] Alterar data de recorrente para mês seguinte: mês atual preservado como pontual, série nova começa no próximo
+- [ ] Deletar ocorrência única de recorrente: mês seguinte continua aparecendo
+- [ ] Deletar todos os futuros: série para, histórico preservado
 Nota do Tech Lead: Este documento deve ser usado como contexto base em todos os prompts futuros que envolvam UI ou regras de negócio. Evitar refatorações gráficas e preservar filosofia de "Quiet Luxury" minimalista sem ruídos em cores ou blocos de grid.

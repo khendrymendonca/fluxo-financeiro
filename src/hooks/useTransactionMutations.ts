@@ -361,10 +361,14 @@ export function useUpdateTransaction() {
           targetDate = updates.date ? updates.date.slice(0, 10) : currentTx.date.slice(0, 10);
         }
 
+        // Inserir o filho pontual com os dados editados
         const { error } = await supabase.from('transactions').insert({
           ...currentTx,
           id: undefined,
           amount: updates.amount ?? currentTx.amount,
+          description: updates.description ?? currentTx.description,
+          category_id: updates.categoryId ?? currentTx.category_id,
+          subcategory_id: updates.subcategoryId ?? currentTx.subcategory_id ?? null,
           date: targetDate,
           original_id: realId,
           is_recurring: false,
@@ -375,6 +379,27 @@ export function useUpdateTransaction() {
           created_at: undefined,
         });
         if (error) throw error;
+
+        // 🛡️ FIX DUPLICATA: Se a mãe está no mesmo mês do filho que acabamos de criar,
+        // ela apareceria como transação REAL do mês E o filho também apareceria.
+        // Precisamos mover a data da mãe para o próximo mês para que ela continue
+        // gerando projeções futuras, mas não apareça como registro real deste mês.
+        if (isRecurringMother) {
+          const motherDate = parseLocalDate(currentTx.date.slice(0, 10));
+          const childDate = parseLocalDate(targetDate);
+          const motherMonthYear = `${motherDate.getFullYear()}-${motherDate.getMonth()}`;
+          const childMonthYear = `${childDate.getFullYear()}-${childDate.getMonth()}`;
+
+          if (motherMonthYear === childMonthYear) {
+            // Avança a mãe para o próximo mês mantendo o mesmo dia
+            const nextMonthDate = new Date(motherDate.getFullYear(), motherDate.getMonth() + 1, motherDate.getDate());
+            const nextMonthStr = format(nextMonthDate, 'yyyy-MM-dd');
+            await supabase.from('transactions')
+              .update({ date: nextMonthStr })
+              .eq('id', realId);
+          }
+        }
+
         return [];
       }
 
@@ -492,7 +517,7 @@ export function useUpdateTransaction() {
       // CASO F: Transação normal pontual ou Fluxo de Cartão/Parcelamento
       // ======================================================================
       if (applyScope === 'this' || (!groupId && !originalId)) {
-        const { data, error } = await supabase.from('transactions').update(dbUpdates).eq('id', realId).select();
+        const { data, error = null } = await supabase.from('transactions').update(dbUpdates).eq('id', realId).select();
         if (error) { logSafeError('useUpdateTransaction (single)', error); throw error; }
         return data || [];
       }
@@ -625,7 +650,7 @@ export function useBulkDeleteTransactions() {
             let query = supabase.from('transactions').select('id').eq('installment_group_id', item.installmentGroupId);
 
             if (installmentScope === 'future') {
-              const { data: tx } = await supabase.from('transactions').select('date').eq('id', item.id).single();
+              const { data: tx = null } = await supabase.from('transactions').select('date').eq('id', item.id).single();
               if (tx?.date) {
                 query = query.gte('date', tx.date);
               }
@@ -716,7 +741,7 @@ export function useAnticipateInstallments() {
       }
 
       // Passo C: Atualizar a transação atual com o novo valor e descrição
-      const { data: currentTx } = await supabase
+      const { data: currentTx = null } = await supabase
         .from('transactions')
         .select('description, installment_number, installment_total')
         .eq('id', transactionId)

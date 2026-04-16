@@ -105,7 +105,7 @@ export function useCategories() {
 
       const { data, error } = await supabase
         .from('categories')
-        .select('*')
+        .select('id, name, type, icon, color, group_id, is_active, budget_group, is_fixed')
         .eq('user_id', user.id);
 
       if (error) throw error;
@@ -116,7 +116,7 @@ export function useCategories() {
         isActive: c.is_active,
         budgetGroup: c.budget_group,
         isFixed: c.is_fixed,
-        budgetLimit: c.budgetlimit ?? null
+        budgetLimit: null // Temporário para teste
       })) as Category[];
     },
     staleTime: 1000 * 60 * 5, // 5 minutos

@@ -60,6 +60,7 @@ export function BillsManager() {
     const [expandedTransactionId, setExpandedTransactionId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [editingBill, setEditingBill] = useState<Transaction | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
     const [billToConfirm, setBillToConfirm] = useState<{
@@ -71,7 +72,9 @@ export function BillsManager() {
     } | null>(null);
 
     const handleMarkAsPaid = async (targetId: string, isCard: boolean) => {
-        if (!isPaying) return;
+        if (!isPaying || isSubmitting) return;
+        setIsSubmitting(true);
+
         const amountValue = paymentAmount ? parseFloat(paymentAmount) : isPaying.amount;
         const pDate = parseLocalDate(paymentDate);
 
@@ -139,6 +142,8 @@ export function BillsManager() {
             toast({ title: "Pagamento registrado com sucesso!" });
         } catch (error) {
             toast({ title: "Erro ao registrar pagamento.", variant: "destructive" });
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -554,9 +559,9 @@ export function BillsManager() {
                                             const insufficientFunds = wouldGoNegative && !hasEnoughWithOverdraft;
                                             return (
                                                 <button key={acc.id} onClick={() => handleMarkAsPaid(acc.id, false)}
-                                                    disabled={insufficientFunds}
+                                                    disabled={insufficientFunds || isSubmitting}
                                                     className={cn("w-full p-4 rounded-xl border-2 text-left transition-all",
-                                                        insufficientFunds ? "border-border/30 opacity-40 cursor-not-allowed" :
+                                                        (insufficientFunds || isSubmitting) ? "border-border/30 opacity-40 cursor-not-allowed" :
                                                             "border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] cursor-pointer")}>
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-3">
@@ -589,7 +594,10 @@ export function BillsManager() {
                                     ) : (
                                         creditCards.map(card => (
                                             <button key={card.id} onClick={() => handleMarkAsPaid(card.id, true)}
-                                                className="w-full p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] transition-all text-left cursor-pointer">
+                                                disabled={isSubmitting}
+                                                className={cn("w-full p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] transition-all text-left cursor-pointer",
+                                                    isSubmitting && "opacity-40 cursor-not-allowed")}
+                                            >
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: card.color }} />
                                                     <div>

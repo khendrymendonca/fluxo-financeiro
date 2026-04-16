@@ -21,9 +21,8 @@ export function useAddCategory() {
         group_id: category.groupId,
         budget_group: category.budgetGroup,
         is_fixed: category.isFixed || false,
-        budgetlimit: category.budgetLimit ?? null,
         user_id: user.id
-      }).select();
+      }).select('id, name, type, icon, color, group_id, is_active, budget_group, is_fixed');
 
       if (error) throw error;
       return data;
@@ -51,8 +50,7 @@ export function useUpdateCategory() {
         group_id: updates.groupId,
         budget_group: updates.budgetGroup,
         is_fixed: updates.isFixed,
-        is_active: updates.isActive,
-        budgetlimit: updates.budgetLimit !== undefined ? updates.budgetLimit : undefined
+        is_active: updates.isActive
       };
 
       if (updates.name !== undefined) {
@@ -63,7 +61,7 @@ export function useUpdateCategory() {
         .from('categories')
         .update(dbUpdates)
         .eq('id', id)
-        .select();
+        .select('id, name, type, icon, color, group_id, is_active, budget_group, is_fixed');
 
       if (error) throw error;
       return data;
@@ -109,7 +107,7 @@ export function useAddSubcategory() {
       const { data, error } = await supabase.from('subcategories').insert({
         name: safeName,
         category_id: subcategory.categoryId
-      }).select();
+      }).select('id, name, category_id, is_active');
 
       if (error) throw error;
       return data;
@@ -151,7 +149,7 @@ export function useUpdateSubcategory() {
   return useMutation({
     mutationFn: async ({ id, name }: { id: string, name: string }) => {
       const safeName = (name ?? '').trim().slice(0, 100);
-      const { data, error } = await supabase.from('subcategories').update({ name: safeName }).eq('id', id).select();
+      const { data, error } = await supabase.from('subcategories').update({ name: safeName }).eq('id', id).select('id, name, category_id, is_active');
 
       if (error) throw error;
       return data;
