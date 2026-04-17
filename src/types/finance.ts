@@ -55,6 +55,7 @@ export interface Transaction {
   recurrence?: string;
   debtId?: string;
   isInvoicePayment?: boolean;
+  isTransfer?: boolean;
   // ✅ ADICIONADO: rastreabilidade de origem para bills convertidas
   isVirtual?: boolean;
   isAutomatic?: boolean;

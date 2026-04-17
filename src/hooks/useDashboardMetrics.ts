@@ -22,16 +22,16 @@ export function useDashboardMetrics(viewDate: Date, transactions: Transaction[])
     });
 
     const totalIncome = currentMonthTransactions
-      .filter(t => t.type === 'income' && t.isPaid)
+      .filter(t => t.type === 'income' && t.isPaid && !t.isTransfer)
       .reduce((sum, t) => safeAdd(sum, t.amount), 0);
 
     const totalExpenses = currentMonthTransactions
-      .filter(t => t.type === 'expense' && (t.isPaid || !!t.cardId) && !t.isInvoicePayment)
+      .filter(t => t.type === 'expense' && (t.isPaid || !!t.cardId) && !t.isInvoicePayment && !t.isTransfer)
       .reduce((sum, t) => safeAdd(sum, t.amount), 0);
 
     const categoryMap = new Map<string, number>();
     currentMonthTransactions
-      .filter(t => t.type === 'expense' && !t.isInvoicePayment)
+      .filter(t => t.type === 'expense' && !t.isInvoicePayment && !t.isTransfer)
       .forEach(t => {
         const cat = categories.find(c => c.id === t.categoryId);
         const name = cat?.name || 'Sem Categoria';

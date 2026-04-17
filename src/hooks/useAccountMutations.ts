@@ -139,7 +139,8 @@ export function useTransferBetweenAccounts() {
           account_id: from,
           date: date,
           is_paid: true,
-          payment_date: date
+          payment_date: date,
+          is_transfer: true
         },
         {
           user_id: user.id,
@@ -152,7 +153,8 @@ export function useTransferBetweenAccounts() {
           is_paid: true,
           payment_date: date,
           is_invoice_payment: type === 'card',
-          invoice_month_year: invoiceMonthYear
+          invoice_month_year: invoiceMonthYear,
+          is_transfer: true
         }
       ];
 

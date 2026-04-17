@@ -45,6 +45,7 @@ export function useAddTransaction() {
           original_id: tx.originalId || tx.original_id || null,
           original_bill_id: tx.originalBillId || tx.original_bill_id || null,
           is_invoice_payment: tx.isInvoicePayment !== undefined ? tx.isInvoicePayment : (tx.is_invoice_payment || false),
+          is_transfer: tx.isTransfer !== undefined ? tx.isTransfer : (tx.is_transfer || false),
           date: tx.date ? tx.date.slice(0, 10) : format(new Date(), 'yyyy-MM-dd'),
         };
 
@@ -55,7 +56,7 @@ export function useAddTransaction() {
             'categoryId', 'subcategoryId', 'accountId', 'cardId', 'isPaid', 'paymentDate',
             'isRecurring', 'installmentGroupId', 'installmentNumber', 'installmentTotal',
             'invoiceMonthYear', 'isAutomatic', 'debtId', 'transactionType', 'cardClosingDay', 'cardDueDay',
-            'userId', 'isVirtual', 'originalId', 'originalBillId', 'isInvoicePayment'
+            'userId', 'isVirtual', 'originalId', 'originalBillId', 'isInvoicePayment', 'isTransfer'
           ].includes(key)) {
             clean[key] = mapped[key];
           }
@@ -321,7 +322,8 @@ export function useUpdateTransaction() {
         is_recurring: updates.isRecurring !== undefined ? updates.isRecurring : (updates as any).is_recurring,
         recurrence: updates.recurrence,
         transaction_type: updates.transactionType,
-        invoice_month_year: finalInvoiceMonthYear
+        invoice_month_year: finalInvoiceMonthYear,
+        is_transfer: updates.isTransfer
       };
 
       // Remover undefined para não sobrescrever dados existentes com null acidentalmente

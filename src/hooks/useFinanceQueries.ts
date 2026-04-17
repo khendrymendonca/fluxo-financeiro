@@ -66,7 +66,9 @@ export function useTransactions(viewDate: Date) {
         invoiceMonthYear: t.invoice_month_year,
         debtId: t.debt_id,
         originalId: t.original_id,
-        originalBillId: t.original_bill_id
+        originalBillId: t.original_bill_id,
+        isTransfer: t.is_transfer || false,
+        isInvoicePayment: t.is_invoice_payment || false
       })) as Transaction[];
     },
     staleTime: 1000 * 60 * 5, // 5 minutos
