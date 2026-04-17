@@ -3,39 +3,64 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import { parseLocalDate } from '@/utils/dateUtils';
 import { Transaction } from '@/types/finance';
 import { formatCurrency } from '@/utils/formatters';
+import { format } from 'date-fns';
 
 interface WeeklyFlowChartProps {
   transactions: Transaction[];
   viewDate: Date;
+  viewMode: 'day' | 'month' | 'year' | 'all';
 }
 
-export function WeeklyFlowChart({ transactions }: WeeklyFlowChartProps) {
+export function WeeklyFlowChart({ transactions, viewDate, viewMode }: WeeklyFlowChartProps) {
   const data = useMemo(() => {
+    // MODO DIA — sem agrupamento, mostra só o dia selecionado
+    if (viewMode === 'day') {
+      const dateStr = format(viewDate, 'yyyy-MM-dd');
+      const txs = transactions.filter(t => t.date.slice(0, 10) === dateStr && !t.isTransfer && !t.isInvoicePayment);
+      const receitas = txs.filter(t => t.type === 'income'  && t.isPaid).reduce((s, t) => s + Number(t.amount), 0);
+      const despesas = txs.filter(t => t.type === 'expense' && t.isPaid).reduce((s, t) => s + Number(t.amount), 0);
+      return [{ label: format(viewDate, 'dd/MM'), receitas, despesas }];
+    }
+
+    // MODO ANO/TUDO — agrupa por mês
+    if (viewMode === 'year' || viewMode === 'all') {
+      const year = viewDate.getFullYear();
+      return Array.from({ length: 12 }, (_, i) => {
+        const txs = transactions.filter(t => {
+          if (t.isTransfer || t.isInvoicePayment) return false;
+          const d = parseLocalDate(t.date);
+          const matchYear = viewMode === 'all' ? true : d.getFullYear() === year;
+          return matchYear && d.getMonth() === i;
+        });
+        return {
+          label: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][i],
+          receitas: txs.filter(t => t.type === 'income'  && t.isPaid).reduce((s, t) => s + Number(t.amount), 0),
+          despesas: txs.filter(t => t.type === 'expense' && t.isPaid).reduce((s, t) => s + Number(t.amount), 0),
+        };
+      });
+    }
+
+    // MODO MÊS — agrupamento por semanas (comportamento padrão)
     const weeks = [
       { label: 'Sem 1', start: 1,  end: 7  },
       { label: 'Sem 2', start: 8,  end: 14 },
       { label: 'Sem 3', start: 15, end: 21 },
       { label: 'Sem 4', start: 22, end: 31 },
     ];
-
     return weeks.map(({ label, start, end }) => {
       const txs = transactions.filter(t => {
         if (t.isTransfer || t.isInvoicePayment) return false;
         const day = parseLocalDate(t.date).getDate();
         return day >= start && day <= end;
       });
-
-      const receitas = txs
-        .filter(t => t.type === 'income' && t.isPaid)
-        .reduce((s, t) => s + Number(t.amount), 0);
-
-      const despesas = txs
-        .filter(t => t.type === 'expense' && t.isPaid)
-        .reduce((s, t) => s + Number(t.amount), 0);
-
-      return { label, receitas, despesas };
+      return {
+        label,
+        receitas: txs.filter(t => t.type === 'income'  && t.isPaid).reduce((s, t) => s + Number(t.amount), 0),
+        despesas: txs.filter(t => t.type === 'expense' && t.isPaid).reduce((s, t) => s + Number(t.amount), 0),
+      };
     });
-  }, [transactions]);
+
+  }, [transactions, viewDate, viewMode]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
@@ -52,7 +77,7 @@ export function WeeklyFlowChart({ transactions }: WeeklyFlowChartProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-          Fluxo do Mês — Semanas
+          {viewMode === 'day' ? 'Fluxo do Dia' : viewMode === 'month' ? 'Fluxo Semanal' : 'Fluxo Mensal'}
         </p>
         <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider">
           <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-success" /> Receitas</span>

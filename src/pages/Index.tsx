@@ -62,6 +62,7 @@ import { AccountsManager } from '@/components/accounts/AccountsManager';
 import { DebtsManager } from '@/components/debts/DebtsManager';
 import ReportsDashboard from './ReportsDashboard';
 import CardsDashboard from './CardsDashboard';
+import ProjectionPage from './ProjectionPage';
 import { Button } from '@/components/ui/button';
 import { Transaction, SavingsGoal } from '@/types/finance';
 import { CategoriesManager } from '@/components/settings/CategoriesManager';
@@ -79,8 +80,10 @@ import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { PendingPayments } from '@/components/dashboard/PendingPayments';
 import { WeeklyFlowChart } from '@/components/dashboard/WeeklyFlowChart';
 import { HealthScore } from '@/components/dashboard/HealthScore';
+import { RecoveryProjection } from '@/components/dashboard/RecoveryProjection';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
 import { ExportManager } from '@/components/dashboard/ExportManager';
+import { useRecoveryProjection } from '@/hooks/useRecoveryProjection';
 import {
   Tooltip,
   TooltipContent,
@@ -145,9 +148,10 @@ export default function Index() {
   }, [queryClient]);
 
   const currentView = (searchParams.get('view') as ViewType) || 'dashboard';
+  const viewMode = (searchParams.get('mode') as 'day' | 'month' | 'year' | 'all') || 'month';
 
   const setCurrentView = (view: ViewType) => {
-    setSearchParams({ view });
+    setSearchParams({ view, mode: viewMode });
   };
 
   const [showTransactionForm, setShowTransactionForm] = useState(false);
@@ -168,6 +172,7 @@ export default function Index() {
     debts,
     savingsGoals,
     categories,
+    transactions, // Usar a lista total para widgets analíticos
     currentMonthTransactions,
     setEmergencyMonths,
     addTransaction,
@@ -346,14 +351,10 @@ export default function Index() {
 
               {/* LINHA 3 — Saúde + Contas a Pagar (2 colunas) */}
               <div className="hidden md:grid md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300">
-                <div className="bg-card rounded-[2rem] p-6 border border-border/40 shadow-sm h-[280px] flex items-center justify-center">
-                  <HealthScore
-                    totalIncome={cashflow.totalIncome}
-                    totalExpenses={cashflow.totalExpenses}
-                    totalPendingOutflows={totalPendingOutflows}
-                  />
+                <div className="bg-card rounded-[2rem] p-6 border border-border/40 shadow-sm h-[320px]">
+                  <RecoveryProjection />
                 </div>
-                <div className="bg-card rounded-[2rem] border border-border/40 shadow-sm overflow-y-auto no-scrollbar h-[280px]">
+                <div className="bg-card rounded-[2rem] border border-border/40 shadow-sm overflow-y-auto no-scrollbar h-[320px]">
                   <PendingPayments transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
                 </div>
               </div>
