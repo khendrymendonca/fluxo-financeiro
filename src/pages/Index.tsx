@@ -80,10 +80,8 @@ import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { PendingPayments } from '@/components/dashboard/PendingPayments';
 import { WeeklyFlowChart } from '@/components/dashboard/WeeklyFlowChart';
 import { HealthScore } from '@/components/dashboard/HealthScore';
-import { RecoveryProjection } from '@/components/dashboard/RecoveryProjection';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
 import { ExportManager } from '@/components/dashboard/ExportManager';
-import { useRecoveryProjection } from '@/hooks/useRecoveryProjection';
 import {
   Tooltip,
   TooltipContent,
@@ -100,7 +98,7 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 
-type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export' | 'emergency' | 'menu' | 'profile';
+type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export' | 'emergency' | 'menu' | 'profile' | 'projection';
 
 // Mapa de views que requerem feature flag
 const PROTECTED_VIEWS: Record<string, string> = {
@@ -113,6 +111,7 @@ const PROTECTED_VIEWS: Record<string, string> = {
   emergency: 'emergency_fund',
   reports: 'reports_dashboard',
   simulator: 'simulator',
+  projection: 'reports_dashboard',
 };
 
 function ViewGuard({
@@ -349,11 +348,8 @@ export default function Index() {
                 </div>
               </div>
 
-              {/* LINHA 3 — Saúde + Contas a Pagar (2 colunas) */}
-              <div className="hidden md:grid md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300">
-                <div className="bg-card rounded-[2rem] p-6 border border-border/40 shadow-sm h-[320px]">
-                  <RecoveryProjection />
-                </div>
+              {/* LINHA 3 — Contas a Pagar (Largura Total) */}
+              <div className="hidden md:block animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300">
                 <div className="bg-card rounded-[2rem] border border-border/40 shadow-sm overflow-y-auto no-scrollbar h-[320px]">
                   <PendingPayments transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
                 </div>
@@ -627,6 +623,12 @@ export default function Index() {
         return <ExportManager />;
       case 'profile':
         return <ProfileSettings />;
+      case 'projection':
+        return (
+          <ViewGuard view="projection">
+            <ProjectionPage />
+          </ViewGuard>
+        );
       default:
         return <div className="text-center py-20 text-zinc-500 italic">Em breve...</div>;
     }
