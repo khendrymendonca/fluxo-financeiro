@@ -77,6 +77,8 @@ import { BudgetAlerts } from '@/components/dashboard/BudgetAlerts';
 import { ExpenseChart } from '@/components/dashboard/ExpenseChart';
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { PendingPayments } from '@/components/dashboard/PendingPayments';
+import { WeeklyFlowChart } from '@/components/dashboard/WeeklyFlowChart';
+import { HealthScore } from '@/components/dashboard/HealthScore';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
 import { ExportManager } from '@/components/dashboard/ExportManager';
 import {
@@ -298,54 +300,68 @@ export default function Index() {
       case 'dashboard':
         if (!isMobile) {
           return (
-            <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto p-4 md:p-8">
+            <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto p-4 md:p-6 pb-20">
               {/* Header Desktop com Saudação */}
-              <div className="mb-4">
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-1">Visão Geral</p>
-                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                      Olá, <span className="text-primary">{userName}</span>
-                      {accentColor === 'pascoa' && <Rabbit className="w-8 h-8 text-primary animate-bounce duration-1000" />}
-                    </h1>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={handleRefreshData}
-                      className="rounded-xl border-gray-100 dark:border-zinc-800 h-10 w-10 hover:bg-primary/5 hover:text-primary transition-colors"
-                      title="Sincronizar dados"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                    </Button>
-                    <MonthSelector />
-                  </div>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1 opacity-50">Visão Geral</p>
+                  <h1 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
+                    Olá, <span className="text-primary">{userName}</span>
+                    {accentColor === 'pascoa' && <Rabbit className="w-8 h-8 text-primary animate-bounce" />}
+                  </h1>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleRefreshData}
+                    className="rounded-xl border-border/40 h-10 w-10 hover:bg-primary/5 hover:text-primary transition-colors shrink-0"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </Button>
+                  <MonthSelector />
                 </div>
               </div>
 
-              {/* Alertas de Orçamento */}
+              {/* Alertas de Orçamento — Topo (Quiet Luxury) */}
               <BudgetAlerts />
 
-              {/* Linha 1: Métricas principais - 4 cards lado a lado */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-500">
-                <StatCard title="Saldo Total" value={totalNetWorth} icon={<Wallet className="w-5 h-5" />} variant="neutral" />
-                <StatCard title="Projetado" value={projectedBalance} icon={<Calculator className="w-5 h-5" />} variant={projectedBalance < 0 ? 'negative' : 'neutral'} />
-                <StatCard title="Receitas" value={cashflow.totalIncome} icon={<TrendingUp className="w-5 h-5" />} variant="positive" />
-                <StatCard title="Despesas" value={cashflow.totalExpenses} icon={<TrendingDown className="w-5 h-5" />} variant="negative" />
+              {/* LINHA 1 — KPIs (4 cards iguais) */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
+                <StatCard title="Saldo Total" value={totalNetWorth} icon={<Wallet className="w-4 h-4" />} variant="neutral" />
+                <StatCard title="Projetado" value={projectedBalance} icon={<Calculator className="w-4 h-4" />} variant={projectedBalance < 0 ? 'negative' : 'neutral'} />
+                <StatCard title="Receitas" value={cashflow.totalIncome} icon={<TrendingUp className="w-4 h-4" />} variant="positive" />
+                <StatCard title="Despesas" value={cashflow.totalExpenses} icon={<TrendingDown className="w-4 h-4" />} variant="negative" />
               </div>
 
-              {/* Grid Principal - Layout 2/1 para priorizar Lançamentos */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
-                {/* Coluna 1 & 2: Contas a pagar e Transações Recentes */}
-                <div className="lg:col-span-2 space-y-6">
-                  <PendingPayments transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
-                  <RecentTransactions transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
+              {/* LINHA 2 — Gráficos Analíticos Principais (2 colunas) */}
+              <div className="hidden md:grid md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200">
+                <div className="bg-card rounded-[2rem] p-6 border border-border/40 shadow-sm h-[280px]">
+                  <WeeklyFlowChart transactions={currentMonthTransactions} viewDate={viewDate} />
                 </div>
-
-                {/* Coluna 3: Gráfico de gastos (Distribuição) */}
-                <div className="lg:col-span-1">
+                <div className="bg-card rounded-[2rem] p-6 border border-border/40 shadow-sm h-[280px]">
                   <ExpenseChart data={Object.fromEntries(categoryExpenses.map(c => [c.name, c.value]))} />
+                </div>
+              </div>
+
+              {/* LINHA 3 — Saúde + Contas a Pagar (2 colunas) */}
+              <div className="hidden md:grid md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300">
+                <div className="bg-card rounded-[2rem] p-6 border border-border/40 shadow-sm h-[280px] flex items-center justify-center">
+                  <HealthScore
+                    totalIncome={cashflow.totalIncome}
+                    totalExpenses={cashflow.totalExpenses}
+                    totalPendingOutflows={totalPendingOutflows}
+                  />
+                </div>
+                <div className="bg-card rounded-[2rem] border border-border/40 shadow-sm overflow-y-auto no-scrollbar h-[280px]">
+                  <PendingPayments transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
+                </div>
+              </div>
+
+              {/* LINHA 4 — Últimas Transações (Largura Total) */}
+              <div className="hidden md:block animate-in fade-in slide-in-from-bottom-2 duration-500 delay-400">
+                <div className="bg-card rounded-[2rem] border border-border/40 shadow-sm overflow-hidden min-h-[400px]">
+                  <RecentTransactions transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
                 </div>
               </div>
             </div>

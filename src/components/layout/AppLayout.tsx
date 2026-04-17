@@ -5,86 +5,71 @@ import { useGlobalFlag } from '@/hooks/useFeatureFlags';
 import { EasterWelcome } from '@/components/layout/EasterWelcome';
 
 interface AppLayoutProps {
-    children: React.ReactNode;
-    sidebar?: React.ReactNode;
-    headerMobile?: React.ReactNode;
-    bottomNav?: React.ReactNode;
-    fab?: React.ReactNode;
+  children: React.ReactNode;
+  sidebar?: React.ReactNode;       // agora usado como topnav no desktop
+  headerMobile?: React.ReactNode;
+  bottomNav?: React.ReactNode;
+  fab?: React.ReactNode;
 }
 
-export function AppLayout({
-    children,
-    sidebar,
-    headerMobile,
-    bottomNav,
-    fab
-}: AppLayoutProps) {
-    const isMobile = useIsMobile();
-    const easterEnabled = useGlobalFlag('theme_easter');
-    const [showEaster, setShowEaster] = useState(false);
+export function AppLayout({ children, sidebar, headerMobile, bottomNav, fab }: AppLayoutProps) {
+  const isMobile = useIsMobile();
+  const easterEnabled = useGlobalFlag('theme:easter');
+  const [showEaster, setShowEaster] = useState(false);
 
-    // Controlar a exibição para que apareça apenas uma vez por sessão 
-    // ou conforme a lógica desejada. Aqui seguiremos a flag.
-    useEffect(() => {
-        if (easterEnabled) {
-            // Verificar se já foi fechado nesta sessão para não ser invasivo
-            const closed = sessionStorage.getItem('easter_welcome_closed');
-            if (!closed) {
-                setShowEaster(true);
-            }
-        }
-    }, [easterEnabled]);
+  useEffect(() => {
+    if (easterEnabled) {
+      const closed = sessionStorage.getItem('easter-welcome-closed');
+      if (!closed) setShowEaster(true);
+    }
+  }, [easterEnabled]);
 
-    return (
-        <div className="flex h-[100dvh] overflow-hidden bg-background transition-colors font-sans selection:bg-primary/30 text-gray-900 dark:text-zinc-50">
-            {/* Sidebar Fixa (Apenas Desktop) */}
-            <aside className={cn(
-                "hidden md:flex flex-col flex-shrink-0 z-50",
-                !sidebar && "md:hidden"
-            )}>
-                {sidebar}
-            </aside>
+  return (
+    <div className="flex flex-col h-[100dvh] overflow-hidden bg-background transition-colors font-sans selection:bg-primary/30 text-gray-900 dark:text-zinc-50">
 
-            {/* Área Principal */}
-            <main className="flex-1 flex flex-col h-[100dvh] overflow-hidden relative bg-inherit">
-                {/* Header Mobile (Apenas Mobile) */}
-                <header className={cn(
-                    "md:hidden flex-shrink-0 sticky top-0 z-50 bg-inherit border-b border-gray-100 dark:border-zinc-900 flex items-center justify-between p-4",
-                    !headerMobile && "hidden"
-                )}>
-                    {headerMobile}
-                </header>
+      {/* ── TOP NAV — apenas Desktop ── */}
+      {sidebar && (
+        <header className={cn(
+          "hidden md:flex flex-shrink-0 z-50 w-full",
+          "bg-white dark:bg-zinc-950 border-b border-gray-200 dark:border-zinc-800"
+        )}>
+          {sidebar}
+        </header>
+      )}
 
-                {/* Container de Conteúdo */}
-                <div className={cn(
-                    "flex-1 overflow-y-auto no-scrollbar pt-0",
-                    "p-4 md:p-8 pb-24 md:pb-8"
-                )}>
-                    <div className="max-w-7xl mx-auto">
-                        {children}
-                    </div>
-                </div>
+      {/* ── HEADER MOBILE ── */}
+      <header className={cn(
+        "md:hidden flex-shrink-0 sticky top-0 z-50 bg-inherit border-b border-gray-100 dark:border-zinc-900 flex items-center justify-between p-4",
+        !headerMobile && "hidden"
+      )}>
+        {headerMobile}
+      </header>
 
-                {/* Floating Action Button (Mobile) */}
-                <div className={cn("md:hidden", !fab && "hidden")}>
-                    {fab}
-                </div>
-            </main>
-
-            {/* Bottom Navigation (Mobile) */}
-            <div className={cn("md:hidden flex-shrink-0", !bottomNav && "hidden")}>
-                {bottomNav}
-            </div>
-
-            {/* Temas Globais */}
-            {showEaster && (
-                <EasterWelcome 
-                    onClose={() => {
-                        setShowEaster(false);
-                        sessionStorage.setItem('easter_welcome_closed', 'true');
-                    }} 
-                />
-            )}
+      {/* ── CONTEÚDO PRINCIPAL ── */}
+      <main className="flex-1 flex flex-col overflow-hidden relative bg-inherit">
+        <div className={cn("flex-1 overflow-y-auto no-scrollbar", "p-4 md:p-8 pb-24 md:pb-8")}>
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </div>
-    );
+
+        {/* FAB Mobile */}
+        <div className={cn("md:hidden", !fab && "hidden")}>
+          {fab}
+        </div>
+      </main>
+
+      {/* Bottom Nav Mobile */}
+      <div className={cn("md:hidden flex-shrink-0", !bottomNav && "hidden")}>
+        {bottomNav}
+      </div>
+
+      {showEaster && (
+        <EasterWelcome onClose={() => {
+          setShowEaster(false);
+          sessionStorage.setItem('easter-welcome-closed', 'true');
+        }} />
+      )}
+    </div>
+  );
 }
