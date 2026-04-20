@@ -142,16 +142,22 @@ export function AnticipatePaymentDialog({ card, isOpen, onClose }: AnticipatePay
                     <SelectValue placeholder="Escolher conta" />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-zinc-100 dark:border-zinc-900">
-                    {accounts
-                      .filter(acc => acc.accountType !== 'investment' && acc.accountType !== 'metas')
-                      .map(acc => (
-                        <SelectItem key={acc.id} value={acc.id} className="font-bold text-xs py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: acc.color }} />
-                            {acc.name}
-                          </div>
-                        </SelectItem>
-                      ))}
+                    {accounts && accounts.length > 0 ? (
+                      accounts
+                        .filter(acc => acc.accountType !== 'investment' && acc.accountType !== 'metas')
+                        .map(acc => (
+                          <SelectItem key={acc.id} value={acc.id} className="font-bold text-xs py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: acc.color }} />
+                              {acc.name}
+                            </div>
+                          </SelectItem>
+                        ))
+                    ) : (
+                      <p className="text-[10px] text-center py-4 text-muted-foreground uppercase font-black">
+                        Nenhuma conta encontrada
+                      </p>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

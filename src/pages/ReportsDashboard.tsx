@@ -102,7 +102,7 @@ export default function ReportsDashboard() {
       const targetYear = month.getFullYear();
 
       const monthReal = transactions.filter(t => {
-        if (t.isVirtual) return false;
+        if (t.isVirtual && !t.isRecurring) return false;
         if (selectedAccountId !== 'all' && t.accountId !== selectedAccountId) return false;
         
         const d = parseLocalDate(t.date);
@@ -116,6 +116,7 @@ export default function ReportsDashboard() {
       });
 
       monthReal.forEach(t => {
+        if (t.isTransfer) return;
         const val = Number(t.amount);
         if (t.type === 'expense' && !t.isInvoicePayment) {
           total += val;
@@ -130,6 +131,7 @@ export default function ReportsDashboard() {
       const recurringMothers = transactions.filter(t => t.isRecurring && !t.isVirtual);
       recurringMothers.forEach(mother => {
         if (selectedAccountId !== 'all' && mother.accountId !== selectedAccountId) return;
+        if (mother.isTransfer) return;
         
         const motherDate = parseLocalDate(mother.date);
         if (isBefore(startOfMonth(motherDate), addMonths(startOfMonth(month), 1))) {
@@ -190,7 +192,7 @@ export default function ReportsDashboard() {
       const monthTransactions = transactions.filter(t => {
         if (selectedAccountId !== 'all' && t.accountId !== selectedAccountId) return false;
         const d = parseLocalDate(t.date);
-        return d.getMonth() === targetMonth && d.getFullYear() === targetYear && t.type === 'expense' && !t.isInvoicePayment;
+        return d.getMonth() === targetMonth && d.getFullYear() === targetYear && t.type === 'expense' && !t.isInvoicePayment && !t.isTransfer;
       });
 
       monthTransactions.forEach(t => {

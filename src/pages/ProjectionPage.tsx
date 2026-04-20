@@ -1,461 +1,425 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useDebtProjection, calcularProjecaoDivida, calcularImpactoCorte } from '@/hooks/useDebtProjection';
+import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { PageHeader } from '@/components/ui/PageHeader';
 import {
-  LineChart, Line, XAxis, YAxis, ReferenceLine, Tooltip,
-  ResponsiveContainer, CartesianGrid, Legend
-} from 'recharts'
-import { addMonths, format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+  TrendingUp,
+  TrendingDown,
+  Target,
+  AlertTriangle,
+  CheckCircle2,
+  Calendar,
+  Zap as ZapIcon,
+  Snowflake as SnowflakeIcon,
+  ArrowRight,
+  Info,
+  RefreshCw
+} from 'lucide-react';
 import {
-  TrendingUp, TrendingDown, Calendar, Target,
-  AlertTriangle, CheckCircle2, Info
-} from 'lucide-react'
-import { Switch } from '@/components/ui/switch'
-import { PageHeader } from '@/components/ui/PageHeader'
-import { useProjectionData, ProjectionMode } from '@/hooks/useProjectionData'
-import { useFinanceStore } from '@/hooks/useFinanceStore'
-import { formatCurrency } from '@/utils/formatters'
-import { cn } from '@/lib/utils'
-
-// ─── Tooltip customizado com fundo opaco ──────────────────────────────────────
-function CustomTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="bg-card border border-border rounded-2xl p-4 shadow-2xl min-w-[160px]">
-      <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-3">{label}</p>
-      {payload.map((p: any) => (
-        <div key={p.dataKey} className="flex items-center justify-between gap-4">
-          <span className="text-xs font-bold" style={{ color: p.color }}>{p.name}</span>
-          <span className="text-sm font-black tabular-nums" style={{ color: p.color }}>
-            {formatCurrency(p.value)}
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ─── Label do eixo Y formatado em K / M ───────────────────────────────────────
-function formatAxisY(value: number) {
-  if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
-  if (Math.abs(value) >= 1_000) return `${(value / 1_000).toFixed(0)}k`
-  return `${value}`
-}
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from 'recharts';
+import { format, addMonths } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/utils/formatters';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 export default function ProjectionPage() {
-  const { accounts } = useFinanceStore()
-  const [mode, setMode] = useState<ProjectionMode>('fixed')
-  const items = useProjectionData()
-  const [enabled, setEnabled] = useState<Record<string, boolean>>({})
+  const navigate = useNavigate();
+  // Única fonte de verdade para dados analíticos de dívidas
+  const { 
+    activeDebts, 
+    diagnostico, 
+    estrategias, 
+    despesasFixasRanqueadas, 
+    acaoImediata,
+    totalFixedExpenses,
+    totalDebtInstallments 
+  } = useDebtProjection();
 
-  const isEnabled = (id: string) => enabled[id] !== false
-  const toggleItem = (id: string) =>
-    setEnabled(prev => ({ ...prev, [id]: !isEnabled(id) }))
+  const { totalIncome } = useFinanceStore();
 
-  // Saldo atual — contas operacionais
-  const currentBalance = useMemo(
-    () =>
-      accounts
-        .filter(a => a.accountType !== 'investment' && a.accountType !== 'metas')
-        .reduce((s, a) => s + Number(a.balance), 0),
-    [accounts]
-  )
+  // BLOCO 3 — Estado local para o simulador de cortes
+  const [selectedCuts, setSelectedCuts] = useState<Set<string>>(new Set());
 
-  // Fluxo mensal líquido com base nos itens ativos
-  const { monthlyIncome, monthlyExpense, monthlyNet } = useMemo(() => {
-    const activeItems = items.filter(item => isEnabled(item.id))
-    const getValue = (item: (typeof items)[0]) =>
-      mode === 'avg6' ? item.avgAmount : item.fixedAmount
-    const income = activeItems
-      .filter(i => i.type === 'income')
-      .reduce((s, i) => s + getValue(i), 0)
-    const expense = activeItems
-      .filter(i => i.type === 'expense')
-      .reduce((s, i) => s + getValue(i), 0)
-    return { monthlyIncome: income, monthlyExpense: expense, monthlyNet: income - expense }
-  }, [items, enabled, mode])
+  const toggleCut = (id: string) => {
+    setSelectedCuts(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
-  // Projeção mês a mês — até 60 meses ou saldo positivo consolidado
-  const { data: projection, recoveryMonth, breakEvenIndex } = useMemo(() => {
-    const today = new Date()
-    let balance = currentBalance
-    const result: { label: string; saldo: number; receita: number; despesa: number }[] = []
-    let recoveryMonth: string | null = null
-    let breakEvenIndex: number | null = null
+  // Cálculo do impacto simulado usando função pura do hook
+  const simulacao = useMemo(() => {
+    const valorTotalCorte = despesasFixasRanqueadas
+      .filter(d => selectedCuts.has(d.id))
+      .reduce((sum, d) => sum + Number(d.amount), 0);
 
-    for (let i = 1; i <= 60; i++) {
-      const prevBalance = balance
-      balance += monthlyNet
-      const date = addMonths(today, i)
-      const label = format(date, 'MMM/yy', { locale: ptBR })
+    return calcularImpactoCorte(valorTotalCorte, activeDebts);
+  }, [selectedCuts, despesasFixasRanqueadas, activeDebts]);
 
-      result.push({
-        label,
-        saldo: Math.round(balance),
-        receita: Math.round(monthlyIncome),
-        despesa: Math.round(monthlyExpense),
-      })
+  // BLOCO 2 — Dados para o gráfico de amortização (Baseline)
+  const chartData = useMemo(() => {
+    if (activeDebts.length === 0) return [];
+    
+    let saldoTotal = activeDebts.reduce((sum, d) => sum + d.remainingAmount, 0);
+    const result = [{ mes: 0, saldo: saldoTotal, dataLabel: 'Hoje' }];
+    
+    const avalanche = estrategias.avalanche.ordem;
+    let mesesCorrentes = 0;
+    let extraAcumulado = 0;
 
-      // Primeiro mês que o saldo cruza de negativo para positivo
-      if (prevBalance < 0 && balance >= 0 && !recoveryMonth) {
-        recoveryMonth = label
-        breakEvenIndex = i
-      }
+    avalanche.forEach(d => {
+      const proj = calcularProjecaoDivida(d, extraAcumulado);
+      proj.cronograma.forEach((p) => {
+        mesesCorrentes++;
+        saldoTotal -= (Number(d.installmentAmount) || Number(d.minimumPayment) || 0) + extraAcumulado;
+        result.push({
+          mes: mesesCorrentes,
+          saldo: Math.max(0, saldoTotal),
+          dataLabel: p.dataLabel
+        });
+      });
+      extraAcumulado += (Number(d.installmentAmount) || Number(d.minimumPayment) || 0);
+    });
 
-      // Para de projetar se ficou positivo há 12 meses (estabilizado) ou após 36 meses se já positivo
-      if (balance > 0 && i >= 12 && recoveryMonth) break
-      if (i >= 36 && balance > 0) break
+    return result.slice(0, 60);
+  }, [activeDebts, estrategias]);
+
+  if (activeDebts.length === 0) {
+    return (
+      <div className="space-y-8 animate-fade-in max-w-6xl mx-auto pb-10 px-4 md:px-0">
+        <PageHeader title="Projeção & Estratégia" icon={TrendingUp} />
+        <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-zinc-900 rounded-[2.5rem] border-2 border-dashed border-gray-100 dark:border-zinc-800 shadow-sm">
+          <CheckCircle2 className="w-12 h-12 text-emerald-500 mb-4 opacity-20" />
+          <h3 className="text-lg font-black tracking-tight text-gray-400">Nenhuma dívida ativa cadastrada</h3>
+          <p className="text-sm text-gray-500 dark:text-zinc-500 mt-1">Sua saúde financeira está em dia.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl shadow-2xl">
+          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">{payload[0].payload.dataLabel}</p>
+          <p className="text-xs font-black text-white">{formatCurrency(payload[0].value)}</p>
+        </div>
+      );
     }
-
-    return { data: result, recoveryMonth, breakEvenIndex }
-  }, [currentBalance, monthlyNet, monthlyIncome, monthlyExpense])
-
-  // Pior mês (menor saldo)
-  const worstMonth = useMemo(() => {
-    if (!projection.length) return null
-    return projection.reduce((min, p) => (p.saldo < min.saldo ? p : min), projection[0])
-  }, [projection])
-
-  const incomeItems = items.filter(i => i.type === 'income')
-  const expenseItems = items.filter(i => i.type === 'expense')
-
-  // Cores dos eixos — usa var CSS do tema para garantir visibilidade
-  const axisColor = 'hsl(var(--muted-foreground))'
-  const gridColor = 'hsl(var(--border))'
+    return null;
+  };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 max-w-6xl mx-auto pb-24 px-4 md:px-0">
-      <PageHeader title="Projeção Financeira" icon={TrendingUp} />
+    <div className="space-y-8 animate-fade-in max-w-6xl mx-auto pb-20 px-4 md:px-0">
+      <PageHeader title="Projeção & Estratégia" icon={TrendingUp} />
 
-      {/* ── KPIs ──────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          {
-            label: 'Saldo Atual',
-            value: formatCurrency(currentBalance),
-            icon: Target,
-            color: currentBalance >= 0 ? 'text-emerald-500' : 'text-rose-500',
-            bg: currentBalance >= 0 ? 'bg-emerald-500/10' : 'bg-rose-500/10',
-          },
-          {
-            label: 'Entrada/Mês',
-            value: formatCurrency(monthlyIncome),
-            icon: TrendingUp,
-            color: 'text-emerald-500',
-            bg: 'bg-emerald-500/10',
-          },
-          {
-            label: 'Saída/Mês',
-            value: formatCurrency(monthlyExpense),
-            icon: TrendingDown,
-            color: 'text-rose-500',
-            bg: 'bg-rose-500/10',
-          },
-          {
-            label: 'Sobra/Mês',
-            value: formatCurrency(monthlyNet),
-            icon: monthlyNet >= 0 ? CheckCircle2 : AlertTriangle,
-            color: monthlyNet >= 0 ? 'text-primary' : 'text-amber-500',
-            bg: monthlyNet >= 0 ? 'bg-primary/10' : 'bg-amber-500/10',
-          },
-        ].map(kpi => (
-          <div
-            key={kpi.label}
-            className="bg-card border border-border/40 rounded-[2rem] p-5 flex items-center gap-4 shadow-sm"
-          >
-            <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0', kpi.bg)}>
-              <kpi.icon className={cn('w-5 h-5', kpi.color)} />
+      {/* BLOCO 1 — Diagnóstico do Fluxo Real */}
+      <Card className="rounded-[2.5rem] border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg font-black tracking-tight flex items-center gap-2">
+            <Target className="w-5 h-5 text-primary" /> Diagnóstico do Fluxo Real
+          </CardTitle>
+          <CardDescription className="text-xs font-bold uppercase tracking-widest opacity-60">Visão de caixa antes de gastos variáveis</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-5 rounded-[2rem] bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/10">
+              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-1">Renda Líquida</p>
+              <p className="text-xl font-black text-emerald-700 dark:text-emerald-300 tabular-nums">{formatCurrency(totalIncome)}</p>
             </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground truncate">
-                {kpi.label}
-              </p>
-              <p className={cn('text-lg font-black tabular-nums truncate', kpi.color)}>
-                {kpi.value}
-              </p>
+            <div className="p-5 rounded-[2rem] bg-rose-50 dark:bg-rose-500/5 border border-rose-100 dark:border-rose-500/10">
+              <p className="text-[10px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-400 mb-1">Gastos Fixos</p>
+              <p className="text-xl font-black text-rose-700 dark:text-rose-300 tabular-nums">{formatCurrency(totalFixedExpenses)}</p>
+            </div>
+            <div className="p-5 rounded-[2rem] bg-amber-50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/10">
+              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 mb-1">Parcelas Dívidas</p>
+              <p className="text-xl font-black text-amber-700 dark:text-amber-300 tabular-nums">{formatCurrency(totalDebtInstallments)}</p>
+            </div>
+            <div className={cn(
+              "p-5 rounded-[2rem] border",
+              diagnostico.sobraReal >= 0 
+                ? "bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/10" 
+                : "bg-rose-50 dark:bg-rose-500/5 border border-rose-100 dark:border-rose-500/10"
+            )}>
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Sobra Real</p>
+              <p className={cn(
+                "text-xl font-black tabular-nums",
+                diagnostico.sobraReal >= 0 ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"
+              )}>{formatCurrency(diagnostico.sobraReal)}</p>
             </div>
           </div>
-        ))}
-      </div>
 
-      {/* ── Insights automáticos ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-card border border-border/40 rounded-[2rem] p-6 flex items-start gap-4 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            <Calendar className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">
-              Recuperação do Saldo
-            </p>
-            <p className="font-black text-foreground mt-1 text-base">
-              {recoveryMonth
-                ? `☀️ ${recoveryMonth}`
-                : currentBalance >= 0
-                ? '✅ Já positivo'
-                : '⚠️ Fora do horizonte'}
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-1 font-medium leading-tight">
-              {recoveryMonth
-                ? `Saldo cruza zero em ${breakEvenIndex} meses`
-                : currentBalance >= 0
-                ? 'Seu saldo operacional atual já é positivo'
-                : 'As despesas fixas superam as entradas nos próximos 5 anos'}
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border/40 rounded-[2rem] p-6 flex items-start gap-4 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-5 h-5 text-rose-500" />
-          </div>
-          <div>
-            <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">
-              Pior Momento
-            </p>
-            <p className="font-black text-rose-500 mt-1 text-base">
-              {worstMonth ? worstMonth.label : '—'}
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-1 font-medium leading-tight">
-              {worstMonth ? `Saldo mínimo projetado de ${formatCurrency(worstMonth.saldo)}` : 'Sem dados de projeção'}
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border/40 rounded-[2rem] p-6 flex items-start gap-4 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
-            <Info className="w-5 h-5 text-blue-500" />
-          </div>
-          <div>
-            <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">
-              Modo de Cálculo
-            </p>
-            <div className="flex items-center gap-2 mt-2">
-              <button
-                onClick={() => setMode('fixed')}
-                className={cn(
-                  'px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border',
-                  mode === 'fixed'
-                    ? 'bg-primary border-primary text-white shadow-md'
-                    : 'bg-muted/50 border-border/40 text-muted-foreground hover:text-foreground'
-                )}
-              >
-                Fixo
-              </button>
-              <button
-                onClick={() => setMode('avg6')}
-                className={cn(
-                  'px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border',
-                  mode === 'avg6'
-                    ? 'bg-primary border-primary text-white shadow-md'
-                    : 'bg-muted/50 border-border/40 text-muted-foreground hover:text-foreground'
-                )}
-              >
-                Média 6M
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Gráfico principal ────────────────────────────────────────────── */}
-      <div className="bg-card border border-border/40 rounded-[2rem] p-8 shadow-sm">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">
-              Evolução do Saldo Projetado
-            </p>
-            <p className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-tight">Cenário acumulado com base em fluxos recorrentes</p>
-          </div>
-        </div>
-        <div style={{ height: 350 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={projection} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke={gridColor}
-                vertical={false}
-                opacity={0.3}
-              />
-              <XAxis
-                dataKey="label"
-                tick={{ fill: axisColor, fontSize: 10, fontWeight: 700 }}
-                axisLine={{ stroke: gridColor, opacity: 0.5 }}
-                tickLine={false}
-                interval="preserveStartEnd"
-                minTickGap={30}
-              />
-              <YAxis
-                tick={{ fill: axisColor, fontSize: 10, fontWeight: 700 }}
-                axisLine={{ stroke: gridColor, opacity: 0.5 }}
-                tickLine={false}
-                tickFormatter={formatAxisY}
-                width={50}
-              />
-              <Tooltip content={<CustomTooltip />} cursor={{ stroke: axisColor, strokeWidth: 1, opacity: 0.2 }} />
-              <Legend
-                verticalAlign="top"
-                align="right"
-                iconType="circle"
-                iconSize={8}
-                wrapperStyle={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', paddingBottom: 24 }}
-                formatter={(value) =>
-                  value === 'saldo'
-                    ? 'Saldo Acumulado'
-                    : value === 'receita'
-                    ? 'Entrada Mensal'
-                    : 'Saída Mensal'
-                }
-              />
-              <ReferenceLine
-                y={0}
-                stroke="hsl(var(--danger))"
-                strokeDasharray="6 3"
-                strokeWidth={1.5}
-                opacity={0.5}
-              />
-              {recoveryMonth && (
-                <ReferenceLine
-                  x={recoveryMonth}
-                  stroke="hsl(var(--primary))"
-                  strokeDasharray="6 3"
-                  strokeWidth={1.5}
-                  label={{
-                    value: 'VIRADA',
-                    fill: 'hsl(var(--primary))',
-                    fontSize: 9,
-                    fontWeight: 900,
-                    position: 'insideTopLeft',
-                    dy: -10
-                  }}
-                />
+          <div className="pt-2">
+            <Badge className={cn(
+              "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border-none shadow-none h-auto",
+              diagnostico.status === 'verde' ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" :
+              diagnostico.status === 'amarelo' ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" :
+              "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+            )}>
+              {diagnostico.status === 'verde' && `${diagnostico.indiceComprometimento.toFixed(0)}% comprometido — Saudável`}
+              {diagnostico.status === 'amarelo' && `${diagnostico.indiceComprometimento.toFixed(0)}% comprometido — Atenção`}
+              {diagnostico.status === 'vermelho' && (
+                <span className="leading-relaxed">
+                  {diagnostico.indiceComprometimento.toFixed(0)}% comprometido — Crítico — Você já comprometeu {diagnostico.indiceComprometimento.toFixed(0)}% da renda antes de qualquer gasto variável
+                </span>
               )}
-              <Line
-                type="monotone"
-                dataKey="saldo"
-                stroke="hsl(var(--primary))"
-                strokeWidth={3}
-                dot={false}
-                activeDot={{ r: 6, fill: 'hsl(var(--primary))', strokeWidth: 0 }}
-                name="saldo"
-                animationDuration={2000}
-              />
-              <Line
-                type="monotone"
-                dataKey="receita"
-                stroke="#10b981"
-                strokeWidth={1.5}
-                strokeDasharray="4 4"
-                dot={false}
-                activeDot={{ r: 4, fill: '#10b981', strokeWidth: 0 }}
-                name="receita"
-                opacity={0.4}
-              />
-              <Line
-                type="monotone"
-                dataKey="despesa"
-                stroke="#f43f5e"
-                strokeWidth={1.5}
-                strokeDasharray="4 4"
-                dot={false}
-                activeDot={{ r: 4, fill: '#f43f5e', strokeWidth: 0 }}
-                name="despesa"
-                opacity={0.4}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* ── Tabela de itens fixos ─────────────────────────────────────────── */}
+      {/* BLOCO 2 — Projeção de Quitação */}
+      <Card className="rounded-[2.5rem] border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-8">
+          <div>
+            <CardTitle className="text-lg font-black tracking-tight">Projeção de Quitação Total</CardTitle>
+            <CardDescription className="text-xs font-bold uppercase tracking-widest opacity-60 mt-1">Evolução do saldo devedor acumulado</CardDescription>
+          </div>
+          <Badge className="bg-primary/10 text-primary border-none rounded-xl px-3 py-1.5 font-black uppercase tracking-widest text-[10px] flex gap-2">
+            <Calendar className="w-3 h-3" /> Quita tudo em {format(addMonths(new Date(), estrategias.avalanche.prazoMeses), "MMM/yyyy", { locale: ptBR })}
+          </Badge>
+        </CardHeader>
+        <CardContent className="space-y-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {activeDebts.map(debt => {
+              const proj = calcularProjecaoDivida(debt);
+              return (
+                <div key={debt.id} className="p-5 rounded-[2rem] border border-gray-50 dark:border-zinc-800 bg-gray-50/30 dark:bg-zinc-900/30">
+                  <p className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-4">{debt.name}</p>
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Saldo Restante</span>
+                      <span className="text-sm font-black tabular-nums">{formatCurrency(debt.remainingAmount)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Data Est.</span>
+                      <span className="text-[11px] font-black text-primary uppercase">{format(proj.dataQuitacao, "MMM/yyyy", { locale: ptBR })}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Juros</span>
+                      <span className="text-[11px] font-black text-rose-500 tabular-nums">{formatCurrency(proj.totalJuros)}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="h-[260px] w-full pt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
+                <XAxis 
+                  dataKey="dataLabel" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fontWeight: 'bold', fill: '#A1A1AA' }}
+                  minTickGap={30}
+                />
+                <YAxis hide />
+                <Tooltip content={<CustomTooltip />} />
+                <Line 
+                  type="monotone" 
+                  dataKey="saldo" 
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={3} 
+                  dot={false}
+                  activeDot={{ r: 6, fill: 'hsl(var(--primary))' }}
+                  animationDuration={2000}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="flex justify-center">
+            <Badge className="bg-rose-500/5 text-rose-600 dark:text-rose-400 border-2 border-rose-500/10 rounded-2xl px-6 py-3 text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-rose-500/5">
+              Total de juros a pagar: {formatCurrency(activeDebts.reduce((sum, d) => sum + calcularProjecaoDivida(d).totalJuros, 0))}
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* BLOCO 3 — Simulador — E se eu abrir mão de... */}
+      <Card className="rounded-[2.5rem] border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <CardHeader>
+          <CardTitle className="text-lg font-black tracking-tight flex items-center gap-2">
+            <RefreshCw className="w-5 h-5 text-primary" /> Simulador de Impacto
+          </CardTitle>
+          <CardDescription className="text-xs font-bold uppercase tracking-widest opacity-60 mt-1">Selecione despesas fixas para projetar a economia</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-8">
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
+            {despesasFixasRanqueadas.map(despesa => (
+              <div key={despesa.id} className={cn(
+                "flex items-center justify-between p-5 rounded-[2rem] border transition-all duration-300",
+                selectedCuts.has(despesa.id) 
+                  ? "bg-primary/5 border-primary/20 shadow-inner" 
+                  : "bg-white dark:bg-zinc-900 border-gray-50 dark:border-zinc-800 shadow-sm"
+              )}>
+                <div className="flex items-center gap-5 min-w-0">
+                  <Switch 
+                    checked={selectedCuts.has(despesa.id)} 
+                    onCheckedChange={() => toggleCut(despesa.id)}
+                    className="data-[state=checked]:bg-primary"
+                  />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-black truncate text-foreground">{despesa.description}</p>
+                      {despesa.isTopImpact && <Badge className="bg-amber-500 text-white border-none text-[8px] h-4 font-black uppercase px-1.5 shadow-lg shadow-amber-500/20">Maior Alavanca 🏆</Badge>}
+                    </div>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{formatCurrency(despesa.amount)}/mês</p>
+                  </div>
+                </div>
+                <div className="text-right hidden sm:block">
+                  <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Preview do Impacto</p>
+                  <p className="text-xs font-black text-foreground tabular-nums">
+                    Economiza {despesa.impacto.mesesEconomizados} meses / {formatCurrency(despesa.impacto.jurosEconomizados)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-8 rounded-[2.5rem] bg-zinc-900 dark:bg-zinc-950 text-white shadow-2xl">
+            {selectedCuts.size > 0 ? (
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-1.5 text-center md:text-left">
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Resultado da Simulação</p>
+                  <p className="text-base font-bold text-zinc-100">
+                    Com os cortes selecionados: quita <span className="text-emerald-400 font-black">{simulacao.mesesEconomizados} meses antes</span> e economiza <span className="text-emerald-400 font-black">{formatCurrency(simulacao.jurosEconomizados)} em juros</span>.
+                  </p>
+                </div>
+                <Button className="rounded-2xl bg-white text-black hover:bg-zinc-200 font-black uppercase tracking-widest text-[11px] h-12 px-8 shadow-xl shadow-white/5 border-none shrink-0 transition-all">
+                  Gerar Plano
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                  <Info className="w-6 h-6 text-zinc-500" />
+                </div>
+                <p className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Selecione despesas acima para simular o impacto real</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* BLOCO 4 — Estratégia de Priorização */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Entradas */}
-        <div className="bg-card border border-border/40 rounded-[2rem] p-8 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-500 mb-6 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" /> Entradas Recorrentes Ativas
-          </p>
-          <div className="space-y-2">
-            {incomeItems.length === 0 && (
-              <p className="text-xs text-muted-foreground italic py-8 text-center opacity-50 font-medium tracking-tight border-2 border-dashed border-border/20 rounded-2xl">
-                Nenhuma entrada fixa cadastrada.
-              </p>
-            )}
-            {incomeItems.map(item => (
-              <div
-                key={item.id}
-                className={cn(
-                  'flex items-center justify-between p-4 rounded-2xl transition-all border',
-                  isEnabled(item.id)
-                    ? 'bg-emerald-500/5 border-emerald-500/20'
-                    : 'opacity-40 bg-muted/30 border-transparent grayscale'
-                )}
-              >
-                <div className="flex items-center gap-4">
-                  <Switch
-                    checked={isEnabled(item.id)}
-                    onCheckedChange={() => toggleItem(item.id)}
-                  />
-                  <span className="text-xs font-black text-foreground uppercase tracking-tight truncate max-w-[150px]">{item.label}</span>
-                </div>
-                <span className="text-xs font-black text-emerald-500 tabular-nums tracking-tighter">
-                  +{formatCurrency(mode === 'avg6' ? item.avgAmount : item.fixedAmount)}
-                </span>
+        <Card className={cn(
+          "rounded-[2.5rem] border-gray-100 dark:border-zinc-800 shadow-sm transition-all duration-500",
+          estrategias.recomendacao === 'bolaDNeve' ? "border-primary/30 bg-primary/[0.03] shadow-xl shadow-primary/5" : "opacity-80"
+        )}>
+          <CardHeader>
+            <div className="flex items-center gap-4 mb-3">
+              <div className="p-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 shadow-sm">
+                <SnowflakeIcon className="w-6 h-6 text-blue-400" />
               </div>
-            ))}
-          </div>
-          <div className="mt-6 pt-6 border-t border-border/40 flex justify-between items-center px-2">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-              Total de Entradas
-            </span>
-            <span className="text-lg font-black text-emerald-500 tabular-nums tracking-tighter">
-              +{formatCurrency(monthlyIncome)}
-            </span>
-          </div>
-        </div>
+              <CardTitle className="text-xl font-black tracking-tight uppercase tracking-[0.1em]">Bola de Neve</CardTitle>
+            </div>
+            <CardDescription className="text-[10px] font-black uppercase tracking-widest opacity-60">Foco em encerrar dívidas menores rápido</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-8">
+            <div className="flex justify-between p-5 rounded-[2rem] bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800">
+              <div className="text-center flex-1 border-r border-gray-50 dark:border-zinc-800">
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Prazo</p>
+                <p className="text-base font-black tabular-nums">{estrategias.bolaDNeve.prazoMeses} meses</p>
+              </div>
+              <div className="text-center flex-1">
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Juros</p>
+                <p className="text-base font-black text-rose-500 tabular-nums">{formatCurrency(estrategias.bolaDNeve.totalJuros)}</p>
+              </div>
+            </div>
+            <div className="space-y-3 px-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Ordem Sugerida:</p>
+              {estrategias.bolaDNeve.ordem.map((d, idx) => (
+                <div key={d.id} className="flex items-center gap-4 text-xs font-bold text-muted-foreground">
+                  <span className="w-6 h-6 rounded-xl bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-[11px] shrink-0 font-black">{idx + 1}</span>
+                  <span className="truncate text-foreground/80">{d.name}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Saídas */}
-        <div className="bg-card border border-border/40 rounded-[2rem] p-8 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-rose-500 mb-6 flex items-center gap-2">
-            <TrendingDown className="w-4 h-4" /> Saídas & Dívidas Ativas
-          </p>
-          <div className="space-y-2">
-            {expenseItems.length === 0 && (
-              <p className="text-xs text-muted-foreground italic py-8 text-center opacity-50 font-medium tracking-tight border-2 border-dashed border-border/20 rounded-2xl">
-                Nenhuma saída fixa cadastrada.
-              </p>
-            )}
-            {expenseItems.map(item => (
-              <div
-                key={item.id}
-                className={cn(
-                  'flex items-center justify-between p-4 rounded-2xl transition-all border',
-                  isEnabled(item.id)
-                    ? 'bg-rose-500/5 border-rose-500/20'
-                    : 'opacity-40 bg-muted/30 border-transparent grayscale'
-                )}
-              >
-                <div className="flex items-center gap-4">
-                  <Switch
-                    checked={isEnabled(item.id)}
-                    onCheckedChange={() => toggleItem(item.id)}
-                  />
-                  <span className="text-xs font-black text-foreground uppercase tracking-tight truncate max-w-[150px]">{item.label}</span>
-                </div>
-                <span className="text-xs font-black text-rose-500 tabular-nums tracking-tighter">
-                  -{formatCurrency(mode === 'avg6' ? item.avgAmount : item.fixedAmount)}
-                </span>
+        <Card className={cn(
+          "rounded-[2.5rem] border-gray-100 dark:border-zinc-800 shadow-sm transition-all duration-500",
+          estrategias.recomendacao === 'avalanche' ? "border-primary/30 bg-primary/[0.03] shadow-xl shadow-primary/5" : "opacity-80"
+        )}>
+          <CardHeader>
+            <div className="flex items-center gap-4 mb-3">
+              <div className="p-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 shadow-sm">
+                <ZapIcon className="w-6 h-6 text-amber-500" />
               </div>
-            ))}
-          </div>
-          <div className="mt-6 pt-6 border-t border-border/40 flex justify-between items-center px-2">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-              Total de Saídas
-            </span>
-            <span className="text-lg font-black text-rose-500 tabular-nums tracking-tighter">
-              -{formatCurrency(monthlyExpense)}
-            </span>
-          </div>
-        </div>
+              <CardTitle className="text-xl font-black tracking-tight uppercase tracking-[0.1em]">Avalanche</CardTitle>
+            </div>
+            <CardDescription className="text-[10px] font-black uppercase tracking-widest opacity-60">Matar os juros mais altos primeiro</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-8">
+            <div className="flex justify-between p-5 rounded-[2rem] bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800">
+              <div className="text-center flex-1 border-r border-gray-50 dark:border-zinc-800">
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Prazo</p>
+                <p className="text-base font-black tabular-nums">{estrategias.avalanche.prazoMeses} meses</p>
+              </div>
+              <div className="text-center flex-1">
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Juros</p>
+                <p className="text-base font-black text-rose-500 tabular-nums">{formatCurrency(estrategias.avalanche.totalJuros)}</p>
+              </div>
+            </div>
+            <div className="space-y-3 px-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 mb-4">Ordem Sugerida:</p>
+              {estrategias.avalanche.ordem.map((d, idx) => (
+                <div key={d.id} className="flex items-center gap-4 text-xs font-bold text-muted-foreground">
+                  <span className="w-6 h-6 rounded-xl bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-[11px] shrink-0 font-black">{idx + 1}</span>
+                  <span className="truncate text-foreground/80">{d.name}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      <div className="flex justify-center">
+        <Badge className="bg-primary/5 text-primary border-2 border-primary/10 rounded-2xl px-8 py-4 text-xs font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/5 h-auto text-center max-w-2xl leading-relaxed">
+          {estrategias.motivacao}
+        </Badge>
+      </div>
+
+      {/* BLOCO 5 — Ação Imediata */}
+      <Card className="rounded-[3rem] border-primary/30 bg-primary/[0.04] shadow-2xl shadow-primary/10 overflow-hidden relative">
+        <CardContent className="p-10">
+          <div className="flex flex-col lg:flex-row items-center gap-10 text-center lg:text-left">
+            <div className="w-20 h-20 rounded-[2.5rem] bg-primary flex items-center justify-center shadow-2xl shadow-primary/40 shrink-0 transform -rotate-3">
+              <ZapIcon className="w-10 h-10 text-white fill-current" />
+            </div>
+            <div className="flex-1 space-y-3">
+              <h3 className="text-2xl font-black tracking-tighter text-foreground uppercase tracking-[0.1em]">Sua maior alavanca agora</h3>
+              <p className="text-sm font-bold text-muted-foreground leading-relaxed max-w-xl">{acaoImediata}</p>
+            </div>
+            <Button 
+              onClick={() => navigate('/?view=debts')}
+              className="rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-black hover:scale-105 transition-transform font-black uppercase tracking-widest text-[11px] h-14 px-10 shadow-2xl border-none"
+            >
+              Ver Dívidas <ArrowRight className="w-4 h-4 ml-3" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
-  )
+  );
 }
