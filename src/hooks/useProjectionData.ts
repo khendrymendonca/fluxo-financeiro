@@ -41,7 +41,7 @@ export function useProjectionData() {
       const avg = getAvg6(t.id);
       return {
         id: t.id,
-        description: t.description,
+        label: t.description,
         type: t.type as 'income' | 'expense',
         fixedAmount: Number(t.amount),
         avgAmount: avg ?? Number(t.amount), // fallback para valor fixo se sem histórico
@@ -56,7 +56,7 @@ export function useProjectionData() {
       .filter(d => d.status === 'active')
       .map(d => ({
         id: d.id,
-        description: d.name,
+        label: d.name,
         type: 'expense' as const,
         fixedAmount: Number(d.installmentAmount) || Number(d.minimumPayment) || 0,
         avgAmount: Number(d.installmentAmount) || Number(d.minimumPayment) || 0,
@@ -65,6 +65,6 @@ export function useProjectionData() {
         categoryColor: '#ef4444',
       }));
 
-    return { items: [...items, ...debtItems] };
+    return [...items, ...debtItems];
   }, [transactions, categories, debts]);
 }
