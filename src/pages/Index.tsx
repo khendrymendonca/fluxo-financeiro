@@ -228,16 +228,9 @@ export default function Index() {
   }, []);
 
   const handleUndoPayment = useCallback(async (item: Transaction) => {
-    // 🛡️ ESTORNO INTELIGENTE: Se veio de uma recorrente e NÃO é parcelamento (fixa),
-    // deletamos o registro real para que ele volte a ser apenas uma "Projeção Virtual".
-    if (item.originalId && !item.installmentGroupId) {
-      await deleteTransaction(item, 'this');
-      toast({ title: "Lançamento estornado para o estado projetado." });
-    } else {
-      await togglePaid({ id: item.id, isPaid: false });
-      toast({ title: "Pagamento desfeito com sucesso." });
-    }
-  }, [deleteTransaction, togglePaid]);
+    await togglePaid({ id: item.id, isPaid: false, isChild: !!item.originalId });
+    toast({ title: "Pagamento estornado com sucesso." });
+  }, [togglePaid]);
 
   const handleToggleSidebar = useCallback((expanded: boolean) => {
     // No longer toggleable in Web
@@ -351,10 +344,10 @@ export default function Index() {
               {/* LINHA 3 — Contas a Pagar (Largura Total) */}
               <div className="hidden md:block animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300">
                 <div className="bg-card rounded-[2rem] border border-border/40 shadow-sm overflow-y-auto no-scrollbar h-[320px]">
-                  <PendingPayments 
-                    transactions={currentMonthTransactions} 
-                    accounts={accounts} 
-                    creditCards={creditCards} 
+                  <PendingPayments
+                    transactions={currentMonthTransactions}
+                    accounts={accounts}
+                    creditCards={creditCards}
                     viewDate={viewDate}
                   />
                 </div>

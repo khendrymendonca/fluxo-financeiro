@@ -200,7 +200,15 @@ export function useToggleTransactionPaid() {
 
   return useMutation({
     mutationKey: ['togglePaid'],
-    mutationFn: async ({ id, isPaid, date, accountId }: { id: string, isPaid: boolean, date?: string, accountId?: string }) => {
+    mutationFn: async ({ id, isPaid, date, accountId, isChild }: { id: string, isPaid: boolean, date?: string, accountId?: string, isChild?: boolean }) => {
+      // Se estamos estornando (isPaid = false) um filho de recorrente, nós fazemos HARD DELETE
+      // para forçar o sistema a recriar a contra-parte virtual intacta sem gerar "shadows"
+      if (!isPaid && isChild) {
+        const { error } = await supabase.from('transactions').delete().eq('id', id);
+        if (error) throw error;
+        return id;
+      }
+
       const paymentDate = isPaid ? (date || format(new Date(), 'yyyy-MM-dd')) : null;
       const updates: any = {
         is_paid: isPaid,

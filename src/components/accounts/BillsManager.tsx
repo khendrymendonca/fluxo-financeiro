@@ -423,7 +423,7 @@ export function BillsManager() {
                                             ) : (
                                                 <Button size="sm" variant="ghost"
                                                     onClick={async () => {
-                                                        await togglePaidMutation({ id: transaction.id, isPaid: false });
+                                                        await togglePaidMutation({ id: transaction.id, isPaid: false, isChild: !!transaction.originalId });
                                                         toast({ title: 'Pagamento estornado com sucesso.' });
                                                     }}
                                                     aria-label="Estornar conta"
