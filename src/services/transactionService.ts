@@ -41,7 +41,7 @@ export async function anticipateCardPayment({
     const invoiceMonthYear = calcInvoiceMonthYear(paymentDate, settings);
 
     // 3. INSERT 1: Débito na conta bancária (Tabela transactions)
-    const { error: debitError } = await supabase
+    const { data: debitData, error: debitError } = await supabase
       .from('transactions')
       .insert({
         user_id: userId,
@@ -53,36 +53,47 @@ export async function anticipateCardPayment({
         date: date,
         is_paid: true,
         payment_date: date,
-        category_id: 'card-payment'
-      });
+        category_id: null
+      })
+      .select('id')
+      .single();
 
     if (debitError) throw debitError;
 
-    // 4. INSERT 2: Crédito na fatura do cartão (Tabela bills)
-    // De acordo com a regra estrita do usuário: type: 'income', is_invoice_payment: true
+    // 4. INSERT 2: Crédito na fatura do cartão (Tabela transactions)
+    // type: 'income' + is_invoice_payment: true = abatimento que reduz o total da fatura
     const { error: creditError } = await supabase
-      .from('bills')
+      .from('transactions')
       .insert({
         user_id: userId,
         card_id: cardId,
-        description: `Abatimento de Fatura (Crédito)`,
+        description: `Abatimento de Fatura: ${card.name}`,
         amount: amount,
         type: 'income',
+        transaction_type: 'adjustment',
+        date: date,
         is_paid: true,
         payment_date: date,
         is_invoice_payment: true,
         invoice_month_year: invoiceMonthYear,
-        category_id: 'card-payment'
+        category_id: null
       });
 
-    if (creditError) throw creditError;
+    // 🔄 ROLLBACK MANUAL: se o crédito falhar, desfaz o débito via soft delete
+    if (creditError) {
+      await supabase
+        .from('transactions')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', debitData.id);
+      throw creditError;
+    }
 
     return { success: true };
   } catch (error: any) {
     console.error('[anticipateCardPayment] Failure:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Falha ao processar abatimento de fatura.' 
+    return {
+      success: false,
+      error: error.message || 'Falha ao processar abatimento de fatura.'
     };
   }
 }

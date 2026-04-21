@@ -106,8 +106,24 @@ export function useDeleteAccount() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('accounts').delete().eq('id', id);
+      const now = new Date().toISOString();
+
+      // 1. Soft delete da conta (padrão do sistema — requer coluna deleted_at em accounts)
+      const { error } = await supabase
+        .from('accounts')
+        .update({ deleted_at: now })
+        .eq('id', id);
       if (error) throw error;
+
+      // 2. 🗑️ Soft delete em cascata: transações não pagas vinculadas à conta
+      const { error: txError } = await supabase
+        .from('transactions')
+        .update({ deleted_at: now })
+        .eq('account_id', id)
+        .eq('is_paid', false)
+        .is('deleted_at', null);
+      if (txError) throw txError;
+
       return id;
     },
     onSuccess: () => {
@@ -130,36 +146,54 @@ export function useTransferBetweenAccounts() {
     mutationFn: async ({ from, to, amount, description, date, type = 'account', invoiceMonthYear }: { from: string, to: string, amount: number, description: string, date: string, type?: 'account' | 'card', invoiceMonthYear?: string }) => {
       if (!user) throw new Error('Utilizador não autenticado');
 
-      const txs = [
-        {
-          user_id: user.id,
-          description: `[Saída] ${description}`,
-          amount: amount,
-          type: 'expense',
-          account_id: from,
-          date: date,
-          is_paid: true,
-          payment_date: date,
-          is_transfer: true
-        },
-        {
-          user_id: user.id,
-          description: `[Entrada] ${description}`,
-          amount: amount,
-          type: 'income',
-          account_id: type === 'account' ? to : null,
-          card_id: type === 'card' ? to : null,
-          date: date,
-          is_paid: true,
-          payment_date: date,
-          is_invoice_payment: type === 'card',
-          invoice_month_year: invoiceMonthYear,
-          is_transfer: true
-        }
-      ];
+      const expenseBody = {
+        user_id: user.id,
+        description: `[Saída] ${description}`,
+        amount: amount,
+        type: 'expense',
+        account_id: from,
+        date: date,
+        is_paid: true,
+        payment_date: date,
+        is_transfer: true
+      };
 
-      const { error } = await supabase.from('transactions').insert(txs);
-      if (error) throw error;
+      const incomeBody = {
+        user_id: user.id,
+        description: `[Entrada] ${description}`,
+        amount: amount,
+        type: 'income',
+        account_id: type === 'account' ? to : null,
+        card_id: type === 'card' ? to : null,
+        date: date,
+        is_paid: true,
+        payment_date: date,
+        is_invoice_payment: type === 'card',
+        invoice_month_year: invoiceMonthYear,
+        is_transfer: true
+      };
+
+      // 1. INSERT 1 (Saída)
+      const { data: outData, error: outError } = await supabase
+        .from('transactions')
+        .insert(expenseBody)
+        .select('id')
+        .single();
+      if (outError) throw outError;
+
+      // 2. INSERT 2 (Entrada)
+      const { error: inError } = await supabase
+        .from('transactions')
+        .insert(incomeBody);
+
+      // 🔄 ROLLBACK MANUAL
+      if (inError) {
+        await supabase
+          .from('transactions')
+          .update({ deleted_at: new Date().toISOString() })
+          .eq('id', outData.id);
+        throw inError;
+      }
       return true;
     },
     onSuccess: () => {

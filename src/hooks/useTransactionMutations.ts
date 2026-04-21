@@ -43,7 +43,6 @@ export function useAddTransaction() {
           debt_id: tx.debtId || tx.debt_id || null,
           transaction_type: tx.transactionType || tx.transaction_type || 'punctual',
           original_id: tx.originalId || tx.original_id || null,
-          original_bill_id: tx.originalBillId || tx.original_bill_id || null,
           is_invoice_payment: tx.isInvoicePayment !== undefined ? tx.isInvoicePayment : (tx.is_invoice_payment || false),
           is_transfer: tx.isTransfer !== undefined ? tx.isTransfer : (tx.is_transfer || false),
           date: tx.date ? tx.date.slice(0, 10) : format(new Date(), 'yyyy-MM-dd'),
@@ -56,7 +55,7 @@ export function useAddTransaction() {
             'categoryId', 'subcategoryId', 'accountId', 'cardId', 'isPaid', 'paymentDate',
             'isRecurring', 'installmentGroupId', 'installmentNumber', 'installmentTotal',
             'invoiceMonthYear', 'isAutomatic', 'debtId', 'transactionType', 'cardClosingDay', 'cardDueDay',
-            'userId', 'isVirtual', 'originalId', 'originalBillId', 'isInvoicePayment', 'isTransfer'
+            'userId', 'isVirtual', 'originalId', 'isInvoicePayment', 'isTransfer'
           ].includes(key)) {
             clean[key] = mapped[key];
           }
@@ -339,7 +338,7 @@ export function useUpdateTransaction() {
 
       const groupId = currentTx.installment_group_id;
       const originalId = currentTx.original_id || (currentTx.is_recurring ? currentTx.id : null);
-      
+
       const isRecurringMother = !isVirtual && currentTx.is_recurring && !currentTx.original_id;
 
       // ======================================================================
@@ -347,7 +346,7 @@ export function useUpdateTransaction() {
       // ======================================================================
       if (applyScope === 'this' && (isVirtual || isRecurringMother)) {
         let targetDate = currentTx.date.slice(0, 10);
-        
+
         if (isVirtual) {
           const virtualParts = id.split('-virtual-');
           if (virtualParts.length === 2) {
@@ -459,7 +458,7 @@ export function useUpdateTransaction() {
         // Se o corte é no futuro (mês posterior), preservamos a mãe como pontual
         if (rootDate < finalDate) {
           await supabase.from('transactions')
-            .update({ is_recurring: false, transaction_type: 'recurring' })
+            .update({ is_recurring: false, transaction_type: 'punctual' })
             .eq('id', realId);
         } else {
           // Se o corte é na própria data da mãe ou antes, aí sim deletamos
@@ -525,7 +524,7 @@ export function useUpdateTransaction() {
       }
 
       const targetDateToApply = referenceDate ?? currentTx.date;
-      
+
       if (applyScope === 'all') {
         let query = supabase.from('transactions').update(dbUpdates).eq('is_paid', false).is('deleted_at', null);
         if (groupId) query = query.eq('installment_group_id', groupId);
@@ -669,19 +668,18 @@ export function useBulkDeleteTransactions() {
       }
 
       // 2. Executar Soft Deletes em lote
-      if (transactionIdsToUpdate.size > 0) {
+      // Nota: itens do tipo 'bill' vivem em 'transactions' (a tabela 'bills' não existe).
+      // Mescla ambos os sets e deleta numa única operação.
+      const allIdsToDelete = new Set([
+        ...Array.from(transactionIdsToUpdate),
+        ...Array.from(billIdsToUpdate)
+      ]);
+
+      if (allIdsToDelete.size > 0) {
         const { error } = await supabase
           .from('transactions')
           .update({ deleted_at: now })
-          .in('id', Array.from(transactionIdsToUpdate));
-        if (error) throw error;
-      }
-
-      if (billIdsToUpdate.size > 0) {
-        const { error } = await supabase
-          .from('bills')
-          .update({ deleted_at: now })
-          .in('id', Array.from(billIdsToUpdate));
+          .in('id', Array.from(allIdsToDelete));
         if (error) throw error;
       }
 
@@ -724,6 +722,7 @@ export function useAnticipateInstallments() {
         .select('id, installment_number')
         .eq('installment_group_id', installmentGroupId)
         .neq('id', transactionId)
+        .is('deleted_at', null)
         .order('installment_number', { ascending: true });
 
       if (fetchError) throw fetchError;

@@ -133,17 +133,9 @@ export function useDepositToGoal() {
       const finalGoalName = goalName || goal.name;
       const isWithdrawal = amount < 0;
 
-      // 2. Atualiza o valor da meta
-      const { error: updateError } = await supabase
-        .from('savings_goals')
-        .update({ current_amount: Number(goal.current_amount) + amount })
-        .eq('id', id);
-
-      if (updateError) throw updateError;
-
-      // 3. Cria a transação (Débito se for depósito, Crédito se for retirada)
+      // 2. Cria a transação PRIMEIRO (Débito se for depósito, Crédito se for retirada)
       const today = todayLocalString();
-      const { error: txError } = await supabase.from('transactions').insert({
+      const { data: txData, error: txError } = await supabase.from('transactions').insert({
         user_id: user.id,
         description: isWithdrawal ? `Retirada: Meta ${finalGoalName}` : `Depósito: Meta ${finalGoalName}`,
         amount: Math.abs(amount), // Valor absoluto
@@ -153,9 +145,25 @@ export function useDepositToGoal() {
         account_id: accountId,
         is_paid: true,
         payment_date: today
-      });
+      }).select('id').single();
 
       if (txError) throw txError;
+
+      // 3. Atualiza o valor da meta
+      const { error: updateError } = await supabase
+        .from('savings_goals')
+        .update({ current_amount: Number(goal.current_amount) + amount })
+        .eq('id', id);
+
+      // 🔄 ROLLBACK MANUAL
+      if (updateError) {
+        await supabase
+          .from('transactions')
+          .update({ deleted_at: new Date().toISOString() })
+          .eq('id', txData.id);
+        throw updateError;
+      }
+
       return true;
     },
     onSuccess: () => {

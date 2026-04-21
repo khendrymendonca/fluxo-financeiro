@@ -216,9 +216,12 @@ export default function CardsDashboard() {
     const isParcial = valorPago < totalFatura;
     const saldoRestante = totalFatura - valorPago;
 
+    // ID da transação de pagamento — usado para rollback se etapas seguintes falharem
+    let paymentTransactionIds: string[] = [];
+
     try {
       // 1. Criar transação de pagamento (BAIXA)
-      await addTransaction({
+      const paymentResult = await addTransaction({
         description: `Pagamento Fatura ${selectedCard.name} ${format(viewDate, 'MMM/yy', { locale: ptBR })}`,
         amount: valorPago,
         type: 'expense',
@@ -231,6 +234,11 @@ export default function CardsDashboard() {
         date: parseLocalDate(payInvoiceDate).toISOString(),
         paymentDate: payInvoiceDate
       } as any);
+
+      // Capturar os IDs inseridos para possível rollback
+      if (Array.isArray(paymentResult)) {
+        paymentTransactionIds = paymentResult.map((r: any) => r.id).filter(Boolean);
+      }
 
       // 2. Se parcial, criar saldo remanescente para o mês seguinte
       if (isParcial) {
@@ -272,7 +280,18 @@ export default function CardsDashboard() {
         // Pagamento TOTAL: marcar tudo como pago
         const ids = currentInvoiceTransactions.map(t => t.id);
         if (ids.length > 0) {
-          await bulkUpdateTransactions({ ids, updates: { isPaid: true, paymentDate: payInvoiceDate } });
+          try {
+            await bulkUpdateTransactions({ ids, updates: { isPaid: true, paymentDate: payInvoiceDate } });
+          } catch (bulkError) {
+            // 🔄 ROLLBACK MANUAL: desfaz a transação de pagamento criada no passo 1
+            if (paymentTransactionIds.length > 0) {
+              await supabase
+                .from('transactions')
+                .update({ deleted_at: new Date().toISOString() })
+                .in('id', paymentTransactionIds);
+            }
+            throw bulkError;
+          }
         }
       }
 
@@ -525,7 +544,10 @@ export default function CardsDashboard() {
                   <p className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Ações</p>
                   <div className="grid grid-cols-2 gap-3">
                     <button
-                      onClick={() => setShowAnticipatePayment(true)}
+                      onClick={() => {
+                        console.log('accounts ao abrir modal:', accounts);
+                        setShowAnticipatePayment(true);
+                      }}
                       className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-primary/40 hover:bg-primary/5 transition-all group"
                     >
                       <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
@@ -827,7 +849,10 @@ export default function CardsDashboard() {
                 <p className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Ações</p>
                 <div className="grid grid-cols-2 gap-3">
                   <button
-                    onClick={() => setShowAnticipatePayment(true)}
+                    onClick={() => {
+                      console.log('accounts ao abrir modal (mobile):', accounts);
+                      setShowAnticipatePayment(true);
+                    }}
                     className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-primary/40 hover:bg-primary/5 transition-all group"
                   >
                     <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
@@ -985,23 +1010,20 @@ export default function CardsDashboard() {
               {/* Seleção de Conta */}
               <div className="space-y-2">
                 <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Pagar com</label>
-                <Select value={payInvoiceAccountId} onValueChange={setPayInvoiceAccountId}>
-                  <SelectTrigger className="h-14 rounded-2xl border-2 border-muted bg-muted/30 font-bold text-sm">
-                    <SelectValue placeholder="Selecione a conta" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-2xl border-2 border-primary/10 bg-card">
-                    {accounts
-                      .filter(acc => acc.accountType !== 'investment' && acc.accountType !== 'metas')
-                      .map(acc => (
-                        <SelectItem key={acc.id} value={acc.id} className="rounded-xl font-bold py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: acc.color }} />
-                            {acc.bank} - {acc.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                <select
+                  value={payInvoiceAccountId}
+                  onChange={e => setPayInvoiceAccountId(e.target.value)}
+                  className="h-14 w-full rounded-2xl border-2 border-muted bg-muted/30 px-4 font-bold text-sm outline-none focus:border-primary/20 transition-all appearance-none"
+                >
+                  <option value="">Selecione a conta</option>
+                  {accounts
+                    .filter(acc => acc.accountType !== 'investment' && acc.accountType !== 'metas')
+                    .map(acc => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.bank} - {acc.name}
+                      </option>
+                    ))}
+                </select>
               </div>
 
               {/* Valor Pago */}

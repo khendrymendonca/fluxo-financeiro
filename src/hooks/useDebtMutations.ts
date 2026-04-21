@@ -96,7 +96,8 @@ export function useUpdateDebt() {
           .from('transactions')
           .select('id, date, amount')
           .eq('debt_id', id)
-          .eq('is_paid', false);
+          .eq('is_paid', false)
+          .is('deleted_at', null);
 
         if (fetchError) throw fetchError;
 
@@ -149,9 +150,22 @@ export function useDeleteDebt() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      // Exclusão do Acordo com Tratamento de Soft Delete (Cascata)
-      const { error } = await supabase.from('debts').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+      const now = new Date().toISOString();
+
+      // 1. Soft delete da dívida
+      const { error } = await supabase
+        .from('debts')
+        .update({ deleted_at: now })
+        .eq('id', id);
       if (error) throw error;
+
+      // 2. 🗑️ Soft delete em cascata: transações não pagas vinculadas à dívida
+      const { error: txError } = await supabase
+        .from('transactions')
+        .update({ deleted_at: now })
+        .eq('debt_id', id)
+        .is('deleted_at', null);
+      if (txError) throw txError;
 
       return id;
     },
@@ -196,6 +210,16 @@ export function useRenegotiateDebt() {
       const groupId = crypto.randomUUID();
       const baseDate = parseLocalDate(firstInstallmentDate || debt.startDate);
       const installments: any[] = [];
+
+      // 🛡️ INTEGRIDADE: Soft delete das parcelas antigas não pagas para evitar dupla cobrança
+      const { error: cleanupError } = await supabase
+        .from('transactions')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('debt_id', debt.id)
+        .eq('is_paid', false)
+        .is('deleted_at', null);
+
+      if (cleanupError) throw cleanupError;
 
       for (let i = 0; i < count; i++) {
         const currentInstDate = addMonths(baseDate, i);

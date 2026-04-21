@@ -10,13 +10,6 @@ import { useAnticipateCardPayment } from '@/hooks/useCreditCardMutations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { formatCurrency } from '@/utils/formatters';
 import { todayLocalString } from '@/utils/dateUtils';
 import { cn } from '@/lib/utils';
@@ -58,7 +51,11 @@ export function AnticipatePaymentDialog({ card, accounts, isOpen, onClose }: Ant
     }
   };
 
-  const filteredAccounts = accounts.filter(acc => acc.accountType !== 'investment' && acc.accountType !== 'metas');
+  const filteredAccounts = accounts.filter(acc => 
+    acc.accountType !== 'investment' && 
+    acc.accountType !== 'metas' &&
+    acc.id !== 'card-payment'
+  );
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/20 backdrop-blur-sm animate-in fade-in duration-300">
@@ -138,27 +135,16 @@ export function AnticipatePaymentDialog({ card, accounts, isOpen, onClose }: Ant
 
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Origem</Label>
-                <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-                  <SelectTrigger className="h-12 rounded-xl border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/30 font-bold text-xs">
-                    <SelectValue placeholder="Escolher conta" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-2xl border-zinc-100 dark:border-zinc-900">
-                    {filteredAccounts.length > 0 ? (
-                      filteredAccounts.map(acc => (
-                        <SelectItem key={acc.id} value={acc.id} className="font-bold text-xs py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: acc.color }} />
-                            {acc.name}
-                          </div>
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <p className="text-[10px] text-center py-4 text-muted-foreground uppercase font-black">
-                        Nenhuma conta encontrada
-                      </p>
-                    )}
-                  </SelectContent>
-                </Select>
+                <select
+                  value={selectedAccountId}
+                  onChange={e => setSelectedAccountId(e.target.value)}
+                  className="h-12 w-full rounded-xl border border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/30 px-4 font-bold text-xs focus:ring-zinc-200 transition-all outline-none appearance-none"
+                >
+                  <option value="">Escolher conta</option>
+                  {filteredAccounts.map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.bank} - {acc.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
