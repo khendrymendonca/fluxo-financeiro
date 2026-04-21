@@ -14,26 +14,29 @@ interface PendingPaymentsProps {
     transactions: Transaction[];
     accounts: Account[];
     creditCards: CreditCard[];
+    viewDate?: Date;
 }
 
-export function PendingPayments({ transactions, accounts, creditCards }: PendingPaymentsProps) {
+export function PendingPayments({ transactions, accounts, creditCards, viewDate }: PendingPaymentsProps) {
     const [period, setPeriod] = useState<FilterPeriod>('mes');
     const { mutate: togglePaid } = useToggleTransactionPaid();
 
+    const referenceDate = viewDate || startOfToday();
+
     const getDeadline = (period: FilterPeriod) => {
-        const today = startOfToday();
+        const baseDate = referenceDate;
         switch (period) {
-            case 'semana': return addDays(today, 7);
-            case 'quinzena': return addDays(today, 15);
-            case 'mes': return endOfMonth(today);
-            case 'ano': return endOfYear(today);
-            default: return endOfMonth(today);
+            case 'semana': return addDays(baseDate, 7);
+            case 'quinzena': return addDays(baseDate, 15);
+            case 'mes': return endOfMonth(baseDate);
+            case 'ano': return endOfYear(baseDate);
+            default: return endOfMonth(baseDate);
         }
     };
 
     const deadline = getDeadline(period);
     const today = startOfToday();
-    const currentMonthStart = startOfMonth(today);
+    const currentMonthStart = startOfMonth(referenceDate);
 
     const pending = transactions
         .filter(t => {

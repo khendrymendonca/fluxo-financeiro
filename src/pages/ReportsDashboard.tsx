@@ -203,7 +203,15 @@ export default function ReportsDashboard() {
     });
 
     return Array.from(distMap.entries())
-      .map(([name, value]) => ({ name, value }))
+      .map(([name, value]) => {
+        const cat = categories.find(c => c.name === name);
+        return { 
+            name, 
+            value, 
+            budgetLimit: cat?.budgetLimit ?? null,
+            color: cat?.color
+        };
+      })
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
   }, [transactions, categories, intervals, selectedAccountId]);
@@ -319,6 +327,7 @@ export default function ReportsDashboard() {
           value={metrics.totalExpenses} 
           icon={<ArrowDownCircle className="text-rose-500" />} 
           trend={metrics.trend >= 0 ? `+${metrics.trend.toFixed(0)}%` : `${metrics.trend.toFixed(0)}%`}
+          forceRed
         />
         <StatCard 
           label="Saldo do Período" 
@@ -412,16 +421,35 @@ export default function ReportsDashboard() {
           <div className="space-y-6">
             {topCategories.map((cat, idx) => {
               const percentage = metrics.totalExpenses > 0 ? (cat.value / metrics.totalExpenses) * 100 : 0;
+              
+              // Lógica de cor baseada no limite
+              const hasLimit = cat.budgetLimit !== null && cat.budgetLimit > 0;
+              const limitPercentage = hasLimit ? (cat.value / (cat.budgetLimit as number)) * 100 : 0;
+              
+              const barColor = !hasLimit ? "bg-primary" :
+                               limitPercentage > 100 ? "bg-rose-500" :
+                               limitPercentage > 80 ? "bg-amber-500" : "bg-emerald-500";
+
               return (
                 <div key={idx} className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="font-bold text-zinc-600 dark:text-zinc-400">{cat.name}</span>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-zinc-600 dark:text-zinc-400 leading-tight">{cat.name}</span>
+                      {hasLimit && (
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
+                          Meta: {formatCurrency(cat.budgetLimit as number)} ({limitPercentage.toFixed(0)}%)
+                        </span>
+                      )}
+                    </div>
                     <span className="font-black tabular-nums">{formatCurrency(cat.value)}</span>
                   </div>
                   <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-primary rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(var(--primary),0.3)]"
-                      style={{ width: `${percentage}%` }}
+                      className={cn(
+                        "h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(var(--primary),0.3)]",
+                        barColor
+                      )}
+                      style={{ width: `${hasLimit ? Math.min(limitPercentage, 100) : percentage}%` }}
                     />
                   </div>
                 </div>
@@ -437,7 +465,7 @@ export default function ReportsDashboard() {
   );
 }
 
-function StatCard({ label, value, icon, trend, isNeutral }: { label: string, value: number, icon: React.ReactNode, trend?: string, isNeutral?: boolean }) {
+function StatCard({ label, value, icon, trend, isNeutral, forceRed }: { label: string, value: number, icon: React.ReactNode, trend?: string, isNeutral?: boolean, forceRed?: boolean }) {
   return (
     <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-gray-100 dark:border-zinc-800 shadow-sm group hover:scale-[1.02] transition-all">
       <div className="flex justify-between items-start mb-4">
@@ -453,7 +481,7 @@ function StatCard({ label, value, icon, trend, isNeutral }: { label: string, val
       <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{label}</p>
       <p className={cn(
         "text-2xl font-black tracking-tighter mt-1",
-        !isNeutral && (value >= 0 ? "text-emerald-500" : "text-rose-500"),
+        forceRed ? "text-rose-500" : (!isNeutral && (value >= 0 ? "text-emerald-500" : "text-rose-500")),
         isNeutral && "text-gray-900 dark:text-zinc-50"
       )}>
         {formatCurrency(value)}

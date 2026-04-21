@@ -211,11 +211,6 @@ export default function CardsDashboard() {
       return;
     }
 
-    if (valorPago > totalFatura) {
-      toast({ title: "O valor pago não pode ser maior que o total da fatura", variant: "destructive" });
-      return;
-    }
-
     setIsProcessingPayment(true);
     const viewDateStr = format(viewDate, "yyyy-MM");
     const isParcial = valorPago < totalFatura;
@@ -228,7 +223,7 @@ export default function CardsDashboard() {
         amount: valorPago,
         type: 'expense',
         transactionType: 'punctual',
-        is_invoice_payment: true,
+        isInvoicePayment: true,
         accountId: payInvoiceAccountId,
         cardId: selectedCard.id,
         invoiceMonthYear: viewDateStr,
@@ -263,7 +258,7 @@ export default function CardsDashboard() {
           amount: saldoRestante,
           type: 'expense',
           transactionType: 'invoiceremainder',
-          is_invoice_payment: false,
+          isInvoicePayment: false,
           accountId: null,
           cardId: selectedCard.id,
           invoiceMonthYear: nextInvoiceMonthYear,
@@ -478,7 +473,7 @@ export default function CardsDashboard() {
                       <h2 className="text-5xl lg:text-6xl font-black tracking-tighter tabular-nums text-foreground">
                         {fmtBRL(currentInvoiceTotal)}
                       </h2>
-                      {dynamicStatus?.text !== 'Paga' && currentInvoiceTotal > 0 && (
+                      {dynamicStatus?.text !== 'Paga' && (
                         <Button
                           onClick={() => {
                             setPayInvoiceAmount(currentInvoiceTotal.toFixed(2));
@@ -779,7 +774,7 @@ export default function CardsDashboard() {
                     <h2 className="text-4xl font-black tracking-tighter tabular-nums text-foreground">
                       {fmtBRL(currentInvoiceTotal)}
                     </h2>
-                    {dynamicStatus?.text !== 'Paga' && currentInvoiceTotal > 0 && (
+                    {dynamicStatus?.text !== 'Paga' && (
                       <Button
                         onClick={() => {
                           setPayInvoiceAmount(currentInvoiceTotal.toFixed(2));
@@ -1062,6 +1057,7 @@ export default function CardsDashboard() {
         <Portal>
           <AnticipatePaymentDialog
             card={selectedCard}
+            accounts={accounts}
             isOpen={showAnticipatePayment}
             onClose={() => setShowAnticipatePayment(false)}
           />

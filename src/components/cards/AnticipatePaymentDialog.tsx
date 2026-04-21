@@ -6,7 +6,6 @@ import {
   CreditCard as CardIcon,
   Loader2
 } from 'lucide-react';
-import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useAnticipateCardPayment } from '@/hooks/useCreditCardMutations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,16 +20,16 @@ import {
 import { formatCurrency } from '@/utils/formatters';
 import { todayLocalString } from '@/utils/dateUtils';
 import { cn } from '@/lib/utils';
-import { CreditCard } from '@/types/finance';
+import { CreditCard, Account } from '@/types/finance';
 
 interface AnticipatePaymentDialogProps {
   card: CreditCard;
+  accounts: Account[];
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function AnticipatePaymentDialog({ card, isOpen, onClose }: AnticipatePaymentDialogProps) {
-  const { accounts } = useFinanceStore();
+export function AnticipatePaymentDialog({ card, accounts, isOpen, onClose }: AnticipatePaymentDialogProps) {
   const { mutateAsync: anticipatePayment } = useAnticipateCardPayment();
   
   const [amount, setAmount] = useState<string>('');
@@ -58,6 +57,8 @@ export function AnticipatePaymentDialog({ card, isOpen, onClose }: AnticipatePay
       setIsSubmitting(false);
     }
   };
+
+  const filteredAccounts = accounts.filter(acc => acc.accountType !== 'investment' && acc.accountType !== 'metas');
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/20 backdrop-blur-sm animate-in fade-in duration-300">
@@ -142,17 +143,15 @@ export function AnticipatePaymentDialog({ card, isOpen, onClose }: AnticipatePay
                     <SelectValue placeholder="Escolher conta" />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-zinc-100 dark:border-zinc-900">
-                    {accounts && accounts.length > 0 ? (
-                      accounts
-                        .filter(acc => acc.accountType !== 'investment' && acc.accountType !== 'metas')
-                        .map(acc => (
-                          <SelectItem key={acc.id} value={acc.id} className="font-bold text-xs py-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: acc.color }} />
-                              {acc.name}
-                            </div>
-                          </SelectItem>
-                        ))
+                    {filteredAccounts.length > 0 ? (
+                      filteredAccounts.map(acc => (
+                        <SelectItem key={acc.id} value={acc.id} className="font-bold text-xs py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: acc.color }} />
+                            {acc.name}
+                          </div>
+                        </SelectItem>
+                      ))
                     ) : (
                       <p className="text-[10px] text-center py-4 text-muted-foreground uppercase font-black">
                         Nenhuma conta encontrada

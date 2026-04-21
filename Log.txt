@@ -1,0 +1,29 @@
+LOG DE ALTERAÇÕES - 20/04/2026
+
+1º — Abatimento de Fatura:
+   - Arquivo: src/components/cards/AnticipatePaymentDialog.tsx
+   - Alteração: Adicionado estado 'loading' do useFinanceStore e feedback visual no Select de contas.
+
+2º — Permitir abatimento com fatura R$0,00:
+   - Arquivo: src/pages/CardsDashboard.tsx
+   - Alteração: Removida condição 'currentInvoiceTotal > 0' para exibição do botão de pagamento (desktop/mobile).
+   - Alteração: Removida validação de 'valorPago > totalFatura' no método handleConfirmPayment.
+
+3º — Contas fixas no Dashboard ao mudar o mês:
+   - Arquivo: src/pages/Index.tsx
+   - Alteração: Passagem da prop 'viewDate' para o componente PendingPayments.
+   - Arquivo: src/components/dashboard/PendingPayments.tsx
+   - Alteração: Implementada prop 'viewDate' e ajuste na lógica de 'deadline' e 'atrasados' usando o mês de referência.
+
+4º — Cor de Despesas nos Relatórios:
+   - Arquivo: src/pages/ReportsDashboard.tsx
+   - Alteração: Adicionada prop 'forceRed' no StatCard e aplicada no card de Despesas.
+
+5º — Limite de Orçamento por Categoria:
+   - Arquivo: src/components/settings/CategoriesManager.tsx
+   - Alteração: Adicionado campo 'budgetLimit' no estado e no formulário de edição de categoria.
+   - Arquivo: src/pages/ReportsDashboard.tsx
+   - Alteração: Atualizado useMemo 'topCategories' para incluir budgetLimit.
+   - Alteração: Nova renderização da lista de categorias com barra de progresso colorida dinamicamente (Verde/Amarelo/Vermelho) conforme o limite.
+   - Arquivo: src/hooks/useCategoryMutations.ts
+   - Alteração: Corrigido o mapeamento do campo 'budgetLimit' para 'budget_limit' (snake_case) nos métodos useAddCategory e useUpdateCategory, garantindo a persistência no Supabase.

@@ -378,6 +378,7 @@ function EditCategoryDialog({
     const [icon, setIcon] = useState(category.icon || 'Tag');
     const [isFixed, setIsFixed] = useState(category.isFixed);
     const [budgetGroup, setBudgetGroup] = useState<BudgetGroup>(category.budgetGroup);
+    const [budgetLimit, setBudgetLimit] = useState<string>(category.budgetLimit ? String(category.budgetLimit) : '');
     const [newSubName, setNewSubName] = useState('');
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -387,7 +388,17 @@ function EditCategoryDialog({
     const handleSave = () => {
         if (!name.trim()) return;
         updateCategory(
-            { id: category.id, updates: { name: name.trim(), color, icon, isFixed, budgetGroup } },
+            { 
+                id: category.id, 
+                updates: { 
+                    name: name.trim(), 
+                    color, 
+                    icon, 
+                    isFixed, 
+                    budgetGroup,
+                    budgetLimit: budgetLimit ? parseFloat(budgetLimit) : null
+                } 
+            },
             { onSuccess: onClose }
         );
     };
@@ -442,6 +453,17 @@ function EditCategoryDialog({
                         <div className="flex items-center justify-between p-3.5 rounded-xl bg-background border border-border/30">
                             <Label className="text-[10px] font-black uppercase tracking-widest">Conta Fixa</Label>
                             <Switch checked={isFixed} onCheckedChange={setIsFixed} />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Limite Mensal (R$)</Label>
+                            <Input
+                                type="number"
+                                value={budgetLimit}
+                                onChange={e => setBudgetLimit(e.target.value)}
+                                placeholder="Sem limite"
+                                className="h-11 rounded-xl border border-border/50 bg-background focus:ring-2 focus:ring-primary/20 transition-all font-bold px-4"
+                            />
                         </div>
 
                         <IconSelector label="Ícone" selectedIcon={icon} onSelect={setIcon} color={color} />

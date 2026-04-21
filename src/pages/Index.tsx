@@ -351,7 +351,12 @@ export default function Index() {
               {/* LINHA 3 — Contas a Pagar (Largura Total) */}
               <div className="hidden md:block animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300">
                 <div className="bg-card rounded-[2rem] border border-border/40 shadow-sm overflow-y-auto no-scrollbar h-[320px]">
-                  <PendingPayments transactions={currentMonthTransactions} accounts={accounts} creditCards={creditCards} />
+                  <PendingPayments 
+                    transactions={currentMonthTransactions} 
+                    accounts={accounts} 
+                    creditCards={creditCards} 
+                    viewDate={viewDate}
+                  />
                 </div>
               </div>
 

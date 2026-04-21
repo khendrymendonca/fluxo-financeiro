@@ -21,8 +21,9 @@ export function useAddCategory() {
         group_id: category.groupId,
         budget_group: category.budgetGroup,
         is_fixed: category.isFixed || false,
+        budget_limit: category.budgetLimit || null,
         user_id: user.id
-      }).select('id, name, type, icon, color, group_id, is_active, budget_group, is_fixed');
+      }).select('id, name, type, icon, color, group_id, is_active, budget_group, is_fixed, budget_limit');
 
       if (error) throw error;
       return data;
@@ -50,7 +51,8 @@ export function useUpdateCategory() {
         group_id: updates.groupId,
         budget_group: updates.budgetGroup,
         is_fixed: updates.isFixed,
-        is_active: updates.isActive
+        is_active: updates.isActive,
+        budget_limit: updates.budgetLimit !== undefined ? updates.budgetLimit : undefined
       };
 
       if (updates.name !== undefined) {
@@ -61,7 +63,7 @@ export function useUpdateCategory() {
         .from('categories')
         .update(dbUpdates)
         .eq('id', id)
-        .select('id, name, type, icon, color, group_id, is_active, budget_group, is_fixed');
+        .select('id, name, type, icon, color, group_id, is_active, budget_group, is_fixed, budget_limit');
 
       if (error) throw error;
       return data;
