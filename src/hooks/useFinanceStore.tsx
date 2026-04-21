@@ -158,7 +158,7 @@ function useFinanceProvider() {
       }
 
       // ✅ Pagamento de Fatura (Baixa): usar invoiceMonthYear como referência
-      if (t.categoryId === 'card-payment' && t.invoiceMonthYear) {
+      if (t.isInvoicePayment && t.invoiceMonthYear) {
         const [year, month] = t.invoiceMonthYear.split('-').map(Number);
         if (viewMode === 'day') return month - 1 === viewDate.getMonth() && year === viewDate.getFullYear();
         if (viewMode === 'year') return year === viewDate.getFullYear();
@@ -319,12 +319,9 @@ function useFinanceProvider() {
 
         // 2. Ignora marcações de pagamento de fatura e itens deletados
         // ✅ Mantemos estornos/abatimentos (income) mesmo que marcados como isInvoicePayment
-        if (t.categoryId === 'card-payment' || (t.isInvoicePayment && t.type === 'expense') || t.deleted_at) return false;
+        if ((t.isInvoicePayment && t.type === 'expense') || t.deleted_at) return false;
 
-        // 3. SE ESTÁ PAGO, LIBEROU O LIMITE (Apenas para despesas)
-        if (t.isPaid && t.type === 'expense') return false;
-
-        // 4. Assinaturas (Spotify/Netflix) do futuro não comprometem o limite global hoje.
+        // 3. Assinaturas (Spotify/Netflix) do futuro não comprometem o limite global hoje.
         const txDate = parseLocalDate(t.date.slice(0, 10));
         const isInstallment = (t.installmentTotal || 0) > 1;
         const today = new Date();

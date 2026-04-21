@@ -13,6 +13,7 @@ import { Portal } from '@/components/ui/Portal';
 import { cn } from '@/lib/utils';
 import { format, isSameMonth, isSameYear, isBefore, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useIsMutating } from '@tanstack/react-query';
 import { getCardSettingsForDate, calcInvoiceMonthYear } from '@/utils/creditCardUtils';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
 import { BulkDeleteDialog } from '../transactions/BulkDeleteDialog';
@@ -49,6 +50,7 @@ export function BillsManager() {
     const { mutateAsync: addTransactionMutation } = useAddTransaction();
     const { mutateAsync: togglePaidMutation } = useToggleTransactionPaid();
     const { mutateAsync: bulkUpdateMutation } = useBulkUpdateTransactions();
+    const isMutating = useIsMutating({ mutationKey: ['togglePaid'] });
 
     const viewDateStr = format(viewDate, 'yyyy-MM');
 
@@ -71,11 +73,11 @@ export function BillsManager() {
         cardId?: string;
     } | null>(null);
 
-    const handleMarkAsPaid = async (targetId: string, isCard: boolean) => {
-        if (!isPaying || isSubmitting) return;
+    const handleMarkAsPaid = async (transaction: Transaction, targetId: string, isCard: boolean) => {
+        if (isSubmitting) return;
         setIsSubmitting(true);
 
-        const amountValue = paymentAmount ? parseFloat(paymentAmount) : isPaying.amount;
+        const amountValue = paymentAmount ? parseFloat(paymentAmount) : transaction.amount;
         const pDate = parseLocalDate(paymentDate);
 
         let finalInvoiceMonthYear: string | undefined = undefined;
@@ -87,35 +89,35 @@ export function BillsManager() {
         }
 
         try {
-            if (isPaying.isVirtual) {
-                const isCardInvoice = isPaying.categoryId === 'card-payment';
+            if (transaction.isVirtual) {
+                const isCardInvoice = transaction.isInvoicePayment === true;
 
                 // 1. Criar transação física de pagamento
                 await addTransactionMutation({
-                    description: isPaying.description,
+                    description: transaction.description,
                     amount: amountValue,
-                    type: isPaying.type,
+                    type: transaction.type,
                     transactionType: 'punctual',
                     isRecurring: false,
-                    date: isPaying.date,
+                    date: transaction.date,
                     isPaid: true,
                     paymentDate: paymentDate,
                     accountId: isCard ? null : targetId,
-                    cardId: (isCard && !isCardInvoice) ? null : (isCard ? targetId : null),
+                    cardId: isCardInvoice ? transaction.cardId : (isCard ? targetId : null),
                     isInvoicePayment: isCardInvoice,
-                    invoiceMonthYear: isCardInvoice ? isPaying.invoiceMonthYear : null,
-                    categoryId: isCardInvoice ? 'card-payment' : isPaying.categoryId,
-                    subcategoryId: isCardInvoice ? undefined : isPaying.subcategoryId,
-                    originalId: isPaying.originalId
+                    invoiceMonthYear: isCardInvoice ? transaction.invoiceMonthYear : null,
+                    categoryId: isCardInvoice ? null : transaction.categoryId,
+                    subcategoryId: isCardInvoice ? undefined : transaction.subcategoryId,
+                    originalId: transaction.originalId
                 });
 
                 if (isCardInvoice) {
                     // 2. Marcar transações individuais da fatura como pagas em lote
                     const txsToMarkAsPaid = transactions.filter(t =>
-                        t.cardId === isPaying.cardId &&
+                        t.cardId === transaction.cardId &&
                         !t.isPaid &&
-                        t.categoryId !== 'card-payment' &&
-                        t.invoiceMonthYear === isPaying.invoiceMonthYear
+                        !t.isInvoicePayment &&
+                        t.invoiceMonthYear === transaction.invoiceMonthYear
                     );
 
                     if (txsToMarkAsPaid.length > 0) {
@@ -127,7 +129,7 @@ export function BillsManager() {
                 }
             } else {
                 await updateTransactionMutation({
-                    id: isPaying.id,
+                    id: transaction.id,
                     updates: {
                         isPaid: true,
                         paymentDate: paymentDate,
@@ -155,7 +157,7 @@ export function BillsManager() {
             // Verifica se já existe um pagamento físico (baixado ou não) para esta fatura
             const physicalPaymentExists = transactions.some(t =>
                 t.cardId === card.id &&
-                t.categoryId === 'card-payment' &&
+                t.isInvoicePayment &&
                 t.invoiceMonthYear === viewDateStr
             );
 
@@ -166,7 +168,7 @@ export function BillsManager() {
                 .filter(t =>
                     t.cardId === card.id &&
                     !t.isVirtual &&
-                    t.categoryId !== 'card-payment' &&
+                    !t.isInvoicePayment &&
                     t.invoiceMonthYear === viewDateStr
                 )
                 .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
@@ -183,10 +185,11 @@ export function BillsManager() {
                 date: cardDueDate.toISOString(),
                 type: 'expense',
                 transactionType: 'recurring', // Marcar como recorrente para fluxos de caixa
-                categoryId: 'card-payment',
+                categoryId: null,
                 cardId: card.id,
                 isPaid: false,
                 isVirtual: true,
+                isInvoicePayment: true,
                 userId: '',
                 invoiceMonthYear: viewDateStr
             } as Transaction;
@@ -196,14 +199,14 @@ export function BillsManager() {
     // 2. Filtrar transações recorrentes e injetar as virtuais
     const recurringTransactions = [...transactions, ...virtualInvoices].filter(t => {
         // Bloqueio de Isolamento: O Gerenciador de Contas não deve vazar lançamentos "pontuais".
-        const isRecurringType = t.isRecurring || t.transactionType === 'recurring' || t.transactionType === 'installment' || t.categoryId === 'card-payment' || !!t.originalId;
+        const isRecurringType = t.isRecurring || t.transactionType === 'recurring' || t.transactionType === 'installment' || t.isInvoicePayment || !!t.originalId;
         if (!t.isVirtual && !isRecurringType) {
             return false;
         }
 
         // Esconder compras individuais feitas no cartão de crédito (estas são liquidadas via fatura)
         // Mas permite se for uma transação recorrente (fixa) ou filha de uma recorrente
-        if (t.cardId && t.categoryId !== 'card-payment' && !t.isRecurring && t.transactionType !== 'recurring' && !t.originalId) return false;
+        if (t.cardId && !t.isInvoicePayment && !t.isRecurring && t.transactionType !== 'recurring' && !t.originalId) return false;
 
         const txDate = parseLocalDate(t.date.slice(0, 10));
 
@@ -283,7 +286,7 @@ export function BillsManager() {
             </div>
 
             {/* Lista de Contas */}
-            <div className="grid gap-3">
+            <div className={cn("grid gap-3 transition-opacity duration-200", isMutating > 0 && "pointer-events-none opacity-60")}>
                 {recurringTransactions.length === 0 ? (
                     <div className="card-elevated p-12 text-center text-muted-foreground">
                         <Receipt className="w-12 h-12 mx-auto mb-4 opacity-10" />
@@ -311,7 +314,7 @@ export function BillsManager() {
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2">
                                                 <h4 className="font-bold truncate">{transaction.description}</h4>
-                                                {transaction.categoryId === 'card-payment' && (
+                                                {transaction.isInvoicePayment && (
                                                     <button
                                                         onClick={e => { e.stopPropagation(); setExpandedTransactionId(expandedTransactionId === transaction.id ? null : transaction.id); }}
                                                         aria-label={expandedTransactionId === transaction.id ? 'Ocultar detalhes' : 'Ver detalhes'}
@@ -419,14 +422,9 @@ export function BillsManager() {
                                                 </Button>
                                             ) : (
                                                 <Button size="sm" variant="ghost"
-                                                    onClick={() => {
-                                                        // 🛡️ ESTORNO INTELIGENTE:
-                                                        if (transaction.originalId && !transaction.installmentGroupId) {
-                                                            deleteTransactionMutation({ transaction, applyScope: 'this' });
-                                                            toast({ title: "Lançamento estornado para o estado projetado." });
-                                                        } else {
-                                                            togglePaidMutation({ id: transaction.id, isPaid: false });
-                                                        }
+                                                    onClick={async () => {
+                                                        await togglePaidMutation({ id: transaction.id, isPaid: false });
+                                                        toast({ title: 'Pagamento estornado com sucesso.' });
                                                     }}
                                                     aria-label="Estornar conta"
                                                     className="h-10 px-3 md:px-4 rounded-xl bg-amber-500/5 text-amber-600 hover:bg-amber-500/10 flex items-center gap-2 font-black uppercase text-xs tracking-wider">
@@ -447,7 +445,7 @@ export function BillsManager() {
                                 </div>
 
                                 {/* Detalhes da Fatura (Expansão) */}
-                                {expandedTransactionId === transaction.id && transaction.categoryId === 'card-payment' && (
+                                {expandedTransactionId === transaction.id && transaction.isInvoicePayment && (
                                     <div className="card-elevated bg-muted/20 border-t-0 rounded-t-none p-4 -mt-1 ml-4 mr-2 animate-in slide-in-from-top-2 duration-200">
                                         <h5 className="text-xs font-black uppercase text-muted-foreground mb-3 flex items-center gap-2">
                                             <Plus className="w-3 h-3" /> Itens desta Fatura (Recorrentes)
@@ -457,7 +455,7 @@ export function BillsManager() {
                                                 .filter(t =>
                                                     t.cardId === transaction.cardId &&
                                                     !t.isPaid &&
-                                                    t.categoryId !== 'card-payment' &&
+                                                    !t.isInvoicePayment &&
                                                     (t.isRecurring || t.transactionType === 'recurring') &&
                                                     t.invoiceMonthYear === viewDateStr
                                                 )
@@ -480,7 +478,7 @@ export function BillsManager() {
                                             {transactions.filter(t =>
                                                 t.cardId === transaction.cardId &&
                                                 !t.isPaid &&
-                                                t.categoryId !== 'card-payment' &&
+                                                !t.isInvoicePayment &&
                                                 (t.isRecurring || t.transactionType === 'recurring') &&
                                                 t.invoiceMonthYear === viewDateStr
                                             ).length === 0 && (
@@ -558,7 +556,7 @@ export function BillsManager() {
                                             const hasEnoughWithOverdraft = acc.hasOverdraft && availableTotal >= isPaying.amount;
                                             const insufficientFunds = wouldGoNegative && !hasEnoughWithOverdraft;
                                             return (
-                                                <button key={acc.id} onClick={() => handleMarkAsPaid(acc.id, false)}
+                                                <button key={acc.id} onClick={() => isPaying && handleMarkAsPaid(isPaying, acc.id, false)}
                                                     disabled={insufficientFunds || isSubmitting}
                                                     className={cn("w-full p-4 rounded-xl border-2 text-left transition-all",
                                                         (insufficientFunds || isSubmitting) ? "border-border/30 opacity-40 cursor-not-allowed" :
@@ -593,7 +591,7 @@ export function BillsManager() {
                                         <p className="text-center text-muted-foreground py-8 text-sm">Nenhum cartão cadastrado.</p>
                                     ) : (
                                         creditCards.map(card => (
-                                            <button key={card.id} onClick={() => handleMarkAsPaid(card.id, true)}
+                                            <button key={card.id} onClick={() => isPaying && handleMarkAsPaid(isPaying, card.id, true)}
                                                 disabled={isSubmitting}
                                                 className={cn("w-full p-4 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] transition-all text-left cursor-pointer",
                                                     isSubmitting && "opacity-40 cursor-not-allowed")}
@@ -635,7 +633,7 @@ export function BillsManager() {
                         <AlertDialogAction
                             onClick={() => {
                                 if (billToConfirm) {
-                                    const tx = transactions.find(t => t.id === billToConfirm.id);
+                                    const tx = recurringTransactions.find(t => t.id === billToConfirm.id);
                                     if (tx) {
                                         setIsPaying(tx);
                                         setPaymentDate(billToConfirm.date);

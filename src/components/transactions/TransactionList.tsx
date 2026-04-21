@@ -86,7 +86,7 @@ export function TransactionList({
     // Apenas Recorrentes, Parcelamentos e Faturas seguem o status isPaid.
     const isRecurringOrInstallment = t.isRecurring || t.transactionType === 'recurring' || t.installmentGroupId;
     const isPending = isRecurringOrInstallment ? !t.isPaid : false;
-    
+
     return { ...t, isPending };
   });
 
@@ -110,7 +110,7 @@ export function TransactionList({
     .filter(t => {
       // 1. Bloqueia faturas de cartão consolidadas e pagamentos de fatura (DESPESAS)
       // ✅ Estornos/abatimentos (income) devem ser exibidos
-      if (t.categoryId === 'card-payment' || (t.isInvoicePayment && t.type === 'expense')) return false;
+      if (t.isInvoicePayment && t.type === 'expense') return false;
 
       // 2. Bloqueia projeções virtuais — pertencem à Gestão de Contas
       if (t.isVirtual) return false;
@@ -370,10 +370,10 @@ export function TransactionList({
                   // 🛡️ REGRA DE INTEGRIDADE: Lançamentos originados na Gestão de Contas são "bloqueados" no Extrato.
                   // A única ação permitida é o Estorno. Cópia e Edição são proibidas aqui.
                   const isManagedByBills = Boolean(
-                    item.isRecurring || 
-                    item.transactionType === 'recurring' || 
-                    item.installmentGroupId || 
-                    item.isInvoicePayment || 
+                    item.isRecurring ||
+                    item.transactionType === 'recurring' ||
+                    item.installmentGroupId ||
+                    item.isInvoicePayment ||
                     item.originalId
                   );
 
@@ -395,8 +395,8 @@ export function TransactionList({
                       )} onClick={() => {
                         if (isSelectionMode) toggleSelectId(item.id);
                         else if (!isManagedByBills) onEdit(item as Transaction);
-                        else toast({ 
-                          title: "Lançamento Protegido", 
+                        else toast({
+                          title: "Lançamento Protegido",
                           description: "Este item é gerenciado pela Gestão de Contas. Para editar, use o estorno ou altere o lançamento mestre.",
                           variant: "default"
                         });
@@ -436,7 +436,7 @@ export function TransactionList({
                           <span className={cn("font-bold text-sm", isIncome ? "text-success" : "text-gray-900 dark:text-white")}>
                             {isIncome ? '+' : '-'} {formatCurrency(item.amount)}
                           </span>
-                          
+
                           {/* Ações protegidas */}
                           <div className="flex items-center gap-2">
                             {/* Botão Estornar (Apenas Gerenciados pela Gestão de Contas) */}
@@ -468,7 +468,7 @@ export function TransactionList({
                                 <Copy className="w-4 h-4" />
                               </button>
                             )}
-                            
+
                             {!isManagedByBills && (
                               <ArrowRight className="w-4 h-4 text-gray-200 dark:text-zinc-800 group-hover:text-gray-400 dark:group-hover:text-zinc-600 transition-colors" />
                             )}

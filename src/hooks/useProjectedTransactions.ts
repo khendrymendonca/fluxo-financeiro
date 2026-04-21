@@ -17,7 +17,7 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
       if (!isShadow && tx.isVirtual) return false;
       if (!isShadow && (tx as any).deleted_at) return false;
 
-      if (tx.categoryId === 'card-payment' && tx.invoiceMonthYear) {
+      if (tx.isInvoicePayment && tx.invoiceMonthYear) {
         const [year, month] = tx.invoiceMonthYear.split('-').map(Number);
         return month - 1 === targetMonth && year === targetYear;
       }
@@ -74,8 +74,8 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
 
           if (!hasMoreRecentInPast) {
             const hasGroupInTargetMonth = realTransactions.some(real => real.installmentGroupId === tx.installmentGroupId);
-            const hasRealEquivalent = realTransactions.some(real => 
-              real.originalId === tx.id || 
+            const hasRealEquivalent = realTransactions.some(real =>
+              real.originalId === tx.id ||
               (real.id === tx.id && isSameMonth(parseLocalDate(real.date.slice(0, 10)), viewDate))
             );
 

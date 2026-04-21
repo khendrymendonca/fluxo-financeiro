@@ -104,11 +104,11 @@ export default function ReportsDashboard() {
       const monthReal = transactions.filter(t => {
         if (t.isVirtual && !t.isRecurring) return false;
         if (selectedAccountId !== 'all' && t.accountId !== selectedAccountId) return false;
-        
+
         const d = parseLocalDate(t.date);
         const matchesDate = d.getMonth() === targetMonth && d.getFullYear() === targetYear;
-        
-        if (t.categoryId === 'card-payment' && t.invoiceMonthYear) {
+
+        if (t.isInvoicePayment && t.invoiceMonthYear) {
           const [y, m] = t.invoiceMonthYear.split('-').map(Number);
           return m - 1 === targetMonth && y === targetYear;
         }
@@ -132,11 +132,11 @@ export default function ReportsDashboard() {
       recurringMothers.forEach(mother => {
         if (selectedAccountId !== 'all' && mother.accountId !== selectedAccountId) return;
         if (mother.isTransfer) return;
-        
+
         const motherDate = parseLocalDate(mother.date);
         if (isBefore(startOfMonth(motherDate), addMonths(startOfMonth(month), 1))) {
           const hasReal = monthReal.some(r => r.originalId === mother.id || (r.id === mother.id && isSameMonth(parseLocalDate(r.date), month)));
-          
+
           if (!hasReal) {
             const val = Number(mother.amount);
             if (mother.type === 'expense') {
@@ -205,11 +205,11 @@ export default function ReportsDashboard() {
     return Array.from(distMap.entries())
       .map(([name, value]) => {
         const cat = categories.find(c => c.name === name);
-        return { 
-            name, 
-            value, 
-            budgetLimit: cat?.budgetLimit ?? null,
-            color: cat?.color
+        return {
+          name,
+          value,
+          budgetLimit: cat?.budgetLimit ?? null,
+          color: cat?.color
         };
       })
       .sort((a, b) => b.value - a.value)
@@ -256,8 +256,8 @@ export default function ReportsDashboard() {
                 </button>
               </>
             ) : period === 'semester' ? (
-              <Select 
-                value={viewDate.getMonth() < 6 ? '1' : '2'} 
+              <Select
+                value={viewDate.getMonth() < 6 ? '1' : '2'}
                 onValueChange={(val) => setViewDate(new Date(viewDate.getFullYear(), val === '1' ? 0 : 6, 1))}
               >
                 <SelectTrigger className="h-9 border-none bg-transparent font-black uppercase tracking-widest text-xs min-w-[160px] outline-none shadow-none focus:ring-0">
@@ -269,8 +269,8 @@ export default function ReportsDashboard() {
                 </SelectContent>
               </Select>
             ) : (
-              <Select 
-                value={String(viewDate.getFullYear())} 
+              <Select
+                value={String(viewDate.getFullYear())}
                 onValueChange={(val) => setViewDate(new Date(Number(val), 0, 1))}
               >
                 <SelectTrigger className="h-9 border-none bg-transparent font-black uppercase tracking-widest text-xs min-w-[100px] outline-none shadow-none focus:ring-0">
@@ -316,22 +316,22 @@ export default function ReportsDashboard() {
       </PageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard 
-          label="Receitas" 
-          value={metrics.income} 
-          icon={<ArrowUpCircle className="text-emerald-500" />} 
+        <StatCard
+          label="Receitas"
+          value={metrics.income}
+          icon={<ArrowUpCircle className="text-emerald-500" />}
           trend={metrics.trend >= 0 ? `+${metrics.trend.toFixed(0)}%` : `${metrics.trend.toFixed(0)}%`}
         />
-        <StatCard 
-          label="Despesas" 
-          value={metrics.totalExpenses} 
-          icon={<ArrowDownCircle className="text-rose-500" />} 
+        <StatCard
+          label="Despesas"
+          value={metrics.totalExpenses}
+          icon={<ArrowDownCircle className="text-rose-500" />}
           trend={metrics.trend >= 0 ? `+${metrics.trend.toFixed(0)}%` : `${metrics.trend.toFixed(0)}%`}
           forceRed
         />
-        <StatCard 
-          label="Saldo do Período" 
-          value={metrics.balance} 
+        <StatCard
+          label="Saldo do Período"
+          value={metrics.balance}
           icon={<TrendingUp className={metrics.balance >= 0 ? "text-primary" : "text-rose-500"} />}
           isNeutral
         />
@@ -360,15 +360,15 @@ export default function ReportsDashboard() {
             <ResponsiveContainer width="100%" height="100%" minHeight={300}>
               <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }} barGap={8}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
                   tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }}
                   dy={10}
                 />
                 <YAxis hide domain={[0, 'auto']} />
-                <Tooltip 
+                <Tooltip
                   cursor={{ fill: 'transparent' }}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
@@ -397,17 +397,17 @@ export default function ReportsDashboard() {
                 />
                 <Bar name="Receita" dataKey="receita" radius={[6, 6, 6, 6]} barSize={16}>
                   {chartData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-income-${index}`} 
-                      fill={entry.isCurrent ? '#10b981' : 'rgba(16, 185, 129, 0.2)'} 
+                    <Cell
+                      key={`cell-income-${index}`}
+                      fill={entry.isCurrent ? '#10b981' : 'rgba(16, 185, 129, 0.2)'}
                     />
                   ))}
                 </Bar>
                 <Bar name="Despesa" dataKey="despesa" radius={[6, 6, 6, 6]} barSize={16}>
                   {chartData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-expense-${index}`} 
-                      fill={entry.isCurrent ? 'hsl(var(--primary))' : 'rgba(161, 161, 170, 0.2)'} 
+                    <Cell
+                      key={`cell-expense-${index}`}
+                      fill={entry.isCurrent ? 'hsl(var(--primary))' : 'rgba(161, 161, 170, 0.2)'}
                     />
                   ))}
                 </Bar>
@@ -421,14 +421,14 @@ export default function ReportsDashboard() {
           <div className="space-y-6">
             {topCategories.map((cat, idx) => {
               const percentage = metrics.totalExpenses > 0 ? (cat.value / metrics.totalExpenses) * 100 : 0;
-              
+
               // Lógica de cor baseada no limite
               const hasLimit = cat.budgetLimit !== null && cat.budgetLimit > 0;
               const limitPercentage = hasLimit ? (cat.value / (cat.budgetLimit as number)) * 100 : 0;
-              
+
               const barColor = !hasLimit ? "bg-primary" :
-                               limitPercentage > 100 ? "bg-rose-500" :
-                               limitPercentage > 80 ? "bg-amber-500" : "bg-emerald-500";
+                limitPercentage > 100 ? "bg-rose-500" :
+                  limitPercentage > 80 ? "bg-amber-500" : "bg-emerald-500";
 
               return (
                 <div key={idx} className="space-y-2">
@@ -444,7 +444,7 @@ export default function ReportsDashboard() {
                     <span className="font-black tabular-nums">{formatCurrency(cat.value)}</span>
                   </div>
                   <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                    <div 
+                    <div
                       className={cn(
                         "h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(var(--primary),0.3)]",
                         barColor

@@ -63,12 +63,17 @@ export function useAddTransaction() {
         return clean;
       });
 
+      console.log('[ADD TRANSACTION PAYLOAD]', JSON.stringify(txsWithUser, null, 2));
+
       const { data: insertedData, error } = await supabase
         .from('transactions')
         .insert(txsWithUser)
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[ADD TRANSACTION ERROR]', error);
+        throw error;
+      }
       return insertedData;
     },
     onSuccess: () => {
@@ -173,36 +178,10 @@ export function useDeleteTransaction() {
 
       return id;
     },
-    onMutate: async ({ transaction, applyScope = 'this' }) => {
-      const { id, installmentGroupId, date } = transaction;
-      const targetId = transaction.isVirtual ? (transaction.originalId || id.split('-virtual')[0]) : id;
+    onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['transactions'] });
-      const previousTransactions = queryClient.getQueryData(['transactions']);
-
-      queryClient.setQueryData(['transactions'], (oldData: any) => {
-        if (!oldData) return;
-        return oldData.filter((tx: any) => {
-          if (applyScope === 'this') {
-            return tx.id !== id;
-          }
-          if (applyScope === 'all') {
-            if (installmentGroupId) return tx.installmentGroupId !== installmentGroupId;
-            return tx.id !== targetId && tx.originalId !== targetId;
-          }
-          if (applyScope === 'future') {
-            if (installmentGroupId) return !(tx.installmentGroupId === installmentGroupId && tx.date >= date);
-            return !((tx.id === targetId || tx.originalId === targetId) && tx.date >= date);
-          }
-          return true;
-        });
-      });
-
-      return { previousTransactions };
     },
-    onError: (err, variables, context) => {
-      if (context?.previousTransactions) {
-        queryClient.setQueryData(['transactions'], context.previousTransactions);
-      }
+    onError: (err) => {
       logSafeError('useDeleteTransaction', err);
       toast({ title: 'Erro ao remover lançamento', variant: 'destructive' });
     },
@@ -220,6 +199,7 @@ export function useToggleTransactionPaid() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: ['togglePaid'],
     mutationFn: async ({ id, isPaid, date, accountId }: { id: string, isPaid: boolean, date?: string, accountId?: string }) => {
       const paymentDate = isPaid ? (date || format(new Date(), 'yyyy-MM-dd')) : null;
       const updates: any = {
@@ -235,35 +215,16 @@ export function useToggleTransactionPaid() {
       const { error } = await supabase
         .from('transactions')
         .update(updates)
-        .eq('id', id);
+        .eq('id', id)
+        .select();
       if (error) throw error;
       return id;
     },
-    onMutate: async ({ id, isPaid, date, accountId }) => {
+    onMutate: async ({ id }) => {
       await queryClient.cancelQueries({ queryKey: ['transactions'] });
-      const previousTransactions = queryClient.getQueryData(['transactions']);
-
-      const paymentDate = isPaid ? (date || format(new Date(), 'yyyy-MM-dd')) : null;
-
-      queryClient.setQueryData(['transactions'], (oldData: any) => {
-        if (!oldData) return [];
-        return oldData.map((tx: any) =>
-          tx.id === id ? {
-            ...tx,
-            isPaid,
-            is_paid: isPaid,
-            paymentDate,
-            payment_date: paymentDate,
-            accountId: isPaid ? (accountId || tx.accountId) : tx.accountId
-          } : tx
-        );
-      });
-      return { previousTransactions };
+      return { id };
     },
-    onError: (err, variables, context) => {
-      if (context?.previousTransactions) {
-        queryClient.setQueryData(['transactions'], context.previousTransactions);
-      }
+    onError: (err) => {
       logSafeError('useToggleTransactionPaid', err);
       toast({ title: 'Erro ao alterar status de pagamento', variant: 'destructive' });
     },
@@ -555,50 +516,8 @@ export function useUpdateTransaction() {
       }
       return [];
     },
-    onMutate: async ({ id, updates, applyScope = 'this' }) => {
+    onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['transactions'] });
-      const previousTransactions = queryClient.getQueryData(['transactions']);
-
-      queryClient.setQueryData(['transactions'], (oldData: any[]) => {
-        if (!oldData) return [];
-
-        const targetTx = oldData.find((t: any) => t.id === id);
-        if (!targetTx) return oldData;
-
-        return oldData.map((tx: any) => {
-          if (applyScope === 'this') {
-            return tx.id === id ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid } : tx;
-          }
-          if (applyScope === 'all') {
-            if (targetTx.installmentGroupId) {
-              return tx.installmentGroupId === targetTx.installmentGroupId ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid } : tx;
-            }
-            // Recorrente: atualiza o próprio e todos com originalId apontando para ele
-            return (tx.id === id || tx.originalId === id) ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid } : tx;
-          }
-          if (applyScope === 'future') {
-            if (targetTx.installmentGroupId) {
-              return (tx.installmentGroupId === targetTx.installmentGroupId && tx.date >= targetTx.date)
-                ? { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid } : tx;
-            }
-            // Recorrente: atualiza a mãe incondicionalmente no onMutate, mas SEM a data, e filhos só no future range
-            const isMother = tx.id === targetTx.originalId || tx.id === targetTx.id.split('-virtual')[0];
-            const isFutureChild = tx.originalId === targetTx.originalId && tx.date >= targetTx.date;
-
-            if (isMother) {
-              const { date: _ignoredDateMutate, ...safeUpdates } = updates;
-              return { ...tx, ...safeUpdates, is_paid: updates.isPaid ?? tx.is_paid };
-            }
-            if (isFutureChild) {
-              return { ...tx, ...updates, is_paid: updates.isPaid ?? tx.is_paid };
-            }
-            return tx;
-          }
-          return tx;
-        });
-      });
-
-      return { previousTransactions };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -607,10 +526,7 @@ export function useUpdateTransaction() {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
       toast({ title: 'Alterações salvas!' });
     },
-    onError: (err, variables, context) => {
-      if (context?.previousTransactions) {
-        queryClient.setQueryData(['transactions'], context.previousTransactions);
-      }
+    onError: (err) => {
       logSafeError('useUpdateTransaction', err);
       toast({ title: 'Erro ao atualizar lançamento', variant: 'destructive' });
     }

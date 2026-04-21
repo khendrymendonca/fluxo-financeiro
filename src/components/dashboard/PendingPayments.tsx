@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToggleTransactionPaid } from '@/hooks/useTransactionMutations';
 import { addDays, endOfMonth, endOfYear, isBefore, startOfToday, startOfMonth } from 'date-fns';
+import { useIsMutating } from '@tanstack/react-query';
 
 import { parseLocalDate } from '@/utils/dateUtils';
 
@@ -20,6 +21,7 @@ interface PendingPaymentsProps {
 export function PendingPayments({ transactions, accounts, creditCards, viewDate }: PendingPaymentsProps) {
     const [period, setPeriod] = useState<FilterPeriod>('mes');
     const { mutate: togglePaid } = useToggleTransactionPaid();
+    const isMutating = useIsMutating({ mutationKey: ['togglePaid'] });
 
     const referenceDate = viewDate || startOfToday();
 
@@ -48,7 +50,7 @@ export function PendingPayments({ transactions, accounts, creditCards, viewDate 
             if (isCard && !isRecurringOrInstallment) return false;
 
             const tDate = parseLocalDate(t.date);
-            
+
             // FILTRO DE RELEVÂNCIA: 
             // 1. Está dentro do período selecionado (semana, mes, etc)
             // 2. OU está atrasado, mas pertence ao mês atual (não mostra lixo de meses muito antigos)
@@ -116,7 +118,7 @@ export function PendingPayments({ transactions, accounts, creditCards, viewDate 
                     Nenhuma conta pendente para este período.
                 </p>
             ) : (
-                <div className="space-y-1">
+                <div className={cn("space-y-1 transition-all duration-200", isMutating > 0 && "pointer-events-none opacity-60")}>
                     {pending.map((t) => {
                         const isOverdue = isBefore(parseLocalDate(t.date), today);
                         return (
