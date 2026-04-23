@@ -25,17 +25,11 @@ export function calcInvoiceMonthYear(
   transactionDate: Date,
   settings: { closingDay: number, dueDay: number }
 ): string {
-  const { closingDay, dueDay } = settings;
+  const { closingDay } = settings;
   const invoiceDate = new Date(transactionDate.getFullYear(), transactionDate.getMonth(), 1);
 
   // Se a compra foi feita DEPOIS do fechamento da fatura, ela cai no mês seguinte
   if (transactionDate.getDate() > closingDay) {
-    invoiceDate.setMonth(invoiceDate.getMonth() + 1);
-  }
-
-  // Regra de negócio Brasileira: Se o vencimento é antes do fechamento (ex: fecha dia 25, vence dia 5), 
-  // empurra mais um mês pois a fatura "Mês X" vence no "Mês X+1".
-  if (dueDay <= closingDay) {
     invoiceDate.setMonth(invoiceDate.getMonth() + 1);
   }
 

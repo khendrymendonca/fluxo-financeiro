@@ -201,10 +201,13 @@ export function useToggleTransactionPaid() {
   return useMutation({
     mutationKey: ['togglePaid'],
     mutationFn: async ({ id, isPaid, date, accountId, isChild }: { id: string, isPaid: boolean, date?: string, accountId?: string, isChild?: boolean }) => {
-      // Se estamos estornando (isPaid = false) um filho de recorrente, nós fazemos HARD DELETE
-      // para forçar o sistema a recriar a contra-parte virtual intacta sem gerar "shadows"
+      // Se estamos estornando (isPaid = false) um filho de recorrente, removemos logicamente
+      // para forçar o sistema a recriar a contra-parte virtual intacta sem gerar "shadows".
       if (!isPaid && isChild) {
-        const { error } = await supabase.from('transactions').delete().eq('id', id);
+        const { error } = await supabase
+          .from('transactions')
+          .update({ deleted_at: new Date().toISOString() })
+          .eq('id', id);
         if (error) throw error;
         return id;
       }
@@ -322,7 +325,7 @@ export function useUpdateTransaction() {
             const [yearStr, monthStr] = virtualParts[1].split('-');
             const year = parseInt(yearStr);
             const month = parseInt(monthStr); // 0-based
-            const originalDay = new Date(currentTx.date).getDate();
+            const originalDay = parseLocalDate(currentTx.date).getDate();
             const lastDay = new Date(year, month + 1, 0).getDate();
             const safeDay = Math.min(originalDay, lastDay);
             targetDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
@@ -339,12 +342,15 @@ export function useUpdateTransaction() {
           description: updates.description ?? currentTx.description,
           category_id: updates.categoryId ?? currentTx.category_id,
           subcategory_id: updates.subcategoryId ?? currentTx.subcategory_id ?? null,
+          account_id: updates.accountId !== undefined ? updates.accountId : currentTx.account_id,
+          card_id: updates.cardId !== undefined ? updates.cardId : currentTx.card_id,
+          invoice_month_year: finalInvoiceMonthYear !== undefined ? finalInvoiceMonthYear : currentTx.invoice_month_year,
           date: targetDate,
           original_id: realId,
           is_recurring: false,
           transaction_type: 'punctual',
-          is_paid: false,
-          payment_date: null,
+          is_paid: updates.isPaid ?? false,
+          payment_date: updates.paymentDate ?? null,
           deleted_at: null,
           created_at: undefined,
         });
@@ -362,7 +368,13 @@ export function useUpdateTransaction() {
 
           if (motherMonthYear === childMonthYear) {
             // Avança a mãe para o próximo mês mantendo o mesmo dia
-            const nextMonthDate = new Date(motherDate.getFullYear(), motherDate.getMonth() + 1, motherDate.getDate());
+            const nextMonth = motherDate.getMonth() + 1;
+            const lastDayOfNextMonth = new Date(motherDate.getFullYear(), nextMonth + 1, 0).getDate();
+            const nextMonthDate = new Date(
+              motherDate.getFullYear(),
+              nextMonth,
+              Math.min(motherDate.getDate(), lastDayOfNextMonth)
+            );
             const nextMonthStr = format(nextMonthDate, 'yyyy-MM-dd');
             await supabase.from('transactions')
               .update({ date: nextMonthStr })
@@ -384,7 +396,7 @@ export function useUpdateTransaction() {
             const [yearStr, monthStr] = parts[1].split('-');
             const year = parseInt(yearStr);
             const month = parseInt(monthStr);
-            const originalDay = new Date(currentTx.date).getDate();
+            const originalDay = parseLocalDate(currentTx.date).getDate();
             const lastDay = new Date(year, month + 1, 0).getDate();
             const safeDay = Math.min(originalDay, lastDay);
             targetDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;

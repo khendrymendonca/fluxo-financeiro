@@ -31,5 +31,10 @@ describe('creditCardUtils - calcInvoiceMonthYear', () => {
       const invoice = calcInvoiceMonthYear(parseLocalDate('2026-12-20'), { closingDay: 15 } as any);
       expect(invoice).toBe('2027-01');
     });
+
+    it('não deve deslocar a competência só porque o vencimento é antes do fechamento', () => {
+      const invoice = calcInvoiceMonthYear(parseLocalDate('2026-04-10'), { closingDay: 25, dueDay: 5 });
+      expect(invoice).toBe('2026-04');
+    });
   });
 });
