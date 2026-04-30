@@ -324,10 +324,11 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     // --- LÓGICA PONTUAL OU RECORRENTE ---
     const isPaidFinal = initialData ? isPaidLocally : (activeTab === 'pontual' ? isDateTodayOrPast(date) : false);
     const isRecurring = Boolean(activeTab === 'fixo' || activeTab === 'renda_fixa');
+    const isInstallment = Boolean(activeTab === 'parcelamento');
 
     await onSubmit({
       type,
-      transactionType: isRecurring ? 'recurring' : 'punctual',
+      transactionType: isRecurring ? 'recurring' : (isInstallment ? 'installment' : 'punctual'),
       description,
       amount: parsedAmount,
       categoryId: finalCategoryId || categoryId,
@@ -336,14 +337,15 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       date: format(parseLocalDate(date), 'yyyy-MM-dd'),
       accountId: isRecurring ? null : (paymentMethod === 'account' ? accountId : undefined),
       cardId: isRecurring ? null : (paymentMethod === 'card' ? cardId : undefined),
-      installmentTotal: undefined, 
+      installmentGroupId: initialData?.installmentGroupId,
+      installmentNumber: isInstallment ? initialData?.installmentNumber : undefined,
+      installmentTotal: isInstallment ? (initialData?.installmentTotal || (parseInt(installmentsCount) || undefined)) : undefined,
       recurrence: isRecurring ? recurrence : undefined,
       isAutomatic: activeTab === 'renda_fixa' ? true : isAutomatic,
       debtId: selectedDebtId || undefined,
       invoiceMonthYear: paymentMethod === 'card' ? finalInvoiceMonthYear : undefined,
       isPaid: isPaidFinal,
-      paymentDate: isPaidFinal ? date : undefined,
-      installmentGroupId: initialData?.installmentGroupId
+      paymentDate: isPaidFinal ? date : undefined
     } as any, undefined, applyScope);
 
     onClose();

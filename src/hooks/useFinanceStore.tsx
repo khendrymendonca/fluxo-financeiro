@@ -42,6 +42,8 @@ import {
   useDeleteDebt
 } from './useDebtMutations';
 import { parseLocalDate } from '@/utils/dateUtils';
+import { getTransactionCategoryLabel } from '@/utils/transactionCategory';
+import { getCardUsedLimitFromTransactions } from '@/utils/cardLimit';
 
 export type FinanceContextData = ReturnType<typeof useFinanceProvider>;
 
@@ -305,33 +307,15 @@ function useFinanceProvider() {
     getCategoryExpenses: () => {
       const categoryMap = new Map<string, number>();
       currentMonthTransactions.filter(t => t.type === 'expense').forEach(t => {
-        const cat = categories.find(c => c.id === t.categoryId);
-        const name = cat?.name || 'Sem Categoria';
+        const name = getTransactionCategoryLabel(t, categories);
         categoryMap.set(name, (categoryMap.get(name) || 0) + Number(t.amount));
       });
       return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     },
     getCardUsedLimit: useCallback((cardId: string) => {
-      // 🚨 REGRA DE OURO: Usamos rawTransactions (histórico real) em vez de 'transactions' (que é cortado pelo mês)
-      return rawTransactions.filter(t => {
-        // 1. Pega apenas as transações deste cartão específico
-        if (t.cardId !== cardId) return false;
-
-        // 2. Ignora marcações de pagamento de fatura e itens deletados
-        // ✅ Mantemos estornos/abatimentos (income) mesmo que marcados como isInvoicePayment
-        if ((t.isInvoicePayment && t.type === 'expense') || t.deleted_at) return false;
-
-        // 3. Assinaturas (Spotify/Netflix) do futuro não comprometem o limite global hoje.
-        const txDate = parseLocalDate(t.date.slice(0, 10));
-        const isInstallment = (t.installmentTotal || 0) > 1;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        if (t.isRecurring && !isInstallment && txDate > today) return false;
-
-        // Se chegou aqui, é uma compra (pontual ou parcelada) do passado/presente que AINDA NÃO FOI PAGA. Consome o limite!
-        return true;
-      }).reduce((acc, t) => acc + (t.type === 'income' ? -Number(t.amount) : Number(t.amount)), 0);
+      // Regra explícita: só impactam o limite compras parceladas, contas fixas pagas via cartão
+      // e pagamentos pontuais; abatimentos/entradas no cartão reduzem o limite usado.
+      return getCardUsedLimitFromTransactions(cardId, rawTransactions);
     }, [rawTransactions])
   };
 }

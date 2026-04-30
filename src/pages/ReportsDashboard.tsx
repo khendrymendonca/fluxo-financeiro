@@ -2,7 +2,6 @@ import { useState, useMemo, useCallback } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { PageHeader } from '@/components/ui/PageHeader';
 import {
-  BarChart3,
   TrendingUp,
   ArrowUpCircle,
   ArrowDownCircle,
@@ -33,6 +32,7 @@ import {
   startOfMonth,
   endOfMonth,
   startOfYear,
+  endOfYear,
   subMonths,
   format,
   isSameMonth,
@@ -44,6 +44,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/utils/formatters';
 import { parseLocalDate } from '@/utils/dateUtils';
+import { getTransactionCategoryLabel } from '@/utils/transactionCategory';
 
 type Period = 'month' | 'semester' | 'year';
 
@@ -59,12 +60,13 @@ export default function ReportsDashboard() {
   const [period, setPeriod] = useState<Period>('month');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
 
-  const handleExportPDF = () => {
-    window.print();
-  };
-
   const handlePrevMonth = () => setViewDate(subMonths(viewDate, 1));
   const handleNextMonth = () => setViewDate(addMonths(viewDate, 1));
+
+  const yearMonths = useMemo(
+    () => eachMonthOfInterval({ start: startOfYear(viewDate), end: endOfYear(viewDate) }),
+    [viewDate]
+  );
 
   const intervals = useMemo(() => {
     const end = endOfMonth(viewDate);
@@ -182,6 +184,19 @@ export default function ReportsDashboard() {
     });
   }, [viewDate, getPeriodData]);
 
+  const yearOptions = useMemo(() => {
+    const years = new Set<number>([new Date().getFullYear(), viewDate.getFullYear()]);
+
+    transactions.forEach((transaction) => {
+      years.add(parseLocalDate(transaction.date).getFullYear());
+      if (transaction.invoiceMonthYear) {
+        years.add(Number(transaction.invoiceMonthYear.split('-')[0]));
+      }
+    });
+
+    return Array.from(years).sort((a, b) => a - b);
+  }, [transactions, viewDate]);
+
   const topCategories = useMemo(() => {
     const distMap = new Map<string, number>();
     const months = eachMonthOfInterval({ start: intervals.start, end: intervals.end });
@@ -196,8 +211,7 @@ export default function ReportsDashboard() {
       });
 
       monthTransactions.forEach(t => {
-        const cat = categories.find(c => c.id === t.categoryId);
-        const name = cat?.name || 'Outros';
+        const name = getTransactionCategoryLabel(t, categories, 'Outros');
         distMap.set(name, (distMap.get(name) || 0) + Number(t.amount));
       });
     });
@@ -216,28 +230,210 @@ export default function ReportsDashboard() {
       .slice(0, 6);
   }, [transactions, categories, intervals, selectedAccountId]);
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl shadow-2xl">
-          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">{label || 'Valor'}</p>
-          {payload.map((entry: any, index: number) => (
-            <div key={index} className="flex items-center justify-between gap-4 mb-1 last:mb-0">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color || entry.fill }} />
-                <span className="text-xs font-bold text-zinc-300 capitalize">{entry.name}</span>
-              </div>
-              <span className="text-xs font-black text-white">{formatCurrency(entry.value)}</span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
+  const annualVision = useMemo(() => {
+    const monthKeys = yearMonths.map((month) => format(month, 'yyyy-MM'));
+
+    const getSyntheticMonthTransactions = (month: Date) => {
+      const targetMonth = month.getMonth();
+      const targetYear = month.getFullYear();
+
+      const monthReal = transactions.filter((transaction) => {
+        if (transaction.isVirtual) return false;
+        if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return false;
+
+        const transactionDate = parseLocalDate(transaction.date);
+        const matchesDate = transactionDate.getMonth() === targetMonth && transactionDate.getFullYear() === targetYear;
+
+        if (transaction.isInvoicePayment && transaction.invoiceMonthYear) {
+          const [year, monthValue] = transaction.invoiceMonthYear.split('-').map(Number);
+          return monthValue - 1 === targetMonth && year === targetYear;
+        }
+
+        return matchesDate;
+      });
+
+      const projectedRecurring = transactions.flatMap((transaction) => {
+        if (!transaction.isRecurring || transaction.isVirtual) return [];
+        if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return [];
+
+        const transactionDate = parseLocalDate(transaction.date);
+        if (!isBefore(startOfMonth(transactionDate), addMonths(startOfMonth(month), 1))) return [];
+
+        const hasReal = monthReal.some((real) =>
+          real.originalId === transaction.id ||
+          (real.id === transaction.id && isSameMonth(parseLocalDate(real.date), month))
+        );
+
+        return hasReal ? [] : [{ ...transaction, originalId: transaction.id, isVirtual: true }];
+      });
+
+      const projectedInstallments = transactions.flatMap((transaction) => {
+        if (
+          transaction.isRecurring ||
+          transaction.isVirtual ||
+          !transaction.installmentGroupId ||
+          !transaction.installmentNumber ||
+          !transaction.installmentTotal ||
+          transaction.installmentNumber >= transaction.installmentTotal
+        ) {
+          return [];
+        }
+
+        if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return [];
+
+        const transactionDate = parseLocalDate(transaction.date);
+        if (!isBefore(transactionDate, startOfMonth(month))) return [];
+
+        const hasMoreRecentInPast = transactions.some((other) =>
+          !other.isVirtual &&
+          other.installmentGroupId === transaction.installmentGroupId &&
+          parseLocalDate(other.date).getTime() > transactionDate.getTime() &&
+          isBefore(parseLocalDate(other.date), startOfMonth(month))
+        );
+
+        if (hasMoreRecentInPast) return [];
+
+        const hasGroupInTargetMonth = monthReal.some((real) => real.installmentGroupId === transaction.installmentGroupId);
+        const hasRealEquivalent = monthReal.some((real) =>
+          real.originalId === transaction.id ||
+          (real.id === transaction.id && isSameMonth(parseLocalDate(real.date), month))
+        );
+
+        if (hasGroupInTargetMonth || hasRealEquivalent) return [];
+
+        const monthDiff = (targetYear - transactionDate.getFullYear()) * 12 + (targetMonth - transactionDate.getMonth());
+        const projectedInstallmentNumber = transaction.installmentNumber + monthDiff;
+
+        if (projectedInstallmentNumber > transaction.installmentTotal) return [];
+
+        return [{
+          ...transaction,
+          originalId: transaction.id,
+          installmentNumber: projectedInstallmentNumber,
+          isVirtual: true,
+        }];
+      });
+
+      return [...monthReal, ...projectedRecurring, ...projectedInstallments];
+    };
+
+    const monthlyTransactionsMap = yearMonths.reduce<Record<string, typeof transactions>>((accumulator, month) => {
+      accumulator[format(month, 'yyyy-MM')] = getSyntheticMonthTransactions(month);
+      return accumulator;
+    }, {});
+
+    const rowMap = new Map<string, {
+      id: string;
+      name: string;
+      type: 'income' | 'expense';
+      monthValues: Record<string, number>;
+      annualTotal: number;
+    }>();
+
+    const ensureRow = (id: string, name: string, type: 'income' | 'expense') => {
+      if (!rowMap.has(id)) {
+        rowMap.set(id, {
+          id,
+          name,
+          type,
+          monthValues: monthKeys.reduce<Record<string, number>>((accumulator, monthKey) => {
+            accumulator[monthKey] = 0;
+            return accumulator;
+          }, {}),
+          annualTotal: 0,
+        });
+      }
+
+      return rowMap.get(id)!;
+    };
+
+    monthKeys.forEach((monthKey) => {
+      monthlyTransactionsMap[monthKey].forEach((transaction) => {
+        if (transaction.isTransfer || transaction.isInvoicePayment) return;
+
+        const rowName = getTransactionCategoryLabel(
+          transaction,
+          categories,
+          transaction.type === 'income' ? 'Receitas sem categoria' : 'Outros'
+        );
+        const rowId = `${transaction.type}-${transaction.categoryId ?? transaction.debtId ?? rowName}`;
+        const row = ensureRow(rowId, rowName, transaction.type);
+        row.monthValues[monthKey] += Number(transaction.amount);
+      });
+    });
+
+    const rows = Array.from(rowMap.values())
+      .map((row) => ({
+        ...row,
+        annualTotal: monthKeys.reduce((sum, monthKey) => sum + row.monthValues[monthKey], 0),
+      }))
+      .sort((a, b) => {
+        if (a.type !== b.type) return a.type === 'income' ? -1 : 1;
+        return b.annualTotal - a.annualTotal;
+      });
+
+    const incomeRows = rows.filter((row) => row.type === 'income');
+    const expenseRows = rows.filter((row) => row.type === 'expense');
+
+    const incomeByMonth = monthKeys.reduce<Record<string, number>>((accumulator, monthKey) => {
+      accumulator[monthKey] = incomeRows.reduce((sum, row) => sum + row.monthValues[monthKey], 0);
+      return accumulator;
+    }, {});
+
+    const expenseByMonth = monthKeys.reduce<Record<string, number>>((accumulator, monthKey) => {
+      accumulator[monthKey] = expenseRows.reduce((sum, row) => sum + row.monthValues[monthKey], 0);
+      return accumulator;
+    }, {});
+
+    const netByMonth = monthKeys.reduce<Record<string, number>>((accumulator, monthKey) => {
+      accumulator[monthKey] = incomeByMonth[monthKey] - expenseByMonth[monthKey];
+      return accumulator;
+    }, {});
+
+    const annualIncome = monthKeys.reduce((sum, monthKey) => sum + incomeByMonth[monthKey], 0);
+    const annualExpenses = monthKeys.reduce((sum, monthKey) => sum + expenseByMonth[monthKey], 0);
+    const annualNet = annualIncome - annualExpenses;
+    const negativeMonths = yearMonths.filter((month) => netByMonth[format(month, 'yyyy-MM')] < 0);
+    const strongestMonth = yearMonths.reduce((best, month) => {
+      const monthKey = format(month, 'yyyy-MM');
+      const amount = netByMonth[monthKey];
+      if (!best || amount > best.amount) {
+        return { label: format(month, 'MMM', { locale: ptBR }), amount };
+      }
+      return best;
+    }, null as { label: string; amount: number } | null);
+
+    const currentTotalBalance = accounts
+      .filter((account) => selectedAccountId === 'all' || account.id === selectedAccountId)
+      .reduce((sum, account) => sum + Number(account.balance || 0), 0);
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth();
+    const projectedYearEndBalance = viewDate.getFullYear() === currentYear
+      ? currentTotalBalance + yearMonths.reduce((sum, month) => {
+          if (month.getMonth() <= currentMonth) return sum;
+          return sum + netByMonth[format(month, 'yyyy-MM')];
+        }, 0)
+      : null;
+
+    return {
+      rows,
+      incomeRows,
+      expenseRows,
+      incomeByMonth,
+      expenseByMonth,
+      netByMonth,
+      annualIncome,
+      annualExpenses,
+      annualNet,
+      negativeMonths,
+      strongestMonth,
+      currentTotalBalance,
+      projectedYearEndBalance,
+    };
+  }, [accounts, categories, selectedAccountId, transactions, viewDate, yearMonths]);
 
   return (
-    <div className="space-y-8 animate-fade-in max-w-6xl mx-auto pb-10 px-4 md:px-0">
+    <div className="space-y-8 animate-fade-in max-w-[1600px] mx-auto pb-10 px-4 xl:px-6">
       <PageHeader title="Relatórios Analíticos" icon={PieIcon}>
         <div className="flex flex-wrap items-center gap-3 no-print">
           <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl p-1">
@@ -277,7 +473,7 @@ export default function ReportsDashboard() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl border-2">
-                  {[2024, 2025, 2026, 2027].map(year => (
+                  {yearOptions.map(year => (
                     <SelectItem key={year} value={String(year)} className="font-bold">{year}</SelectItem>
                   ))}
                 </SelectContent>
@@ -335,6 +531,208 @@ export default function ReportsDashboard() {
           icon={<TrendingUp className={metrics.balance >= 0 ? "text-primary" : "text-rose-500"} />}
           isNeutral
         />
+      </div>
+
+      <div className="lg:hidden bg-white dark:bg-zinc-900 rounded-[2rem] p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
+        <p className="text-[10px] font-black uppercase tracking-[0.25em] text-primary mb-2">Desktop</p>
+        <h3 className="text-base font-black tracking-tight">Mapa anual por categoria</h3>
+        <p className="text-sm text-muted-foreground mt-2">
+          Esse relatório fica visível só em telas maiores para não poluir o mobile.
+        </p>
+      </div>
+
+      <div className="hidden lg:block bg-white dark:bg-zinc-900 rounded-[2.5rem] p-10 xl:p-12 border border-gray-100 dark:border-zinc-800 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-2">Pergunta do Milhão</p>
+            <h3 className="text-2xl font-black tracking-tight">Mapa anual por categoria</h3>
+            <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
+              Uma linha por categoria de lançamento, um mês por coluna e o total do ano no fim. Assim você enxerga receita, moradia, transporte e onde o caixa desvia.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 min-w-[660px]">
+            <div className="rounded-[1.75rem] border border-emerald-100 dark:border-emerald-500/10 bg-emerald-50/70 dark:bg-emerald-500/5 p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300">Saldo atual</p>
+              <p className="text-xl font-black mt-2 text-emerald-700 dark:text-emerald-200">{formatCurrency(annualVision.currentTotalBalance)}</p>
+            </div>
+            <div className="rounded-[1.75rem] border border-rose-100 dark:border-rose-500/10 bg-rose-50/70 dark:bg-rose-500/5 p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-rose-700 dark:text-rose-300">Meses no vermelho</p>
+              <p className="text-xl font-black mt-2 text-rose-700 dark:text-rose-200">{annualVision.negativeMonths.length}</p>
+            </div>
+            <div className="rounded-[1.75rem] border border-primary/10 bg-primary/[0.06] p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary">Fechamento do ano</p>
+              <p className="text-xl font-black mt-2 text-foreground">
+                {annualVision.projectedYearEndBalance !== null ? formatCurrency(annualVision.projectedYearEndBalance) : formatCurrency(annualVision.annualNet)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+          <div className="rounded-[1.75rem] border border-gray-100 dark:border-zinc-800 bg-gray-50/60 dark:bg-zinc-950/40 p-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Melhor mês</p>
+            <p className="text-sm font-black mt-2">
+              {annualVision.strongestMonth ? `${annualVision.strongestMonth.label} · ${formatCurrency(annualVision.strongestMonth.amount)}` : 'Sem dados'}
+            </p>
+          </div>
+          <div className="rounded-[1.75rem] border border-gray-100 dark:border-zinc-800 bg-gray-50/60 dark:bg-zinc-950/40 p-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Receita x despesa no ano</p>
+            <p className={cn(
+              "text-sm font-black mt-2",
+              annualVision.annualNet >= 0 ? "text-emerald-600 dark:text-emerald-300" : "text-rose-600 dark:text-rose-300"
+            )}>
+              {formatCurrency(annualVision.annualIncome)} / {formatCurrency(annualVision.annualExpenses)}
+            </p>
+          </div>
+          <div className="rounded-[1.75rem] border border-gray-100 dark:border-zinc-800 bg-gray-50/60 dark:bg-zinc-950/40 p-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Leitura</p>
+            <p className="text-sm font-bold mt-2 text-foreground/80">
+              {annualVision.negativeMonths.length === 0
+                ? 'O ano está sem meses deficitários nessa visão.'
+                : `Há ${annualVision.negativeMonths.length} mês(es) pedindo ajuste de rota.`}
+            </p>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto rounded-[2rem] border border-gray-100 dark:border-zinc-800">
+          <table className="min-w-[1480px] w-full">
+            <thead className="bg-zinc-50 dark:bg-zinc-950/70">
+              <tr>
+                <th className="sticky left-0 z-10 bg-zinc-50 dark:bg-zinc-950/70 px-5 py-4 text-left text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground min-w-[240px]">Categoria</th>
+                {yearMonths.map((month) => (
+                  <th key={month.toISOString()} className="px-4 py-4 text-right text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground min-w-[96px]">
+                    {format(month, 'MMM', { locale: ptBR })}
+                  </th>
+                ))}
+                <th className="px-5 py-4 text-right text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground min-w-[120px]">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {annualVision.incomeRows.length > 0 && (
+                <tr className="border-t border-gray-200 dark:border-zinc-700 bg-emerald-50/60 dark:bg-emerald-500/5">
+                  <td className="sticky left-0 z-10 bg-emerald-50/60 dark:bg-emerald-500/5 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
+                    Receitas
+                  </td>
+                  <td colSpan={yearMonths.length + 1} />
+                </tr>
+              )}
+
+              {annualVision.incomeRows.map((row) => (
+                <tr key={row.id} className="border-t border-gray-100 dark:border-zinc-800">
+                  <td className="sticky left-0 z-10 bg-white dark:bg-zinc-900 px-5 py-4">
+                    <span className="text-sm font-black text-foreground">{row.name}</span>
+                  </td>
+                  {yearMonths.map((month) => {
+                    const monthKey = format(month, 'yyyy-MM');
+                    const value = row.monthValues[monthKey];
+
+                    return (
+                      <td key={`${row.id}-${monthKey}`} className="px-4 py-4 text-right text-xs font-black tabular-nums text-emerald-600 dark:text-emerald-300">
+                        {formatCurrency(value)}
+                      </td>
+                    );
+                  })}
+                  <td className="px-5 py-4 text-right text-sm font-black tabular-nums border-l border-gray-100 dark:border-zinc-800 text-emerald-600 dark:text-emerald-300">
+                    {formatCurrency(row.annualTotal)}
+                  </td>
+                </tr>
+              ))}
+
+              {annualVision.expenseRows.length > 0 && (
+                <tr className="border-t border-gray-200 dark:border-zinc-700 bg-rose-50/60 dark:bg-rose-500/5">
+                  <td className="sticky left-0 z-10 bg-rose-50/60 dark:bg-rose-500/5 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-rose-700 dark:text-rose-300">
+                    Despesas
+                  </td>
+                  <td colSpan={yearMonths.length + 1} />
+                </tr>
+              )}
+
+              {annualVision.expenseRows.map((row) => (
+                <tr key={row.id} className="border-t border-gray-100 dark:border-zinc-800">
+                  <td className="sticky left-0 z-10 bg-white dark:bg-zinc-900 px-5 py-4">
+                    <span className="text-sm font-black text-foreground">{row.name}</span>
+                  </td>
+                  {yearMonths.map((month) => {
+                    const monthKey = format(month, 'yyyy-MM');
+                    const value = row.monthValues[monthKey];
+
+                    return (
+                      <td key={`${row.id}-${monthKey}`} className="px-4 py-4 text-right text-xs font-black tabular-nums text-rose-600 dark:text-rose-300">
+                        {formatCurrency(value)}
+                      </td>
+                    );
+                  })}
+                  <td className="px-5 py-4 text-right text-sm font-black tabular-nums border-l border-gray-100 dark:border-zinc-800 text-rose-600 dark:text-rose-300">
+                    {formatCurrency(row.annualTotal)}
+                  </td>
+                </tr>
+              ))}
+
+              <tr className="border-t border-gray-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950">
+                <td className="sticky left-0 z-10 bg-zinc-50 dark:bg-zinc-950 px-5 py-4 text-sm font-black uppercase tracking-[0.15em]">
+                  Resultado líquido
+                </td>
+                {yearMonths.map((month) => {
+                  const monthKey = format(month, 'yyyy-MM');
+                  const value = annualVision.netByMonth[monthKey];
+
+                  return (
+                    <td
+                      key={`total-${monthKey}`}
+                      className={cn(
+                        "px-4 py-4 text-right text-xs font-black tabular-nums",
+                        value >= 0 ? "text-emerald-600 dark:text-emerald-300" : "text-rose-600 dark:text-rose-300"
+                      )}
+                    >
+                      {formatCurrency(value)}
+                    </td>
+                  );
+                })}
+                <td className={cn(
+                  "px-5 py-4 text-right text-sm font-black tabular-nums border-l border-gray-200 dark:border-zinc-700",
+                  annualVision.annualNet >= 0 ? "text-emerald-600 dark:text-emerald-300" : "text-rose-600 dark:text-rose-300"
+                )}>
+                  {formatCurrency(annualVision.annualNet)}
+                </td>
+              </tr>
+
+              <tr className="border-t border-gray-100 dark:border-zinc-800 bg-emerald-50 dark:bg-emerald-950">
+                <td className="sticky left-0 z-10 bg-emerald-50 dark:bg-emerald-950 px-5 py-4 text-sm font-black uppercase tracking-[0.15em] text-emerald-700 dark:text-emerald-300">
+                  Total receitas
+                </td>
+                {yearMonths.map((month) => {
+                  const monthKey = format(month, 'yyyy-MM');
+                  return (
+                    <td key={`income-${monthKey}`} className="px-4 py-4 text-right text-xs font-black tabular-nums text-emerald-600 dark:text-emerald-300">
+                      {formatCurrency(annualVision.incomeByMonth[monthKey])}
+                    </td>
+                  );
+                })}
+                <td className="px-5 py-4 text-right text-sm font-black tabular-nums border-l border-gray-200 dark:border-zinc-700 text-emerald-600 dark:text-emerald-300">
+                  {formatCurrency(annualVision.annualIncome)}
+                </td>
+              </tr>
+
+              <tr className="border-t border-gray-100 dark:border-zinc-800 bg-rose-50 dark:bg-rose-950">
+                <td className="sticky left-0 z-10 bg-rose-50 dark:bg-rose-950 px-5 py-4 text-sm font-black uppercase tracking-[0.15em] text-rose-700 dark:text-rose-300">
+                  Total despesas
+                </td>
+                {yearMonths.map((month) => {
+                  const monthKey = format(month, 'yyyy-MM');
+                  return (
+                    <td key={`expense-${monthKey}`} className="px-4 py-4 text-right text-xs font-black tabular-nums text-rose-600 dark:text-rose-300">
+                      {formatCurrency(annualVision.expenseByMonth[monthKey])}
+                    </td>
+                  );
+                })}
+                <td className="px-5 py-4 text-right text-sm font-black tabular-nums border-l border-gray-200 dark:border-zinc-700 text-rose-600 dark:text-rose-300">
+                  {formatCurrency(annualVision.annualExpenses)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">

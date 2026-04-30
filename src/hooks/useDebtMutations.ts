@@ -194,8 +194,8 @@ export function useRenegotiateDebt() {
       if (!user) throw new Error('Utilizador não autenticado');
 
       // 1. Atualizar status do acordo e data se fornecida
-      const debtUpdates: any = { status: 'renegotiated' };
-      if (firstInstallmentDate) debtUpdates.startDate = firstInstallmentDate;
+      const debtUpdates: { status: 'renegotiated'; start_date?: string } = { status: 'renegotiated' };
+      if (firstInstallmentDate) debtUpdates.start_date = firstInstallmentDate;
 
       const { error: debtError } = await supabase
         .from('debts')
@@ -210,6 +210,9 @@ export function useRenegotiateDebt() {
       const groupId = crypto.randomUUID();
       const baseDate = parseLocalDate(firstInstallmentDate || debt.startDate);
       const installments: any[] = [];
+      const agreementCategoryId = categories.find((category) =>
+        ['Acordo', 'Metas/Acordos', 'Renegociação'].includes(category.name)
+      )?.id;
 
       // 🛡️ INTEGRIDADE: Soft delete das parcelas antigas não pagas para evitar dupla cobrança
       const { error: cleanupError } = await supabase
@@ -233,7 +236,7 @@ export function useRenegotiateDebt() {
           amount,
           date: dateStr,
           debt_id: debt.id,
-          category_id: categories.find(c => c.name === 'Renegociação')?.id,
+          category_id: agreementCategoryId,
           is_paid: false,
           installment_group_id: groupId,
           installment_number: i + 1,

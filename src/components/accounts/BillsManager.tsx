@@ -33,6 +33,7 @@ import { formatCurrency } from '@/utils/formatters';
 import { Transaction } from '@/types/finance';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EditBillForm } from './EditBillForm';
+import { getAccountOverdraftMetrics } from '@/utils/accountOverdraft';
 
 export function BillsManager() {
     const {
@@ -72,6 +73,11 @@ export function BillsManager() {
         accountId?: string;
         cardId?: string;
     } | null>(null);
+
+    const getEffectivePaymentAmount = (transaction: Transaction) => {
+        const parsed = Number.parseFloat(paymentAmount);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : transaction.amount;
+    };
 
     const handleMarkAsPaid = async (transaction: Transaction, targetId: string, isCard: boolean) => {
         if (isSubmitting) return;
@@ -216,8 +222,8 @@ export function BillsManager() {
         const isOverduePending = isBefore(txDate, startOfMonth(viewDate)) && !t.isPaid;
         if (!isCurrentMonth && !isOverduePending) return false;
 
-        // 🛡️ NOVO: Se é um filho físico já pago, não aparece na Gestão de Contas (já está no extrato)
-        if (t.originalId && t.isPaid) return false;
+        // Regra da Gestão de Contas: itens reais já pagos saem da lista principal e residem no extrato.
+        if (!t.isVirtual && t.isPaid) return false;
 
         // Busca por Texto
         if (searchQuery.trim() !== '') {
@@ -551,15 +557,16 @@ export function BillsManager() {
                                         <p className="text-center text-muted-foreground py-8 text-sm">Nenhuma conta cadastrada.</p>
                                     ) : (
                                         accounts.map(acc => {
-                                            const availableTotal = acc.balance + (acc.hasOverdraft ? (acc.overdraftLimit || 0) : 0);
-                                            const wouldGoNegative = isPaying.type === 'expense' && acc.balance < isPaying.amount;
-                                            const hasEnoughWithOverdraft = acc.hasOverdraft && availableTotal >= isPaying.amount;
-                                            const insufficientFunds = wouldGoNegative && !hasEnoughWithOverdraft;
+                                            const currentMetrics = getAccountOverdraftMetrics(acc);
+                                            const amountValue = getEffectivePaymentAmount(isPaying);
+                                            const projectedBalance = acc.balance + (isPaying.type === 'income' ? amountValue : -amountValue);
+                                            const projectedMetrics = getAccountOverdraftMetrics({ ...acc, balance: projectedBalance });
+                                            const showsOverdraftWarning = projectedMetrics.usedLimit > 0 || projectedMetrics.overLimit > 0;
                                             return (
                                                 <button key={acc.id} onClick={() => isPaying && handleMarkAsPaid(isPaying, acc.id, false)}
-                                                    disabled={insufficientFunds || isSubmitting}
+                                                    disabled={isSubmitting}
                                                     className={cn("w-full p-4 rounded-xl border-2 text-left transition-all",
-                                                        (insufficientFunds || isSubmitting) ? "border-border/30 opacity-40 cursor-not-allowed" :
+                                                        isSubmitting ? "border-border/30 opacity-40 cursor-not-allowed" :
                                                             "border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] cursor-pointer")}>
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-3">
@@ -570,15 +577,29 @@ export function BillsManager() {
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className={cn("font-black text-sm", acc.balance < 0 && "text-danger")}>
-                                                                {formatCurrency(acc.balance)}
+                                                            <p className={cn("font-black text-sm", currentMetrics.realBalance < 0 && "text-danger")}>
+                                                                {formatCurrency(currentMetrics.realBalance)}
                                                             </p>
-                                                            {acc.hasOverdraft && (acc.overdraftLimit || 0) > 0 && (
-                                                                <p className="text-[11px] text-amber-600 font-bold">
-                                                                    Limite: {formatCurrency(acc.overdraftLimit || 0)}
+                                                            <p className="text-[11px] text-muted-foreground font-bold">Saldo atual</p>
+                                                            <div className="mt-1 space-y-0.5">
+                                                                <p className={cn("text-[11px] font-bold", projectedMetrics.realBalance < 0 && "text-danger")}>
+                                                                    Após pagamento: {formatCurrency(projectedMetrics.realBalance)}
+                                                                </p>
+                                                                {projectedMetrics.limit > 0 && (
+                                                                    <>
+                                                                        <p className="text-[11px] text-amber-600 font-bold">Limite utilizado: {formatCurrency(projectedMetrics.usedLimit)}</p>
+                                                                        <p className="text-[11px] text-emerald-600 font-bold">Limite disponivel: {formatCurrency(projectedMetrics.availableLimit)}</p>
+                                                                        {projectedMetrics.overLimit > 0 && (
+                                                                            <p className="text-[11px] text-danger font-bold">Excesso alem do limite: {formatCurrency(projectedMetrics.overLimit)}</p>
+                                                                        )}
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                            {showsOverdraftWarning && (
+                                                                <p className={cn("text-[11px] font-bold", projectedMetrics.overLimit > 0 ? "text-danger" : "text-amber-600")}>
+                                                                    Aviso: pagamento permitido com uso do limite.
                                                                 </p>
                                                             )}
-                                                            {insufficientFunds && <p className="text-[11px] text-danger font-bold">Saldo inadequado</p>}
                                                         </div>
                                                     </div>
                                                 </button>

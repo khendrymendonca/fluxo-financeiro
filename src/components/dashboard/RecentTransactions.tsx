@@ -5,6 +5,7 @@ import { ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatters';
 
 import { parseLocalDate } from '@/utils/dateUtils';
+import { getTransactionCategoryLabel } from '@/utils/transactionCategory';
 
 interface RecentTransactionsProps {
   transactions: Transaction[];
@@ -24,8 +25,7 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
   const { categories } = useFinanceStore();
 
   const getCategory = (transaction: Transaction) => {
-    const cat = categories.find(c => c.id === transaction.categoryId);
-    return { label: cat?.name || 'Outros' };
+    return { label: getTransactionCategoryLabel(transaction, categories, 'Outros') };
   };
 
   const getSourceLabel = (transaction: Transaction) => {

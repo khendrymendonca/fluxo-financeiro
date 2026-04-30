@@ -34,6 +34,7 @@ import { Transaction } from "@/types/finance";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer,
@@ -75,6 +76,7 @@ function StatusBadge({ status }: { status: ReturnType<typeof getInvoiceStatusDis
 }
 
 export default function CardsDashboard() {
+  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const {
     creditCards, transactions, accounts, categories,
@@ -151,6 +153,25 @@ export default function CardsDashboard() {
     [currentInvoiceTransactions]
   );
 
+  const currentInvoicePaidTotal = useMemo(() => {
+    if (!selectedCardId) return 0;
+    const viewDateStr = format(viewDate, "yyyy-MM");
+    return transactions
+      .filter(
+        (t) =>
+          t.cardId === selectedCardId &&
+          t.isInvoicePayment &&
+          t.type === "expense" &&
+          t.invoiceMonthYear === viewDateStr
+      )
+      .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+  }, [selectedCardId, viewDate, transactions]);
+
+  const currentInvoiceDifference = useMemo(
+    () => currentInvoicePaidTotal - currentInvoiceTotal,
+    [currentInvoicePaidTotal, currentInvoiceTotal]
+  );
+
   const stats = useMemo(() => {
     if (!selectedCardId || !selectedCard) return { used: 0, available: 0, limit: 0, percentUsed: 0 };
     const limit = Number(selectedCard.limit ?? 0);
@@ -164,7 +185,11 @@ export default function CardsDashboard() {
     if (!selectedCard || !selectedCardId) return null;
     const viewDateStr = format(viewDate, "yyyy-MM");
     const isPaid = transactions.some(
-      (t) => t.cardId === selectedCardId && t.isInvoicePayment && t.invoiceMonthYear === viewDateStr
+      (t) =>
+        t.cardId === selectedCardId &&
+        t.isInvoicePayment &&
+        t.type === "expense" &&
+        t.invoiceMonthYear === viewDateStr
     );
     return getInvoiceStatusDisplay(selectedCard, viewDate, isPaid, currentInvoiceTotal);
   }, [selectedCard, selectedCardId, viewDate, transactions, currentInvoiceTotal]);
@@ -197,6 +222,11 @@ export default function CardsDashboard() {
     [currentInvoiceTransactions, searchQuery]
   );
 
+  const openPayInvoiceModal = useCallback(() => {
+    setPayInvoiceAmount(currentInvoiceTotal > 0 ? currentInvoiceTotal.toFixed(2) : "");
+    setShowPayInvoice(true);
+  }, [currentInvoiceTotal]);
+
   const handleConfirmPayment = async () => {
     if (!selectedCard || !payInvoiceAccountId || !payInvoiceAmount) {
       toast({ title: "Preencha todos os campos", variant: "destructive" });
@@ -213,7 +243,6 @@ export default function CardsDashboard() {
 
     setIsProcessingPayment(true);
     const viewDateStr = format(viewDate, "yyyy-MM");
-    const isParcial = valorPago < totalFatura;
     const saldoRestante = totalFatura - valorPago;
 
     // ID da transação de pagamento — usado para rollback se etapas seguintes falharem
@@ -241,7 +270,7 @@ export default function CardsDashboard() {
       }
 
       // 2. Se parcial, criar saldo remanescente para o mês seguinte
-      if (isParcial) {
+      if (false) {
         const nextInvoiceMonthYear = format(addMonths(viewDate, 1), 'yyyy-MM');
 
         // 🛡️ DEDUPLICAÇÃO: Buscar remainders existentes para este cartão no mesmo mês de fatura
@@ -275,10 +304,11 @@ export default function CardsDashboard() {
         } as any);
       }
 
-      // 3. Atualizar compras originais
-      if (!isParcial) {
-        // Pagamento TOTAL: marcar tudo como pago
-        const ids = currentInvoiceTransactions.map(t => t.id);
+      // 3. Atualizar compras originais jÃ¡ lanÃ§adas nesta competÃªncia
+      {
+        const ids = currentInvoiceTransactions
+          .filter((transaction) => transaction.type === 'expense' && !transaction.isInvoicePayment)
+          .map((transaction) => transaction.id);
         if (ids.length > 0) {
           try {
             await bulkUpdateTransactions({ ids, updates: { isPaid: true, paymentDate: payInvoiceDate } });
@@ -357,7 +387,7 @@ export default function CardsDashboard() {
     if (!card) return null;
     const viewDateStr = format(viewDate, "yyyy-MM");
     const isPaid = transactions.some(
-      (t) => t.cardId === cardId && t.isInvoicePayment && t.invoiceMonthYear === viewDateStr
+      (t) => t.cardId === cardId && t.isInvoicePayment && t.type === 'expense' && t.invoiceMonthYear === viewDateStr
     );
     const total = transactions
       .filter((t) => {
@@ -408,7 +438,7 @@ export default function CardsDashboard() {
       {/* ══════════════════════════════════════════════════════════════════════
           DESKTOP — Master-Detail (lg+)
       ══════════════════════════════════════════════════════════════════════ */}
-      {sortedCards.length > 0 && (
+      {!isMobile && sortedCards.length > 0 && (
         <div className="hidden lg:grid lg:grid-cols-12 gap-0 items-start">
 
           {/* Coluna esquerda — lista de cartões */}
@@ -489,15 +519,17 @@ export default function CardsDashboard() {
                       <StatusBadge status={dynamicStatus} />
                     </div>
                     <div className="flex items-end justify-between mb-4">
-                      <h2 className="text-5xl lg:text-6xl font-black tracking-tighter tabular-nums text-foreground">
-                        {fmtBRL(currentInvoiceTotal)}
-                      </h2>
+                      <div>
+                        <h2 className="text-5xl lg:text-6xl font-black tracking-tighter tabular-nums text-foreground">
+                          {fmtBRL(currentInvoiceTotal)}
+                        </h2>
+                        <p className="mt-2 text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
+                          Total lançado / calculado
+                        </p>
+                      </div>
                       {dynamicStatus?.text !== 'Paga' && (
                         <Button
-                          onClick={() => {
-                            setPayInvoiceAmount(currentInvoiceTotal.toFixed(2));
-                            setShowPayInvoice(true);
-                          }}
+                          onClick={openPayInvoiceModal}
                           className="bg-[#00d4aa] hover:bg-[#00b894] text-[#0a0a0f] rounded-xl font-black uppercase text-xs tracking-widest px-6 h-11 shadow-lg shadow-[#00d4aa]/20 transition-all hover:scale-105 active:scale-95"
                         >
                           Pagar Fatura
@@ -519,6 +551,27 @@ export default function CardsDashboard() {
                           stats.percentUsed > 90 ? "bg-rose-400" :
                             stats.percentUsed > 70 ? "bg-amber-400" : "bg-emerald-400"
                         )} style={{ width: `${stats.percentUsed}%` }} />
+                      </div>
+                    </div>
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="rounded-2xl border border-border bg-muted/20 p-4">
+                        <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Total lançado</p>
+                        <p className="mt-1 text-xl font-black tabular-nums text-foreground">{fmtBRL(currentInvoiceTotal)}</p>
+                      </div>
+                      <div className="rounded-2xl border border-border bg-muted/20 p-4">
+                        <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Valor pago</p>
+                        <p className="mt-1 text-xl font-black tabular-nums text-foreground">{fmtBRL(currentInvoicePaidTotal)}</p>
+                      </div>
+                      <div className="rounded-2xl border border-border bg-muted/20 p-4">
+                        <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Diferença a conciliar</p>
+                        <p className="mt-1 text-xl font-black tabular-nums text-foreground">{fmtBRL(Math.abs(currentInvoiceDifference))}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {currentInvoiceDifference > 0
+                            ? 'Pago acima do lançado. Ainda falta lançar essa diferença.'
+                            : currentInvoiceDifference < 0
+                              ? 'Há mais lançamentos do que pagamento registrado nesta competência.'
+                              : 'Fatura conciliada.'}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -545,7 +598,6 @@ export default function CardsDashboard() {
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => {
-                        console.log('accounts ao abrir modal:', accounts);
                         setShowAnticipatePayment(true);
                       }}
                       className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-primary/40 hover:bg-primary/5 transition-all group"
@@ -721,7 +773,7 @@ export default function CardsDashboard() {
       {/* ══════════════════════════════════════════════════════════════════════
           MOBILE — Carrossel snap + painel
       ══════════════════════════════════════════════════════════════════════ */}
-      {sortedCards.length > 0 && (
+      {isMobile && sortedCards.length > 0 && (
         <div className="block lg:hidden space-y-4">
 
           <div
@@ -798,10 +850,7 @@ export default function CardsDashboard() {
                     </h2>
                     {dynamicStatus?.text !== 'Paga' && (
                       <Button
-                        onClick={() => {
-                          setPayInvoiceAmount(currentInvoiceTotal.toFixed(2));
-                          setShowPayInvoice(true);
-                        }}
+                        onClick={openPayInvoiceModal}
                         className="bg-[#00d4aa] hover:bg-[#00b894] text-[#0a0a0f] rounded-xl font-black uppercase text-[11px] tracking-widest px-4 h-10 shadow-lg shadow-[#00d4aa]/20"
                       >
                         Pagar
@@ -850,7 +899,6 @@ export default function CardsDashboard() {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => {
-                      console.log('accounts ao abrir modal (mobile):', accounts);
                       setShowAnticipatePayment(true);
                     }}
                     className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-primary/40 hover:bg-primary/5 transition-all group"
@@ -993,7 +1041,7 @@ export default function CardsDashboard() {
       {/* Pay Invoice Dialog */}
       {showPayInvoice && selectedCard && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-card border-2 border-primary/20 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-300">
+          <div className="bg-card border-2 border-primary/20 rounded-[2.5rem] p-6 md:p-8 w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300">
             <div className="flex flex-col items-center text-center space-y-4 mb-8">
               <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-lg">
                 <Check className="w-8 h-8" />
@@ -1006,7 +1054,7 @@ export default function CardsDashboard() {
               </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-start">
               {/* Seleção de Conta */}
               <div className="space-y-2">
                 <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Pagar com</label>
@@ -1039,7 +1087,19 @@ export default function CardsDashboard() {
                     className="h-14 rounded-2xl border-2 border-muted bg-muted/30 pl-10 font-black text-xl"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground font-bold ml-1">Total da fatura: {fmtBRL(currentInvoiceTotal)}</p>
+                <p className="text-xs text-muted-foreground font-bold ml-1">Total lançado: {fmtBRL(currentInvoiceTotal)}</p>
+                <p className="text-xs text-muted-foreground font-bold ml-1">Valor pago nesta competência: {fmtBRL(currentInvoicePaidTotal)}</p>
+                <p className="text-xs text-muted-foreground font-bold ml-1">Diferença a conciliar: {fmtBRL(Math.abs(currentInvoiceDifference))}</p>
+                {currentInvoiceDifference > 0 && (
+                  <p className="text-xs text-primary font-bold ml-1 leading-relaxed">
+                    O valor pago está acima do que foi lançado até agora. Essa diferença fica como falta lançar nesta competência.
+                  </p>
+                )}
+                {currentInvoiceTotal <= 0 && (
+                  <p className="text-xs text-primary font-bold ml-1 leading-relaxed">
+                    Sem lançamentos nesta competência. Você pode informar um valor manual para registrar a fatura e reconciliar depois com os lançamentos.
+                  </p>
+                )}
               </div>
 
               {/* Data do Pagamento */}
@@ -1054,20 +1114,20 @@ export default function CardsDashboard() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 mt-8">
-              <Button
-                onClick={handleConfirmPayment}
-                disabled={isProcessingPayment}
-                className="w-full h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl font-black text-base shadow-lg shadow-primary/20"
-              >
-                {isProcessingPayment ? "Processando..." : "Confirmar Pagamento"}
-              </Button>
+            <div className="flex flex-col-reverse md:flex-row gap-3 mt-8">
               <Button
                 variant="ghost"
                 onClick={() => setShowPayInvoice(false)}
-                className="w-full h-12 rounded-2xl font-bold text-muted-foreground hover:text-foreground"
+                className="w-full md:flex-1 h-12 rounded-2xl font-bold text-muted-foreground hover:text-foreground"
               >
                 Cancelar
+              </Button>
+              <Button
+                onClick={handleConfirmPayment}
+                disabled={isProcessingPayment}
+                className="w-full md:flex-1 h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl font-black text-base shadow-lg shadow-primary/20"
+              >
+                {isProcessingPayment ? "Processando..." : "Confirmar Pagamento"}
               </Button>
             </div>
           </div>

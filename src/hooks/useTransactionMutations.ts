@@ -201,13 +201,21 @@ export function useToggleTransactionPaid() {
   return useMutation({
     mutationKey: ['togglePaid'],
     mutationFn: async ({ id, isPaid, date, accountId, isChild }: { id: string, isPaid: boolean, date?: string, accountId?: string, isChild?: boolean }) => {
-      // Se estamos estornando (isPaid = false) um filho de recorrente, removemos logicamente
-      // para forçar o sistema a recriar a contra-parte virtual intacta sem gerar "shadows".
+      // Se estamos estornando (isPaid = false) um filho materializado, ele deve voltar
+      // ao estado pendente em vez de virar shadow. Isso tira o item do Extrato e o
+      // devolve para a Gestão de Contas pelo fluxo normal de filtros.
       if (!isPaid && isChild) {
         const { error } = await supabase
           .from('transactions')
-          .update({ deleted_at: new Date().toISOString() })
-          .eq('id', id);
+          .update({
+            is_paid: false,
+            payment_date: null,
+            account_id: null,
+            card_id: null,
+            invoice_month_year: null,
+          })
+          .eq('id', id)
+          .select();
         if (error) throw error;
         return id;
       }

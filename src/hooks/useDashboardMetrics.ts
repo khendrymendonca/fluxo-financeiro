@@ -3,6 +3,7 @@ import { useCategories } from './useFinanceQueries';
 import { parseLocalDate } from '@/utils/dateUtils';
 import { Transaction } from '@/types/finance';
 import { safeAdd, safeSubtract } from '@/utils/mathUtils';
+import { getTransactionCategoryLabel } from '@/utils/transactionCategory';
 
 export function useDashboardMetrics(viewDate: Date, transactions: Transaction[]) {
   const { data: categories = [] } = useCategories();
@@ -33,8 +34,7 @@ export function useDashboardMetrics(viewDate: Date, transactions: Transaction[])
     currentMonthTransactions
       .filter(t => t.type === 'expense' && !t.isInvoicePayment && !t.isTransfer)
       .forEach(t => {
-        const cat = categories.find(c => c.id === t.categoryId);
-        const name = cat?.name || 'Sem Categoria';
+        const name = getTransactionCategoryLabel(t, categories);
         categoryMap.set(name, safeAdd(categoryMap.get(name) || 0, t.amount));
       });
 

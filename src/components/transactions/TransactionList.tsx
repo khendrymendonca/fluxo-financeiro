@@ -11,9 +11,10 @@ import {
 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { Portal } from '@/components/ui/Portal';
-import { OverdraftWarningDialog } from '@/components/ui/OverdraftWarningDialog';
 import { BulkDeleteDialog } from './BulkDeleteDialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { getAccountOverdraftMetrics } from '@/utils/accountOverdraft';
+import { getTransactionCategoryLabel } from '@/utils/transactionCategory';
 
 export interface TransactionListProps {
   transactions: Transaction[];
@@ -46,10 +47,6 @@ export function TransactionList({
   const [searchQuery, setSearchQuery] = useState('');
   const [anticipatingIds, setAnticipatingIds] = useState<Set<string>>(new Set());
   const [anticipateAccount, setAnticipateAccount] = useState('');
-  const [showOverdraftWarning, setShowOverdraftWarning] = useState(false);
-  const [overdraftAmountUsed, setOverdraftAmountUsed] = useState(0);
-  const [overdraftAccountName, setOverdraftAccountName] = useState('');
-  const [pendingPaymentData, setPendingPaymentData] = useState<{ id: string, isCard: boolean } | null>(null);
 
   // Single Item Delete State
   const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
@@ -121,6 +118,9 @@ export function TransactionList({
       // 4. REGRA DO EXTRATO: parcelamentos vinculados a um grupo só aparecem após serem pagos
       if (t.installmentGroupId && !t.isPaid) return false;
 
+      // 5. REGRA DO EXTRATO: filhos materializados de recorrentes também saem do extrato ao estornar
+      if (t.originalId && !t.isPaid) return false;
+
       // Filtro de Busca por Texto
       if (searchQuery.trim() !== '') {
         const query = searchQuery.toLowerCase();
@@ -165,19 +165,6 @@ export function TransactionList({
 
   const handleSubmitPayment = (targetId: string, isCard: boolean) => {
     if (!payingItem) return;
-    if (!isCard && payingItem.type === 'expense') {
-      const acc = accounts.find(a => a.id === targetId);
-      if (acc?.hasOverdraft && acc.balance < payingItem.amount) {
-        const deficit = payingItem.amount - acc.balance;
-        if (deficit > 0 && deficit <= (acc.overdraftLimit || 0)) {
-          setOverdraftAmountUsed(deficit);
-          setOverdraftAccountName(acc.name);
-          setPendingPaymentData({ id: targetId, isCard });
-          setShowOverdraftWarning(true);
-          return;
-        }
-      }
-    }
     executePayment(targetId, isCard);
   };
 
@@ -363,6 +350,12 @@ export function TransactionList({
                   const isPending = item.isPending;
                   const hasInstallmentGroup = item.installmentGroupId && !item.isBill;
                   const isGroupExpanded = expandedGroup === item.installmentGroupId;
+                  const isCardInstallment = Boolean(
+                    item.cardId &&
+                    item.installmentGroupId &&
+                    item.transactionType === 'installment' &&
+                    !item.debtId
+                  );
                   const futureInstallments = hasInstallmentGroup
                     ? getFutureInstallments(item.installmentGroupId, item.installmentNumber || 0)
                     : [];
@@ -372,7 +365,7 @@ export function TransactionList({
                   const isManagedByBills = Boolean(
                     item.isRecurring ||
                     item.transactionType === 'recurring' ||
-                    item.installmentGroupId ||
+                    (item.installmentGroupId && !isCardInstallment) ||
                     item.isInvoicePayment ||
                     item.originalId
                   );
@@ -418,8 +411,7 @@ export function TransactionList({
                             </div>
                             <div className="flex items-center gap-1.5 text-xs text-zinc-500">
                               <span>
-                                {item.categoryId === 'debt-payment' ? 'Pagamento de Acordo' :
-                                  item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || 'Outros' : 'Outros'}
+                                {getTransactionCategoryLabel(item, categories, 'Outros')}
                               </span>
                               {item.installmentNumber && item.installmentTotal && (
                                 <>
@@ -597,15 +589,14 @@ export function TransactionList({
                       <p className="text-center text-muted-foreground py-8 text-sm">Nenhuma conta cadastrada.</p>
                     ) : (
                       accounts.map(acc => {
-                        const availableTotal = acc.balance + (acc.hasOverdraft ? (acc.overdraftLimit || 0) : 0);
-                        const wouldGoNegative = payingItem.type === 'expense' && acc.balance < payingItem.amount;
-                        const hasEnoughWithOverdraft = acc.hasOverdraft && availableTotal >= payingItem.amount;
-                        const insufficientFunds = wouldGoNegative && !hasEnoughWithOverdraft;
+                        const currentMetrics = getAccountOverdraftMetrics(acc);
+                        const projectedBalance = acc.balance + (payingItem.type === 'income' ? payingItem.amount : -payingItem.amount);
+                        const projectedMetrics = getAccountOverdraftMetrics({ ...acc, balance: projectedBalance });
+                        const showsOverdraftWarning = projectedMetrics.usedLimit > 0 || projectedMetrics.overLimit > 0;
                         return (
                           <button key={acc.id} onClick={() => handleSubmitPayment(acc.id, false)}
-                            disabled={insufficientFunds}
                             className={cn("w-full p-3 rounded-xl border-2 text-left transition-all",
-                              insufficientFunds ? "border-border/30 opacity-40 cursor-not-allowed" : "border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] cursor-pointer")}>
+                              "border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] cursor-pointer")}>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: acc.color }} />
@@ -615,13 +606,29 @@ export function TransactionList({
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className={cn("font-black text-sm", acc.balance < 0 && "text-danger")}>
-                                  {formatCurrency(acc.balance)}
+                                <p className={cn("font-black text-sm", currentMetrics.realBalance < 0 && "text-danger")}>
+                                  {formatCurrency(currentMetrics.realBalance)}
                                 </p>
-                                {acc.hasOverdraft && (acc.overdraftLimit || 0) > 0 && (
-                                  <p className="text-[11px] text-amber-600 font-bold">Limite: {formatCurrency(acc.overdraftLimit || 0)}</p>
+                                <p className="text-[11px] text-muted-foreground font-bold">Saldo atual</p>
+                                <div className="mt-1 space-y-0.5">
+                                  <p className={cn("text-[11px] font-bold", projectedMetrics.realBalance < 0 && "text-danger")}>
+                                    Após pagamento: {formatCurrency(projectedMetrics.realBalance)}
+                                  </p>
+                                  {projectedMetrics.limit > 0 && (
+                                    <>
+                                      <p className="text-[11px] text-amber-600 font-bold">Limite utilizado: {formatCurrency(projectedMetrics.usedLimit)}</p>
+                                      <p className="text-[11px] text-emerald-600 font-bold">Limite disponivel: {formatCurrency(projectedMetrics.availableLimit)}</p>
+                                      {projectedMetrics.overLimit > 0 && (
+                                        <p className="text-[11px] text-danger font-bold">Excesso alem do limite: {formatCurrency(projectedMetrics.overLimit)}</p>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                                {showsOverdraftWarning && (
+                                  <p className={cn("text-[11px] font-bold", projectedMetrics.overLimit > 0 ? "text-danger" : "text-amber-600")}>
+                                    Aviso: pagamento permitido com uso do limite.
+                                  </p>
                                 )}
-                                {insufficientFunds && <p className="text-[11px] text-danger font-bold">Saldo inadequado</p>}
                               </div>
                             </div>
                           </button>
@@ -672,18 +679,6 @@ export function TransactionList({
 
           await deleteTransaction(itemToDelete, options.installmentScope || (options.deleteFutureBills ? 'future' : 'this'));
           setItemToDelete(null);
-        }}
-      />
-
-      <OverdraftWarningDialog
-        isOpen={showOverdraftWarning}
-        amountUsedFromLimit={overdraftAmountUsed}
-        accountName={overdraftAccountName}
-        onCancel={() => { setShowOverdraftWarning(false); setPendingPaymentData(null); }}
-        onConfirm={() => {
-          setShowOverdraftWarning(false);
-          if (pendingPaymentData) executePayment(pendingPaymentData.id, pendingPaymentData.isCard);
-          setPendingPaymentData(null);
         }}
       />
 

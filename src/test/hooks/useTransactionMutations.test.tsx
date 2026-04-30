@@ -159,9 +159,9 @@ describe('useTransactionMutations - soft delete and payment status', () => {
     }));
   });
 
-  it('estorna filho materializado com soft delete em vez de delete fisico', async () => {
+  it('estorna filho materializado voltando o registro para pendente', async () => {
     const updateQuery = chain({
-      eq: vi.fn(async () => ({ error: null })),
+      select: vi.fn(async () => ({ error: null })),
     });
     supabaseMock.from.mockReturnValueOnce(updateQuery);
 
@@ -173,7 +173,13 @@ describe('useTransactionMutations - soft delete and payment status', () => {
       isChild: true,
     });
 
-    expect(updateQuery.update).toHaveBeenCalledWith({ deleted_at: expect.any(String) });
+    expect(updateQuery.update).toHaveBeenCalledWith({
+      is_paid: false,
+      payment_date: null,
+      account_id: null,
+      card_id: null,
+      invoice_month_year: null,
+    });
     expect(updateQuery.eq).toHaveBeenCalledWith('id', 'child-1');
   });
 

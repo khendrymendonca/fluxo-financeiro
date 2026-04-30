@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { TrendingDown, Plus, Trash2, X, AlertTriangle, Edit2 } from 'lucide-react';
 import { useRenegotiateDebt } from '@/hooks/useDebtMutations';
+import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { Debt } from '@/types/finance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,7 @@ export function DebtsManager({
   const [firstInstallmentDate, setFirstInstallmentDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   const { mutateAsync: renegotiateDebt } = useRenegotiateDebt();
+  const { transactions } = useFinanceStore();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -91,8 +93,64 @@ export function DebtsManager({
     setShowForm(false);
   };
 
+  const debtSummaries = useMemo(() => {
+    return debts.reduce<Record<string, {
+      totalAmount: number;
+      remainingAmount: number;
+      paidAmount: number;
+      totalInstallments: number;
+      paidInstallments: number;
+      pendingInstallments: number;
+      currentInstallment: number;
+      hasDerivedInstallments: boolean;
+    }>>((acc, debt) => {
+      const installments = transactions
+        .filter((tx) => !tx.isVirtual && tx.debtId === debt.id)
+        .sort((a, b) => {
+          const aOrder = a.installmentNumber ?? Number.MAX_SAFE_INTEGER;
+          const bOrder = b.installmentNumber ?? Number.MAX_SAFE_INTEGER;
+          return aOrder - bOrder;
+        });
 
-  const totalDebt = debts.reduce((sum, d) => sum + d.remainingAmount, 0);
+      const paidInstallments = installments.filter((tx) => tx.isPaid);
+      const pendingInstallments = installments.filter((tx) => !tx.isPaid);
+      const hasDerivedInstallments = installments.length > 0;
+
+      const totalAmount = hasDerivedInstallments
+        ? installments.reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
+        : Number(debt.totalAmount) || 0;
+      const remainingAmount = hasDerivedInstallments
+        ? pendingInstallments.reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
+        : Number(debt.remainingAmount) || 0;
+      const paidAmount = hasDerivedInstallments
+        ? paidInstallments.reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
+        : Math.max(0, totalAmount - remainingAmount);
+      const totalInstallments = hasDerivedInstallments
+        ? installments.length
+        : Number(debt.totalInstallments) || 0;
+      const currentInstallment = totalInstallments > 0
+        ? Math.min(
+          paidInstallments.length + (pendingInstallments.length > 0 ? 1 : 0),
+          totalInstallments
+        )
+        : 0;
+
+      acc[debt.id] = {
+        totalAmount,
+        remainingAmount,
+        paidAmount,
+        totalInstallments,
+        paidInstallments: paidInstallments.length,
+        pendingInstallments: pendingInstallments.length,
+        currentInstallment,
+        hasDerivedInstallments,
+      };
+
+      return acc;
+    }, {});
+  }, [debts, transactions]);
+
+  const totalDebt = debts.reduce((sum, d) => sum + (debtSummaries[d.id]?.remainingAmount ?? d.remainingAmount), 0);
   const totalMonthly = debts.reduce((sum, d) => sum + d.installmentAmount, 0);
 
   const toNegotiate = debts.filter(d => d.status !== 'renegotiated');
@@ -214,8 +272,9 @@ export function DebtsManager({
               <div className="space-y-4">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground ml-1">Em Pagamento (Acordos)</h3>
                 {inPayment.map((debt) => {
-                  const totalAmt = Number(debt.totalAmount) || 0;
-                  const remAmt = Number(debt.remainingAmount) || 0;
+                  const summary = debtSummaries[debt.id];
+                  const totalAmt = summary?.totalAmount ?? Number(debt.totalAmount || 0);
+                  const remAmt = summary?.remainingAmount ?? Number(debt.remainingAmount || 0);
                   const progress = totalAmt > 0
                     ? ((totalAmt - remAmt) / totalAmt) * 100
                     : 0;
@@ -232,7 +291,10 @@ export function DebtsManager({
                               <span className="px-1.5 py-0.5 rounded bg-success/10 text-success text-[11px] font-black uppercase">Acordo Ativo</span>
                             )}
                             <p className="text-xs text-gray-500 dark:text-zinc-500 font-bold">
-                              {debt.totalInstallments} parcelas • Dia {debt.dueDay}
+                              {summary?.hasDerivedInstallments
+                                ? `${summary.paidInstallments}/${summary.totalInstallments} pagas • Parcela ${summary.currentInstallment}/${summary.totalInstallments}`
+                                : `${debt.totalInstallments} parcelas`}
+                              {debt.dueDay ? ` • Dia ${debt.dueDay}` : ''}
                             </p>
 
                           </div>
@@ -249,8 +311,8 @@ export function DebtsManager({
 
                       <div className="space-y-2">
                         <div className="flex justify-between text-xs font-black uppercase">
-                          <span className="text-muted-foreground">Pago: {formatCurrency(Math.max(0, (Number(debt.totalAmount) || 0) - (Number(debt.remainingAmount) || 0)))}</span>
-                          <span className="text-danger">Restante: {formatCurrency(Number(debt.remainingAmount) || 0)}</span>
+                          <span className="text-muted-foreground">Pago: {formatCurrency(summary?.paidAmount ?? Math.max(0, (Number(debt.totalAmount) || 0) - (Number(debt.remainingAmount) || 0)))}</span>
+                          <span className="text-danger">Restante: {formatCurrency(remAmt)}</span>
                         </div>
                         <div className="h-2 rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden">
                           <div className="h-full rounded-full bg-success transition-all duration-500" style={{ width: `${progress}%` }} />

@@ -1,6 +1,6 @@
 ﻿import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns';
+import { format, startOfYear, endOfYear } from 'date-fns';
 import { Transaction, Account, CreditCard, Debt, SavingsGoal, Category, Subcategory, CategoryGroup } from '@/types/finance';
 import { toast } from '@/components/ui/use-toast';
 
@@ -28,9 +28,9 @@ export function useTransactions(viewDate: Date) {
   return useQuery({
     queryKey: ['transactions', viewDate.getFullYear(), viewDate.getMonth()],
     queryFn: async () => {
-      // Janela expandida: 3 meses antes e 3 meses depois do mês visualizado
-      const windowStart = format(startOfMonth(subMonths(viewDate, 3)), 'yyyy-MM-dd');
-      const windowEnd = format(endOfMonth(addMonths(viewDate, 3)), 'yyyy-MM-dd');
+      // Janela anual: garante relatórios completos e comparativos por meses no mesmo ano
+      const windowStart = format(startOfYear(viewDate), 'yyyy-MM-dd');
+      const windowEnd = format(endOfYear(viewDate), 'yyyy-MM-dd');
       const viewDateStr = format(viewDate, 'yyyy-MM');
 
       const { data, error } = await supabase
@@ -41,6 +41,7 @@ export function useTransactions(viewDate: Date) {
           `and(deleted_at.is.null,is_recurring.eq.true),` +
           `and(deleted_at.is.null,installment_group_id.not.is.null),` +
           `and(deleted_at.is.null,invoice_month_year.eq.${viewDateStr}),` +
+          `and(deleted_at.is.null,card_id.not.is.null,is_invoice_payment.eq.true),` +
           `and(deleted_at.is.null,card_id.not.is.null,is_paid.eq.false),` +
           `and(deleted_at.is.null,original_id.not.is.null),` +
           `and(deleted_at.not.is.null,original_id.not.is.null,is_recurring.eq.false)`

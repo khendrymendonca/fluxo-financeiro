@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { todayLocalString } from '@/utils/dateUtils';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Separator } from '@/components/ui/separator';
+import { getAccountOverdraftMetrics } from '@/utils/accountOverdraft';
 import {
   Accordion,
   AccordionContent,
@@ -362,6 +363,7 @@ export function AccountsManager({
                       {instAccounts.map((account) => {
                         const viewAccountBalance = getAccountViewBalance(account.id);
                         const typeLabel = getAccountTypeLabel(account.accountType);
+                        const overdraftMetrics = getAccountOverdraftMetrics(account);
 
                         return (
                           <div
@@ -401,13 +403,22 @@ export function AccountsManager({
 
                             <div className="flex items-end justify-between mt-auto">
                               <div>
-                                <p className="text-xs uppercase font-black text-zinc-400 tracking-tighter">Saldo Disponível</p>
+                                <p className="text-xs uppercase font-black text-zinc-400 tracking-tighter">Saldo Real</p>
                                 <p className={cn(
                                   "font-black text-xl tracking-tighter",
                                   viewAccountBalance < 0 ? "text-danger" : "text-zinc-900 dark:text-zinc-50"
                                 )}>
                                   {formatCurrency(viewAccountBalance)}
                                 </p>
+                                {overdraftMetrics.limit > 0 && (
+                                  <div className="mt-1 space-y-0.5">
+                                    <p className="text-[11px] font-bold text-amber-600">Limite utilizado: {formatCurrency(overdraftMetrics.usedLimit)}</p>
+                                    <p className="text-[11px] font-bold text-emerald-600">Limite disponível: {formatCurrency(overdraftMetrics.availableLimit)}</p>
+                                    {overdraftMetrics.overLimit > 0 && (
+                                      <p className="text-[11px] font-bold text-danger">Excesso além do limite: {formatCurrency(overdraftMetrics.overLimit)}</p>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                               <div className="w-8 h-8 rounded-full border-4 border-white dark:border-zinc-900 shadow-sm" style={{ backgroundColor: account.color }} />
                             </div>
@@ -496,7 +507,7 @@ export function AccountsManager({
                     <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-200">
                       <Label className="text-xs font-black uppercase tracking-widest text-amber-600">Valor do Limite (R$)</Label>
                       <Input type="number" step="0.01" min="0" value={overdraftLimit} onChange={(e) => setOverdraftLimit(e.target.value)} placeholder="Ex: 1000.00" className="h-10 rounded-xl border-2 border-amber-500/30 focus:border-amber-500/50 transition-colors px-4 font-bold" />
-                      <p className="text-[11px] text-muted-foreground">Seu saldo poderá ir até <strong className="text-amber-600">-{formatCurrency(parseFloat(overdraftLimit || '0'))}</strong></p>
+                      <p className="text-[11px] text-muted-foreground">O limite é apenas informativo para cálculo e exibição. A conta pode ultrapassá-lo.</p>
                     </div>
                   )}
                 </div>
@@ -535,7 +546,10 @@ export function AccountsManager({
                     required
                   >
                     <option value="">Selecione...</option>
-                    {accounts.map(a => <option key={a.id} value={a.id}>{a.bank} - {a.name} (Saldo: {formatCurrency(a.balance + (a.hasOverdraft ? (a.overdraftLimit || 0) : 0))})</option>)}
+                    {accounts.map(a => {
+                      const overdraftMetrics = getAccountOverdraftMetrics(a);
+                      return <option key={a.id} value={a.id}>{a.bank} - {a.name} (Saldo real: {formatCurrency(a.balance)} | Limite disp.: {formatCurrency(overdraftMetrics.availableLimit)})</option>;
+                    })}
                   </select>
                 </div>
 
