@@ -131,6 +131,47 @@ Lançamentos originados na Gestão de Contas (recorrentes, parcelados, pagamento
 - Pagamento parcial: cria transação de saldo remanescente (transaction_type: 'invoice_remainder') na fatura do mês seguinte com is_paid: false. As compras originais NÃO são marcadas como pagas em pagamento parcial.
 - Pagamento total: todas as compras do mês são marcadas is_paid: true via bulk update.
 
+### REGRA DE NEGÓCIO — LANÇAMENTOS, CARTÃO, FATURA E TOTAIS
+
+- A tela de `Lançamentos` representa movimentos financeiros registrados ou efetivamente ocorridos. Ela funciona como extrato, não como tela principal de baixa.
+- Compra em conta/carteira deve aparecer em `Lançamentos` e somar como despesa efetiva do período quando estiver paga/baixada.
+- Receita recebida deve aparecer em `Lançamentos` e somar como receita efetiva do período quando estiver recebida/baixada.
+- Compra no cartão de crédito deve aparecer em `Lançamentos`, pois é uma compra realizada, e também deve aparecer em `Cartões/Fatura`.
+- Compra no cartão, seja à vista ou parcelada, consome limite do cartão e compõe compromissos da fatura, mas NÃO deve somar como despesa efetiva nos totais financeiros do mês.
+- O valor da compra no cartão só deve impactar a despesa efetiva quando houver `pagamento de fatura`, pois é nesse momento que ocorre a saída real de dinheiro.
+- Pagamento de fatura deve aparecer em `Lançamentos` e deve somar como despesa efetiva do período.
+- Transferência entre contas deve aparecer em `Lançamentos` como registro de movimentação, mas NÃO deve somar como receita nem como despesa.
+- Contas fixas, receitas fixas, parcelas futuras e dívidas pendentes permanecem como compromissos/previsões enquanto não forem baixadas, pagas ou recebidas.
+- Baixa, pagamento ou recebimento transforma o compromisso em movimento efetivo.
+- Estorno deve reverter a baixa quando aplicável e devolver o item ao estado pendente, sem duplicar movimento no extrato.
+- Visualmente, compras de cartão e pagamentos de fatura devem ser identificáveis no extrato para evitar confusão entre compromisso de fatura e saída real de caixa.
+
+### REGRA DE NEGÓCIO — CORREÇÃO ASSISTIDA DE COMPRAS PARCELADAS
+
+- O app deve abraçar o usuário: se ele lançou uma compra ou parcelamento errado, precisa conseguir corrigir.
+- Compra parcelada no cartão deve ser corrigida preferencialmente como compra inteira, não como parcela isolada.
+- A ação principal deve ser `Corrigir compra parcelada`.
+- Ao corrigir a compra inteira, o sistema deve preservar a coerência de:
+  - `installmentGroupId`
+  - `cardId`
+  - `invoiceMonthYear`
+  - parcelas futuras
+  - limite consumido
+  - faturas envolvidas
+  - categorias e descrições
+- A correção pode ajustar:
+  - descrição
+  - categoria
+  - valor total
+  - número de parcelas
+  - cartão
+  - data inicial ou competência inicial
+- O sistema deve recalcular as parcelas futuras e manter o histórico coerente.
+- O app não deve tratar uma parcela de cartão como despesa comum isolada quando isso quebrar o grupo parcelado.
+- Edição de parcela isolada só deve existir no futuro como ação avançada e explícita, com aviso claro de que altera apenas aquela competência/fatura.
+- Pagamento de fatura deve ter fluxo próprio de ajuste/estorno, não deve ser editado como compra comum.
+- Transferência deve preservar a contraparte; não deve permitir quebrar apenas uma ponta sem tratamento.
+
 
 5. Histórico de Mudanças Críticas
 Data	Arquivo	Mudança

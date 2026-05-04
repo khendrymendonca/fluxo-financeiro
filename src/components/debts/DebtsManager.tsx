@@ -3,11 +3,13 @@ import { format } from 'date-fns';
 import { TrendingDown, Plus, Trash2, X, AlertTriangle, Edit2 } from 'lucide-react';
 import { useRenegotiateDebt } from '@/hooks/useDebtMutations';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { Debt } from '@/types/finance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { toast } from '@/components/ui/use-toast';
 
 interface DebtsManagerProps {
   debts: Debt[];
@@ -34,6 +36,9 @@ export function DebtsManager({
 
   const { mutateAsync: renegotiateDebt } = useRenegotiateDebt();
   const { transactions } = useFinanceStore();
+  const canUseUnlimitedDebts = useFeatureFlag('unlimited_debts');
+  const freeDebtsLimit = 3;
+  const hasReachedDebtsLimit = !canUseUnlimitedDebts && debts.length >= freeDebtsLimit;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -60,6 +65,14 @@ export function DebtsManager({
     if (editingDebt) {
       onUpdateDebt(editingDebt.id, debtData);
     } else {
+      if (hasReachedDebtsLimit) {
+        toast({
+          title: 'Limite do plano Free atingido',
+          description: 'Você pode cadastrar até 3 dívidas/acordos no plano Free. Para adicionar mais, libere dívidas ilimitadas.',
+        });
+        return;
+      }
+
       onAddDebt({
         ...debtData,
         startDate: firstInstallmentDate,
@@ -91,6 +104,19 @@ export function DebtsManager({
     setFirstInstallmentDate(format(new Date(), 'yyyy-MM-dd'));
     setEditingDebt(null);
     setShowForm(false);
+  };
+
+  const openAddDebtForm = () => {
+    if (hasReachedDebtsLimit) {
+      toast({
+        title: 'Limite do plano Free atingido',
+        description: 'Você pode cadastrar até 3 dívidas/acordos no plano Free. Para adicionar mais, libere dívidas ilimitadas.',
+      });
+      return;
+    }
+
+    setEditingDebt(null);
+    setShowForm(true);
   };
 
   const debtSummaries = useMemo(() => {
@@ -189,10 +215,7 @@ export function DebtsManager({
 
       {/* Add Button */}
       <Button
-        onClick={() => {
-          setEditingDebt(null);
-          setShowForm(true);
-        }}
+        onClick={openAddDebtForm}
         className="w-full rounded-xl py-6"
         variant="outline"
       >

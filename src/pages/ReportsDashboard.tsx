@@ -42,6 +42,7 @@ import {
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { formatCurrency } from '@/utils/formatters';
 import { parseLocalDate } from '@/utils/dateUtils';
 import { getTransactionCategoryLabel } from '@/utils/transactionCategory';
@@ -59,6 +60,7 @@ export default function ReportsDashboard() {
 
   const [period, setPeriod] = useState<Period>('month');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
+  const canUseAdvancedReports = useFeatureFlag('advanced_reports');
 
   const handlePrevMonth = () => setViewDate(subMonths(viewDate, 1));
   const handleNextMonth = () => setViewDate(addMonths(viewDate, 1));
@@ -533,15 +535,17 @@ export default function ReportsDashboard() {
         />
       </div>
 
-      <div className="lg:hidden bg-white dark:bg-zinc-900 rounded-[2rem] p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
+      {canUseAdvancedReports ? (
+        <>
+          <div className="lg:hidden bg-white dark:bg-zinc-900 rounded-[2rem] p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
         <p className="text-[10px] font-black uppercase tracking-[0.25em] text-primary mb-2">Desktop</p>
         <h3 className="text-base font-black tracking-tight">Mapa anual por categoria</h3>
         <p className="text-sm text-muted-foreground mt-2">
           Esse relatório fica visível só em telas maiores para não poluir o mobile.
         </p>
-      </div>
+          </div>
 
-      <div className="hidden lg:block bg-white dark:bg-zinc-900 rounded-[2.5rem] p-10 xl:p-12 border border-gray-100 dark:border-zinc-800 shadow-sm">
+          <div className="hidden lg:block bg-white dark:bg-zinc-900 rounded-[2.5rem] p-10 xl:p-12 border border-gray-100 dark:border-zinc-800 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-2">Pergunta do Milhão</p>
@@ -733,7 +737,9 @@ export default function ReportsDashboard() {
             </tbody>
           </table>
         </div>
-      </div>
+          </div>
+        </>
+      ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         <div className="lg:col-span-3 bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm">

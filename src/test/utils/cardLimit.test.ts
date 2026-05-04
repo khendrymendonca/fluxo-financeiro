@@ -100,7 +100,7 @@ describe('card limit calculation', () => {
     ])).toBe(0);
   });
 
-  it('pagamento de fatura isolado vira placeholder de limite ate os lancamentos entrarem', () => {
+  it('pagamento de fatura isolado nao consome limite por si so', () => {
     expect(getCardUsedLimitFromTransactions('card-1', [
       {
         cardId: 'card-1',
@@ -110,7 +110,7 @@ describe('card limit calculation', () => {
         invoiceMonthYear: '2026-05',
         date: '2026-05-20',
       },
-    ])).toBe(500);
+    ])).toBe(0);
   });
 
   it('pagamento isolado e compras futuras da mesma competencia se compensam', () => {

@@ -29,7 +29,7 @@ describe('TransactionForm - parcelamento no cartao', () => {
     });
   });
 
-  it('preserva o modelo de parcelamento e recalcula invoiceMonthYear ao editar compra parcelada no cartao', async () => {
+  it('abre compra parcelada no cartao em modo de correcao assistida do grupo inteiro', async () => {
     const onSubmit = vi.fn(async () => undefined);
 
     render(
@@ -70,7 +70,13 @@ describe('TransactionForm - parcelamento no cartao', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Salvar Alterações' }));
+    expect(screen.getAllByText('Corrigir compra parcelada')).toHaveLength(2);
+    expect(screen.getByText('Esta compra foi parcelada no cartão. A correção será aplicada ao grupo inteiro para manter fatura e limite coerentes.')).toBeInTheDocument();
+    expect(screen.getByText('Todas as parcelas desta compra')).toBeInTheDocument();
+    expect(screen.queryByText('Somente este lançamento')).not.toBeInTheDocument();
+    expect(screen.queryByText('Este e todos os futuros')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Corrigir compra parcelada' }));
 
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledWith(
@@ -83,7 +89,7 @@ describe('TransactionForm - parcelamento no cartao', () => {
           cardId: 'card-1',
         }),
         undefined,
-        'this'
+        'all'
       );
     });
   });

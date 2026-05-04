@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
 import { Portal } from '@/components/ui/Portal';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { useTransferBetweenAccounts } from '@/hooks/useAccountMutations';
 import { useAddTransaction } from '@/hooks/useTransactionMutations';
 import { toast } from '@/components/ui/use-toast';
@@ -39,8 +40,11 @@ export function AccountsManager({
   onDeleteAccount,
 }: AccountsManagerProps) {
   const { viewDate, currentMonthTransactions, categories } = useFinanceStore();
+  const canUseUnlimitedAccounts = useFeatureFlag('unlimited_accounts');
   const { mutateAsync: transferBetweenAccounts } = useTransferBetweenAccounts();
   const { mutateAsync: addTransaction } = useAddTransaction();
+  const freeAccountsLimit = 2;
+  const hasReachedAccountsLimit = !canUseUnlimitedAccounts && accounts.length >= freeAccountsLimit;
 
   const [showAccountForm, setShowAccountForm] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
@@ -98,6 +102,14 @@ export function AccountsManager({
   };
 
   const openAddForm = () => {
+    if (hasReachedAccountsLimit) {
+      toast({
+        title: 'Limite do plano Free atingido',
+        description: 'Você pode cadastrar até 2 contas/carteiras no plano Free. Para adicionar mais, libere contas ilimitadas.',
+      });
+      return;
+    }
+
     resetForm();
     setShowAccountForm(true);
   };
@@ -197,6 +209,14 @@ export function AccountsManager({
       onUpdateAccount(editingAccount.id, accountDataToUpdate);
       toast({ title: 'Conta atualizada com sucesso!' });
     } else {
+      if (hasReachedAccountsLimit) {
+        toast({
+          title: 'Limite do plano Free atingido',
+          description: 'Você pode cadastrar até 2 contas/carteiras no plano Free. Para adicionar mais, libere contas ilimitadas.',
+        });
+        return;
+      }
+
       // Check if institution already exists to inherit color if not explicitly changed
       const existingInst = accounts.find(a => (a.institution || a.bank) === accountInstitution);
       const finalColor = existingInst ? existingInst.color : accountColor;

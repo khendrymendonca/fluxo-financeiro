@@ -56,7 +56,7 @@ const navGroups = [
     items: [
       { id: 'reports', icon: BarChart3, label: 'Relatórios', featureKey: 'reports_dashboard' },
       { id: 'categories', icon: Settings2, label: 'Categorias' },
-      { id: 'export', icon: Database, label: 'Exportar' },
+      { id: 'export', icon: Database, label: 'Exportar', featureKey: 'export_data' },
     ],
   },
   {

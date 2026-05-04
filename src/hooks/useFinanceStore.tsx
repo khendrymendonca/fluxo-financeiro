@@ -181,7 +181,14 @@ function useFinanceProvider() {
 
   const totalBalance = useMemo(() => accounts.reduce((sum, acc) => sum + Number(acc.balance), 0), [accounts]);
   const totalIncome = useMemo(() => currentMonthTransactions.filter(t => t.type === 'income' && t.isPaid && !t.isTransfer).reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
-  const totalExpenses = useMemo(() => currentMonthTransactions.filter(t => t.type === 'expense' && t.isPaid && !t.isInvoicePayment && !t.isTransfer).reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
+  const totalExpenses = useMemo(() => currentMonthTransactions
+    .filter(t =>
+      t.type === 'expense' &&
+      t.isPaid &&
+      !t.isTransfer &&
+      (t.isInvoicePayment || !t.cardId)
+    )
+    .reduce((s, t) => s + Number(t.amount), 0), [currentMonthTransactions]);
 
   const totalPendingOutflows = useMemo(() => {
     return currentMonthTransactions

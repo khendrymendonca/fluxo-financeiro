@@ -135,6 +135,38 @@ export function useUserProfile() {
   });
 }
 
+// ── Plano atual do usuário (nome legível) ────────────────────
+export function useUserPlan(): { planId: string | null; planName: string | null; isLoading: boolean } {
+  const { user } = useAuth();
+  const isSuperAdmin = useIsSuperAdmin();
+
+  const query = useQuery({
+    queryKey: ['my_plan_info', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('plan_id, plans(name)')
+        .eq('id', user!.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && !isSuperAdmin,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  if (isSuperAdmin) {
+    return { planId: null, planName: 'admin', isLoading: false };
+  }
+
+  const raw = query.data as { plan_id: string | null; plans: { name: string } | null } | undefined;
+  return {
+    planId: raw?.plan_id ?? null,
+    planName: raw?.plans?.name ?? null,
+    isLoading: query.isLoading,
+  };
+}
+
 // ── SUPER ADMIN: buscar usuário por código ──────────────────
 export function useSearchUserByCode(code: string) {
   const isSuperAdmin = useIsSuperAdmin();

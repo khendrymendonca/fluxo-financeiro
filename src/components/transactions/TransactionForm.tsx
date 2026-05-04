@@ -83,7 +83,17 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     return format(new Date(), 'yyyy-MM');
   });
 
-  const [applyScope, setApplyScope] = useState<'this' | 'future' | 'all'>('this');
+  const isCardInstallmentEdit = Boolean(
+    initialData?.cardId &&
+    initialData?.installmentGroupId &&
+    initialData?.transactionType === 'installment' &&
+    !initialData?.debtId &&
+    !initialData?.isInvoicePayment
+  );
+
+  const [applyScope, setApplyScope] = useState<'this' | 'future' | 'all'>(
+    isCardInstallmentEdit ? 'all' : 'this'
+  );
   const [isPaidLocally, setIsPaidLocally] = useState(initialData?.isPaid || false);
 
   const [showOverdraftWarning, setShowOverdraftWarning] = useState(false);
@@ -130,6 +140,12 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       }
     }
   }, [initialData]);
+
+  useEffect(() => {
+    if (isCardInstallmentEdit) {
+      setApplyScope('all');
+    }
+  }, [isCardInstallmentEdit]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -824,6 +840,17 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 </>
               )}
 
+              {isCardInstallmentEdit && (
+                <div className="p-4 rounded-2xl bg-sky-50 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-900/30">
+                  <p className="text-xs font-black uppercase tracking-widest text-sky-700 dark:text-sky-300">
+                    Corrigir compra parcelada
+                  </p>
+                  <p className="mt-1 text-xs text-sky-700/80 dark:text-sky-300/80 leading-relaxed">
+                    Esta compra foi parcelada no cartão. A correção será aplicada ao grupo inteiro para manter fatura e limite coerentes.
+                  </p>
+                </div>
+              )}
+
               {/* Alcance da Atualização / Exclusão */}
               {(initialData?.installmentGroupId || initialData?.isRecurring) && (
                 <div className="flex flex-col gap-2 p-4 bg-primary/5 rounded-2xl border border-primary/20 animate-in fade-in zoom-in duration-300">
@@ -833,17 +860,24 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     </div>
                     <Label className="text-xs font-black uppercase tracking-widest text-primary">Alcance da Alteração / Exclusão</Label>
                   </div>
-                  <select
-                    className="h-11 rounded-xl border-2 border-primary/20 bg-background px-3 text-xs font-bold focus:ring-2 focus:ring-primary outline-none transition-all cursor-pointer hover:border-primary/40"
-                    value={applyScope}
-                    onChange={e => setApplyScope(e.target.value as any)}
-                  >
-                    <option value="this">Somente este lançamento</option>
-                    <option value="future">Este e todos os futuros</option>
-                    <option value="all">Todo o grupo (todos os meses)</option>
-                  </select>
+                  {isCardInstallmentEdit ? (
+                    <div className="h-11 rounded-xl border-2 border-primary/20 bg-background px-3 flex items-center text-xs font-bold">
+                      Todas as parcelas desta compra
+                    </div>
+                  ) : (
+                    <select
+                      className="h-11 rounded-xl border-2 border-primary/20 bg-background px-3 text-xs font-bold focus:ring-2 focus:ring-primary outline-none transition-all cursor-pointer hover:border-primary/40"
+                      value={applyScope}
+                      onChange={e => setApplyScope(e.target.value as any)}
+                    >
+                      <option value="this">Somente este lançamento</option>
+                      <option value="future">Este e todos os futuros</option>
+                      <option value="all">Todo o grupo (todos os meses)</option>
+                    </select>
+                  )}
                   <p className="text-[11px] text-primary/60 font-medium leading-tight px-1">
-                    {applyScope === 'this' ? 'A alteração afetará apenas o mês selecionado.' :
+                    {isCardInstallmentEdit ? 'A correção será aplicada em todo o grupo desta compra parcelada.' :
+                      applyScope === 'this' ? 'A alteração afetará apenas o mês selecionado.' :
                       applyScope === 'future' ? 'A alteração será replicada para os próximos meses.' :
                         'A alteração será aplicada em todo o histórico deste lançamento.'}
                   </p>
@@ -860,7 +894,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                       <span>Processando...</span>
                     </div>
                   ) : (
-                    initialData ? 'Salvar Alterações' :
+                    initialData ? (isCardInstallmentEdit ? 'Corrigir compra parcelada' : 'Salvar Alterações') :
                       activeTab === 'renda_fixa' ? 'Confirmar Renda Fixa' :
                         activeTab === 'transfer' ? 'Confirmar Transferência' : 'Concluir Lançamento'
                   )}

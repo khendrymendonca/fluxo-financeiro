@@ -6,11 +6,17 @@ const financeStoreMock = vi.hoisted(() => ({
   useFinanceStore: vi.fn(),
 }));
 
+const featureFlagsMock = vi.hoisted(() => ({
+  useFeatureFlag: vi.fn(),
+}));
+
 vi.mock('@/hooks/useFinanceStore', () => financeStoreMock);
+vi.mock('@/hooks/useFeatureFlags', () => featureFlagsMock);
 
 describe('ReportsDashboard - categoria de acordo', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    featureFlagsMock.useFeatureFlag.mockReturnValue(true);
     vi.stubGlobal('ResizeObserver', class {
       observe() {}
       unobserve() {}
@@ -54,7 +60,25 @@ describe('ReportsDashboard - categoria de acordo', () => {
 
     expect(screen.getAllByText('Acordo').length).toBeGreaterThan(0);
     expect(screen.queryByText('Outros')).not.toBeInTheDocument();
-    expect(screen.getByText('Mapa anual por categoria')).toBeInTheDocument();
+    expect(screen.getAllByText('Mapa anual por categoria').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Despesas').length).toBeGreaterThan(0);
+  });
+
+  it('oculta o bloco avancado quando advanced_reports nao estiver liberado', () => {
+    featureFlagsMock.useFeatureFlag.mockReturnValue(false);
+
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      transactions: [],
+      categories: [],
+      accounts: [],
+      viewDate: new Date(2026, 3, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<ReportsDashboard />);
+
+    expect(screen.queryByText('Mapa anual por categoria')).not.toBeInTheDocument();
+    expect(screen.getByText('Evolução Mensal')).toBeInTheDocument();
+    expect(screen.getByText('Por Categoria')).toBeInTheDocument();
   });
 });

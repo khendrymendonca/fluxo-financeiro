@@ -105,9 +105,7 @@ export function TransactionList({
 
   const filteredItems = displayItems
     .filter(t => {
-      // 1. Bloqueia faturas de cartão consolidadas e pagamentos de fatura (DESPESAS)
-      // ✅ Estornos/abatimentos (income) devem ser exibidos
-      if (t.isInvoicePayment && t.type === 'expense') return false;
+      // Pagamentos de fatura devem aparecer no extrato.
 
       // 2. Bloqueia projeções virtuais — pertencem à Gestão de Contas
       if (t.isVirtual) return false;
@@ -116,7 +114,14 @@ export function TransactionList({
       if ((t.isRecurring || t.transactionType === 'recurring') && !t.isPaid) return false;
 
       // 4. REGRA DO EXTRATO: parcelamentos vinculados a um grupo só aparecem após serem pagos
-      if (t.installmentGroupId && !t.isPaid) return false;
+      const isCardInstallment = Boolean(
+        t.cardId &&
+        t.installmentGroupId &&
+        t.transactionType === 'installment' &&
+        !t.debtId &&
+        !t.isInvoicePayment
+      );
+      if (t.installmentGroupId && !t.isPaid && !isCardInstallment) return false;
 
       // 5. REGRA DO EXTRATO: filhos materializados de recorrentes também saem do extrato ao estornar
       if (t.originalId && !t.isPaid) return false;
@@ -348,6 +353,9 @@ export function TransactionList({
                 {groupedItems[date].map(item => {
                   const isIncome = item.type === 'income';
                   const isPending = item.isPending;
+                  const isInvoicePaymentExpense = Boolean(item.isInvoicePayment && item.type === 'expense');
+                  const isTransferItem = Boolean(item.isTransfer);
+                  const isCardPurchase = Boolean(item.cardId && !item.isInvoicePayment && !item.isTransfer);
                   const hasInstallmentGroup = item.installmentGroupId && !item.isBill;
                   const isGroupExpanded = expandedGroup === item.installmentGroupId;
                   const isCardInstallment = Boolean(
@@ -402,13 +410,16 @@ export function TransactionList({
                               isPending ? <Clock className="w-5 h-5" /> : (isIncome ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />)
                             )}
                           </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-bold text-gray-900 dark:text-white text-sm">{item.description}</p>
-                              {isPending && <span className="text-[11px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Pendente</span>}
-                              {item.isVirtual && <span className="text-[11px] bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Projetado</span>}
-                              {isManagedByBills && <span className="text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Gestão de Contas</span>}
-                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold text-gray-900 dark:text-white text-sm">{item.description}</p>
+                                {isPending && <span className="text-[11px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Pendente</span>}
+                                {item.isVirtual && <span className="text-[11px] bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Projetado</span>}
+                                {isCardPurchase && <span className="text-[11px] bg-sky-100 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Compra no cartão</span>}
+                                {isInvoicePaymentExpense && <span className="text-[11px] bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Pagamento de fatura</span>}
+                                {isTransferItem && <span className="text-[11px] bg-violet-100 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Transferência</span>}
+                                {isManagedByBills && <span className="text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Gestão de Contas</span>}
+                              </div>
                             <div className="flex items-center gap-1.5 text-xs text-zinc-500">
                               <span>
                                 {getTransactionCategoryLabel(item, categories, 'Outros')}

@@ -30,11 +30,12 @@ import { cn } from "@/lib/utils";
 import { format, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getCardSettingsForDate, getInvoiceStatusDisplay } from "@/utils/creditCardUtils";
-import { Transaction } from "@/types/finance";
+import { Transaction, CreditCard as CreditCardType } from "@/types/finance";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useFeatureFlag } from "@/hooks/useFeatureFlags";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer,
@@ -77,6 +78,7 @@ function StatusBadge({ status }: { status: ReturnType<typeof getInvoiceStatusDis
 
 export default function CardsDashboard() {
   const isMobile = useIsMobile();
+  const canUseUnlimitedCards = useFeatureFlag('unlimited_cards');
   const queryClient = useQueryClient();
   const {
     creditCards, transactions, accounts, categories,
@@ -112,6 +114,8 @@ export default function CardsDashboard() {
   const [chartPeriod, setChartPeriod] = useState<"mensal" | "anual">("mensal");
   const [transactionToAnticipate, setTransactionToAnticipate] = useState<Transaction | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const freeCardsLimit = 1;
+  const hasReachedCardsLimit = !canUseUnlimitedCards && creditCards.length >= freeCardsLimit;
 
   useEffect(() => {
     if (sortedCards.length > 0 && !selectedCardId) {
@@ -226,6 +230,30 @@ export default function CardsDashboard() {
     setPayInvoiceAmount(currentInvoiceTotal > 0 ? currentInvoiceTotal.toFixed(2) : "");
     setShowPayInvoice(true);
   }, [currentInvoiceTotal]);
+
+  const openAddCardModal = useCallback(() => {
+    if (hasReachedCardsLimit) {
+      toast({
+        title: 'Limite do plano Free atingido',
+        description: 'Você pode cadastrar 1 cartão no plano Free. Para adicionar mais, libere cartões ilimitados.',
+      });
+      return;
+    }
+
+    setShowAddCard(true);
+  }, [hasReachedCardsLimit, setShowAddCard]);
+
+  const handleAddCard = useCallback((card: Omit<CreditCardType, 'id' | 'userId'>) => {
+    if (hasReachedCardsLimit) {
+      toast({
+        title: 'Limite do plano Free atingido',
+        description: 'Você pode cadastrar 1 cartão no plano Free. Para adicionar mais, libere cartões ilimitados.',
+      });
+      return;
+    }
+
+    return addCreditCard(card);
+  }, [addCreditCard, hasReachedCardsLimit]);
 
   const handleConfirmPayment = async () => {
     if (!selectedCard || !payInvoiceAccountId || !payInvoiceAmount) {
@@ -410,7 +438,7 @@ export default function CardsDashboard() {
           <Button
             variant="outline" size="sm"
             className="hidden md:flex rounded-xl border-primary/20 gap-2 font-bold uppercase text-xs tracking-widest h-10 px-4"
-            onClick={() => setShowAddCard(true)}
+            onClick={openAddCardModal}
           >
             <Plus className="w-4 h-4 text-primary" /> Novo Cartão
           </Button>
@@ -418,7 +446,7 @@ export default function CardsDashboard() {
         <Button
           variant="outline"
           className="md:hidden w-full rounded-xl border-primary/20 gap-2 font-bold uppercase text-xs tracking-widest h-12 mt-2 mb-4"
-          onClick={() => setShowAddCard(true)}
+          onClick={openAddCardModal}
         >
           <Plus className="w-4 h-4 text-primary" /> Novo Cartão
         </Button>
@@ -429,7 +457,7 @@ export default function CardsDashboard() {
         <div className="mx-4 p-12 text-center text-muted-foreground bg-muted/10 border-dashed border-2 border-white/10 rounded-3xl">
           <CreditCard className="w-16 h-16 mx-auto mb-4 opacity-10" />
           <p className="text-xl font-bold">Nenhum cartão ativo.</p>
-          <Button variant="ghost" className="mt-4" onClick={() => setShowAddCard(true)}>
+          <Button variant="ghost" className="mt-4" onClick={openAddCardModal}>
             Começar agora
           </Button>
         </div>
@@ -1006,7 +1034,7 @@ export default function CardsDashboard() {
       {/* Dialogs */}
       {showAddCard && (
         <Portal>
-          <AddCardDialog isOpen={showAddCard} onClose={() => setShowAddCard(false)} onAdd={addCreditCard} />
+          <AddCardDialog isOpen={showAddCard} onClose={() => setShowAddCard(false)} onAdd={handleAddCard} />
         </Portal>
       )}
       {showEditCard && selectedCard && (

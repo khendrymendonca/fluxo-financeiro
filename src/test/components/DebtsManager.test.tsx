@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DebtsManager } from '@/components/debts/DebtsManager';
 
@@ -6,7 +6,17 @@ const financeStoreMock = vi.hoisted(() => ({
   useFinanceStore: vi.fn(),
 }));
 
+const featureFlagsMock = vi.hoisted(() => ({
+  useFeatureFlag: vi.fn(),
+}));
+
+const toastMock = vi.hoisted(() => ({
+  toast: vi.fn(),
+}));
+
 vi.mock('@/hooks/useFinanceStore', () => financeStoreMock);
+vi.mock('@/hooks/useFeatureFlags', () => featureFlagsMock);
+vi.mock('@/components/ui/use-toast', () => toastMock);
 
 vi.mock('@/hooks/useDebtMutations', () => ({
   useRenegotiateDebt: () => ({ mutateAsync: vi.fn() }),
@@ -48,6 +58,7 @@ function buildInstallment(id: string, isPaid: boolean) {
 describe('DebtsManager - acordos em pagamento', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    featureFlagsMock.useFeatureFlag.mockReturnValue(true);
   });
 
   it('reflete parcela paga e recalcula os valores do acordo', () => {
@@ -110,5 +121,34 @@ describe('DebtsManager - acordos em pagamento', () => {
     expect(screen.getByText(/Parcela 1\/2/)).toBeInTheDocument();
     expect(screen.getByText('Pago: R$ 0,00')).toBeInTheDocument();
     expect(screen.getByText('Restante: R$ 200,00')).toBeInTheDocument();
+  });
+
+  it('bloqueia a abertura do formulario ao atingir o limite Free sem unlimited_debts', () => {
+    featureFlagsMock.useFeatureFlag.mockReturnValue(false);
+
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      transactions: [],
+    });
+
+    render(
+      <DebtsManager
+        debts={[
+          { ...baseDebt, id: 'debt-1' },
+          { ...baseDebt, id: 'debt-2', name: 'Acordo 2' },
+          { ...baseDebt, id: 'debt-3', name: 'Acordo 3' },
+        ]}
+        onAddDebt={vi.fn()}
+        onUpdateDebt={vi.fn()}
+        onDeleteDebt={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /adicionar acordo/i }));
+
+    expect(screen.queryByText('Novo Acordo')).not.toBeInTheDocument();
+    expect(toastMock.toast).toHaveBeenCalledWith({
+      title: 'Limite do plano Free atingido',
+      description: 'Você pode cadastrar até 3 dívidas/acordos no plano Free. Para adicionar mais, libere dívidas ilimitadas.',
+    });
   });
 });

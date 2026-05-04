@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, waitFor, within, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Transaction } from '@/types/finance';
+import { todayLocalString } from '@/utils/dateUtils';
 
 const financeStoreState = {
   categories: [{ id: 'cat-1', name: 'Moradia' }],
@@ -151,7 +152,7 @@ describe('TransactionList - fluxo interno de pagamento', () => {
       expect(onPayBill).toHaveBeenCalledWith(expect.objectContaining({
         id: 'tx-110',
         isPaid: true,
-        paymentDate: '2026-04-23',
+        paymentDate: todayLocalString(),
         accountId: 'acc-1',
         cardId: undefined,
       }));
@@ -181,7 +182,7 @@ describe('TransactionList - fluxo interno de pagamento', () => {
       expect(onPayBill).toHaveBeenCalledWith(expect.objectContaining({
         id: 'tx-130',
         isPaid: true,
-        paymentDate: '2026-04-23',
+        paymentDate: todayLocalString(),
         accountId: 'acc-1',
         cardId: undefined,
       }));
@@ -306,6 +307,153 @@ describe('TransactionList - fluxo interno de pagamento', () => {
       cardId: 'card-1',
     }));
     expect(screen.queryByText('Gestão de Contas')).not.toBeInTheDocument();
+
+    vi.doUnmock('@/hooks/useFinanceStore');
+    vi.doUnmock('@/hooks/useTransactionMutations');
+    vi.doUnmock('@/components/ui/use-toast');
+  });
+
+  it('mantem compra parcelada no cartao visivel mesmo sem isPaid e exibe pagamento de fatura e transferencia no extrato', async () => {
+    vi.resetModules();
+
+    vi.doMock('@/hooks/useFinanceStore', () => ({
+      useFinanceStore: () => financeStoreState,
+    }));
+
+    vi.doMock('@/hooks/useTransactionMutations', () => ({
+      useToggleTransactionPaid: () => ({ mutateAsync: vi.fn() }),
+    }));
+
+    vi.doMock('@/components/ui/use-toast', () => ({
+      toast: vi.fn(),
+    }));
+
+    const { TransactionList } = await import('@/components/transactions/TransactionList');
+
+    render(
+      <TransactionList
+        transactions={[
+          {
+            id: 'inst-card-open',
+            userId: 'user-1',
+            description: 'Notebook (2/10)',
+            amount: 300,
+            type: 'expense',
+            transactionType: 'installment',
+            date: '2026-04-20',
+            isPaid: false,
+            cardId: 'card-1',
+            categoryId: 'cat-1',
+            installmentGroupId: 'group-card-1',
+            installmentNumber: 2,
+            installmentTotal: 10,
+            invoiceMonthYear: '2026-05',
+          },
+          {
+            id: 'invoice-payment-1',
+            userId: 'user-1',
+            description: 'Pagamento fatura abril',
+            amount: 900,
+            type: 'expense',
+            transactionType: 'punctual',
+            date: '2026-04-25',
+            isPaid: true,
+            cardId: 'card-1',
+            categoryId: 'cat-1',
+            isInvoicePayment: true,
+            invoiceMonthYear: '2026-04',
+          },
+          {
+            id: 'transfer-1',
+            userId: 'user-1',
+            description: 'Transferencia poupanca',
+            amount: 150,
+            type: 'expense',
+            transactionType: 'punctual',
+            date: '2026-04-11',
+            isPaid: true,
+            accountId: 'acc-1',
+            categoryId: 'cat-1',
+            isTransfer: true,
+          },
+        ] as Transaction[]}
+        onEdit={vi.fn()}
+        onPayBill={vi.fn(async () => undefined)}
+      />,
+      { wrapper }
+    );
+
+    expect(screen.getByText('Notebook (2/10)')).toBeInTheDocument();
+    expect(screen.getByText('Compra no cartão')).toBeInTheDocument();
+    expect(screen.getByText('Pagamento fatura abril')).toBeInTheDocument();
+    expect(screen.getByText('Pagamento de fatura')).toBeInTheDocument();
+    expect(screen.getByText('Transferencia poupanca')).toBeInTheDocument();
+    expect(screen.getByText('Transferência')).toBeInTheDocument();
+
+    vi.doUnmock('@/hooks/useFinanceStore');
+    vi.doUnmock('@/hooks/useTransactionMutations');
+    vi.doUnmock('@/components/ui/use-toast');
+  });
+
+  it('continua ocultando boleto e divida parcelada pendentes no extrato comum', async () => {
+    vi.resetModules();
+
+    vi.doMock('@/hooks/useFinanceStore', () => ({
+      useFinanceStore: () => financeStoreState,
+    }));
+
+    vi.doMock('@/hooks/useTransactionMutations', () => ({
+      useToggleTransactionPaid: () => ({ mutateAsync: vi.fn() }),
+    }));
+
+    vi.doMock('@/components/ui/use-toast', () => ({
+      toast: vi.fn(),
+    }));
+
+    const { TransactionList } = await import('@/components/transactions/TransactionList');
+
+    render(
+      <TransactionList
+        transactions={[
+          {
+            id: 'boleto-open-1',
+            userId: 'user-1',
+            description: 'Geladeira carnê (3/12)',
+            amount: 220,
+            type: 'expense',
+            transactionType: 'installment',
+            date: '2026-04-14',
+            isPaid: false,
+            accountId: 'acc-1',
+            categoryId: 'cat-1',
+            installmentGroupId: 'group-boleto-1',
+            installmentNumber: 3,
+            installmentTotal: 12,
+          },
+          {
+            id: 'debt-open-1',
+            userId: 'user-1',
+            description: 'Acordo banco (2/8)',
+            amount: 180,
+            type: 'expense',
+            transactionType: 'installment',
+            date: '2026-04-18',
+            isPaid: false,
+            categoryId: 'cat-1',
+            debtId: 'debt-1',
+            installmentGroupId: 'group-debt-1',
+            installmentNumber: 2,
+            installmentTotal: 8,
+          },
+        ] as Transaction[]}
+        onEdit={vi.fn()}
+        onPayBill={vi.fn(async () => undefined)}
+      />,
+      { wrapper }
+    );
+
+    expect(screen.queryByText('Geladeira carnê (3/12)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Acordo banco (2/8)')).not.toBeInTheDocument();
 
     vi.doUnmock('@/hooks/useFinanceStore');
     vi.doUnmock('@/hooks/useTransactionMutations');
