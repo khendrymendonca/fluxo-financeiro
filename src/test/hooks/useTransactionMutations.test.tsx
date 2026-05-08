@@ -3,7 +3,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  useBulkDeleteTransactions,
   useDeleteTransaction,
+  useUpdateTransferTransaction,
   useToggleTransactionPaid,
   useUpdateTransaction,
 } from '@/hooks/useTransactionMutations';
@@ -24,6 +26,11 @@ vi.mock('@/components/ui/use-toast', () => ({
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'user-1' } }),
 }));
+
+const LEGACY_TRANSFER_PAIR_ERROR =
+  'Transferência antiga sem vínculo seguro. Não foi possível identificar a contraparte sem risco.';
+const LEGACY_TRANSFER_EDIT_ERROR =
+  'Transferência antiga sem vínculo seguro. Não foi possível editar a contraparte sem risco.';
 
 function chain(overrides: Record<string, unknown> = {}) {
   const builder: Record<string, any> = {};
@@ -77,6 +84,375 @@ describe('useTransactionMutations - soft delete and payment status', () => {
 
     expect(updateQuery.update).toHaveBeenCalledWith({ deleted_at: expect.any(String) });
     expect(updateQuery.eq).toHaveBeenCalledWith('id', 'tx-1');
+  });
+
+  it('ao excluir pagamento de fatura reabre compras da competencia', async () => {
+    const deletePayment = chain({
+      eq: vi.fn(async () => ({ error: null })),
+    });
+    const reopenPurchases = chain({
+      select: vi.fn(async () => ({ error: null })),
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(deletePayment)
+      .mockReturnValueOnce(reopenPurchases);
+
+    const { result } = renderHook(() => useDeleteTransaction(), { wrapper });
+
+    await result.current.mutateAsync({
+      transaction: {
+        id: 'invoice-payment-1',
+        type: 'expense',
+        amount: 900,
+        date: '2026-04-25',
+        cardId: 'card-1',
+        invoiceMonthYear: '2026-04',
+        isInvoicePayment: true,
+      },
+      applyScope: 'this',
+    });
+
+    expect(deletePayment.update).toHaveBeenCalledWith({ deleted_at: expect.any(String) });
+    expect(deletePayment.eq).toHaveBeenCalledWith('id', 'invoice-payment-1');
+    expect(reopenPurchases.update).toHaveBeenCalledWith({
+      is_paid: false,
+      payment_date: null,
+    });
+    expect(reopenPurchases.eq).toHaveBeenCalledWith('card_id', 'card-1');
+    expect(reopenPurchases.eq).toHaveBeenCalledWith('invoice_month_year', '2026-04');
+    expect(reopenPurchases.eq).toHaveBeenCalledWith('is_invoice_payment', false);
+    expect(reopenPurchases.eq).toHaveBeenCalledWith('type', 'expense');
+    expect(reopenPurchases.is).toHaveBeenCalledWith('deleted_at', null);
+  });
+
+  it('ao excluir transferencia nova com transferGroupId remove apenas as pontas do grupo por id', async () => {
+    const selectGroup = chain({
+      is: vi.fn(async () => ({
+        data: [{ id: 'tx-out' }, { id: 'tx-in' }],
+        error: null,
+      })),
+    });
+    const updatePair = chain({
+      in: vi.fn(async () => ({ error: null })),
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(selectGroup)
+      .mockReturnValueOnce(updatePair);
+
+    const { result } = renderHook(() => useDeleteTransaction(), { wrapper });
+
+    await result.current.mutateAsync({
+      transaction: {
+        id: 'tx-out',
+        type: 'expense',
+        amount: 500,
+        date: '2026-04-10',
+        accountId: 'checking',
+        isTransfer: true,
+        transferGroupId: 'group-1',
+      },
+      applyScope: 'this',
+    });
+
+    expect(selectGroup.select).toHaveBeenCalledWith('id');
+    expect(selectGroup.eq).toHaveBeenCalledWith('transfer_group_id', 'group-1');
+    expect(selectGroup.eq).toHaveBeenCalledWith('is_transfer', true);
+    expect(selectGroup.is).toHaveBeenCalledWith('deleted_at', null);
+    expect(updatePair.update).toHaveBeenCalledWith({ deleted_at: expect.any(String) });
+    expect(updatePair.in).toHaveBeenCalledWith('id', ['tx-out', 'tx-in']);
+    expect(selectGroup.or).not.toHaveBeenCalled();
+    expect(updatePair.or).not.toHaveBeenCalled();
+  });
+
+  it('ao excluir uma entre duas transferencias iguais no mesmo dia limita o update ao transferGroupId selecionado', async () => {
+    const selectGroup = chain({
+      is: vi.fn(async () => ({
+        data: [{ id: 'group-1-out' }, { id: 'group-1-in' }],
+        error: null,
+      })),
+    });
+    const updatePair = chain({
+      in: vi.fn(async () => ({ error: null })),
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(selectGroup)
+      .mockReturnValueOnce(updatePair);
+
+    const { result } = renderHook(() => useDeleteTransaction(), { wrapper });
+
+    await result.current.mutateAsync({
+      transaction: {
+        id: 'group-1-out',
+        type: 'expense',
+        amount: 500,
+        date: '2026-04-10',
+        isTransfer: true,
+        transferGroupId: 'group-1',
+      },
+      applyScope: 'this',
+    });
+
+    expect(selectGroup.eq).toHaveBeenCalledWith('transfer_group_id', 'group-1');
+    expect(updatePair.update).toHaveBeenCalledWith({ deleted_at: expect.any(String) });
+    expect(updatePair.in).toHaveBeenCalledWith('id', ['group-1-out', 'group-1-in']);
+    expect(updatePair.in).not.toHaveBeenCalledWith('id', expect.arrayContaining(['group-2-out', 'group-2-in']));
+    expect(selectGroup.or).not.toHaveBeenCalled();
+    expect(updatePair.or).not.toHaveBeenCalled();
+  });
+
+  it('ao excluir transferencia legada com uma contraparte usa fallback seguro por ids', async () => {
+    const selectCounterpart = chain({
+      neq: vi.fn(async () => ({
+        data: [{ id: 'legacy-in' }],
+        error: null,
+      })),
+    });
+    const updatePair = chain({
+      in: vi.fn(async () => ({ error: null })),
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(selectCounterpart)
+      .mockReturnValueOnce(updatePair);
+
+    const { result } = renderHook(() => useDeleteTransaction(), { wrapper });
+
+    await result.current.mutateAsync({
+      transaction: {
+        id: 'legacy-out',
+        type: 'expense',
+        amount: 500,
+        date: '2026-04-10',
+        isTransfer: true,
+      },
+      applyScope: 'this',
+    });
+
+    expect(selectCounterpart.select).toHaveBeenCalledWith('id');
+    expect(selectCounterpart.eq).toHaveBeenCalledWith('is_transfer', true);
+    expect(selectCounterpart.eq).toHaveBeenCalledWith('type', 'income');
+    expect(selectCounterpart.eq).toHaveBeenCalledWith('amount', 500);
+    expect(selectCounterpart.eq).toHaveBeenCalledWith('date', '2026-04-10');
+    expect(selectCounterpart.is).toHaveBeenCalledWith('deleted_at', null);
+    expect(selectCounterpart.neq).toHaveBeenCalledWith('id', 'legacy-out');
+    expect(updatePair.update).toHaveBeenCalledWith({ deleted_at: expect.any(String) });
+    expect(updatePair.in).toHaveBeenCalledWith('id', ['legacy-out', 'legacy-in']);
+    expect(selectCounterpart.or).not.toHaveBeenCalled();
+    expect(updatePair.or).not.toHaveBeenCalled();
+  });
+
+  it('ao excluir transferencia legada ambigua rejeita e nao aplica soft delete por chute', async () => {
+    const selectCounterpart = chain({
+      neq: vi.fn(async () => ({
+        data: [{ id: 'legacy-in-1' }, { id: 'legacy-in-2' }],
+        error: null,
+      })),
+    });
+    supabaseMock.from.mockReturnValueOnce(selectCounterpart);
+
+    const { result } = renderHook(() => useDeleteTransaction(), { wrapper });
+
+    await expect(result.current.mutateAsync({
+      transaction: {
+        id: 'legacy-out',
+        type: 'expense',
+        amount: 500,
+        date: '2026-04-10',
+        isTransfer: true,
+      },
+      applyScope: 'this',
+    })).rejects.toThrow(LEGACY_TRANSFER_PAIR_ERROR);
+
+    expect(supabaseMock.from).toHaveBeenCalledTimes(1);
+    expect(selectCounterpart.update).not.toHaveBeenCalled();
+    expect(selectCounterpart.or).not.toHaveBeenCalled();
+  });
+
+  it('ao excluir transferencia legada sem contraparte rejeita sem apagar contraparte por chute', async () => {
+    const selectCounterpart = chain({
+      neq: vi.fn(async () => ({
+        data: [],
+        error: null,
+      })),
+    });
+    supabaseMock.from.mockReturnValueOnce(selectCounterpart);
+
+    const { result } = renderHook(() => useDeleteTransaction(), { wrapper });
+
+    await expect(result.current.mutateAsync({
+      transaction: {
+        id: 'legacy-out',
+        type: 'expense',
+        amount: 500,
+        date: '2026-04-10',
+        isTransfer: true,
+      },
+      applyScope: 'this',
+    })).rejects.toThrow(LEGACY_TRANSFER_PAIR_ERROR);
+
+    expect(supabaseMock.from).toHaveBeenCalledTimes(1);
+    expect(selectCounterpart.update).not.toHaveBeenCalled();
+    expect(selectCounterpart.or).not.toHaveBeenCalled();
+  });
+
+  it('remocao em massa preserva integridade de transferencia usando ids seguros', async () => {
+    const selectGroup = chain({
+      is: vi.fn(async () => ({
+        data: [{ id: 'tx-out' }, { id: 'tx-in' }],
+        error: null,
+      })),
+    });
+    const updatePair = chain({
+      in: vi.fn(async () => ({ error: null })),
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(selectGroup)
+      .mockReturnValueOnce(updatePair);
+
+    const { result } = renderHook(() => useBulkDeleteTransactions(), { wrapper });
+
+    await result.current.mutateAsync({
+      items: [{
+        id: 'tx-out',
+        type: 'transaction',
+        transactionKind: 'expense',
+        amount: 500,
+        date: '2026-04-10',
+        isTransfer: true,
+        transferGroupId: 'group-1',
+      }],
+      installmentScope: 'this',
+    });
+
+    expect(selectGroup.eq).toHaveBeenCalledWith('transfer_group_id', 'group-1');
+    expect(updatePair.update).toHaveBeenCalledWith({ deleted_at: expect.any(String) });
+    expect(updatePair.in).toHaveBeenCalledWith('id', ['tx-out', 'tx-in']);
+    expect(selectGroup.or).not.toHaveBeenCalled();
+    expect(updatePair.or).not.toHaveBeenCalled();
+  });
+
+  it('corrige transferencia com transferGroupId atualizando saida e entrada como par', async () => {
+    const selectGroup = chain({
+      is: vi.fn(async () => ({
+        data: [
+          {
+            id: 'tx-out',
+            type: 'expense',
+            amount: 500,
+            date: '2026-04-10',
+            account_id: 'acc-origin-1',
+            description: '[Saída] Reserva',
+            transfer_group_id: 'group-1',
+            is_transfer: true,
+          },
+          {
+            id: 'tx-in',
+            type: 'income',
+            amount: 500,
+            date: '2026-04-10',
+            account_id: 'acc-dest-1',
+            description: '[Entrada] Reserva',
+            transfer_group_id: 'group-1',
+            is_transfer: true,
+          },
+        ],
+        error: null,
+      })),
+    });
+    const updateExpense = chain({
+      select: vi.fn(async () => ({ data: [{ id: 'tx-out' }], error: null })),
+    });
+    const updateIncome = chain({
+      select: vi.fn(async () => ({ data: [{ id: 'tx-in' }], error: null })),
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(selectGroup)
+      .mockReturnValueOnce(updateExpense)
+      .mockReturnValueOnce(updateIncome);
+
+    const { result } = renderHook(() => useUpdateTransferTransaction(), { wrapper });
+
+    await result.current.mutateAsync({
+      transaction: {
+        id: 'tx-out',
+        type: 'expense',
+        amount: 500,
+        date: '2026-04-10',
+        isTransfer: true,
+        transferGroupId: 'group-1',
+      },
+      updates: {
+        amount: 750,
+        date: '2026-05-12',
+        transferFrom: 'acc-origin-2',
+        transferTo: 'acc-dest-2',
+        transferToType: 'account',
+        description: 'Reserva corrigida',
+      },
+    });
+
+    expect(selectGroup.select).toHaveBeenCalledWith('id,type,amount,date,account_id,card_id,description,transfer_group_id,is_transfer,deleted_at');
+    expect(selectGroup.eq).toHaveBeenCalledWith('transfer_group_id', 'group-1');
+    expect(selectGroup.eq).toHaveBeenCalledWith('is_transfer', true);
+    expect(selectGroup.is).toHaveBeenCalledWith('deleted_at', null);
+    expect(updateExpense.update).toHaveBeenCalledWith(expect.objectContaining({
+      amount: 750,
+      date: '2026-05-12',
+      payment_date: '2026-05-12',
+      account_id: 'acc-origin-2',
+      card_id: null,
+      type: 'expense',
+      is_transfer: true,
+      transfer_group_id: 'group-1',
+      description: '[Saída] Reserva corrigida',
+    }));
+    expect(updateIncome.update).toHaveBeenCalledWith(expect.objectContaining({
+      amount: 750,
+      date: '2026-05-12',
+      payment_date: '2026-05-12',
+      account_id: 'acc-dest-2',
+      card_id: null,
+      type: 'income',
+      is_transfer: true,
+      transfer_group_id: 'group-1',
+      description: '[Entrada] Reserva corrigida',
+    }));
+    expect(updateExpense.eq).toHaveBeenCalledWith('id', 'tx-out');
+    expect(updateIncome.eq).toHaveBeenCalledWith('id', 'tx-in');
+    expect(selectGroup.or).not.toHaveBeenCalled();
+    expect(updateExpense.or).not.toHaveBeenCalled();
+    expect(updateIncome.or).not.toHaveBeenCalled();
+  });
+
+  it('aborta correcao de transferencia legada ambigua sem atualizar por chute', async () => {
+    const selectCounterpart = chain({
+      neq: vi.fn(async () => ({
+        data: [{ id: 'legacy-in-1' }, { id: 'legacy-in-2' }],
+        error: null,
+      })),
+    });
+    supabaseMock.from.mockReturnValueOnce(selectCounterpart);
+
+    const { result } = renderHook(() => useUpdateTransferTransaction(), { wrapper });
+
+    await expect(result.current.mutateAsync({
+      transaction: {
+        id: 'legacy-out',
+        type: 'expense',
+        amount: 500,
+        date: '2026-04-10',
+        isTransfer: true,
+      },
+      updates: {
+        amount: 750,
+        date: '2026-05-12',
+        transferFrom: 'acc-origin-2',
+        transferTo: 'acc-dest-2',
+      },
+    })).rejects.toThrow(LEGACY_TRANSFER_EDIT_ERROR);
+
+    expect(supabaseMock.from).toHaveBeenCalledTimes(1);
+    expect(selectCounterpart.update).not.toHaveBeenCalled();
+    expect(selectCounterpart.or).not.toHaveBeenCalled();
   });
 
   it('remove parcelas futuras por soft delete usando installment_group_id e date', async () => {

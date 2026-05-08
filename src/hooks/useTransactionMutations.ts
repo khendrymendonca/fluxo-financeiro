@@ -7,6 +7,174 @@ import { useAuth } from '@/contexts/AuthContext';
 import { calcInvoiceMonthYear } from '@/utils/creditCardUtils';
 import { parseLocalDate } from '@/utils/dateUtils';
 
+function isPaidInvoicePayment(transaction: any): boolean {
+  return Boolean(
+    transaction?.isInvoicePayment &&
+    transaction?.type === 'expense' &&
+    transaction?.cardId &&
+    transaction?.invoiceMonthYear
+  );
+}
+
+const LEGACY_TRANSFER_PAIR_ERROR =
+  'Transferência antiga sem vínculo seguro. Não foi possível identificar a contraparte sem risco.';
+const LEGACY_TRANSFER_EDIT_ERROR =
+  'Transferência antiga sem vínculo seguro. Não foi possível editar a contraparte sem risco.';
+
+function getTransferGroupId(transaction: any): string | null {
+  return transaction?.transferGroupId || transaction?.transfer_group_id || null;
+}
+
+async function getSafeTransferDeleteIds(transaction: any, targetId: string): Promise<string[]> {
+  const transferGroupId = getTransferGroupId(transaction);
+
+  if (transferGroupId) {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id')
+      .eq('transfer_group_id', transferGroupId)
+      .eq('is_transfer', true)
+      .is('deleted_at', null);
+
+    if (error) throw error;
+
+    const ids = (data || []).map((tx) => tx.id);
+    return ids.includes(targetId) ? ids : [targetId, ...ids];
+  }
+
+  const normalizedDate = transaction?.date ? String(transaction.date).slice(0, 10) : '';
+  const amount = Number(transaction?.amount || 0);
+  const counterpartType = transaction?.type === 'income' ? 'expense' : 'income';
+
+  if (!normalizedDate || !Number.isFinite(amount) || amount <= 0) {
+    throw new Error(LEGACY_TRANSFER_PAIR_ERROR);
+  }
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('id')
+    .eq('is_transfer', true)
+    .eq('type', counterpartType)
+    .eq('amount', amount)
+    .eq('date', normalizedDate)
+    .is('deleted_at', null)
+    .neq('id', targetId);
+
+  if (error) throw error;
+
+  if ((data || []).length !== 1) {
+    throw new Error(LEGACY_TRANSFER_PAIR_ERROR);
+  }
+
+  return [targetId, data![0].id];
+}
+
+function stripTransferDirection(description?: string | null): string {
+  return String(description || '')
+    .replace(/^\[(Saída|Saida|Entrada)\]\s*/i, '')
+    .trim();
+}
+
+function hasTransferDirection(description?: string | null): boolean {
+  return /^\[(Saída|Saida|Entrada)\]\s*/i.test(String(description || ''));
+}
+
+function getTransferEditDescription(direction: 'Saída' | 'Entrada', description: string, shouldUsePrefix: boolean): string {
+  const cleanDescription = stripTransferDirection(description);
+  return shouldUsePrefix ? `[${direction}] ${cleanDescription}` : cleanDescription;
+}
+
+async function getSafeTransferEditPair(transaction: any, targetId: string): Promise<{
+  expense: any;
+  income: any;
+  transferGroupId: string | null;
+}> {
+  const transferGroupId = getTransferGroupId(transaction);
+
+  if (transferGroupId) {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id,type,amount,date,account_id,card_id,description,transfer_group_id,is_transfer,deleted_at')
+      .eq('transfer_group_id', transferGroupId)
+      .eq('is_transfer', true)
+      .is('deleted_at', null);
+
+    if (error) throw error;
+
+    const expense = (data || []).find((tx) => tx.type === 'expense');
+    const income = (data || []).find((tx) => tx.type === 'income');
+
+    if (!expense || !income) {
+      throw new Error(LEGACY_TRANSFER_EDIT_ERROR);
+    }
+
+    return { expense, income, transferGroupId };
+  }
+
+  const normalizedDate = transaction?.date ? String(transaction.date).slice(0, 10) : '';
+  const amount = Number(transaction?.amount || 0);
+  const counterpartType = transaction?.type === 'income' ? 'expense' : 'income';
+
+  if (!normalizedDate || !Number.isFinite(amount) || amount <= 0) {
+    throw new Error(LEGACY_TRANSFER_EDIT_ERROR);
+  }
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('id,type,amount,date,account_id,card_id,description,transfer_group_id,is_transfer,deleted_at')
+    .eq('is_transfer', true)
+    .eq('type', counterpartType)
+    .eq('amount', amount)
+    .eq('date', normalizedDate)
+    .is('deleted_at', null)
+    .neq('id', targetId);
+
+  if (error) throw error;
+
+  if ((data || []).length !== 1) {
+    throw new Error(LEGACY_TRANSFER_EDIT_ERROR);
+  }
+
+  const targetTx = {
+    id: targetId,
+    type: transaction?.type,
+    amount,
+    date: normalizedDate,
+    account_id: transaction?.accountId || transaction?.account_id || null,
+    card_id: transaction?.cardId || transaction?.card_id || null,
+    description: transaction?.description,
+    transfer_group_id: null,
+    is_transfer: true,
+  };
+
+  const counterpart = data![0];
+  const expense = targetTx.type === 'expense' ? targetTx : counterpart;
+  const income = targetTx.type === 'income' ? targetTx : counterpart;
+
+  if (!expense?.id || !income?.id) {
+    throw new Error(LEGACY_TRANSFER_EDIT_ERROR);
+  }
+
+  return { expense, income, transferGroupId: null };
+}
+
+async function reopenInvoicePurchases(transaction: any) {
+  const { error } = await supabase
+    .from('transactions')
+    .update({
+      is_paid: false,
+      payment_date: null,
+    })
+    .eq('card_id', transaction.cardId)
+    .eq('invoice_month_year', transaction.invoiceMonthYear)
+    .eq('is_invoice_payment', false)
+    .eq('type', 'expense')
+    .is('deleted_at', null)
+    .select();
+
+  if (error) throw error;
+}
+
 // --- 1. ADICIONAR TRANSAÇÃO ---
 export function useAddTransaction() {
   const queryClient = useQueryClient();
@@ -132,6 +300,27 @@ export function useDeleteTransaction() {
       }
 
       // --- FLUXO NORMAL: Transação real ou exclusão em massa ---
+      if (applyScope === 'this' && transaction.isTransfer && !isVirtual) {
+        const idsToDelete = await getSafeTransferDeleteIds(transaction, targetId);
+        const { error } = await supabase
+          .from('transactions')
+          .update({ deleted_at: now })
+          .in('id', idsToDelete);
+        if (error) throw error;
+        return id;
+      }
+
+      if (applyScope === 'this' && isPaidInvoicePayment(transaction)) {
+        const { error } = await supabase
+          .from('transactions')
+          .update({ deleted_at: now })
+          .eq('id', targetId);
+        if (error) throw error;
+
+        await reopenInvoicePurchases(transaction);
+        return id;
+      }
+
       if (applyScope === 'this') {
         const { error } = await supabase
           .from('transactions')
@@ -561,6 +750,107 @@ export function useUpdateTransaction() {
   });
 }
 
+export function useUpdateTransferTransaction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      transaction,
+      updates,
+    }: {
+      transaction: any;
+      updates: any;
+    }) => {
+      const targetId = transaction?.id;
+      if (!targetId) throw new Error('Transferência não encontrada');
+
+      const amount = Number(updates?.amount || 0);
+      const normalizedDate = updates?.date ? String(updates.date).slice(0, 10) : '';
+      const fromAccountId = updates?.transferFrom || updates?.fromAccountId || updates?.accountId;
+      const transferToType = updates?.transferToType || (updates?.cardId ? 'card' : 'account');
+      const toTargetId = updates?.transferTo || updates?.toAccountId || updates?.cardId;
+      const description = stripTransferDirection(updates?.transferDescription || updates?.description || transaction?.description);
+
+      if (!Number.isFinite(amount) || amount <= 0 || !normalizedDate || !fromAccountId || !toTargetId) {
+        throw new Error('Dados obrigatórios da transferência não preenchidos');
+      }
+
+      if (transferToType === 'account' && fromAccountId === toTargetId) {
+        throw new Error('Origem e destino não podem ser iguais');
+      }
+
+      const { expense, income, transferGroupId } = await getSafeTransferEditPair(transaction, targetId);
+      const shouldUsePrefix = hasTransferDirection(expense.description) || hasTransferDirection(income.description);
+      const groupUpdate = transferGroupId ? { transfer_group_id: transferGroupId } : {};
+
+      const expenseUpdate = {
+        amount,
+        date: normalizedDate,
+        payment_date: normalizedDate,
+        account_id: fromAccountId,
+        card_id: null,
+        type: 'expense',
+        transaction_type: 'punctual',
+        is_paid: true,
+        is_transfer: true,
+        is_invoice_payment: false,
+        invoice_month_year: null,
+        description: getTransferEditDescription('Saída', description, shouldUsePrefix),
+        ...groupUpdate,
+      };
+
+      const incomeUpdate = {
+        amount,
+        date: normalizedDate,
+        payment_date: normalizedDate,
+        account_id: transferToType === 'account' ? toTargetId : null,
+        card_id: transferToType === 'card' ? toTargetId : null,
+        type: 'income',
+        transaction_type: 'punctual',
+        is_paid: true,
+        is_transfer: true,
+        is_invoice_payment: transferToType === 'card',
+        invoice_month_year: transferToType === 'card' ? (updates?.invoiceMonthYear || null) : null,
+        description: getTransferEditDescription('Entrada', description, shouldUsePrefix),
+        ...groupUpdate,
+      };
+
+      const { data: expenseData, error: expenseError } = await supabase
+        .from('transactions')
+        .update(expenseUpdate)
+        .eq('id', expense.id)
+        .select();
+      if (expenseError) throw expenseError;
+
+      const { data: incomeData, error: incomeError } = await supabase
+        .from('transactions')
+        .update(incomeUpdate)
+        .eq('id', income.id)
+        .select();
+      if (incomeError) throw incomeError;
+
+      return [...(expenseData || []), ...(incomeData || [])];
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['transactions'] });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+      toast({ title: 'Transferência corrigida!' });
+    },
+    onError: (err: any) => {
+      logSafeError('useUpdateTransferTransaction', err);
+      toast({
+        title: 'Erro ao corrigir transferência',
+        description: err?.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
 // --- 5. DELETAR EM MASSA (SOFT DELETE) ---
 export function useBulkDeleteTransactions() {
   const queryClient = useQueryClient();
@@ -578,17 +868,40 @@ export function useBulkDeleteTransactions() {
         billId?: string,
         installmentGroupId?: string,
         isRecurring?: boolean
+        transactionKind?: Transaction['type'],
+        amount?: number,
+        date?: string,
+        cardId?: string,
+        invoiceMonthYear?: string,
+        isInvoicePayment?: boolean,
+        isTransfer?: boolean,
+        transferGroupId?: string,
+        transfer_group_id?: string,
       }[],
       installmentScope?: 'this' | 'future' | 'all',
       deleteFutureBills?: boolean
     }) => {
       const transactionIdsToUpdate = new Set<string>();
       const billIdsToUpdate = new Set<string>();
+      const transferIdsToUpdate = new Set<string>();
+      const invoicePaymentsToReopen: any[] = [];
       const now = new Date().toISOString();
 
       // 1. Classificar o que "deletar" (marcar como deletado)
       for (const item of items) {
         if (item.type === 'transaction') {
+          const normalizedItem = { ...item, type: item.transactionKind };
+
+          if (installmentScope === 'this' && item.isTransfer) {
+            const idsToDelete = await getSafeTransferDeleteIds(normalizedItem, item.id);
+            idsToDelete.forEach((idToDelete) => transferIdsToUpdate.add(idToDelete));
+            continue;
+          }
+
+          if (installmentScope === 'this' && isPaidInvoicePayment(normalizedItem)) {
+            invoicePaymentsToReopen.push(normalizedItem);
+          }
+
           if (installmentScope === 'this' || !item.installmentGroupId) {
             transactionIdsToUpdate.add(item.id);
           } else {
@@ -616,7 +929,8 @@ export function useBulkDeleteTransactions() {
       // Mescla ambos os sets e deleta numa única operação.
       const allIdsToDelete = new Set([
         ...Array.from(transactionIdsToUpdate),
-        ...Array.from(billIdsToUpdate)
+        ...Array.from(billIdsToUpdate),
+        ...Array.from(transferIdsToUpdate)
       ]);
 
       if (allIdsToDelete.size > 0) {
@@ -625,6 +939,10 @@ export function useBulkDeleteTransactions() {
           .update({ deleted_at: now })
           .in('id', Array.from(allIdsToDelete));
         if (error) throw error;
+      }
+
+      for (const invoicePayment of invoicePaymentsToReopen) {
+        await reopenInvoicePurchases(invoicePayment);
       }
 
       return { txCount: transactionIdsToUpdate.size, billCount: billIdsToUpdate.size };

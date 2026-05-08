@@ -132,4 +132,38 @@ describe('card limit calculation', () => {
       },
     ])).toBe(0);
   });
+
+  it('compra de cartao deletada libera limite', () => {
+    expect(getCardUsedLimitFromTransactions('card-1', [
+      {
+        cardId: 'card-1',
+        amount: 500,
+        type: 'expense',
+        invoiceMonthYear: '2026-05',
+        date: '2026-05-02',
+        deleted_at: '2026-05-03T10:00:00.000Z',
+      },
+    ])).toBe(0);
+  });
+
+  it('pagamento de fatura deletado volta a deixar compras consumindo limite', () => {
+    expect(getCardUsedLimitFromTransactions('card-1', [
+      {
+        cardId: 'card-1',
+        amount: 500,
+        type: 'expense',
+        invoiceMonthYear: '2026-05',
+        date: '2026-05-02',
+      },
+      {
+        cardId: 'card-1',
+        amount: 500,
+        type: 'expense',
+        isInvoicePayment: true,
+        invoiceMonthYear: '2026-05',
+        date: '2026-05-20',
+        deleted_at: '2026-05-21T10:00:00.000Z',
+      },
+    ])).toBe(500);
+  });
 });

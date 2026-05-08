@@ -94,3 +94,112 @@ describe('TransactionForm - parcelamento no cartao', () => {
     });
   });
 });
+
+describe('TransactionForm - correcao de transferencia', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      categories: [{ id: 'cat-1', name: 'Transferencia', type: 'expense' }],
+      subcategories: [],
+      transferBetweenAccounts: vi.fn(),
+      getAccountViewBalance: vi.fn(() => 1000),
+      getCardExpenses: vi.fn(() => 0),
+      isAddingTransaction: false,
+      isUpdatingTransaction: false,
+      isTransferring: false,
+    });
+  });
+
+  it('abre transferencia em modo de correcao e nao como lancamento pontual comum', async () => {
+    const onSubmit = vi.fn(async () => undefined);
+
+    render(
+      <TransactionForm
+        accounts={[
+          {
+            id: 'acc-origin',
+            userId: 'user-1',
+            name: 'Origem',
+            bank: 'Banco A',
+            institution: 'Banco A',
+            balance: 1000,
+            color: '#111111',
+            accountType: 'corrente',
+          } as any,
+          {
+            id: 'acc-dest',
+            userId: 'user-1',
+            name: 'Destino',
+            bank: 'Banco B',
+            institution: 'Banco B',
+            balance: 500,
+            color: '#222222',
+            accountType: 'poupanca',
+          } as any,
+        ]}
+        creditCards={[]}
+        initialData={{
+          id: 'tx-out',
+          userId: 'user-1',
+          description: '[Saída] Reserva',
+          amount: 500,
+          type: 'expense',
+          transactionType: 'punctual',
+          date: '2026-04-10',
+          isPaid: true,
+          paymentDate: '2026-04-10',
+          accountId: 'acc-origin',
+          isTransfer: true,
+          transferGroupId: 'group-1',
+          transferCounterpart: {
+            id: 'tx-in',
+            userId: 'user-1',
+            description: '[Entrada] Reserva',
+            amount: 500,
+            type: 'income',
+            transactionType: 'punctual',
+            date: '2026-04-10',
+            isPaid: true,
+            paymentDate: '2026-04-10',
+            accountId: 'acc-dest',
+            isTransfer: true,
+            transferGroupId: 'group-1',
+          },
+        } as any}
+        onSubmit={onSubmit}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Transferência')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Corrigir transferência' })).toBeInTheDocument();
+    expect(screen.queryByText('Lançamento Pontual')).not.toBeInTheDocument();
+    expect(screen.queryByText('Categoria')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('Reserva')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Corrigir transferência' }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          transactionType: 'punctual',
+          description: 'Reserva',
+          transferDescription: 'Reserva',
+          amount: 500,
+          date: '2026-04-10',
+          accountId: 'acc-origin',
+          transferFrom: 'acc-origin',
+          transferTo: 'acc-dest',
+          transferToType: 'account',
+          isPaid: true,
+          paymentDate: '2026-04-10',
+          isTransfer: true,
+          transferGroupId: 'group-1',
+        }),
+        undefined,
+        'this'
+      );
+    });
+  });
+});

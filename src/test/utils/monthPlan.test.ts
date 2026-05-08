@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Category, Debt, Transaction } from '@/types/finance';
+import type { Account, Category, Debt, Transaction } from '@/types/finance';
 import { buildMonthPlan } from '@/utils/monthPlan';
 
 function makeCategory(overrides: Partial<Category> = {}): Category {
@@ -16,6 +16,22 @@ function makeCategory(overrides: Partial<Category> = {}): Category {
     budgetLimit: overrides.budgetLimit,
     icon: overrides.icon,
     color: overrides.color,
+  };
+}
+
+function makeAccount(overrides: Partial<Account> = {}): Account {
+  return {
+    id: overrides.id ?? 'account-1',
+    userId: overrides.userId ?? 'user-1',
+    name: overrides.name ?? 'Conta',
+    bank: overrides.bank ?? 'Banco',
+    institution: overrides.institution ?? 'Banco',
+    balance: overrides.balance ?? 0,
+    color: overrides.color ?? '#0f766e',
+    icon: overrides.icon,
+    accountType: overrides.accountType ?? 'corrente',
+    hasOverdraft: overrides.hasOverdraft,
+    overdraftLimit: overrides.overdraftLimit,
   };
 }
 
@@ -398,5 +414,137 @@ describe('buildMonthPlan', () => {
     expect(result.debtPaymentCapacity).toBe(0);
     expect(result.alerts[0]?.severity).toBe('info');
     expect(result.recommendedActions[0]?.type).toBe('review');
+  });
+
+  it('calcula caixa consolidado por contas menos despesas abertas', () => {
+    const result = buildMonthPlan({
+      viewDate,
+      accounts: [
+        makeAccount({ id: 'checking', balance: 3000 }),
+        makeAccount({ id: 'wallet', balance: 500 }),
+      ],
+      categories: [essentialCategory, lifestyleCategory],
+      debts: [],
+      transactions: [
+        makeTransaction({
+          id: 'current-open',
+          categoryId: 'essential',
+          description: 'Conta do mes',
+          amount: 700,
+          date: '2026-04-20',
+          isPaid: false,
+        }),
+        makeTransaction({
+          id: 'previous-overdue',
+          categoryId: 'essential',
+          description: 'Conta vencida',
+          amount: 250,
+          date: '2026-03-25',
+          isPaid: false,
+        }),
+        makeTransaction({
+          id: 'paid',
+          categoryId: 'essential',
+          description: 'Conta paga',
+          amount: 300,
+          date: '2026-04-05',
+          isPaid: true,
+        }),
+        makeTransaction({
+          id: 'deleted-open',
+          categoryId: 'essential',
+          description: 'Conta removida',
+          amount: 999,
+          date: '2026-04-06',
+          isPaid: false,
+          deleted_at: '2026-04-07T10:00:00.000Z',
+        }),
+        makeTransaction({
+          id: 'transfer',
+          categoryId: 'essential',
+          description: 'Transferencia',
+          amount: 400,
+          date: '2026-04-08',
+          isPaid: false,
+          isTransfer: true,
+        }),
+        makeTransaction({
+          id: 'invoice-open',
+          categoryId: 'essential',
+          description: 'Fatura aberta',
+          amount: 600,
+          date: '2026-04-21',
+          isPaid: false,
+          cardId: 'card-1',
+          isInvoicePayment: true,
+          invoiceMonthYear: '2026-04',
+        }),
+        makeTransaction({
+          id: 'card-purchase',
+          categoryId: 'lifestyle',
+          description: 'Compra no cartao',
+          amount: 500,
+          date: '2026-04-10',
+          isPaid: false,
+          cardId: 'card-1',
+        }),
+      ],
+    });
+
+    expect(result.totalAccountBalance).toBe(3500);
+    expect(result.openExpensesTotal).toBe(1550);
+    expect(result.overdueOpenExpensesTotal).toBe(250);
+    expect(result.overdueOpenExpensesCount).toBe(1);
+    expect(result.cashBalance).toBe(1950);
+    expect(result.upcomingOpenExpenses.map((item) => item.id)).toEqual(['previous-overdue', 'current-open', 'invoice-open']);
+    expect(result.upcomingOpenExpenses.map((item) => item.status)).toEqual(['overdue', 'soon', 'soon']);
+  });
+
+  it('ordena vencimentos abertos por vencidas, data mais proxima e maior valor no empate', () => {
+    const result = buildMonthPlan({
+      viewDate,
+      accounts: [makeAccount({ balance: 1000 })],
+      categories: [essentialCategory],
+      debts: [],
+      transactions: [
+        makeTransaction({
+          id: 'future',
+          categoryId: 'essential',
+          description: 'Conta futura',
+          amount: 100,
+          date: '2026-04-20',
+          isPaid: false,
+        }),
+        makeTransaction({
+          id: 'today-low',
+          categoryId: 'essential',
+          description: 'Conta hoje menor',
+          amount: 80,
+          date: '2026-04-15',
+          isPaid: false,
+        }),
+        makeTransaction({
+          id: 'overdue',
+          categoryId: 'essential',
+          description: 'Conta vencida',
+          amount: 120,
+          date: '2026-04-14',
+          isPaid: false,
+        }),
+        makeTransaction({
+          id: 'today-high',
+          categoryId: 'essential',
+          description: 'Conta hoje maior',
+          amount: 180,
+          date: '2026-04-15',
+          isPaid: false,
+        }),
+      ],
+    });
+
+    expect(result.upcomingOpenExpenses.map((item) => item.id)).toEqual(['overdue', 'today-high', 'today-low', 'future']);
+    expect(result.upcomingOpenExpenses.map((item) => item.status)).toEqual(['overdue', 'today', 'today', 'soon']);
+    expect(result.overdueOpenExpensesTotal).toBe(120);
+    expect(result.overdueOpenExpensesCount).toBe(1);
   });
 });

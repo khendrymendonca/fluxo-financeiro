@@ -10,7 +10,7 @@ export function useAccounts() {
   return useQuery({
     queryKey: ['accounts'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('accounts').select('*');
+      const { data, error } = await supabase.from('accounts').select('*').is('deleted_at', null);
       if (error) throw error;
       return (data || []).map((acc: any) => ({
         ...acc,
@@ -69,6 +69,7 @@ export function useTransactions(viewDate: Date) {
         originalId: t.original_id,
         originalBillId: t.original_bill_id,
         isTransfer: t.is_transfer || false,
+        transferGroupId: t.transfer_group_id,
         isInvoicePayment: t.is_invoice_payment || false
       })) as Transaction[];
     },
@@ -189,6 +190,9 @@ export function useCategoryGroups() {
   return useQuery({
     queryKey: ['category-groups'],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
       const { data, error } = await supabase.from('category_groups').select('*');
       if (error) throw error;
       return data as CategoryGroup[];

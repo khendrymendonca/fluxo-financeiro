@@ -41,6 +41,7 @@ import { ReactNode } from 'react';
 import { NavigationRail } from '@/components/layout/NavigationRail';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { TransactionList } from '@/components/transactions/TransactionList';
+import { useUpdateTransferTransaction } from '@/hooks/useTransactionMutations';
 import { GoalCard } from '@/components/goals/GoalCard';
 import { GoalForm } from '@/components/goals/GoalForm';
 import { WhatIfSimulator } from '@/components/simulator/WhatIfSimulator';
@@ -173,6 +174,7 @@ export default function Index() {
 
   const { cashflow, categoryExpenses } = useDashboardMetrics(viewDate, currentMonthTransactions);
   const { ...emergencyData } = useEmergencyFund(currentMonthTransactions);
+  const updateTransferTransaction = useUpdateTransferTransaction();
   const isMobile = useIsMobile();
   const isSuperAdmin = useIsSuperAdmin();
   const easterEnabled = useGlobalFlag('theme_easter');
@@ -195,11 +197,39 @@ export default function Index() {
   const projectedBalance = useMemo(() => totalNetWorth - totalPendingOutflows, [totalNetWorth, totalPendingOutflows]);
 
   const handleEditTransaction = useCallback((item: Transaction) => {
-    setEditingTransaction(item);
+    if (item.isTransfer) {
+      const legacyCandidates = transactions.filter(tx =>
+        tx.isTransfer &&
+        tx.id !== item.id &&
+        tx.type !== item.type &&
+        Number(tx.amount) === Number(item.amount) &&
+        String(tx.date).slice(0, 10) === String(item.date).slice(0, 10)
+      );
+      const counterpart = item.transferGroupId
+        ? transactions.find(tx => tx.transferGroupId === item.transferGroupId && tx.id !== item.id && tx.isTransfer)
+        : legacyCandidates.length === 1 ? legacyCandidates[0] : undefined;
+
+      setEditingTransaction({
+        ...item,
+        transferCounterpart: counterpart,
+      } as Transaction);
+      setInitialFormTab('transfer');
+    } else {
+      setEditingTransaction(item);
+      setInitialFormTab(undefined);
+    }
     setShowTransactionForm(true);
-  }, []);
+  }, [transactions]);
 
   const handleCopyTransaction = useCallback((item: Transaction) => {
+    if (item.isTransfer) {
+      toast({
+        title: 'Cópia bloqueada',
+        description: 'Transferências devem ser corrigidas como grupo, não copiadas como lançamento comum.',
+        variant: 'destructive',
+      });
+      return;
+    }
     // 🛡️ REGRA DE NEGÓCIO: Ao copiar, removemos o ID para que seja um novo lançamento
     const { id, ...transactionData } = item;
     setEditingTransaction(transactionData as Transaction);
@@ -645,14 +675,21 @@ export default function Index() {
                 originalId: editingTransaction.originalId || editingTransaction.id.split('-virtual')[0]
               } as any);
             } else if (editingTransaction && editingTransaction.id) {
-              await updateTransaction({
-                id: editingTransaction.id,
-                updates: tx,
-                cardClosingDay: tx.cardClosingDay,
-                cardDueDay: tx.cardDueDay,
-                currentCardId: editingTransaction.cardId,
-                applyScope
-              });
+              if (editingTransaction.isTransfer) {
+                await updateTransferTransaction.mutateAsync({
+                  transaction: editingTransaction,
+                  updates: tx,
+                });
+              } else {
+                await updateTransaction({
+                  id: editingTransaction.id,
+                  updates: tx,
+                  cardClosingDay: tx.cardClosingDay,
+                  cardDueDay: tx.cardDueDay,
+                  currentCardId: editingTransaction.cardId,
+                  applyScope
+                });
+              }
             } else {
               await addTransaction(tx as any);
             }

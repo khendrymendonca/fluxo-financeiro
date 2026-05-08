@@ -395,6 +395,67 @@ describe('TransactionList - fluxo interno de pagamento', () => {
     vi.doUnmock('@/components/ui/use-toast');
   });
 
+  it('abre transferencia para correcao e nao permite copiar uma ponta isolada', async () => {
+    vi.resetModules();
+
+    vi.doMock('@/hooks/useFinanceStore', () => ({
+      useFinanceStore: () => financeStoreState,
+    }));
+
+    vi.doMock('@/hooks/useTransactionMutations', () => ({
+      useToggleTransactionPaid: () => ({ mutateAsync: vi.fn() }),
+    }));
+
+    vi.doMock('@/components/ui/use-toast', () => ({
+      toast: vi.fn(),
+    }));
+
+    const onEdit = vi.fn();
+    const onCopy = vi.fn();
+    const { TransactionList } = await import('@/components/transactions/TransactionList');
+
+    render(
+      <TransactionList
+        transactions={[
+          {
+            id: 'transfer-out',
+            userId: 'user-1',
+            description: '[Saída] Reserva',
+            amount: 150,
+            type: 'expense',
+            transactionType: 'punctual',
+            date: '2026-04-11',
+            isPaid: true,
+            accountId: 'acc-1',
+            categoryId: 'cat-1',
+            isTransfer: true,
+            transferGroupId: 'transfer-group-1',
+          },
+        ] as Transaction[]}
+        onEdit={onEdit}
+        onCopy={onCopy}
+        onPayBill={vi.fn(async () => undefined)}
+      />,
+      { wrapper }
+    );
+
+    expect(screen.getByText('Transferência')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Duplicar lançamento')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('[Saída] Reserva'));
+
+    expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'transfer-out',
+      isTransfer: true,
+      transferGroupId: 'transfer-group-1',
+    }));
+    expect(onCopy).not.toHaveBeenCalled();
+
+    vi.doUnmock('@/hooks/useFinanceStore');
+    vi.doUnmock('@/hooks/useTransactionMutations');
+    vi.doUnmock('@/components/ui/use-toast');
+  });
+
   it('continua ocultando boleto e divida parcelada pendentes no extrato comum', async () => {
     vi.resetModules();
 

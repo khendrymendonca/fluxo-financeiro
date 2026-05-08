@@ -458,7 +458,7 @@ export function TransactionList({
                             )}
 
                             {/* Botão Copiar (Apenas Pontual e NÃO gerenciado por Bills) */}
-                            {!isManagedByBills && !item.isRecurring && item.transactionType !== 'recurring' && !item.installmentGroupId && onCopy && (
+                            {!isManagedByBills && !item.isTransfer && !item.isRecurring && item.transactionType !== 'recurring' && !item.installmentGroupId && onCopy && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -752,7 +752,15 @@ export function TransactionList({
               type: 'transaction' as const,
               isVirtual: item?.isVirtual,
               installmentGroupId: item?.installmentGroupId,
-              isRecurring: item?.isRecurring || item?.transactionType === 'recurring'
+              isRecurring: item?.isRecurring || item?.transactionType === 'recurring',
+              transactionKind: item?.type,
+              amount: item?.amount,
+              date: item?.date,
+              cardId: item?.cardId,
+              invoiceMonthYear: item?.invoiceMonthYear,
+              isInvoicePayment: item?.isInvoicePayment,
+              isTransfer: item?.isTransfer,
+              transferGroupId: item?.transferGroupId,
             };
           });
 

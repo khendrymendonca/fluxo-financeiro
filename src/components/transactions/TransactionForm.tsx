@@ -39,10 +39,28 @@ const isDateTodayOrPast = (dateStr: string): boolean => {
   return d <= today;
 };
 
+const stripTransferDirection = (description?: string) =>
+  String(description || '').replace(/^\[(Saída|Saida|Entrada)\]\s*/i, '').trim();
+
 export function TransactionForm({ accounts, creditCards, initialData, onSubmit, onDelete, onClose, initialTab }: TransactionFormProps) {
+  const isTransferEdit = Boolean(initialData?.isTransfer);
+  const transferCounterpart = (initialData as any)?.transferCounterpart as Transaction | undefined;
+  const initialTransferFrom = isTransferEdit
+    ? (initialData?.type === 'expense' ? initialData.accountId : transferCounterpart?.accountId) || ''
+    : '';
+  const initialTransferTarget = isTransferEdit
+    ? (initialData?.type === 'income'
+      ? (initialData.accountId || initialData.cardId)
+      : (transferCounterpart?.accountId || transferCounterpart?.cardId)) || ''
+    : '';
+  const initialTransferToType = isTransferEdit && (
+    (initialData?.type === 'income' && initialData.cardId) ||
+    (initialData?.type === 'expense' && transferCounterpart?.cardId)
+  ) ? 'card' : 'account';
+
   // Wizard State
   const [step, setStep] = useState<Step>(initialData || initialTab ? 'DETAILS' : 'SELECT_TYPE');
-  const [activeTab, setActiveTab] = useState<TabType>(initialTab || 'pontual');
+  const [activeTab, setActiveTab] = useState<TabType>(isTransferEdit ? 'transfer' : (initialTab || 'pontual'));
   const [type, setType] = useState<'income' | 'expense'>(initialData?.type || 'expense');
 
   // Form Fields
@@ -71,10 +89,12 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [debtFirstPaymentDate, setDebtFirstPaymentDate] = useState(todayLocalString());
 
   // Transfer Specific
-  const [transferFrom, setTransferFrom] = useState('');
-  const [transferTo, setTransferTo] = useState('');
-  const [transferToType, setTransferToType] = useState<'account' | 'card'>('account');
-  const [transferDescription, setTransferDescription] = useState('Transferência entre contas');
+  const [transferFrom, setTransferFrom] = useState(initialTransferFrom);
+  const [transferTo, setTransferTo] = useState(initialTransferTarget);
+  const [transferToType, setTransferToType] = useState<'account' | 'card'>(initialTransferToType);
+  const [transferDescription, setTransferDescription] = useState(
+    isTransferEdit ? stripTransferDirection(initialData?.description) : 'Transferência entre contas'
+  );
 
   // Reference for Editing
   const [invoiceReference, setInvoiceReference] = useState(() => {
@@ -122,7 +142,24 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
   useEffect(() => {
     if (initialData) {
-      if (initialData.transactionType === 'recurring' || initialData.isRecurring || (initialData as any).is_recurring) {
+      if (initialData.isTransfer) {
+        const counterpart = (initialData as any).transferCounterpart as Transaction | undefined;
+        setActiveTab('transfer');
+        setTransferFrom(
+          (initialData.type === 'expense' ? initialData.accountId : counterpart?.accountId) || ''
+        );
+        setTransferTo(
+          (initialData.type === 'income'
+            ? (initialData.accountId || initialData.cardId)
+            : (counterpart?.accountId || counterpart?.cardId)) || ''
+        );
+        setTransferToType(
+          ((initialData.type === 'income' && initialData.cardId) || (initialData.type === 'expense' && counterpart?.cardId))
+            ? 'card'
+            : 'account'
+        );
+        setTransferDescription(stripTransferDirection(initialData.description));
+      } else if (initialData.transactionType === 'recurring' || initialData.isRecurring || (initialData as any).is_recurring) {
         if (initialData.type === 'income' && (initialData as any).isAutomatic) {
           setActiveTab('renda_fixa');
         } else {
@@ -149,7 +186,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting || isPending) return;
 
@@ -157,6 +194,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       const errors: string[] = [];
       if (!transferFrom) errors.push('Conta de Origem');
       if (!transferTo) errors.push('Conta de Destino');
+      if (!transferDescription) errors.push('Descrição');
       if (!amount || parseFloat(String(amount)) <= 0) {
         toast({
           title: "Valor inválido",
@@ -187,7 +225,29 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         }
       }
 
-      transferBetweenAccounts(transferFrom, transferTo, parseFloat(amount), transferDescription, date, transferToType, invoiceMonthYear);
+      if (initialData?.isTransfer) {
+        await onSubmit({
+          type: 'expense',
+          transactionType: 'punctual',
+          description: transferDescription,
+          transferDescription,
+          amount: parseFloat(amount),
+          date,
+          accountId: transferFrom,
+          transferFrom,
+          transferTo,
+          transferToType,
+          invoiceMonthYear,
+          isPaid: true,
+          paymentDate: date,
+          isTransfer: true,
+          transferGroupId: initialData.transferGroupId || (initialData as any).transfer_group_id || null,
+        } as any, undefined, 'this');
+        onClose();
+        return;
+      }
+
+      await transferBetweenAccounts(transferFrom, transferTo, parseFloat(amount), transferDescription, date, transferToType, invoiceMonthYear);
       onClose();
       return;
     }
@@ -490,11 +550,11 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               {/* Context Header for Details Step */}
               <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/50 mb-2">
                 <div className="flex items-center gap-2">
-                  <div className={cn("p-2 rounded-xl", type === 'income' ? "bg-success text-success-foreground" : "bg-danger text-danger-foreground")}>
-                    {activeTab === 'renda_fixa' ? <RotateCw className="w-4 h-4" /> : <Coins className="w-4 h-4" />}
+                  <div className={cn("p-2 rounded-xl", activeTab === 'transfer' ? "bg-primary text-primary-foreground" : type === 'income' ? "bg-success text-success-foreground" : "bg-danger text-danger-foreground")}>
+                    {activeTab === 'transfer' ? <ArrowRightLeft className="w-4 h-4" /> : activeTab === 'renda_fixa' ? <RotateCw className="w-4 h-4" /> : <Coins className="w-4 h-4" />}
                   </div>
                   <div>
-                    <p className="text-xs font-black uppercase tracking-widest opacity-50">{type === 'income' ? 'RECEITA' : 'DESPESA'}</p>
+                    <p className="text-xs font-black uppercase tracking-widest opacity-50">{activeTab === 'transfer' ? 'TRANSFERÊNCIA' : type === 'income' ? 'RECEITA' : 'DESPESA'}</p>
                     <p className="text-sm font-black flex items-center gap-2">
                       {activeTab === 'pontual' && 'Lançamento Pontual'}
                       {activeTab === 'parcelamento' && 'Lançamento Parcelado'}
@@ -505,7 +565,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                     </p>
                   </div>
                 </div>
-                {initialData?.isVirtual ? (
+                {initialData?.isVirtual || initialData?.isTransfer ? (
                   <Button variant="ghost" size="sm" disabled className="text-xs font-bold uppercase opacity-50" title="Altere a transação original para mudar o tipo estrutural">Bloqueado</Button>
                 ) : (
                   <Button variant="ghost" size="sm" onClick={() => setStep('SELECT_SUBTYPE')} disabled={isPending} className="text-xs font-bold uppercase">Alterar</Button>
@@ -587,6 +647,11 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                       <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Data</Label>
                       <Input type="date" value={date?.split('T')[0] || ''} onChange={e => setDate(e.target.value)} className="h-12 rounded-2xl border-2" />
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Descrição</Label>
+                    <Input value={transferDescription} onChange={e => setTransferDescription(e.target.value)} placeholder="Ex: Transferência para reserva" className="h-12 rounded-2xl border-2 font-bold" />
                   </div>
                 </div>
 
@@ -887,14 +952,18 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               {/* Action Buttons */}
               <div className="flex flex-col gap-3 pt-2">
                 <Button type="submit" disabled={isPending} className={cn("w-full rounded-2xl py-7 text-lg font-black shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]",
-                  type === 'income' ? "bg-success hover:bg-success/90 shadow-success/20" : "bg-danger hover:bg-danger/90 shadow-danger/20")}>
+                  activeTab === 'transfer' ? "bg-primary hover:bg-primary/90 shadow-primary/20" :
+                    type === 'income' ? "bg-success hover:bg-success/90 shadow-success/20" : "bg-danger hover:bg-danger/90 shadow-danger/20")}>
                   {isPending ? (
                     <div className="flex items-center gap-2">
                       <Loader2 className="w-5 h-5 animate-spin" />
                       <span>Processando...</span>
                     </div>
                   ) : (
-                    initialData ? (isCardInstallmentEdit ? 'Corrigir compra parcelada' : 'Salvar Alterações') :
+                    initialData ? (
+                      isTransferEdit ? 'Corrigir transferência' :
+                        isCardInstallmentEdit ? 'Corrigir compra parcelada' : 'Salvar Alterações'
+                    ) :
                       activeTab === 'renda_fixa' ? 'Confirmar Renda Fixa' :
                         activeTab === 'transfer' ? 'Confirmar Transferência' : 'Concluir Lançamento'
                   )}

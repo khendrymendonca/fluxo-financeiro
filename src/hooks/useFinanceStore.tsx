@@ -192,7 +192,12 @@ function useFinanceProvider() {
 
   const totalPendingOutflows = useMemo(() => {
     return currentMonthTransactions
-      .filter(t => !t.isPaid && t.type === 'expense')
+      .filter(t =>
+        !t.isPaid &&
+        t.type === 'expense' &&
+        !t.isTransfer &&
+        (t.isInvoicePayment || !t.cardId)
+      )
       .reduce((sum, t) => sum + Number(t.amount), 0);
   }, [currentMonthTransactions]);
 

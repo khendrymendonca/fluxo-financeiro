@@ -115,6 +115,17 @@ describe('useDashboardMetrics - categoria de acordo', () => {
           isPaid: true,
           isTransfer: true,
         },
+        {
+          id: 'transfer-2',
+          userId: 'user-1',
+          description: 'Transferencia entrada',
+          amount: 100,
+          type: 'income',
+          transactionType: 'punctual',
+          date: '2026-04-14',
+          isPaid: true,
+          isTransfer: true,
+        },
       ]),
       { wrapper }
     );
