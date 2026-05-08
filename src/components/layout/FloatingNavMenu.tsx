@@ -6,7 +6,8 @@ import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import {
   LayoutDashboard, ArrowUpDown, Receipt, CreditCard,
   Wallet, Rocket, TrendingDown, LineChart,
-  Settings2, Database, Calculator, User, Shield
+  Settings2, Database, Calculator, User, Shield,
+  TrendingUp
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -25,6 +26,7 @@ const SHORTCUT_META: Record<ShortcutId, { icon: any; label: string; featureKey?:
   export:       { icon: Database,       label: 'Dados' },
   simulator:    { icon: Calculator,     label: 'Simulador',   featureKey: 'simulator' },
   emergency:    { icon: Shield,         label: 'Reserva',     featureKey: 'emergency_fund' },
+  projection:   { icon: TrendingUp,     label: 'Projeção',    featureKey: 'debt_strategy' },
   profile:      { icon: User,           label: 'Perfil' },
 };
 

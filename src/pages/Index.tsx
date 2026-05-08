@@ -25,6 +25,7 @@ import {
   Wallet,
   Calculator,
   Rabbit,
+  TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFeatureFlag, useIsSuperAdmin, useGlobalFlag } from '@/hooks/useFeatureFlags';
@@ -90,7 +91,7 @@ const PROTECTED_VIEWS: Record<string, string> = {
   emergency: 'emergency_fund',
   reports: 'reports_dashboard',
   simulator: 'simulator',
-  projection: 'reports_dashboard',
+  projection: 'debt_strategy',
   export: 'export_data',
 };
 
@@ -259,6 +260,7 @@ export default function Index() {
     { id: 'cards', icon: CardIcon, label: 'Cartões', featureKey: 'cards_dashboard' },
     { id: 'bills', icon: Receipt, label: 'Gestão de Contas', featureKey: 'accounts' },
     { id: 'accounts', icon: Wallet, label: 'Minhas Contas (Carteira)', featureKey: 'accounts' },
+    { id: 'projection', icon: TrendingUp, label: 'Projeção', featureKey: 'debt_strategy' },
     { id: 'emergency', icon: Shield, label: 'Reserva de Emergência', featureKey: 'emergency_fund' },
     { id: 'goals', icon: Rocket, label: 'Sonhos & Projetos', featureKey: 'goals_manager' },
     { id: 'debts', icon: History, label: 'Acordos', featureKey: 'debts_manager' },

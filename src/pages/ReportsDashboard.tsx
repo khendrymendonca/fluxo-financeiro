@@ -46,8 +46,87 @@ import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { formatCurrency } from '@/utils/formatters';
 import { parseLocalDate } from '@/utils/dateUtils';
 import { getTransactionCategoryLabel } from '@/utils/transactionCategory';
+import { Category, Transaction } from '@/types/finance';
 
 type Period = 'month' | 'semester' | 'year';
+
+type CategoryRankingItem = {
+  name: string;
+  value: number;
+  budgetLimit: number | null;
+  color?: string;
+  barWidth: number;
+};
+
+function getReportPeriodKey(transaction: Transaction) {
+  if (transaction.isInvoicePayment && transaction.invoiceMonthYear) {
+    return transaction.invoiceMonthYear;
+  }
+
+  return format(parseLocalDate(transaction.date), 'yyyy-MM');
+}
+
+function isEffectiveCategoryExpense(transaction: Transaction) {
+  return (
+    transaction.type === 'expense' &&
+    transaction.isPaid &&
+    !transaction.isTransfer &&
+    !transaction.deleted_at &&
+    (transaction.isInvoicePayment || !transaction.cardId)
+  );
+}
+
+export function buildCategoryExpenseRanking({
+  transactions,
+  categories,
+  start,
+  end,
+  selectedAccountId,
+  limit = 10,
+}: {
+  transactions: Transaction[];
+  categories: Category[];
+  start: Date;
+  end: Date;
+  selectedAccountId: string;
+  limit?: number;
+}): CategoryRankingItem[] {
+  const periodKeys = new Set(
+    eachMonthOfInterval({ start, end }).map((month) => format(month, 'yyyy-MM'))
+  );
+  const distMap = new Map<string, number>();
+
+  transactions.forEach((transaction) => {
+    if (!isEffectiveCategoryExpense(transaction)) return;
+    if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return;
+    if (!periodKeys.has(getReportPeriodKey(transaction))) return;
+
+    const name = transaction.isInvoicePayment
+      ? 'Pagamento de fatura'
+      : getTransactionCategoryLabel(transaction, categories, 'Outros');
+    distMap.set(name, (distMap.get(name) || 0) + Number(transaction.amount));
+  });
+
+  const ranked = Array.from(distMap.entries())
+    .map(([name, value]) => {
+      const cat = categories.find(c => c.name === name);
+      return {
+        name,
+        value,
+        budgetLimit: cat?.budgetLimit ?? null,
+        color: cat?.color
+      };
+    })
+    .sort((a, b) => b.value - a.value)
+    .slice(0, limit);
+
+  const maxCategoryAmount = ranked[0]?.value ?? 0;
+
+  return ranked.map((category) => ({
+    ...category,
+    barWidth: maxCategoryAmount > 0 ? (category.value / maxCategoryAmount) * 100 : 0,
+  }));
+}
 
 export default function ReportsDashboard() {
   const {
@@ -200,36 +279,13 @@ export default function ReportsDashboard() {
   }, [transactions, viewDate]);
 
   const topCategories = useMemo(() => {
-    const distMap = new Map<string, number>();
-    const months = eachMonthOfInterval({ start: intervals.start, end: intervals.end });
-
-    months.forEach(month => {
-      const targetMonth = month.getMonth();
-      const targetYear = month.getFullYear();
-      const monthTransactions = transactions.filter(t => {
-        if (selectedAccountId !== 'all' && t.accountId !== selectedAccountId) return false;
-        const d = parseLocalDate(t.date);
-        return d.getMonth() === targetMonth && d.getFullYear() === targetYear && t.type === 'expense' && !t.isInvoicePayment && !t.isTransfer;
-      });
-
-      monthTransactions.forEach(t => {
-        const name = getTransactionCategoryLabel(t, categories, 'Outros');
-        distMap.set(name, (distMap.get(name) || 0) + Number(t.amount));
-      });
+    return buildCategoryExpenseRanking({
+      transactions,
+      categories,
+      start: intervals.start,
+      end: intervals.end,
+      selectedAccountId,
     });
-
-    return Array.from(distMap.entries())
-      .map(([name, value]) => {
-        const cat = categories.find(c => c.name === name);
-        return {
-          name,
-          value,
-          budgetLimit: cat?.budgetLimit ?? null,
-          color: cat?.color
-        };
-      })
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 6);
   }, [transactions, categories, intervals, selectedAccountId]);
 
   const annualVision = useMemo(() => {
@@ -824,8 +880,6 @@ export default function ReportsDashboard() {
           <h3 className="text-lg font-black tracking-tight mb-6">Por Categoria</h3>
           <div className="space-y-6">
             {topCategories.map((cat, idx) => {
-              const percentage = metrics.totalExpenses > 0 ? (cat.value / metrics.totalExpenses) * 100 : 0;
-
               // Lógica de cor baseada no limite
               const hasLimit = cat.budgetLimit !== null && cat.budgetLimit > 0;
               const limitPercentage = hasLimit ? (cat.value / (cat.budgetLimit as number)) * 100 : 0;
@@ -853,7 +907,9 @@ export default function ReportsDashboard() {
                         "h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(var(--primary),0.3)]",
                         barColor
                       )}
-                      style={{ width: `${hasLimit ? Math.min(limitPercentage, 100) : percentage}%` }}
+                      data-testid={`category-ranking-bar-${idx}`}
+                      data-category-name={cat.name}
+                      style={{ width: `${Math.min(cat.barWidth, 100)}%` }}
                     />
                   </div>
                 </div>

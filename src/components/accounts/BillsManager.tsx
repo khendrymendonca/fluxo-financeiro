@@ -64,6 +64,7 @@ export function BillsManager() {
     const [searchQuery, setSearchQuery] = useState('');
     const [editingBill, setEditingBill] = useState<Transaction | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [settledTransactionIds, setSettledTransactionIds] = useState<Set<string>>(() => new Set());
 
     const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
     const [billToConfirm, setBillToConfirm] = useState<{
@@ -139,13 +140,14 @@ export function BillsManager() {
                     updates: {
                         isPaid: true,
                         paymentDate: paymentDate,
-                        accountId: isCard ? undefined : targetId,
-                        cardId: isCard ? targetId : undefined,
-                        invoiceMonthYear: isCard ? finalInvoiceMonthYear : undefined,
+                        accountId: isCard ? null : targetId,
+                        cardId: isCard ? targetId : null,
+                        invoiceMonthYear: isCard ? finalInvoiceMonthYear : null,
                         amount: amountValue
                     }
                 });
             }
+            setSettledTransactionIds(prev => new Set(prev).add(transaction.id));
             setIsPaying(null);
             toast({ title: "Pagamento registrado com sucesso!" });
         } catch (error) {
@@ -204,6 +206,7 @@ export function BillsManager() {
 
     // 2. Filtrar transações recorrentes e injetar as virtuais
     const recurringTransactions = [...transactions, ...virtualInvoices].filter(t => {
+        if (settledTransactionIds.has(t.id)) return false;
         // Bloqueio de Isolamento: O Gerenciador de Contas não deve vazar lançamentos "pontuais".
         const isRecurringType = t.isRecurring || t.transactionType === 'recurring' || t.transactionType === 'installment' || t.isInvoicePayment || !!t.originalId;
         if (!t.isVirtual && !isRecurringType) {
@@ -429,7 +432,12 @@ export function BillsManager() {
                                             ) : (
                                                 <Button size="sm" variant="ghost"
                                                     onClick={async () => {
-                                                        await togglePaidMutation({ id: transaction.id, isPaid: false, isChild: !!transaction.originalId });
+                                                        await togglePaidMutation({
+                                                            id: transaction.id,
+                                                            isPaid: false,
+                                                            isChild: !!transaction.originalId,
+                                                            clearSourceOnUnpay: Boolean(transaction.debtId && transaction.transactionType === 'installment'),
+                                                        });
                                                         toast({ title: 'Pagamento estornado com sucesso.' });
                                                     }}
                                                     aria-label="Estornar conta"

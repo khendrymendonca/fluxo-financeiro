@@ -393,11 +393,12 @@ export function useToggleTransactionPaid() {
 
   return useMutation({
     mutationKey: ['togglePaid'],
-    mutationFn: async ({ id, isPaid, date, accountId, isChild }: { id: string, isPaid: boolean, date?: string, accountId?: string, isChild?: boolean }) => {
-      // Se estamos estornando (isPaid = false) um filho materializado, ele deve voltar
-      // ao estado pendente em vez de virar shadow. Isso tira o item do Extrato e o
-      // devolve para a Gestão de Contas pelo fluxo normal de filtros.
-      if (!isPaid && isChild) {
+    mutationFn: async ({ id, isPaid, date, accountId, isChild, clearSourceOnUnpay }: { id: string, isPaid: boolean, date?: string, accountId?: string, isChild?: boolean, clearSourceOnUnpay?: boolean }) => {
+      const shouldClearSourceOnUnpay = !isPaid && (isChild || clearSourceOnUnpay);
+
+      // Estorno de filho materializado ou parcela de acordo limpa a fonte para
+      // devolver o item ao estado pendente sem manter baixa financeira ativa.
+      if (shouldClearSourceOnUnpay) {
         const { error } = await supabase
           .from('transactions')
           .update({
@@ -411,6 +412,10 @@ export function useToggleTransactionPaid() {
           .select();
         if (error) throw error;
         return id;
+      }
+
+      if (isPaid && !accountId) {
+        throw new Error('Selecione uma conta para registrar o pagamento.');
       }
 
       const paymentDate = isPaid ? (date || format(new Date(), 'yyyy-MM-dd')) : null;
@@ -476,7 +481,7 @@ export function useUpdateTransaction() {
 
       if (finalInvoiceMonthYear === undefined && effectiveCardId && updates.date && cardClosingDay != null && cardDueDay != null) {
         finalInvoiceMonthYear = calcInvoiceMonthYear(parseLocalDate(updates.date), { closingDay: cardClosingDay, dueDay: cardDueDay });
-      } else if (updates.accountId) {
+      } else if (updates.accountId && finalInvoiceMonthYear === undefined) {
         finalInvoiceMonthYear = undefined;
       }
 
@@ -508,6 +513,14 @@ export function useUpdateTransaction() {
       // Buscar a transação base no banco
       const { data: currentTx } = await supabase.from('transactions').select('*').eq('id', realId).single();
       if (!currentTx) throw new Error('Transação base não encontrada');
+
+      const hasUpdateKey = (key: keyof Transaction) => Object.prototype.hasOwnProperty.call(updates, key);
+      const nextAccountId = hasUpdateKey('accountId') ? updates.accountId : currentTx.account_id;
+      const nextCardId = hasUpdateKey('cardId') ? updates.cardId : currentTx.card_id;
+
+      if (updates.isPaid === true && !nextAccountId && !nextCardId) {
+        throw new Error('Selecione uma conta ou cartao para registrar o pagamento.');
+      }
 
       const groupId = currentTx.installment_group_id;
       const originalId = currentTx.original_id || (currentTx.is_recurring ? currentTx.id : null);
@@ -702,6 +715,9 @@ export function useUpdateTransaction() {
       if (applyScope === 'this' || (!groupId && !originalId)) {
         const { data, error = null } = await supabase.from('transactions').update(dbUpdates).eq('id', realId).select();
         if (error) { logSafeError('useUpdateTransaction (single)', error); throw error; }
+        if (!data || data.length === 0) {
+          throw new Error('Transacao nao atualizada. Recarregue os dados e tente novamente.');
+        }
         return data || [];
       }
 

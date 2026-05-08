@@ -478,8 +478,17 @@ export function TransactionList({
                             {/* Botão Estornar (Apenas Gerenciados pela Gestão de Contas) */}
                             {isManagedByBills && onUndoPayment && (
                               <button
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                   e.stopPropagation();
+                                  if (item.debtId && item.transactionType === 'installment') {
+                                    await togglePaidMutation({
+                                      id: item.id,
+                                      isPaid: false,
+                                      clearSourceOnUnpay: true,
+                                    });
+                                    toast({ title: 'Pagamento estornado com sucesso.' });
+                                    return;
+                                  }
                                   onUndoPayment(item as Transaction);
                                 }}
                                 aria-label="Estornar pagamento"

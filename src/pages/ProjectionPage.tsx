@@ -303,9 +303,6 @@ export default function ProjectionPage() {
                     Com os cortes selecionados: quita <span className="text-emerald-400 font-black">{simulacao.mesesEconomizados} meses antes</span> e economiza <span className="text-emerald-400 font-black">{formatCurrency(simulacao.jurosEconomizados)} em juros</span>.
                   </p>
                 </div>
-                <Button className="rounded-2xl bg-white text-black hover:bg-zinc-200 font-black uppercase tracking-widest text-[11px] h-12 px-8 shadow-xl shadow-white/5 border-none shrink-0 transition-all">
-                  Gerar Plano
-                </Button>
               </div>
             ) : (
               <div className="flex items-center gap-4">

@@ -59,7 +59,8 @@ export function DebtsManager({
       interestRateMonthly: editingDebt?.interestRateMonthly || 0,
       totalInstallments: parseInt(totalInstallments) || 1,
       dueDay: parseInt(dueDay) || undefined,
-      status: editingDebt?.status || 'active'
+      status: editingDebt?.status || 'active',
+      startDate: firstInstallmentDate,
     };
 
     if (editingDebt) {
@@ -73,10 +74,7 @@ export function DebtsManager({
         return;
       }
 
-      onAddDebt({
-        ...debtData,
-        startDate: firstInstallmentDate,
-      });
+      onAddDebt(debtData);
     }
 
     handleCloseForm();

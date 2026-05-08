@@ -162,7 +162,10 @@ export function useDebts() {
         minimumPayment: d.minimum_payment,
         dueDay: d.due_day,
         totalInstallments: d.total_installments,
-        strategyPriority: d.strategy_priority
+        strategyPriority: d.strategy_priority,
+        startDate: d.start_date,
+        cardId: d.card_id,
+        debtType: d.debt_type
       })) as Debt[];
     },
     staleTime: 1000 * 60 * 5, // 5 minutos

@@ -15,6 +15,7 @@ import SuperPage from "./pages/SuperPage";
 import ProjectionPage from "./pages/ProjectionPage";
 import NotFound from "./pages/NotFound";
 import { UpdatePrompt } from "./components/layout/UpdatePrompt";
+import { ProtectedRoute } from "./components/layout/ProtectedRoute";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,7 +46,14 @@ const AppRoutes = () => {
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
       <Routes>
         <Route path="/" element={<Index />} />
-        <Route path="/projection" element={<ProjectionPage />} />
+        <Route
+          path="/projection"
+          element={
+            <ProtectedRoute featureKey="debt_strategy" redirectTo="/?view=dashboard">
+              <ProjectionPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/super" element={<SuperPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

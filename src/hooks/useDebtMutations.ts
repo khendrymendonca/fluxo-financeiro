@@ -20,6 +20,236 @@ interface DebtDbPayload {
   total_installments?: number;
   card_id?: string;
   debt_type?: string;
+  start_date?: string;
+}
+
+interface DebtInstallmentRow {
+  id: string;
+  description: string | null;
+  amount: number | null;
+  date: string;
+  is_paid: boolean | null;
+  payment_date: string | null;
+  account_id: string | null;
+  card_id: string | null;
+  category_id: string | null;
+  debt_id: string | null;
+  installment_group_id: string | null;
+  installment_number: number | null;
+  installment_total: number | null;
+  deleted_at: string | null;
+}
+
+interface SyncDebtInstallmentsReport {
+  created: number;
+  updated: number;
+  preservedPaid: number;
+  conflicts: string[];
+}
+
+const GRID_AFFECTING_DEBT_FIELDS: (keyof Debt)[] = [
+  'name',
+  'totalAmount',
+  'remainingAmount',
+  'installmentAmount',
+  'dueDay',
+  'startDate',
+  'totalInstallments',
+  'status',
+  'cardId',
+  'debtType',
+];
+
+function mapDebtRow(row: any, fallback?: Partial<Debt>): Debt {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    totalAmount: Number(row.total_amount) || 0,
+    remainingAmount: Number(row.remaining_amount) || 0,
+    installmentAmount: Number(row.installment_amount) || 0,
+    interestRateMonthly: Number(row.interest_rate_monthly) || 0,
+    minimumPayment: row.minimum_payment,
+    dueDay: row.due_day,
+    strategyPriority: row.strategy_priority,
+    status: row.status,
+    totalInstallments: row.total_installments,
+    cardId: row.card_id,
+    debtType: row.debt_type,
+    startDate: row.start_date || fallback?.startDate || '',
+  };
+}
+
+function shouldSyncDebtInstallments(updates: Partial<Debt>) {
+  return GRID_AFFECTING_DEBT_FIELDS.some((field) =>
+    Object.prototype.hasOwnProperty.call(updates, field)
+  );
+}
+
+function getInstallmentCount(debt: Debt) {
+  const explicitCount = Number(debt.totalInstallments);
+  if (Number.isFinite(explicitCount) && explicitCount > 0) {
+    return Math.trunc(explicitCount);
+  }
+
+  const amount = Number(debt.installmentAmount);
+  const baseTotal = Number(debt.remainingAmount || debt.totalAmount);
+  if (Number.isFinite(amount) && amount > 0 && Number.isFinite(baseTotal) && baseTotal > 0) {
+    return Math.max(1, Math.ceil(baseTotal / amount));
+  }
+
+  return 1;
+}
+
+function getInstallmentDate(baseDate: Date, offset: number, dueDay?: number) {
+  const monthDate = addMonths(baseDate, offset);
+
+  if (!dueDay) {
+    return format(monthDate, 'yyyy-MM-dd');
+  }
+
+  const normalizedDueDay = Math.max(1, Math.min(31, Math.trunc(dueDay)));
+  const date = new Date(monthDate.getFullYear(), monthDate.getMonth(), normalizedDueDay);
+
+  if (date.getMonth() !== monthDate.getMonth()) {
+    date.setDate(0);
+  }
+
+  return format(date, 'yyyy-MM-dd');
+}
+
+function buildExpectedDebtInstallments(debt: Debt, userId: string, categoryId?: string | null) {
+  const count = getInstallmentCount(debt);
+  const amount = Number(debt.installmentAmount);
+  const baseDate = debt.startDate ? parseLocalDate(debt.startDate) : new Date();
+
+  return Array.from({ length: count }, (_, index) => ({
+    user_id: userId,
+    type: 'expense',
+    transaction_type: 'installment',
+    description: `Acordo ${debt.name} (${index + 1}/${count})`,
+    amount,
+    date: getInstallmentDate(baseDate, index, debt.dueDay),
+    debt_id: debt.id,
+    category_id: categoryId || null,
+    card_id: debt.cardId || null,
+    is_paid: false,
+    installment_number: index + 1,
+    installment_total: count,
+  }));
+}
+
+async function syncDebtInstallments({
+  debt,
+  userId,
+  categoryId,
+}: {
+  debt: Debt;
+  userId: string;
+  categoryId?: string | null;
+}): Promise<SyncDebtInstallmentsReport> {
+  const report: SyncDebtInstallmentsReport = {
+    created: 0,
+    updated: 0,
+    preservedPaid: 0,
+    conflicts: [],
+  };
+
+  const amount = Number(debt.installmentAmount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    report.conflicts.push('installmentAmount inválido; sincronização ignorada.');
+    return report;
+  }
+
+  const { data: existingInstallments, error: fetchError } = await supabase
+    .from('transactions')
+    .select('id, description, amount, date, is_paid, payment_date, account_id, card_id, category_id, debt_id, installment_group_id, installment_number, installment_total, deleted_at')
+    .eq('debt_id', debt.id);
+
+  if (fetchError) throw fetchError;
+
+  const existingRows = (existingInstallments || []) as DebtInstallmentRow[];
+  const activeRows = existingRows.filter((row) => !row.deleted_at);
+  const shouldMaterialize = debt.status === 'renegotiated' || existingRows.length > 0;
+
+  if (!shouldMaterialize) {
+    return report;
+  }
+
+  const normalizedGroupId =
+    activeRows.find((row) => row.installment_group_id)?.installment_group_id ||
+    existingRows.find((row) => row.installment_group_id)?.installment_group_id ||
+    crypto.randomUUID();
+
+  const fallbackCategoryId =
+    categoryId ||
+    activeRows.find((row) => row.category_id)?.category_id ||
+    existingRows.find((row) => row.category_id)?.category_id ||
+    null;
+
+  const rowsByInstallment = activeRows.reduce((map, row) => {
+    if (!row.installment_number) return map;
+    const current = map.get(row.installment_number) || [];
+    current.push(row);
+    map.set(row.installment_number, current);
+    return map;
+  }, new Map<number, DebtInstallmentRow[]>());
+
+  const expectedInstallments = buildExpectedDebtInstallments(debt, userId, fallbackCategoryId);
+
+  for (const expected of expectedInstallments) {
+    const installmentNumber = expected.installment_number;
+    const matchingActiveRows = rowsByInstallment.get(installmentNumber) || [];
+    const paidRows = matchingActiveRows.filter((row) => row.is_paid);
+    const pendingRows = matchingActiveRows.filter((row) => !row.is_paid);
+
+    if (matchingActiveRows.length > 1) {
+      report.conflicts.push(`Parcela ${installmentNumber} possui ${matchingActiveRows.length} registros ativos.`);
+    }
+
+    if (paidRows.length > 0) {
+      report.preservedPaid += paidRows.length;
+      continue;
+    }
+
+    const pendingRow = pendingRows[0];
+    if (pendingRow) {
+      const { error: updateError } = await supabase
+        .from('transactions')
+        .update({
+          type: expected.type,
+          transaction_type: expected.transaction_type,
+          description: expected.description,
+          amount: expected.amount,
+          date: expected.date,
+          debt_id: expected.debt_id,
+          category_id: expected.category_id,
+          card_id: expected.card_id,
+          installment_group_id: normalizedGroupId,
+          installment_number: expected.installment_number,
+          installment_total: expected.installment_total,
+        })
+        .eq('id', pendingRow.id)
+        .select('id');
+
+      if (updateError) throw updateError;
+      report.updated += 1;
+      continue;
+    }
+
+    const { error: insertError } = await supabase
+      .from('transactions')
+      .insert({
+        ...expected,
+        installment_group_id: normalizedGroupId,
+      })
+      .select('id');
+
+    if (insertError) throw insertError;
+    report.created += 1;
+  }
+
+  return report;
 }
 
 // --- 1. ADICIONAR DÃ VIDA ---
@@ -67,6 +297,7 @@ export function useAddDebt() {
 // --- 2. ATUALIZAR DÃ VIDA ---
 export function useUpdateDebt() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string, updates: Partial<Debt> }) => {
@@ -84,52 +315,27 @@ export function useUpdateDebt() {
       if (updates.totalInstallments !== undefined) payload.total_installments = updates.totalInstallments;
       if (updates.cardId !== undefined) payload.card_id = updates.cardId;
       if (updates.debtType !== undefined) payload.debt_type = updates.debtType;
+      if (updates.startDate !== undefined) payload.start_date = updates.startDate;
 
       // 1. Atualizar a dívida
-      const { error } = await supabase.from('debts').update(payload).eq('id', id);
+      const { data: updatedDebtRow, error } = await supabase
+        .from('debts')
+        .update(payload)
+        .eq('id', id)
+        .select('*')
+        .single();
       if (error) throw error;
 
-      // 2. Se mudamos o valor da parcela ou o dia de vencimento, atualizar transações futuras não pagas
-      if (updates.installmentAmount !== undefined || updates.dueDay !== undefined) {
-        // Buscar transações pendentes
-        const { data: pendingTxs, error: fetchError } = await supabase
-          .from('transactions')
-          .select('id, date, amount')
-          .eq('debt_id', id)
-          .eq('is_paid', false)
-          .is('deleted_at', null);
-
-        if (fetchError) throw fetchError;
-
-        if (pendingTxs && pendingTxs.length > 0) {
-          const updatesPromises = pendingTxs.map(tx => {
-            const txUpdates: any = {};
-            if (updates.installmentAmount !== undefined) {
-              txUpdates.amount = updates.installmentAmount;
-            }
-
-            if (updates.dueDay !== undefined) {
-              // Ajustar a data mantendo mês e ano
-              const originalDate = parseLocalDate(tx.date);
-              const year = originalDate.getFullYear();
-              const month = originalDate.getMonth();
-              // Usar date-fns para garantir que o dia seja válido para o mês (ex: 31 de Abril -> 30 de Abril)
-              const newDate = new Date(year, month, updates.dueDay);
-              // Se o dia resultou em mudança de mês (ex: dia 31 em mês de 30), retroceder para o último dia do mês correto
-              if (newDate.getMonth() !== month) {
-                newDate.setDate(0);
-              }
-              txUpdates.date = format(newDate, 'yyyy-MM-dd');
-            }
-
-            return supabase.from('transactions').update(txUpdates).eq('id', tx.id);
-          });
-
-          await Promise.all(updatesPromises);
-        }
+      let syncReport: SyncDebtInstallmentsReport | null = null;
+      if (user && shouldSyncDebtInstallments(updates)) {
+        const updatedDebt = mapDebtRow(updatedDebtRow, updates);
+        syncReport = await syncDebtInstallments({
+          debt: updatedDebt,
+          userId: user.id,
+        });
       }
 
-      return id;
+      return { id, syncReport };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });
@@ -197,60 +403,32 @@ export function useRenegotiateDebt() {
       const debtUpdates: { status: 'renegotiated'; start_date?: string } = { status: 'renegotiated' };
       if (firstInstallmentDate) debtUpdates.start_date = firstInstallmentDate;
 
-      const { error: debtError } = await supabase
+      const { data: updatedDebtRow, error: debtError } = await supabase
         .from('debts')
         .update(debtUpdates)
-        .eq('id', debt.id);
+        .eq('id', debt.id)
+        .select('*')
+        .single();
 
       if (debtError) throw debtError;
 
-      // 2. Gerar parcelas na tabela transactions
-      const count = debt.totalInstallments || 1;
-      const amount = debt.installmentAmount;
-      const groupId = crypto.randomUUID();
-      const baseDate = parseLocalDate(firstInstallmentDate || debt.startDate);
-      const installments: any[] = [];
+      // 2. Recalcular/materializar parcelas sem sobrescrever pagamentos já efetivados
       const agreementCategoryId = categories.find((category) =>
         ['Acordo', 'Metas/Acordos', 'Renegociação'].includes(category.name)
       )?.id;
 
-      // 🛡️ INTEGRIDADE: Soft delete das parcelas antigas não pagas para evitar dupla cobrança
-      const { error: cleanupError } = await supabase
-        .from('transactions')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('debt_id', debt.id)
-        .eq('is_paid', false)
-        .is('deleted_at', null);
+      const updatedDebt = mapDebtRow(updatedDebtRow, {
+        ...debt,
+        status: 'renegotiated',
+        startDate: firstInstallmentDate || debt.startDate,
+      });
+      const syncReport = await syncDebtInstallments({
+        debt: updatedDebt,
+        userId: user.id,
+        categoryId: agreementCategoryId,
+      });
 
-      if (cleanupError) throw cleanupError;
-
-      for (let i = 0; i < count; i++) {
-        const currentInstDate = addMonths(baseDate, i);
-        const dateStr = format(currentInstDate, 'yyyy-MM-dd');
-
-        installments.push({
-          user_id: user.id,
-          type: 'expense',
-          transaction_type: 'installment',
-          description: `Acordo ${debt.name} (${i + 1}/${count})`,
-          amount,
-          date: dateStr,
-          debt_id: debt.id,
-          category_id: agreementCategoryId,
-          is_paid: false,
-          installment_group_id: groupId,
-          installment_number: i + 1,
-          installment_total: count
-        });
-      }
-
-      const { error: txError } = await supabase
-        .from('transactions')
-        .insert(installments);
-
-      if (txError) throw txError;
-
-      return debt.id;
+      return { id: debt.id, syncReport };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['debts'] });

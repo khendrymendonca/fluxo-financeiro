@@ -656,4 +656,70 @@ describe('TransactionList - fluxo interno de pagamento', () => {
     vi.doUnmock('@/hooks/useTransactionMutations');
     vi.doUnmock('@/components/ui/use-toast');
   });
+
+  it('estorno de parcela de acordo paga limpa fonte pela mutation protegida', async () => {
+    vi.resetModules();
+
+    const toastMock = vi.fn();
+    const togglePaidMock = vi.fn(async () => undefined);
+    const onUndoPayment = vi.fn();
+
+    vi.doMock('@/hooks/useFinanceStore', () => ({
+      useFinanceStore: () => financeStoreState,
+    }));
+
+    vi.doMock('@/hooks/useTransactionMutations', () => ({
+      useToggleTransactionPaid: () => ({ mutateAsync: togglePaidMock }),
+    }));
+
+    vi.doMock('@/components/ui/use-toast', () => ({
+      toast: toastMock,
+    }));
+
+    const { TransactionList } = await import('@/components/transactions/TransactionList');
+
+    render(
+      <TransactionList
+        transactions={[
+          {
+            id: 'debt-paid-1',
+            userId: 'user-1',
+            description: 'Acordo banco (1/3)',
+            amount: 180,
+            type: 'expense',
+            transactionType: 'installment',
+            date: '2026-04-10',
+            paymentDate: '2026-04-10',
+            isPaid: true,
+            accountId: 'acc-1',
+            categoryId: 'cat-1',
+            debtId: 'debt-1',
+            installmentGroupId: 'group-debt-1',
+            installmentNumber: 1,
+            installmentTotal: 3,
+          },
+        ] as Transaction[]}
+        onEdit={vi.fn()}
+        onPayBill={vi.fn(async () => undefined)}
+        onUndoPayment={onUndoPayment}
+      />,
+      { wrapper }
+    );
+
+    fireEvent.click(screen.getByLabelText('Estornar pagamento'));
+
+    await waitFor(() => {
+      expect(togglePaidMock).toHaveBeenCalledWith({
+        id: 'debt-paid-1',
+        isPaid: false,
+        clearSourceOnUnpay: true,
+      });
+    });
+    expect(onUndoPayment).not.toHaveBeenCalled();
+    expect(toastMock).toHaveBeenCalledWith({ title: 'Pagamento estornado com sucesso.' });
+
+    vi.doUnmock('@/hooks/useFinanceStore');
+    vi.doUnmock('@/hooks/useTransactionMutations');
+    vi.doUnmock('@/components/ui/use-toast');
+  });
 });

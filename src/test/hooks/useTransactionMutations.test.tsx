@@ -64,6 +64,14 @@ function wrapper({ children }: PropsWithChildren) {
   );
 }
 
+function createWrapper(queryClient: QueryClient) {
+  return ({ children }: PropsWithChildren) => (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  );
+}
+
 describe('useTransactionMutations - soft delete and payment status', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -583,6 +591,42 @@ describe('useTransactionMutations - soft delete and payment status', () => {
     expect(updateQuery.select).toHaveBeenCalled();
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
+
+  it('rejeita marcar transacao como paga sem conta informada', async () => {
+    const { result } = renderHook(() => useToggleTransactionPaid(), { wrapper });
+
+    await expect(result.current.mutateAsync({
+      id: 'tx-sem-fonte',
+      isPaid: true,
+      date: '2026-04-21',
+    })).rejects.toThrow('Selecione uma conta para registrar o pagamento.');
+
+    expect(supabaseMock.from).not.toHaveBeenCalled();
+  });
+
+  it('estorna parcela de acordo limpando fonte de pagamento quando solicitado', async () => {
+    const updateQuery = chain({
+      select: vi.fn(async () => ({ error: null })),
+    });
+    supabaseMock.from.mockReturnValueOnce(updateQuery);
+
+    const { result } = renderHook(() => useToggleTransactionPaid(), { wrapper });
+
+    await result.current.mutateAsync({
+      id: 'debt-installment-1',
+      isPaid: false,
+      clearSourceOnUnpay: true,
+    });
+
+    expect(updateQuery.update).toHaveBeenCalledWith({
+      is_paid: false,
+      payment_date: null,
+      account_id: null,
+      card_id: null,
+      invoice_month_year: null,
+    });
+    expect(updateQuery.eq).toHaveBeenCalledWith('id', 'debt-installment-1');
+  });
 });
 
 describe('useTransactionMutations - useUpdateTransaction scopes', () => {
@@ -958,6 +1002,185 @@ describe('useTransactionMutations - useUpdateTransaction scopes', () => {
     }));
     expect(updateMother.update).toHaveBeenCalledWith({ date: '2026-05-20' });
     expect(updateMother.eq).toHaveBeenCalledWith('id', 'mother-1');
+  });
+
+  it('rejeita baixa por useUpdateTransaction quando nao ha conta nem cartao', async () => {
+    const transaction = {
+      id: 'debt-installment-1',
+      description: 'Acordo banco (1/3)',
+      amount: 180,
+      date: '2026-04-10',
+      is_recurring: false,
+      original_id: null,
+      installment_group_id: 'debt-group-1',
+      account_id: null,
+      card_id: null,
+      debt_id: 'debt-1',
+    };
+    const selectTransaction = chain({
+      single: vi.fn(async () => ({ data: transaction, error: null })),
+    });
+    supabaseMock.from.mockReturnValueOnce(selectTransaction);
+
+    const { result } = renderHook(() => useUpdateTransaction(), { wrapper });
+
+    await expect(result.current.mutateAsync({
+      id: 'debt-installment-1',
+      updates: {
+        isPaid: true,
+        paymentDate: '2026-04-10',
+      },
+    })).rejects.toThrow('Selecione uma conta ou cartao para registrar o pagamento.');
+
+    expect(supabaseMock.from).toHaveBeenCalledTimes(1);
+    expect(selectTransaction.update).not.toHaveBeenCalled();
+  });
+
+  it('rejeita baixa quando update nao retorna linha alterada', async () => {
+    const transaction = {
+      id: 'debt-installment-1',
+      description: 'Acordo banco (1/3)',
+      amount: 180,
+      date: '2026-04-10',
+      is_recurring: false,
+      original_id: null,
+      installment_group_id: 'debt-group-1',
+      account_id: null,
+      card_id: null,
+      debt_id: 'debt-1',
+    };
+    const selectTransaction = chain({
+      single: vi.fn(async () => ({ data: transaction, error: null })),
+    });
+    const updateInstallment = chain({
+      select: vi.fn(async () => ({ data: [], error: null })),
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(selectTransaction)
+      .mockReturnValueOnce(updateInstallment);
+
+    const { result } = renderHook(() => useUpdateTransaction(), { wrapper });
+
+    await expect(result.current.mutateAsync({
+      id: 'debt-installment-1',
+      updates: {
+        isPaid: true,
+        paymentDate: '2026-04-10',
+        accountId: 'acc-1',
+        cardId: null,
+        invoiceMonthYear: null,
+      },
+    })).rejects.toThrow('Transacao nao atualizada. Recarregue os dados e tente novamente.');
+
+    expect(updateInstallment.update).toHaveBeenCalledWith(expect.objectContaining({
+      is_paid: true,
+      payment_date: '2026-04-10',
+      account_id: 'acc-1',
+      card_id: null,
+    }));
+  });
+
+  it('baixa parcela de acordo por conta limpando cartao anterior e mantendo o registro da parcela', async () => {
+    const transaction = {
+      id: 'debt-installment-1',
+      description: 'Acordo banco (1/3)',
+      amount: 180,
+      date: '2026-04-10',
+      is_recurring: false,
+      original_id: null,
+      installment_group_id: 'debt-group-1',
+      account_id: null,
+      card_id: 'card-old',
+      invoice_month_year: '2026-04',
+      debt_id: 'debt-1',
+    };
+    const selectTransaction = chain({
+      single: vi.fn(async () => ({ data: transaction, error: null })),
+    });
+    const updateInstallment = chain({
+      select: vi.fn(async () => ({ data: [{ id: 'debt-installment-1' }], error: null })),
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(selectTransaction)
+      .mockReturnValueOnce(updateInstallment);
+
+    const { result } = renderHook(() => useUpdateTransaction(), { wrapper });
+
+    await result.current.mutateAsync({
+      id: 'debt-installment-1',
+      updates: {
+        isPaid: true,
+        paymentDate: '2026-04-10',
+        accountId: 'acc-1',
+        cardId: null,
+        invoiceMonthYear: null,
+        amount: 180,
+      },
+    });
+
+    expect(updateInstallment.update).toHaveBeenCalledWith(expect.objectContaining({
+      amount: 180,
+      account_id: 'acc-1',
+      card_id: null,
+      invoice_month_year: null,
+      is_paid: true,
+      payment_date: '2026-04-10',
+    }));
+    expect(updateInstallment.eq).toHaveBeenCalledWith('id', 'debt-installment-1');
+  });
+
+  it('invalida queries financeiras apos baixa de parcela de acordo', async () => {
+    const transaction = {
+      id: 'debt-installment-1',
+      description: 'Acordo banco (1/3)',
+      amount: 180,
+      date: '2026-04-10',
+      is_recurring: false,
+      original_id: null,
+      installment_group_id: 'debt-group-1',
+      account_id: null,
+      card_id: null,
+      debt_id: 'debt-1',
+    };
+    const selectTransaction = chain({
+      single: vi.fn(async () => ({ data: transaction, error: null })),
+    });
+    const updateInstallment = chain({
+      select: vi.fn(async () => ({ data: [{ id: 'debt-installment-1' }], error: null })),
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(selectTransaction)
+      .mockReturnValueOnce(updateInstallment);
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    const { result } = renderHook(() => useUpdateTransaction(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync({
+      id: 'debt-installment-1',
+      updates: {
+        isPaid: true,
+        paymentDate: '2026-04-10',
+        accountId: 'acc-1',
+        cardId: null,
+        invoiceMonthYear: null,
+      },
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['transactions'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['accounts'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['credit-cards'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['debts'] });
   });
 
   it('no escopo all de recorrente filtra apenas registros nao pagos e nao deletados', async () => {

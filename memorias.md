@@ -1,3 +1,12 @@
+- 08/05/2026 | Arquitetura & Acesso | (1) Regra Definitiva: A Projeção e Estratégia é protegida exclusivamente pela feature `debt_strategy`. Fallback temporário com `reports_dashboard` removido. (2) Arquitetura Modular: O app é modular; módulos existem estruturalmente, mas acesso e visibilidade são controlados estritamente por feature flags vinculadas a planos ou overrides. (3) Hook `useFeatureFlag`: assinatura padronizada para string única; removido suporte a `string[]` para evitar fallback implícito e manter o gating modular explícito.
+
+## PROTOCOLO OBRIGATÓRIO — ARQUITETURA MODULAR
+O app deve ser tratado como um conjunto de módulos independentes.
+1. **Existência:** O código do módulo (tela, rotas, lógica) deve sempre existir no projeto.
+2. **Gating:** O acesso é controlado EXCLUSIVAMENTE pela feature flag designada no `src/config/features.ts`.
+3. **Isolamento:** Não misturar permissões. Uma feature não deve servir de fallback para outra (ex: `reports_dashboard` não libera `debt_strategy`).
+4. **Planos:** A liberação de módulos para grupos de usuários deve ser feita via matriz de planos no banco de dados (`plan_features`).
+
 ## LEITURA OBRIGATÓRIA — INÍCIO DE SESSÃO
 
 Antes de qualquer resposta técnica, você deve:
@@ -292,3 +301,4 @@ markdown## CASOS DE TESTE — VERIFICAR APÓS CADA ALTERAÇÃO
 Nota do Tech Lead: Este documento deve ser usado como contexto base em todos os prompts futuros que envolvam UI ou regras de negócio. Evitar refatorações gráficas e preservar filosofia de "Quiet Luxury" minimalista sem ruídos em cores ou blocos de grid.
 
 21/04/2026 | Projeto Global | Erradicação do Bug de Duplo Clique & Blindagem UX: (1) Injetado bloqueio visual de `pointer-events-none` e opacidade 60% durante refetchs de mutação de pagamento (`useIsMutating`). (2) Adicionado `.select()` em todas as atualizações do Supabase para garantir persistência atômica antes do retorno. (3) Migração completa da lógica de reconhecimento de pagamentos de fatura: Substituída a string hardcoded `'card-payment'` pela flag booleana `isInvoicePayment`, resolvendo falhas de filtros entre banco e UI. (4) Refatoração do handler `handleMarkAsPaid` para injeção direta de transação, eliminando dependência de estado asíncrono e prevenindo dead-locks em pagamentos sequenciais.
+
