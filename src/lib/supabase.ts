@@ -21,8 +21,21 @@ export function logSafeError(context: string, err: unknown): void {
     return;
   }
   // Em produção: apenas mensagem sem dados internos
-  const message = err instanceof Error ? err.message : 'Erro desconhecido';
-  console.error(`[${context}] ${message}`);
+  const errorLike = err as { message?: unknown; code?: unknown } | null;
+
+  const message =
+    typeof errorLike?.message === 'string' && errorLike.message.trim().length > 0
+      ? errorLike.message
+      : err instanceof Error
+        ? err.message
+        : 'Erro desconhecido';
+
+  const code =
+    typeof errorLike?.code === 'string' && errorLike.code.trim().length > 0
+      ? errorLike.code
+      : null;
+
+  console.error(code ? `[${context}] (${code}) ${message}` : `[${context}] ${message}`);
 }
 
 

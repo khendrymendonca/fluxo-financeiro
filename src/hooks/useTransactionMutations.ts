@@ -231,7 +231,9 @@ export function useAddTransaction() {
         return clean;
       });
 
-      console.log('[ADD TRANSACTION PAYLOAD]', JSON.stringify(txsWithUser, null, 2));
+      if (import.meta.env.DEV) {
+        console.log('[ADD TRANSACTION PAYLOAD]', JSON.stringify(txsWithUser, null, 2));
+      }
 
       const { data: insertedData, error } = await supabase
         .from('transactions')
@@ -239,7 +241,9 @@ export function useAddTransaction() {
         .select();
 
       if (error) {
-        console.error('[ADD TRANSACTION ERROR]', error);
+        if (import.meta.env.DEV) {
+          console.error('[ADD TRANSACTION ERROR]', error);
+        }
         throw error;
       }
       return insertedData;

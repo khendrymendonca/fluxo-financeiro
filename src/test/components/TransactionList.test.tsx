@@ -7,6 +7,7 @@ import { todayLocalString } from '@/utils/dateUtils';
 
 const financeStoreState = {
   categories: [{ id: 'cat-1', name: 'Moradia' }],
+  subcategories: [{ id: 'sub-1', categoryId: 'cat-1', name: 'Energia' }],
   accounts: [
     {
       id: 'acc-1',
@@ -132,6 +133,56 @@ describe('TransactionList - fluxo interno de pagamento', () => {
     });
   });
 
+  it('exibe lancamento comum com titulo, categoria, subcategoria e valor', async () => {
+    vi.resetModules();
+
+    vi.doMock('@/hooks/useFinanceStore', () => ({
+      useFinanceStore: () => financeStoreState,
+    }));
+
+    vi.doMock('@/hooks/useTransactionMutations', () => ({
+      useToggleTransactionPaid: () => ({ mutateAsync: vi.fn() }),
+    }));
+
+    vi.doMock('@/components/ui/use-toast', () => ({
+      toast: vi.fn(),
+    }));
+
+    const { TransactionList } = await import('@/components/transactions/TransactionList');
+
+    render(
+      <TransactionList
+        transactions={[
+          {
+            id: 'common-1',
+            userId: 'user-1',
+            description: 'Conta de luz',
+            amount: 75.5,
+            type: 'expense',
+            transactionType: 'punctual',
+            date: '2026-04-10',
+            isPaid: true,
+            accountId: 'acc-1',
+            categoryId: 'cat-1',
+            subcategoryId: 'sub-1',
+          },
+        ]}
+        onEdit={vi.fn()}
+        onPayBill={vi.fn(async () => undefined)}
+      />,
+      { wrapper }
+    );
+
+    const row = screen.getByText('Conta de luz').closest('.group') as HTMLElement;
+    expect(row).toBeTruthy();
+    expect(within(row).getByText(/Moradia.*Energia/)).toBeInTheDocument();
+    expect(within(row).getAllByText(/R\$\s*75,50/).length).toBeGreaterThan(0);
+
+    vi.doUnmock('@/hooks/useFinanceStore');
+    vi.doUnmock('@/hooks/useTransactionMutations');
+    vi.doUnmock('@/components/ui/use-toast');
+  }, 10000);
+
   it('permite pagamento com saldo projetado em -110, mantendo saldo atual em destaque e chamando onPayBill', async () => {
     const onPayBill = vi.fn(async () => undefined);
     const { getByText, cleanupMocks } = await renderTransactionListWithOpenPayment(110, onPayBill);
@@ -233,6 +284,9 @@ describe('TransactionList - fluxo interno de pagamento', () => {
     );
 
     expect(screen.getByText('Internet paga')).toBeInTheDocument();
+    const row = screen.getByText('Internet paga').closest('.group') as HTMLElement;
+    expect(within(row).getByText('Fixo')).toBeInTheDocument();
+    expect(within(row).getByText('Gestão de Contas')).toBeInTheDocument();
 
     vi.doUnmock('@/hooks/useFinanceStore');
     vi.doUnmock('@/hooks/useTransactionMutations');
@@ -384,11 +438,15 @@ describe('TransactionList - fluxo interno de pagamento', () => {
     );
 
     expect(screen.getByText('Notebook (2/10)')).toBeInTheDocument();
-    expect(screen.getByText('Compra no cartão')).toBeInTheDocument();
+    const installmentRow = screen.getByText('Notebook (2/10)').closest('.group') as HTMLElement;
+    expect(within(installmentRow).getByText('Compra no cartão')).toBeInTheDocument();
+    expect(within(installmentRow).getByText('Parcelado')).toBeInTheDocument();
     expect(screen.getByText('Pagamento fatura abril')).toBeInTheDocument();
-    expect(screen.getByText('Pagamento de fatura')).toBeInTheDocument();
+    const invoiceRow = screen.getByText('Pagamento fatura abril').closest('.group') as HTMLElement;
+    expect(within(invoiceRow).getByText('Pagamento de fatura')).toBeInTheDocument();
     expect(screen.getByText('Transferencia poupanca')).toBeInTheDocument();
-    expect(screen.getByText('Transferência')).toBeInTheDocument();
+    const transferRow = screen.getByText('Transferencia poupanca').closest('.group') as HTMLElement;
+    expect(within(transferRow).getByText('Transferência')).toBeInTheDocument();
 
     vi.doUnmock('@/hooks/useFinanceStore');
     vi.doUnmock('@/hooks/useTransactionMutations');

@@ -56,6 +56,7 @@ export function TransactionList({
 
   const {
     categories,
+    subcategories,
     accounts,
     creditCards,
     viewDate,
@@ -377,6 +378,30 @@ export function TransactionList({
                     item.isInvoicePayment ||
                     item.originalId
                   );
+                  const categoryLabel = getTransactionCategoryLabel(item, categories, 'Outros');
+                  const subcategoryName = categoryLabel !== 'Acordo'
+                    ? subcategories?.find((subcategory) => subcategory.id === item.subcategoryId)?.name
+                    : null;
+                  const categoryDisplay = subcategoryName ? `${categoryLabel} · ${subcategoryName}` : categoryLabel;
+                  const isFixedManagedItem = Boolean(
+                    isManagedByBills &&
+                    !isInvoicePaymentExpense &&
+                    !isTransferItem &&
+                    !isCardPurchase &&
+                    !item.debtId
+                  );
+                  const movementBadges = [
+                    isPending ? 'Pendente' : null,
+                    item.isVirtual ? 'Projetado' : null,
+                    isCardPurchase ? 'Compra no cartão' : null,
+                    isInvoicePaymentExpense ? 'Pagamento de fatura' : null,
+                    isTransferItem ? 'Transferência' : null,
+                    item.debtId ? 'Acordo' : null,
+                    isFixedManagedItem ? 'Fixo' : null,
+                    isManagedByBills ? 'Gestão de Contas' : null,
+                    item.installmentTotal && item.installmentTotal > 1 ? 'Parcelado' : null,
+                    item.installmentNumber && item.installmentTotal ? `${item.installmentNumber}/${item.installmentTotal}` : null,
+                  ].filter((badge): badge is string => Boolean(badge));
 
                   return (
                     <div key={item.id} className="group relative">
@@ -390,7 +415,7 @@ export function TransactionList({
                         </div>
                       )}
                       <div className={cn(
-                        "flex items-center justify-between p-4 transition-all active:bg-white/5 cursor-pointer",
+                        "flex flex-col gap-3 p-4 transition-all active:bg-white/5 cursor-pointer sm:flex-row sm:items-center sm:justify-between",
                         isSelectionMode && "pl-14",
                         isManagedByBills && !isSelectionMode && "cursor-default"
                       )} onClick={() => {
@@ -403,40 +428,48 @@ export function TransactionList({
                         });
                       }}>
                         {/* Lado esquerdo */}
-                        <div className="flex items-center gap-4">
+                        <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
                           <div className={cn("p-2.5 rounded-full border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 group-hover:border-gray-200 dark:group-hover:border-zinc-700 transition-colors",
                             isPending ? "text-primary border-primary/20 bg-primary/5" : (isIncome ? "text-success bg-success/5 border-success/10" : "text-gray-400 dark:text-zinc-400"))}>
                             {item.icon ? <item.icon className="w-5 h-5" /> : (
                               isPending ? <Clock className="w-5 h-5" /> : (isIncome ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />)
                             )}
                           </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="font-bold text-gray-900 dark:text-white text-sm">{item.description}</p>
-                                {isPending && <span className="text-[11px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Pendente</span>}
-                                {item.isVirtual && <span className="text-[11px] bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Projetado</span>}
-                                {isCardPurchase && <span className="text-[11px] bg-sky-100 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Compra no cartão</span>}
-                                {isInvoicePaymentExpense && <span className="text-[11px] bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Pagamento de fatura</span>}
-                                {isTransferItem && <span className="text-[11px] bg-violet-100 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Transferência</span>}
-                                {isManagedByBills && <span className="text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Gestão de Contas</span>}
-                              </div>
-                            <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-                              <span>
-                                {getTransactionCategoryLabel(item, categories, 'Outros')}
+                          <div className="min-w-0 flex-1 space-y-1.5">
+                            <div className="flex min-w-0 items-start justify-between gap-3">
+                              <p className="min-w-0 truncate font-bold text-gray-900 dark:text-white text-sm">{item.description}</p>
+                              <span className={cn("shrink-0 whitespace-nowrap text-sm font-bold sm:hidden", isIncome ? "text-success" : "text-gray-900 dark:text-white")}>
+                                {isIncome ? '+' : '-'} {formatCurrency(item.amount)}
                               </span>
-                              {item.installmentNumber && item.installmentTotal && (
-                                <>
-                                  <span className="opacity-30">•</span>
-                                  <span className="font-bold">{item.installmentNumber}/{item.installmentTotal}</span>
-                                </>
-                              )}
+                            </div>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                              {categoryDisplay}
+                            </p>
+                            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                              {movementBadges.map((badge) => (
+                                <span
+                                  key={badge}
+                                  className={cn(
+                                    "inline-flex max-w-full items-center rounded-md px-1.5 py-0.5 text-[11px] font-black uppercase leading-none tracking-normal",
+                                    badge === 'Compra no cartão' && "bg-sky-100 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300",
+                                    badge === 'Pagamento de fatura' && "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300",
+                                    badge === 'Transferência' && "bg-violet-100 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300",
+                                    badge === 'Pendente' && "bg-primary/20 text-primary",
+                                    badge === 'Projetado' && "bg-amber-500/20 text-amber-600",
+                                    !['Compra no cartão', 'Pagamento de fatura', 'Transferência', 'Pendente', 'Projetado'].includes(badge) &&
+                                    "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                                  )}
+                                >
+                                  {badge}
+                                </span>
+                              ))}
                             </div>
                           </div>
                         </div>
 
                         {/* Lado direito */}
-                        <div className="flex items-center gap-4">
-                          <span className={cn("font-bold text-sm", isIncome ? "text-success" : "text-gray-900 dark:text-white")}>
+                        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-gray-100 pt-3 dark:border-zinc-800 sm:border-t-0 sm:pt-0">
+                          <span className={cn("hidden whitespace-nowrap font-bold text-sm sm:inline", isIncome ? "text-success" : "text-gray-900 dark:text-white")}>
                             {isIncome ? '+' : '-'} {formatCurrency(item.amount)}
                           </span>
 

@@ -15,6 +15,7 @@ import { formatCurrency } from '@/utils/formatters';
 import { parseLocalDate } from '@/utils/dateUtils';
 import { cn } from '@/lib/utils';
 import { buildMonthPlan, type MonthPlanCashItem } from '@/utils/monthPlan';
+import { LegacyDashboardHome } from './LegacyDashboardHome';
 
 interface MonthPlanPageProps {
   isBalanceVisible: boolean;
@@ -155,6 +156,19 @@ export default function MonthPlanPage({
       icon: <AlertTriangle className="h-5 w-5 text-rose-700 dark:text-rose-300" />,
     },
   ];
+
+  if (isMobile) {
+    return (
+      <LegacyDashboardHome
+        isBalanceVisible={isBalanceVisible}
+        onRefreshData={onRefreshData}
+        onOpenTransactionForm={onOpenTransactionForm}
+        onOpenTransferForm={onOpenTransferForm}
+        onNavigateToBills={onNavigateToBills}
+        onNavigateToTransactions={onNavigateToTransactions}
+      />
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 pb-24 md:space-y-7 md:p-6">
