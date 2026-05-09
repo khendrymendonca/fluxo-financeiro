@@ -19,6 +19,7 @@ const authMock = vi.hoisted(() => ({
 }));
 
 const financeStoreMock = vi.hoisted(() => ({
+  FinanceProvider: vi.fn(({ children }: any) => <div data-testid="finance-provider">{children}</div>),
   useFinanceStore: vi.fn(),
 }));
 
@@ -34,7 +35,7 @@ vi.mock('@/contexts/AuthContext', () => ({
   useAuth: authMock.useAuth,
 }));
 vi.mock('@/hooks/useFinanceStore', () => ({
-  FinanceProvider: ({ children }: any) => <>{children}</>,
+  FinanceProvider: financeStoreMock.FinanceProvider,
   useFinanceStore: financeStoreMock.useFinanceStore,
 }));
 vi.mock('@/hooks/useDebtProjection', () => debtProjectionMock);
@@ -176,6 +177,25 @@ describe('Projection access and positioning', () => {
 
     expect(await screen.findByText('Bola de Neve')).toBeInTheDocument();
     expect(screen.queryByText('Index page mock')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('finance-provider')).toHaveLength(1);
+  });
+
+  it('mantem /projection no provider financeiro global sem wrapper duplicado', () => {
+    const appSource = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
+
+    expect(appSource).toContain('path="/projection"');
+    expect(appSource).toContain('<ProtectedRoute featureKey="debt_strategy" redirectTo="/?view=dashboard">');
+    expect(appSource).not.toContain('ProtectedFinanceRoute');
+    expect(appSource.match(/<FinanceProvider>/g)).toHaveLength(1);
+  });
+
+  it('mantem a navegação interna /?view=projection protegida por debt_strategy', () => {
+    const indexSource = readFileSync(resolve(process.cwd(), 'src/pages/Index.tsx'), 'utf8');
+
+    expect(indexSource).toContain("projection: 'debt_strategy'");
+    expect(indexSource).toContain("case 'projection':");
+    expect(indexSource).toContain('<ViewGuard view="projection">');
+    expect(indexSource).toContain('<ProjectionPage />');
   });
 
   it('não renderiza o botão Gerar Plano depois de selecionar cortes simulados', () => {
@@ -198,3 +218,4 @@ describe('Projection access and positioning', () => {
     expect(screen.queryByRole('button', { name: /gerar plano/i })).not.toBeInTheDocument();
   });
 });
+
