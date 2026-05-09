@@ -17,7 +17,7 @@ import { OverdraftWarningDialog } from '@/components/ui/OverdraftWarningDialog';
 import { formatCurrency } from '@/utils/formatters';
 import { toast } from '@/components/ui/use-toast';
 import { parseLocalDate, todayLocalString } from '@/utils/dateUtils';
-import { calcInvoiceMonthYear } from '@/utils/creditCardUtils';
+import { calcInvoiceMonthYearForCard } from '@/utils/creditCardUtils';
 
 interface TransactionFormProps {
   accounts: Account[];
@@ -218,10 +218,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       if (transferToType === 'card') {
         const selectedCard = creditCards.find(c => c.id === transferTo);
         if (selectedCard) {
-          invoiceMonthYear = calcInvoiceMonthYear(parseLocalDate(date), {
-            closingDay: selectedCard.closingDay,
-            dueDay: selectedCard.dueDay
-          });
+          invoiceMonthYear = calcInvoiceMonthYearForCard(parseLocalDate(date), selectedCard);
         }
       }
 
@@ -330,7 +327,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     }
     const selectedCard = creditCards.find(c => c.id === (paymentMethod === 'card' ? cardId : ''));
     const finalInvoiceMonthYear = (paymentMethod === 'card' && selectedCard)
-      ? calcInvoiceMonthYear(parseLocalDate(date), { closingDay: selectedCard.closingDay, dueDay: selectedCard.dueDay })
+      ? calcInvoiceMonthYearForCard(parseLocalDate(date), selectedCard)
       : undefined;
 
     // --- LÓGICA DE PARCELAMENTO (BULK) ---
@@ -359,7 +356,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         const instIsPaid = paymentMethod === 'card' ? true : isDateTodayOrPast(dateStr);
 
         const invoiceMonthYear = (paymentMethod === 'card' && selectedCard)
-          ? calcInvoiceMonthYear(currentInstDate, { closingDay: selectedCard.closingDay, dueDay: selectedCard.dueDay })
+          ? calcInvoiceMonthYearForCard(currentInstDate, selectedCard)
           : undefined;
 
         installmentList.push({

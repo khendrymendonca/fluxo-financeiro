@@ -25,15 +25,28 @@ export function calcInvoiceMonthYear(
   transactionDate: Date,
   settings: { closingDay: number, dueDay: number }
 ): string {
-  const { closingDay } = settings;
+  const { closingDay, dueDay } = settings;
   const invoiceDate = new Date(transactionDate.getFullYear(), transactionDate.getMonth(), 1);
+  const transactionDay = transactionDate.getDate();
 
-  // Se a compra foi feita DEPOIS do fechamento da fatura, ela cai no mês seguinte
-  if (transactionDate.getDate() > closingDay) {
-    invoiceDate.setMonth(invoiceDate.getMonth() + 1);
+  // invoiceMonthYear representa o mês/ano de vencimento da fatura.
+  if (closingDay > dueDay) {
+    const monthOffset = transactionDay <= closingDay ? 1 : 2;
+    invoiceDate.setMonth(invoiceDate.getMonth() + monthOffset);
+  } else {
+    const monthOffset = transactionDay <= closingDay ? 0 : 1;
+    invoiceDate.setMonth(invoiceDate.getMonth() + monthOffset);
   }
 
   return format(invoiceDate, 'yyyy-MM');
+}
+
+export function calcInvoiceMonthYearForCard(
+  transactionDate: Date,
+  card: CreditCard
+): string {
+  const settings = getCardSettingsForDate(card, transactionDate);
+  return calcInvoiceMonthYear(transactionDate, settings);
 }
 
 /**

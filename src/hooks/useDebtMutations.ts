@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { addMonths, format } from 'date-fns';
 import { parseLocalDate } from '@/utils/dateUtils';
 import { useFinanceStore } from './useFinanceStore';
+import { CreditCard } from '@/types/finance';
+import { calcInvoiceMonthYearForCard } from '@/utils/creditCardUtils';
 
 interface DebtDbPayload {
   name?: string;
@@ -118,35 +120,51 @@ function getInstallmentDate(baseDate: Date, offset: number, dueDay?: number) {
   return format(date, 'yyyy-MM-dd');
 }
 
-function buildExpectedDebtInstallments(debt: Debt, userId: string, categoryId?: string | null) {
+function buildExpectedDebtInstallments(
+  debt: Debt,
+  userId: string,
+  categoryId?: string | null,
+  cardById?: Map<string, CreditCard>
+) {
   const count = getInstallmentCount(debt);
   const amount = Number(debt.installmentAmount);
   const baseDate = debt.startDate ? parseLocalDate(debt.startDate) : new Date();
 
-  return Array.from({ length: count }, (_, index) => ({
+  return Array.from({ length: count }, (_, index) => {
+    const installmentDate = getInstallmentDate(baseDate, index, debt.dueDay);
+    const linkedCard = debt.cardId ? cardById?.get(debt.cardId) : undefined;
+    const invoiceMonthYear = linkedCard
+      ? calcInvoiceMonthYearForCard(parseLocalDate(installmentDate), linkedCard)
+      : null;
+
+    return {
     user_id: userId,
     type: 'expense',
     transaction_type: 'installment',
     description: `Acordo ${debt.name} (${index + 1}/${count})`,
     amount,
-    date: getInstallmentDate(baseDate, index, debt.dueDay),
+    date: installmentDate,
     debt_id: debt.id,
     category_id: categoryId || null,
     card_id: debt.cardId || null,
+    invoice_month_year: invoiceMonthYear,
     is_paid: false,
     installment_number: index + 1,
     installment_total: count,
-  }));
+    };
+  });
 }
 
 async function syncDebtInstallments({
   debt,
   userId,
   categoryId,
+  creditCards,
 }: {
   debt: Debt;
   userId: string;
   categoryId?: string | null;
+  creditCards?: CreditCard[];
 }): Promise<SyncDebtInstallmentsReport> {
   const report: SyncDebtInstallmentsReport = {
     created: 0,
@@ -195,7 +213,8 @@ async function syncDebtInstallments({
     return map;
   }, new Map<number, DebtInstallmentRow[]>());
 
-  const expectedInstallments = buildExpectedDebtInstallments(debt, userId, fallbackCategoryId);
+  const cardById = new Map((creditCards || []).map((card) => [card.id, card] as const));
+  const expectedInstallments = buildExpectedDebtInstallments(debt, userId, fallbackCategoryId, cardById);
 
   for (const expected of expectedInstallments) {
     const installmentNumber = expected.installment_number;
@@ -225,6 +244,7 @@ async function syncDebtInstallments({
           debt_id: expected.debt_id,
           category_id: expected.category_id,
           card_id: expected.card_id,
+          invoice_month_year: expected.invoice_month_year,
           installment_group_id: normalizedGroupId,
           installment_number: expected.installment_number,
           installment_total: expected.installment_total,
@@ -298,6 +318,7 @@ export function useAddDebt() {
 export function useUpdateDebt() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { creditCards } = useFinanceStore();
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string, updates: Partial<Debt> }) => {
@@ -332,6 +353,7 @@ export function useUpdateDebt() {
         syncReport = await syncDebtInstallments({
           debt: updatedDebt,
           userId: user.id,
+          creditCards,
         });
       }
 
@@ -393,7 +415,7 @@ export function useDeleteDebt() {
 export function useRenegotiateDebt() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { categories } = useFinanceStore();
+  const { categories, creditCards } = useFinanceStore();
 
   return useMutation({
     mutationFn: async ({ debt, firstInstallmentDate }: { debt: Debt, firstInstallmentDate?: string }) => {
@@ -426,6 +448,7 @@ export function useRenegotiateDebt() {
         debt: updatedDebt,
         userId: user.id,
         categoryId: agreementCategoryId,
+        creditCards,
       });
 
       return { id: debt.id, syncReport };

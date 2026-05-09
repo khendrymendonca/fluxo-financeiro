@@ -13,6 +13,10 @@ const toastMock = vi.hoisted(() => ({
   toast: vi.fn(),
 }));
 
+const financeStoreMock = vi.hoisted(() => ({
+  useFinanceStore: vi.fn(),
+}));
+
 vi.mock('@/lib/supabase', () => ({
   supabase: supabaseMock,
   logSupabaseError: vi.fn(),
@@ -26,11 +30,7 @@ vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'user-1' } }),
 }));
 
-vi.mock('@/hooks/useFinanceStore', () => ({
-  useFinanceStore: () => ({
-    categories: [{ id: 'cat-reneg', name: 'Acordo' }],
-  }),
-}));
+vi.mock('@/hooks/useFinanceStore', () => financeStoreMock);
 
 type QueryBuilder = {
   update?: ReturnType<typeof vi.fn>;
@@ -154,6 +154,10 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     supabaseMock.from.mockReset();
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      categories: [{ id: 'cat-reneg', name: 'Acordo' }],
+      creditCards: [],
+    });
   });
 
   it('cria todas as parcelas esperadas quando o acordo atualizado ainda nao tem transactions', async () => {
@@ -495,5 +499,69 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
     expect(response.syncReport).toEqual(
       expect.objectContaining({ created: 1, updated: 1, preservedPaid: 1 }),
     );
+  });
+
+  it('renegociacao vinculada ao cartao usa regra central de invoiceMonthYear com historico', async () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      categories: [{ id: 'cat-reneg', name: 'Acordo' }],
+      creditCards: [
+        {
+          id: 'card-1',
+          userId: 'user-1',
+          name: 'Nu - Duda',
+          bank: 'Nu',
+          limit: 5000,
+          color: '#000',
+          dueDay: 5,
+          closingDay: 28,
+          isClosingDateFixed: true,
+          isActive: true,
+          history: [
+            { dueDay: 5, closingDay: 29, effectiveDate: '2020-01-01' },
+            { dueDay: 5, closingDay: 28, effectiveDate: '2026-01-01' },
+          ],
+        },
+      ],
+    });
+
+    const debtUpdate = createDebtUpdateQuery(
+      baseDebtRow({
+        status: 'renegotiated',
+        installment_amount: 300,
+        total_installments: 3,
+        start_date: '2026-05-05',
+        card_id: 'card-1',
+        debt_type: 'invoice_installment',
+      }),
+    );
+    const fetchInstallments = createFetchInstallmentsQuery([]);
+    const insertFirst = createInsertTransactionQuery();
+    const insertSecond = createInsertTransactionQuery();
+    const insertThird = createInsertTransactionQuery();
+
+    supabaseMock.from
+      .mockReturnValueOnce(debtUpdate)
+      .mockReturnValueOnce(fetchInstallments)
+      .mockReturnValueOnce(insertFirst)
+      .mockReturnValueOnce(insertSecond)
+      .mockReturnValueOnce(insertThird);
+
+    const { result } = renderHook(() => useRenegotiateDebt(), { wrapper: createWrapper() });
+
+    await result.current.mutateAsync({
+      debt: baseDebt({
+        installmentAmount: 300,
+        totalInstallments: 3,
+        startDate: '2026-05-05',
+        cardId: 'card-1',
+        debtType: 'invoice_installment',
+      }),
+      firstInstallmentDate: '2026-05-05',
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const payloads = [getInsertPayload(insertFirst), getInsertPayload(insertSecond), getInsertPayload(insertThird)];
+    expect(payloads.map((payload) => payload.invoice_month_year)).toEqual(['2026-06', '2026-07', '2026-08']);
   });
 });

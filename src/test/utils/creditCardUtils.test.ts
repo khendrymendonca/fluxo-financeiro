@@ -1,40 +1,64 @@
 import { describe, it, expect } from 'vitest';
-import { calcInvoiceMonthYear } from '../../utils/creditCardUtils';
+import { calcInvoiceMonthYear, calcInvoiceMonthYearForCard } from '../../utils/creditCardUtils';
 import { parseLocalDate } from '../../utils/dateUtils';
 
 describe('creditCardUtils - calcInvoiceMonthYear', () => {
-  describe('Regra de fechamento do cartão', () => {
-    it('deve entrar na fatura do mês atual (2026-04) se a compra for dia 10 e fechamento dia 15', () => {
-      // Dia 10/04/2026 -> antes do dia 15/04 -> fatura vence no mesmo mês ou no próximo dependendo da regra, 
-      // mas pelo utils, deve dar a "fatura de abril" (ou maio, depende de como o app conta).
-      // A instrução diz: calcInvoiceMonthYear(new Date('2026-04-10'), { closingDay: 15 }) → '2026-04'
-      const invoice = calcInvoiceMonthYear(parseLocalDate('2026-04-10'), { closingDay: 15 } as any);
-      expect(invoice).toBe('2026-04');
-    });
+  it('compra em 28/04/2026 (fech. 28, venc. 5) entra em 2026-05', () => {
+    const invoice = calcInvoiceMonthYear(parseLocalDate('2026-04-28'), { closingDay: 28, dueDay: 5 });
+    expect(invoice).toBe('2026-05');
+  });
 
-    it('deve entrar na fatura do próximo mês (2026-05) se a compra for dia 20 e fechamento dia 15', () => {
-      const invoice = calcInvoiceMonthYear(parseLocalDate('2026-04-20'), { closingDay: 15 } as any);
-      expect(invoice).toBe('2026-05');
-    });
+  it('compra em 29/04/2026 (fech. 28, venc. 5) entra em 2026-06', () => {
+    const invoice = calcInvoiceMonthYear(parseLocalDate('2026-04-29'), { closingDay: 28, dueDay: 5 });
+    expect(invoice).toBe('2026-06');
+  });
 
-    it('deve entrar na fatura de 2026-04 se a compra for dia 1 e fechamento dia 3', () => {
-      const invoice = calcInvoiceMonthYear(parseLocalDate('2026-04-01'), { closingDay: 3 } as any);
-      expect(invoice).toBe('2026-04');
-    });
+  it('compra em 05/05/2026 (fech. 28, venc. 5) entra em 2026-06', () => {
+    const invoice = calcInvoiceMonthYear(parseLocalDate('2026-05-05'), { closingDay: 28, dueDay: 5 });
+    expect(invoice).toBe('2026-06');
+  });
 
-    it('deve entrar na fatura de 2026-05 se a compra for dia 5 e fechamento dia 3', () => {
-      const invoice = calcInvoiceMonthYear(parseLocalDate('2026-04-05'), { closingDay: 3 } as any);
-      expect(invoice).toBe('2026-05');
-    });
+  it('usa historico antigo antes de 2026-01-01 (fech. 29, venc. 5)', () => {
+    const card = {
+      id: 'card-1',
+      userId: 'u1',
+      name: 'Nu - Duda',
+      bank: 'Nu',
+      limit: 1000,
+      color: '#000',
+      closingDay: 28,
+      dueDay: 5,
+      isClosingDateFixed: true,
+      isActive: true,
+      history: [
+        { dueDay: 5, closingDay: 29, effectiveDate: '2020-01-01' },
+        { dueDay: 5, closingDay: 28, effectiveDate: '2026-01-01' },
+      ],
+    } as any;
 
-    it('deve virar o ano corretamente (2027-01) se a compra for em 20/12/2026 e fechamento dia 15', () => {
-      const invoice = calcInvoiceMonthYear(parseLocalDate('2026-12-20'), { closingDay: 15 } as any);
-      expect(invoice).toBe('2027-01');
-    });
+    const invoice = calcInvoiceMonthYearForCard(parseLocalDate('2025-12-15'), card);
+    expect(invoice).toBe('2026-01');
+  });
 
-    it('não deve deslocar a competência só porque o vencimento é antes do fechamento', () => {
-      const invoice = calcInvoiceMonthYear(parseLocalDate('2026-04-10'), { closingDay: 25, dueDay: 5 });
-      expect(invoice).toBe('2026-04');
-    });
+  it('usa historico novo a partir de 2026-01-01 (fech. 28, venc. 5)', () => {
+    const card = {
+      id: 'card-1',
+      userId: 'u1',
+      name: 'Nu - Duda',
+      bank: 'Nu',
+      limit: 1000,
+      color: '#000',
+      closingDay: 28,
+      dueDay: 5,
+      isClosingDateFixed: true,
+      isActive: true,
+      history: [
+        { dueDay: 5, closingDay: 29, effectiveDate: '2020-01-01' },
+        { dueDay: 5, closingDay: 28, effectiveDate: '2026-01-01' },
+      ],
+    } as any;
+
+    const invoice = calcInvoiceMonthYearForCard(parseLocalDate('2026-05-05'), card);
+    expect(invoice).toBe('2026-06');
   });
 });

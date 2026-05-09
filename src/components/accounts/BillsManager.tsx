@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { format, isSameMonth, isSameYear, isBefore, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useIsMutating } from '@tanstack/react-query';
-import { getCardSettingsForDate, calcInvoiceMonthYear } from '@/utils/creditCardUtils';
+import { getCardSettingsForDate, calcInvoiceMonthYearForCard } from '@/utils/creditCardUtils';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
 import { BulkDeleteDialog } from '../transactions/BulkDeleteDialog';
 import {
@@ -91,7 +91,7 @@ export function BillsManager() {
         if (isCard) {
             const card = creditCards.find(c => c.id === targetId);
             if (card) {
-                finalInvoiceMonthYear = calcInvoiceMonthYear(pDate, { closingDay: card.closingDay, dueDay: card.dueDay });
+                finalInvoiceMonthYear = calcInvoiceMonthYearForCard(pDate, card);
             }
         }
 

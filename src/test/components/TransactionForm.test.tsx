@@ -85,7 +85,7 @@ describe('TransactionForm - parcelamento no cartao', () => {
           installmentGroupId: 'group-card-1',
           installmentNumber: 1,
           installmentTotal: 10,
-          invoiceMonthYear: '2026-05',
+          invoiceMonthYear: '2026-06',
           cardId: 'card-1',
         }),
         undefined,
