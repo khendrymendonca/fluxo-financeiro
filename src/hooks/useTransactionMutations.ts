@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, logSafeError } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
-import { format } from 'date-fns';
-import { Transaction } from '@/types/finance';
+import { addMonths, format } from 'date-fns';
+import { CreditCard, Transaction } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
-import { calcInvoiceMonthYear } from '@/utils/creditCardUtils';
+import { calcInvoiceMonthYear, calcInvoiceMonthYearForCard } from '@/utils/creditCardUtils';
 import { parseLocalDate } from '@/utils/dateUtils';
 
 function isPaidInvoicePayment(transaction: any): boolean {
@@ -20,6 +20,12 @@ const LEGACY_TRANSFER_PAIR_ERROR =
   'Transferência antiga sem vínculo seguro. Não foi possível identificar a contraparte sem risco.';
 const LEGACY_TRANSFER_EDIT_ERROR =
   'Transferência antiga sem vínculo seguro. Não foi possível editar a contraparte sem risco.';
+
+const INSTALLMENT_SUFFIX_REGEX = /\s*\(\d+\/\d+\)\s*$/;
+
+function stripInstallmentSuffix(description?: string | null) {
+  return String(description || '').replace(INSTALLMENT_SUFFIX_REGEX, '').trim();
+}
 
 function getTransferGroupId(transaction: any): string | null {
   return transaction?.transferGroupId || transaction?.transfer_group_id || null;
@@ -478,9 +484,17 @@ export function useUpdateTransaction() {
     }) => {
       const effectiveCardId = updates.cardId !== undefined ? updates.cardId : currentCardId;
       let finalInvoiceMonthYear = updates.invoiceMonthYear;
+      const creditCards = queryClient.getQueryData<CreditCard[]>(['credit-cards']) ?? [];
+      const effectiveCard = effectiveCardId
+        ? creditCards.find((card) => card.id === effectiveCardId)
+        : undefined;
 
-      if (finalInvoiceMonthYear === undefined && effectiveCardId && updates.date && cardClosingDay != null && cardDueDay != null) {
-        finalInvoiceMonthYear = calcInvoiceMonthYear(parseLocalDate(updates.date), { closingDay: cardClosingDay, dueDay: cardDueDay });
+      if (finalInvoiceMonthYear === undefined && effectiveCardId && updates.date) {
+        finalInvoiceMonthYear = effectiveCard
+          ? calcInvoiceMonthYearForCard(parseLocalDate(updates.date), effectiveCard)
+          : cardClosingDay != null && cardDueDay != null
+            ? calcInvoiceMonthYear(parseLocalDate(updates.date), { closingDay: cardClosingDay, dueDay: cardDueDay })
+            : undefined;
       } else if (updates.accountId && finalInvoiceMonthYear === undefined) {
         finalInvoiceMonthYear = undefined;
       }
@@ -526,6 +540,12 @@ export function useUpdateTransaction() {
       const originalId = currentTx.original_id || (currentTx.is_recurring ? currentTx.id : null);
 
       const isRecurringMother = !isVirtual && currentTx.is_recurring && !currentTx.original_id;
+      const shouldRecalculateCardInstallmentGroup = Boolean(
+        groupId &&
+        effectiveCardId &&
+        (applyScope === 'all' || applyScope === 'future') &&
+        (updates.date !== undefined || updates.cardId !== undefined || updates.invoiceMonthYear !== undefined)
+      );
 
       // ======================================================================
       // CASO A e C: isVirtual ou isRecurringMother + applyScope='this'
@@ -712,6 +732,73 @@ export function useUpdateTransaction() {
       // ======================================================================
       // CASO F: Transação normal pontual ou Fluxo de Cartão/Parcelamento
       // ======================================================================
+      if (shouldRecalculateCardInstallmentGroup) {
+        const { data: groupRows, error: groupFetchError } = await supabase
+          .from('transactions')
+          .select('id,date,is_paid,installment_number,installment_total,card_id,invoice_month_year,deleted_at')
+          .eq('installment_group_id', groupId)
+          .is('deleted_at', null)
+          .order('installment_number', { ascending: true });
+
+        if (groupFetchError) throw groupFetchError;
+
+        const targetDateToApply = referenceDate ?? currentTx.date;
+        const activeRows = groupRows || [];
+        const scopedRows = applyScope === 'future'
+          ? activeRows.filter((row) => String(row.date).slice(0, 10) >= String(targetDateToApply).slice(0, 10))
+          : activeRows;
+        const rowsToUpdate = scopedRows.filter((row) => !row.is_paid || row.card_id === effectiveCardId);
+
+        const anchorInstallmentNumber = Number(currentTx.installment_number || rowsToUpdate[0]?.installment_number || 1);
+        const baseDate = updates.date ? parseLocalDate(updates.date.slice(0, 10)) : null;
+        const baseDescription = updates.description !== undefined
+          ? stripInstallmentSuffix(updates.description)
+          : undefined;
+        const updatedRows: any[] = [];
+
+        for (const row of rowsToUpdate) {
+          const rowUpdates: any = { ...dbUpdates };
+          const installmentNumber = Number(row.installment_number || 1);
+          const installmentTotal = Number(row.installment_total || currentTx.installment_total || installmentNumber);
+
+          if (baseDate) {
+            rowUpdates.date = format(addMonths(baseDate, installmentNumber - anchorInstallmentNumber), 'yyyy-MM-dd');
+          } else {
+            delete rowUpdates.date;
+          }
+
+          if (baseDescription) {
+            rowUpdates.description = `${baseDescription} (${installmentNumber}/${installmentTotal})`;
+          }
+
+          const invoiceDate = parseLocalDate((rowUpdates.date || row.date).slice(0, 10));
+          rowUpdates.invoice_month_year = effectiveCard
+            ? calcInvoiceMonthYearForCard(invoiceDate, effectiveCard)
+            : cardClosingDay != null && cardDueDay != null
+              ? calcInvoiceMonthYear(invoiceDate, { closingDay: cardClosingDay, dueDay: cardDueDay })
+              : row.invoice_month_year;
+
+          if (row.is_paid) {
+            delete rowUpdates.is_paid;
+            delete rowUpdates.payment_date;
+            delete rowUpdates.account_id;
+          }
+
+          Object.keys(rowUpdates).forEach(key => rowUpdates[key] === undefined && delete rowUpdates[key]);
+
+          const { data, error } = await supabase
+            .from('transactions')
+            .update(rowUpdates)
+            .eq('id', row.id)
+            .select();
+
+          if (error) throw error;
+          updatedRows.push(...(data || []));
+        }
+
+        return updatedRows;
+      }
+
       if (applyScope === 'this' || (!groupId && !originalId)) {
         const { data, error = null } = await supabase.from('transactions').update(dbUpdates).eq('id', realId).select();
         if (error) { logSafeError('useUpdateTransaction (single)', error); throw error; }

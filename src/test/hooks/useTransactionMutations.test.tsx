@@ -1255,6 +1255,153 @@ describe('useTransactionMutations - useUpdateTransaction scopes', () => {
     expect(updateFutureInstallments.or).not.toHaveBeenCalled();
   });
 
+  it('corrige compra parcelada existente recalculando invoice_month_year do grupo sem duplicar parcelas', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    queryClient.setQueryData(['credit-cards'], [
+      {
+        id: 'card-1',
+        userId: 'user-1',
+        name: 'Nu - Duda',
+        bank: 'Nu',
+        limit: 5000,
+        color: '#000',
+        dueDay: 5,
+        closingDay: 28,
+        isClosingDateFixed: true,
+        isActive: true,
+        history: [
+          { dueDay: 5, closingDay: 29, effectiveDate: '2020-01-01' },
+          { dueDay: 5, closingDay: 28, effectiveDate: '2026-01-01' },
+        ],
+      },
+    ]);
+
+    const currentInstallment = {
+      id: 'inst-1',
+      description: 'Renegociação de Pendências (1/9)',
+      amount: 483.85,
+      date: '2026-05-05',
+      is_recurring: false,
+      original_id: null,
+      installment_group_id: 'group-card-1',
+      installment_number: 1,
+      installment_total: 9,
+      card_id: 'card-1',
+      invoice_month_year: '2026-05',
+    };
+    const selectInstallment = chain({
+      single: vi.fn(async () => ({ data: currentInstallment, error: null })),
+    });
+    const installmentDates = [
+      '2026-05-05',
+      '2026-06-05',
+      '2026-07-05',
+      '2026-08-05',
+      '2026-09-05',
+      '2026-10-05',
+      '2026-11-05',
+      '2026-12-05',
+      '2027-01-05',
+    ];
+    const groupRows = installmentDates.map((installmentDate, index) => ({
+      id: `inst-${index + 1}`,
+      date: installmentDate,
+      is_paid: true,
+      payment_date: installmentDate,
+      installment_number: index + 1,
+      installment_total: 9,
+      card_id: 'card-1',
+      invoice_month_year: installmentDate.slice(0, 7),
+      deleted_at: null,
+    }));
+    const fetchGroup = chain({
+      order: vi.fn(async () => ({
+        data: groupRows,
+        error: null,
+      })),
+    });
+    const updateQueries = Array.from({ length: 9 }, (_, index) => chain({
+      select: vi.fn(async () => ({ data: [{ id: `inst-${index + 1}` }], error: null })),
+    }));
+
+    supabaseMock.from
+      .mockReturnValueOnce(selectInstallment)
+      .mockReturnValueOnce(fetchGroup);
+    updateQueries.forEach((query) => {
+      supabaseMock.from.mockReturnValueOnce(query);
+    });
+
+    const { result } = renderHook(() => useUpdateTransaction(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await result.current.mutateAsync({
+      id: 'inst-1',
+      currentCardId: 'card-1',
+      updates: {
+        description: 'Renegociação de Pendências',
+        amount: 483.85,
+        date: '2026-05-05',
+        cardId: 'card-1',
+        transactionType: 'installment',
+        isPaid: true,
+        paymentDate: '2026-05-05',
+      },
+      applyScope: 'all',
+      referenceDate: '2026-05-05',
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(updateQueries[0].update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: 'Renegociação de Pendências (1/9)',
+        amount: 483.85,
+        date: '2026-05-05',
+        card_id: 'card-1',
+        transaction_type: 'installment',
+        invoice_month_year: '2026-06',
+      }),
+    );
+    expect(updateQueries[1].update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: 'Renegociação de Pendências (2/9)',
+        amount: 483.85,
+        date: '2026-06-05',
+        card_id: 'card-1',
+        transaction_type: 'installment',
+        invoice_month_year: '2026-07',
+      }),
+    );
+    expect(updateQueries[2].update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: 'Renegociação de Pendências (3/9)',
+        amount: 483.85,
+        date: '2026-07-05',
+        card_id: 'card-1',
+        transaction_type: 'installment',
+        invoice_month_year: '2026-08',
+      }),
+    );
+    expect(updateQueries[0].eq).toHaveBeenCalledWith('id', 'inst-1');
+    expect(updateQueries[1].eq).toHaveBeenCalledWith('id', 'inst-2');
+    expect(updateQueries[2].eq).toHaveBeenCalledWith('id', 'inst-3');
+    expect(updateQueries[0].update).not.toHaveBeenCalledWith(expect.objectContaining({
+      installment_group_id: expect.anything(),
+      installment_number: expect.anything(),
+      installment_total: expect.anything(),
+      is_paid: expect.anything(),
+      payment_date: expect.anything(),
+      account_id: expect.anything(),
+    }));
+    expect(supabaseMock.from).toHaveBeenCalledTimes(11);
+  });
+
   it('em filho fisico de recorrente no escopo future atualiza a mae e filhos futuros pelo original_id', async () => {
     const child = {
       id: 'child-1',
