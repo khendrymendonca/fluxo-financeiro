@@ -5,9 +5,13 @@ import { Debt } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 import { addMonths, format } from 'date-fns';
 import { parseLocalDate } from '@/utils/dateUtils';
-import { useFinanceStore } from './useFinanceStore';
-import { CreditCard } from '@/types/finance';
+import { Category, CreditCard } from '@/types/finance';
 import { calcInvoiceMonthYearForCard } from '@/utils/creditCardUtils';
+
+interface DebtMutationDeps {
+  creditCards?: CreditCard[];
+  categories?: Category[];
+}
 
 interface DebtDbPayload {
   name?: string;
@@ -315,10 +319,9 @@ export function useAddDebt() {
 }
 
 // --- 2. ATUALIZAR DÃ VIDA ---
-export function useUpdateDebt() {
+export function useUpdateDebt(deps: DebtMutationDeps = {}) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { creditCards } = useFinanceStore();
 
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string, updates: Partial<Debt> }) => {
@@ -350,6 +353,7 @@ export function useUpdateDebt() {
       let syncReport: SyncDebtInstallmentsReport | null = null;
       if (user && shouldSyncDebtInstallments(updates)) {
         const updatedDebt = mapDebtRow(updatedDebtRow, updates);
+        const creditCards = deps.creditCards ?? queryClient.getQueryData<CreditCard[]>(['credit-cards']) ?? [];
         syncReport = await syncDebtInstallments({
           debt: updatedDebt,
           userId: user.id,
@@ -412,10 +416,9 @@ export function useDeleteDebt() {
 }
 
 // --- 4. RENEGOCIAR ACORDO ---
-export function useRenegotiateDebt() {
+export function useRenegotiateDebt(deps: DebtMutationDeps = {}) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { categories, creditCards } = useFinanceStore();
 
   return useMutation({
     mutationFn: async ({ debt, firstInstallmentDate }: { debt: Debt, firstInstallmentDate?: string }) => {
@@ -435,6 +438,8 @@ export function useRenegotiateDebt() {
       if (debtError) throw debtError;
 
       // 2. Recalcular/materializar parcelas sem sobrescrever pagamentos já efetivados
+      const categories = deps.categories ?? queryClient.getQueryData<Category[]>(['categories']) ?? [];
+      const creditCards = deps.creditCards ?? queryClient.getQueryData<CreditCard[]>(['credit-cards']) ?? [];
       const agreementCategoryId = categories.find((category) =>
         ['Acordo', 'Metas/Acordos', 'Renegociação'].includes(category.name)
       )?.id;

@@ -1,4 +1,6 @@
 import React, { PropsWithChildren } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,13 +15,10 @@ const toastMock = vi.hoisted(() => ({
   toast: vi.fn(),
 }));
 
-const financeStoreMock = vi.hoisted(() => ({
-  useFinanceStore: vi.fn(),
-}));
-
 vi.mock('@/lib/supabase', () => ({
   supabase: supabaseMock,
   logSupabaseError: vi.fn(),
+  logSafeError: vi.fn(),
 }));
 
 vi.mock('@/components/ui/use-toast', () => ({
@@ -29,8 +28,6 @@ vi.mock('@/components/ui/use-toast', () => ({
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'user-1' } }),
 }));
-
-vi.mock('@/hooks/useFinanceStore', () => financeStoreMock);
 
 type QueryBuilder = {
   update?: ReturnType<typeof vi.fn>;
@@ -154,10 +151,13 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     supabaseMock.from.mockReset();
-    financeStoreMock.useFinanceStore.mockReturnValue({
-      categories: [{ id: 'cat-reneg', name: 'Acordo' }],
-      creditCards: [],
-    });
+  });
+
+  it('nao depende de useFinanceStore para evitar ciclo com FinanceProvider', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/hooks/useDebtMutations.ts'), 'utf8');
+
+    expect(source).not.toContain("from './useFinanceStore'");
+    expect(source).not.toContain('useFinanceStore(');
   });
 
   it('cria todas as parcelas esperadas quando o acordo atualizado ainda nao tem transactions', async () => {
@@ -502,7 +502,7 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
   });
 
   it('renegociacao vinculada ao cartao usa regra central de invoiceMonthYear com historico', async () => {
-    financeStoreMock.useFinanceStore.mockReturnValue({
+    const debtMutationDeps = {
       categories: [{ id: 'cat-reneg', name: 'Acordo' }],
       creditCards: [
         {
@@ -522,7 +522,7 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
           ],
         },
       ],
-    });
+    };
 
     const debtUpdate = createDebtUpdateQuery(
       baseDebtRow({
@@ -546,7 +546,7 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
       .mockReturnValueOnce(insertSecond)
       .mockReturnValueOnce(insertThird);
 
-    const { result } = renderHook(() => useRenegotiateDebt(), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useRenegotiateDebt(debtMutationDeps), { wrapper: createWrapper() });
 
     await result.current.mutateAsync({
       debt: baseDebt({

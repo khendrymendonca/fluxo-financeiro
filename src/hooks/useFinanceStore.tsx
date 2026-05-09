@@ -113,7 +113,7 @@ function useFinanceProvider() {
   const depositGoalMutation = useDepositToGoal();
 
   const addDebtMutation = useAddDebt();
-  const updateDebtMutation = useUpdateDebt();
+  const updateDebtMutation = useUpdateDebt({ creditCards });
   const deleteDebtMutation = useDeleteDebt();
 
   // --- Selection Methods ---
