@@ -136,6 +136,7 @@ export default function Index() {
 
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
 
   const [isExpanded, setIsExpanded] = useState(true);
@@ -247,7 +248,6 @@ export default function Index() {
   const handleToggleSidebar = useCallback((expanded: boolean) => {
     // No longer toggleable in Web
   }, []);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (currentView === 'menu') {
