@@ -1,4 +1,4 @@
-// UTF-8 Integrity Check
+﻿// UTF-8 Integrity Check
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -105,7 +105,7 @@ function ViewGuard({
   const featureKey = PROTECTED_VIEWS[view];
   const isEnabled = useFeatureFlag(featureKey ?? '');
 
-  // Se não tem feature key associada (ex: dashboard, profile), sempre libera
+  // Se nÃ£o tem feature key associada (ex: dashboard, profile), sempre libera
   if (!featureKey) return <>{children}</>;
 
   if (!isEnabled) {
@@ -152,7 +152,7 @@ export default function Index() {
     debts,
     savingsGoals,
     categories,
-    transactions, // Usar a lista total para widgets analíticos
+    transactions, // Usar a lista total para widgets analÃ­ticos
     currentMonthTransactions,
     setEmergencyMonths,
     addTransaction,
@@ -179,6 +179,8 @@ export default function Index() {
   const isMobile = useIsMobile();
   const isSuperAdmin = useIsSuperAdmin();
   const easterEnabled = useGlobalFlag('theme_easter');
+  const isAnyShellOverlayOpen = showTransactionForm || showGoalForm || isDrawerOpen;
+  const shouldShowMobileFabs = isMobile && !isAnyShellOverlayOpen;
 
   const totalNetWorth = useMemo(() => accounts.reduce((sum, acc) => sum + Number(acc.balance), 0), [accounts]);
 
@@ -192,7 +194,7 @@ export default function Index() {
   }, [user]);
 
   const userName = useMemo(() => {
-    return user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Usuário';
+    return user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'UsuÃ¡rio';
   }, [user]);
 
   const projectedBalance = useMemo(() => totalNetWorth - totalPendingOutflows, [totalNetWorth, totalPendingOutflows]);
@@ -225,13 +227,13 @@ export default function Index() {
   const handleCopyTransaction = useCallback((item: Transaction) => {
     if (item.isTransfer) {
       toast({
-        title: 'Cópia bloqueada',
-        description: 'Transferências devem ser corrigidas como grupo, não copiadas como lançamento comum.',
+        title: 'CÃ³pia bloqueada',
+        description: 'TransferÃªncias devem ser corrigidas como grupo, nÃ£o copiadas como lanÃ§amento comum.',
         variant: 'destructive',
       });
       return;
     }
-    // 🛡️ REGRA DE NEGÓCIO: Ao copiar, removemos o ID para que seja um novo lançamento
+    // ðŸ›¡ï¸ REGRA DE NEGÃ“CIO: Ao copiar, removemos o ID para que seja um novo lanÃ§amento
     const { id, ...transactionData } = item;
     setEditingTransaction(transactionData as Transaction);
     setShowTransactionForm(true);
@@ -250,7 +252,7 @@ export default function Index() {
   useEffect(() => {
     if (currentView === 'menu') {
       setIsDrawerOpen(true);
-      setCurrentView('dashboard'); // Reset p/ não ficar preso no estado 'menu'
+      setCurrentView('dashboard'); // Reset p/ nÃ£o ficar preso no estado 'menu'
     }
   }, [currentView]);
 
@@ -338,7 +340,7 @@ export default function Index() {
                     }}
                     className="bg-primary hover:bg-primary/90 text-white shadow-md hidden md:flex rounded-xl font-bold"
                   >
-                    <Plus className="w-4 h-4 mr-2" /> Novo Lançamento
+                    <Plus className="w-4 h-4 mr-2" /> Novo LanÃ§amento
                   </Button>
                   <MonthSelector />
                 </div>
@@ -372,7 +374,7 @@ export default function Index() {
             <div className="space-y-6 pt-2">
               <div className="flex items-center justify-between px-2">
                 <h2 className="text-2xl font-black tracking-tight">Sonhos & Projetos</h2>
-                <Button size="sm" className="rounded-xl font-bold bg-primary text-white" onClick={() => setShowGoalForm(true)}>Lançar Novo Projeto</Button>
+                <Button size="sm" className="rounded-xl font-bold bg-primary text-white" onClick={() => setShowGoalForm(true)}>LanÃ§ar Novo Projeto</Button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {savingsGoals.map(goal => (
@@ -497,12 +499,12 @@ export default function Index() {
         <div className="flex items-center justify-between w-full">
           {/* Lado esquerdo: Home + Drawer */}
           <div className="flex items-center gap-1">
-            {/* Botão Home — volta para dashboard */}
+            {/* BotÃ£o Home â€” volta para dashboard */}
             {currentView !== 'dashboard' && (
               <button
                 onClick={() => setCurrentView('dashboard')}
                 className="p-2 rounded-xl text-zinc-500 hover:text-primary hover:bg-primary/5 transition-all"
-                aria-label="Voltar para início"
+                aria-label="Voltar para inÃ­cio"
               >
                 <Home className="w-5 h-5" />
               </button>
@@ -525,7 +527,7 @@ export default function Index() {
                         {accentColor === 'pascoa' && <Rabbit className="w-4 h-4 text-primary" />}
                       </SheetTitle>
                       <SheetDescription className="text-xs uppercase font-black tracking-widest text-zinc-500">
-                        {accentColor === 'pascoa' ? '🐰 Feliz Páscoa!' : 'Menu Principal'}
+                        {accentColor === 'pascoa' ? 'ðŸ° Feliz PÃ¡scoa!' : 'Menu Principal'}
                       </SheetDescription>
                     </div>
                   </div>
@@ -571,7 +573,7 @@ export default function Index() {
                       >
                         <div className="flex items-center gap-3">
                           <Rabbit className="w-5 h-5" />
-                          <span className="text-sm font-bold">Modo Páscoa</span>
+                          <span className="text-sm font-bold">Modo PÃ¡scoa</span>
                         </div>
                         {accentColor === 'pascoa' && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
                       </button>
@@ -579,7 +581,7 @@ export default function Index() {
                   )}
 
                   <div>
-                    <p className="text-xs uppercase font-black tracking-widest text-zinc-500 mb-4">Aparência</p>
+                    <p className="text-xs uppercase font-black tracking-widest text-zinc-500 mb-4">AparÃªncia</p>
                     <div className="grid grid-cols-3 gap-2">
                       {[{ id: 'light', icon: Sun, label: 'Claro' }, { id: 'dark', icon: Moon, label: 'Escuro' }, { id: 'amoled', icon: Zap, label: 'AMOLED' }]
                         .filter(t => isMobile || t.id !== 'amoled')
@@ -629,14 +631,16 @@ export default function Index() {
       bottomNav={null}
       fab={
         <>
-          {/* FAB de navegação semicircular */}
-          <FloatingNavMenu
-            activeView={currentView}
-            onNavigate={(v) => setCurrentView(v as ViewType)}
-          />
+          {/* FAB de navegaÃ§Ã£o semicircular */}
+          {shouldShowMobileFabs && (
+            <FloatingNavMenu
+              activeView={currentView}
+              onNavigate={(v) => setCurrentView(v as ViewType)}
+            />
+          )}
 
-          {/* FAB de adicionar transação — só nas views de extrato/dashboard */}
-          {['dashboard', 'transactions'].includes(currentView) && (
+          {/* FAB de adicionar transaÃ§Ã£o â€” sÃ³ nas views de extrato/dashboard */}
+          {shouldShowMobileFabs && ['dashboard', 'transactions'].includes(currentView) && (
             <button
               onClick={() => {
                 setEditingTransaction(undefined);
@@ -650,7 +654,7 @@ export default function Index() {
                 'flex items-center justify-center',
                 'active:scale-95 transition-all duration-200'
               )}
-              aria-label="Novo lançamento"
+              aria-label="Novo lanÃ§amento"
             >
               <Plus className="w-6 h-6" />
             </button>
@@ -667,10 +671,10 @@ export default function Index() {
           initialData={editingTransaction}
           initialTab={initialFormTab}
           onSubmit={async (tx, _customInstallments, applyScope) => {
-            // 🛡️ REGRA DE NEGÓCIO: 
+            // ðŸ›¡ï¸ REGRA DE NEGÃ“CIO: 
             // 1. Se for VIRTUAL, estamos materializando uma conta fixa/parcelada em um registro real. (INSERT)
-            // 2. Se houver um ID real (não virtual), é uma edição de registro existente. (UPDATE)
-            // 3. Se não houver ID, é uma nova transação simples ou cópia. (INSERT)
+            // 2. Se houver um ID real (nÃ£o virtual), Ã© uma ediÃ§Ã£o de registro existente. (UPDATE)
+            // 3. Se nÃ£o houver ID, Ã© uma nova transaÃ§Ã£o simples ou cÃ³pia. (INSERT)
             if (editingTransaction?.isVirtual) {
               await addTransaction({
                 ...tx,
@@ -730,4 +734,5 @@ export default function Index() {
     </AppLayout>
   );
 }
+
 

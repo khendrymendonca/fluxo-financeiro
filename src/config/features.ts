@@ -13,6 +13,12 @@ export interface FeatureDefinition {
   enabledByDefault: boolean;
 }
 
+export const FORCED_DISABLED_FEATURE_KEYS = [
+  'debt_strategy',
+  'goals_manager',
+  'simulator',
+] as const;
+
 export const FEATURES: FeatureDefinition[] = [
   // ── Telas ──────────────────────────────────────────────
   {
@@ -41,7 +47,7 @@ export const FEATURES: FeatureDefinition[] = [
     label: 'Metas',
     description: 'Objetivos de poupança',
     type: 'screen',
-    enabledByDefault: true,
+    enabledByDefault: false,
   },
   {
     key: 'debts_manager',
@@ -69,7 +75,7 @@ export const FEATURES: FeatureDefinition[] = [
     label: 'Simulador',
     description: 'Simulador "E Se?"',
     type: 'screen',
-    enabledByDefault: true,
+    enabledByDefault: false,
   },
 
   // ── Premium ─────────────────────────────────────────────

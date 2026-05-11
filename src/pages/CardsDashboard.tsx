@@ -51,7 +51,7 @@ function ChartTooltip({ active, payload, label }: any) {
   return (
     <div className="bg-[#18181f] border border-white/10 rounded-xl px-4 py-2 shadow-2xl">
       <p className="text-xs text-zinc-400 uppercase tracking-widest font-bold mb-1">{label}</p>
-      <p className="text-base font-black text-[#00d4aa]">{fmtBRL(payload[0].value)}</p>
+      <p className="text-base font-black text-primary">{fmtBRL(payload[0].value)}</p>
     </div>
   );
 }
@@ -538,7 +538,7 @@ export default function CardsDashboard() {
 
                 {/* Hero da fatura */}
                 <div className="bg-card border border-border rounded-2xl p-6 relative overflow-hidden">
-                  <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full opacity-[0.06] blur-3xl pointer-events-none" style={{ background: selectedCard.color ?? '#00d4aa' }} />
+                  <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full opacity-[0.06] blur-3xl pointer-events-none" style={{ background: selectedCard.color ?? 'hsl(var(--primary))' }} />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4">
                       <p className="text-xs uppercase font-black text-muted-foreground tracking-[0.2em]">
@@ -558,7 +558,7 @@ export default function CardsDashboard() {
                       {dynamicStatus?.text !== 'Paga' && (
                         <Button
                           onClick={openPayInvoiceModal}
-                          className="bg-[#00d4aa] hover:bg-[#00b894] text-[#0a0a0f] rounded-xl font-black uppercase text-xs tracking-widest px-6 h-11 shadow-lg shadow-[#00d4aa]/20 transition-all hover:scale-105 active:scale-95"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-black uppercase text-xs tracking-widest px-6 h-11 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
                         >
                           Pagar Fatura
                         </Button>
@@ -665,7 +665,7 @@ export default function CardsDashboard() {
                           className={cn(
                             "px-3 py-1 rounded-md text-xs font-black uppercase tracking-widest transition-all",
                             chartPeriod === p
-                              ? "bg-[#00d4aa] text-[#0a0a0f]"
+                              ? "bg-primary text-primary-foreground"
                               : "text-zinc-500 hover:text-zinc-300"
                           )}
                         >
@@ -679,8 +679,8 @@ export default function CardsDashboard() {
                       <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                         <defs>
                           <linearGradient id="gradTeal" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#00d4aa" stopOpacity={0.35} />
-                            <stop offset="100%" stopColor="#00d4aa" stopOpacity={0.02} />
+                            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
+                            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
@@ -700,10 +700,10 @@ export default function CardsDashboard() {
                         />
                         <Area
                           type="monotone" dataKey="total"
-                          stroke="#00d4aa" strokeWidth={2.5}
+                          stroke="hsl(var(--primary))" strokeWidth={2.5}
                           fill="url(#gradTeal)"
-                          dot={{ r: 4, fill: "#00d4aa", strokeWidth: 0 }}
-                          activeDot={{ r: 6, fill: "#00d4aa", strokeWidth: 0 }}
+                          dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 0 }}
+                          activeDot={{ r: 6, fill: "hsl(var(--primary))", strokeWidth: 0 }}
                         />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -864,7 +864,7 @@ export default function CardsDashboard() {
 
               {/* Fatura mobile */}
               <div className="bg-card border border-border rounded-2xl p-5 relative overflow-hidden">
-                <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full opacity-[0.06] blur-3xl pointer-events-none" style={{ background: selectedCard.color ?? '#00d4aa' }} />
+                <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full opacity-[0.06] blur-3xl pointer-events-none" style={{ background: selectedCard.color ?? 'hsl(var(--primary))' }} />
 
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
@@ -879,7 +879,7 @@ export default function CardsDashboard() {
                     {dynamicStatus?.text !== 'Paga' && (
                       <Button
                         onClick={openPayInvoiceModal}
-                        className="bg-[#00d4aa] hover:bg-[#00b894] text-[#0a0a0f] rounded-xl font-black uppercase text-[11px] tracking-widest px-4 h-10 shadow-lg shadow-[#00d4aa]/20"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-black uppercase text-[11px] tracking-widest px-4 h-10 shadow-lg shadow-primary/20"
                       >
                         Pagar
                       </Button>
@@ -957,8 +957,8 @@ export default function CardsDashboard() {
                     <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
                       <defs>
                         <linearGradient id="gradTealM" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#00d4aa" stopOpacity={0.3} />
-                          <stop offset="100%" stopColor="#00d4aa" stopOpacity={0.02} />
+                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
@@ -966,10 +966,10 @@ export default function CardsDashboard() {
                       <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 8 }} axisLine={false} tickLine={false}
                         tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
                       <RechartsTooltip content={<ChartTooltip />} cursor={{ stroke: "hsl(var(--border))", strokeWidth: 1 }} />
-                      <Area type="monotone" dataKey="total" stroke="#00d4aa" strokeWidth={2}
+                      <Area type="monotone" dataKey="total" stroke="hsl(var(--primary))" strokeWidth={2}
                         fill="url(#gradTealM)"
-                        dot={{ r: 3, fill: "#00d4aa", strokeWidth: 0 }}
-                        activeDot={{ r: 5, fill: "#00d4aa", strokeWidth: 0 }} />
+                        dot={{ r: 3, fill: "hsl(var(--primary))", strokeWidth: 0 }}
+                        activeDot={{ r: 5, fill: "hsl(var(--primary))", strokeWidth: 0 }} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>

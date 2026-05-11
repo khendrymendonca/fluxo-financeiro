@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, logSafeError } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { FEATURES } from '@/config/features';
+import { FEATURES, FORCED_DISABLED_FEATURE_KEYS } from '@/config/features';
 
 const SUPER_USER_ID = import.meta.env.VITE_SUPER_USER_ID as string;
 
@@ -94,9 +94,11 @@ export function useFeatureFlag(featureKey: string): boolean {
   const { data: overrides = [] } = useMyOverrides();
   const { data: planFeatures = [] } = useMyPlanFeatures();
 
+  if (!featureKey) return true;
+  if ((FORCED_DISABLED_FEATURE_KEYS as readonly string[]).includes(featureKey)) return false;
+
   // Super admin: acesso total, sem consulta ao banco
   if (isSuperAdmin) return true;
-  if (!featureKey) return true;
 
   const feature = FEATURES.find((f) => f.key === featureKey);
   if (!feature) return false;

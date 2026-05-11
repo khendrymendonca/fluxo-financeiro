@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 export type ShortcutId = 'dashboard' | 'transactions' | 'cards' | 'accounts' | 'goals' | 'bills' | 'categories' | 'reports' | 'debts' | 'simulator' | 'export' | 'emergency' | 'profile' | 'projection';
 
-export const DEFAULT_SHORTCUTS: ShortcutId[] = ['dashboard', 'transactions', 'cards', 'goals'];
+export const DEFAULT_SHORTCUTS: ShortcutId[] = ['dashboard', 'transactions', 'cards', 'bills'];
 
 export function useMobileShortcuts() {
   const { user } = useAuth();

@@ -4,7 +4,6 @@ export type AccountType = 'corrente' | 'poupanca' | 'caixinha' | 'investment' | 
 export type BillStatus = 'pending' | 'paid' | 'late' | 'cancelled';
 export type BudgetGroup = 'essential' | 'lifestyle' | 'financial' | 'income';
 export type CategoryGroupName = 'Essenciais' | 'Estilo de Vida' | 'Metas/Acordos' | 'essencial' | 'lazer' | 'metas';
-
 export interface CategoryGroup {
   id: string;
   name: CategoryGroupName;

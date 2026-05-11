@@ -1,8 +1,9 @@
-import { useState, useEffect, ReactNode } from 'react';
+﻿import { useState, useEffect, ReactNode } from 'react';
 import { X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMobileShortcuts, ShortcutId } from '@/hooks/useMobileShortcuts';
 import { useFeatureFlag } from '@/hooks/useFeatureFlags';
+import { FORCED_DISABLED_FEATURE_KEYS } from '@/config/features';
 import {
   LayoutDashboard, ArrowUpDown, Receipt, CreditCard,
   Wallet, Rocket, TrendingDown, LineChart,
@@ -21,7 +22,7 @@ const SHORTCUT_META: Record<ShortcutId, { icon: any; label: string; featureKey?:
   accounts:     { icon: Wallet,         label: 'Contas',      featureKey: 'accounts' },
   goals:        { icon: Rocket,         label: 'Metas',       featureKey: 'goals_manager' },
   debts:        { icon: TrendingDown,   label: 'Dívidas',     featureKey: 'debts_manager' },
-  reports:      { icon: LineChart,      label: 'Gráficos',    featureKey: 'reports_dashboard' },
+  reports:      { icon: LineChart,      label: 'GrÃ¡ficos',    featureKey: 'reports_dashboard' },
   categories:   { icon: Settings2,      label: 'Categ.' },
   export:       { icon: Database,       label: 'Dados' },
   simulator:    { icon: Calculator,     label: 'Simulador',   featureKey: 'simulator' },
@@ -61,18 +62,19 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
 
   if (!shortcuts || shortcuts.length === 0) return null;
 
-  // 🛡️ REGRA DE NEGÓCIO: Apenas 4 botões, excluindo Início (Home)
+  // ðŸ›¡ï¸ REGRA DE NEGÃ“CIO: Apenas 4 botÃµes, excluindo Início (Home)
   const items = shortcuts
     .filter(id => id !== 'dashboard')
-    .slice(0, 4)
     .map(id => ({ id, ...SHORTCUT_META[id] }))
-    .filter(item => !!item.icon);
+    .filter(item => !!item.icon)
+    .filter(item => !item.featureKey || !(FORCED_DISABLED_FEATURE_KEYS as readonly string[]).includes(item.featureKey))
+    .slice(0, 4);
 
-  // Geometria aprimorada: Arco Superior centralizado (180° a 0°)
-  // O centro do botão central de 64px está a 32px do fundo do container.
+  // Geometria aprimorada: Arco Superior centralizado (180Â° a 0Â°)
+  // O centro do botÃ£o central de 64px estÃ¡ a 32px do fundo do container.
   const RADIUS = 100;
-  const START_ANGLE = 180; // Totalmente à esquerda
-  const END_ANGLE = 0;     // Totalmente à direita
+  const START_ANGLE = 180; // Totalmente Ã  esquerda
+  const END_ANGLE = 0;     // Totalmente Ã  direita
 
   return (
     <>
@@ -141,7 +143,7 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
           );
         })}
 
-        {/* Botão Gatilho */}
+        {/* BotÃ£o Gatilho */}
         <button
           onClick={() => setIsOpen(prev => !prev)}
           className={cn(
@@ -152,7 +154,7 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
               ? 'bg-zinc-100 text-zinc-900 rotate-45' 
               : 'bg-zinc-900 text-white hover:bg-zinc-800'
           )}
-          aria-label={isOpen ? 'Fechar menu' : 'Abrir menu de navegação'}
+          aria-label={isOpen ? 'Fechar menu' : 'Abrir menu de navegaÃ§Ã£o'}
         >
           {isOpen ? (
             <X className="w-7 h-7" />
@@ -171,3 +173,4 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
     </>
   );
 }
+

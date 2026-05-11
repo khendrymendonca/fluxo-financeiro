@@ -1,4 +1,4 @@
-import {
+﻿import {
   ArrowUpDown,
   Calculator,
   Database,
@@ -30,7 +30,7 @@ import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { ReactNode, useState, useRef } from 'react';
 import { Portal } from '@/components/ui/Portal';
 
-// Grupos de navegação para cabeçalho compacto
+// Grupos de navegaÃ§Ã£o para cabeÃ§alho compacto
 const navGroups = [
   {
     label: 'Financeiro',
@@ -130,7 +130,7 @@ function NavGroupDropdown({
           {/* Overlay para fechar ao clicar fora */}
           <div className="fixed inset-0 z-40" onClick={onClose} />
 
-          {/* Dropdown — posicionado via fixed com coordenadas reais */}
+          {/* Dropdown â€” posicionado via fixed com coordenadas reais */}
           <div
             className={cn(
               "fixed z-50 min-w-[200px]",
@@ -180,7 +180,7 @@ function ThemeButton({ theme, setTheme }: { theme: string; setTheme: (t: string)
 
   return (
     <div className="relative">
-      {/* Botão gatilho */}
+      {/* BotÃ£o gatilho */}
       <button
         onClick={() => setOpen(prev => !prev)}
         className={cn(
@@ -244,10 +244,10 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
   return (
     <nav className="flex flex-col w-full">
 
-      {/* ── LINHA 1: Logo (clicável) + Tema ── */}
+      {/* â”€â”€ LINHA 1: Logo (clicÃ¡vel) + Tema â”€â”€ */}
       <div className="flex items-center justify-between px-6 pt-3 pb-1.5">
 
-        {/* Logo clicável */}
+        {/* Logo clicÃ¡vel */}
         <button
           onClick={() => onNavigate('dashboard')}
           className="flex items-center gap-3 shrink-0 group"
@@ -264,10 +264,10 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
         <ThemeButton theme={theme} setTheme={setTheme} />
       </div>
 
-      {/* ── LINHA 2: 🏠 + Grupos de nav ── */}
+      {/* â”€â”€ LINHA 2: ðŸ  + Grupos de nav â”€â”€ */}
       <div className="flex flex-row items-center px-4 pb-2.5">
 
-        {/* Botão casinha — fixo no início */}
+        {/* BotÃ£o casinha â€” fixo no inÃ­cio */}
         <button
           onClick={() => onNavigate('dashboard')}
           title="Início"
@@ -284,7 +284,7 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
         {/* Separador visual */}
         <div className="w-px h-5 bg-border shrink-0 mr-1" />
 
-        {/* Grupos — overflow SOMENTE aqui, no eixo X */}
+        {/* Grupos â€” overflow SOMENTE aqui, no eixo X */}
         <div className="flex flex-row items-center gap-0.5 overflow-x-auto no-scrollbar min-w-0">
           {navGroups.map((group) => (
             <NavGroupDropdown
@@ -303,3 +303,4 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
     </nav>
   );
 }
+

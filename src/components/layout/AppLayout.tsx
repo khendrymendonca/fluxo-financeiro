@@ -31,7 +31,7 @@ export function AppLayout({ children, sidebar, headerMobile, bottomNav, fab }: A
       {sidebar && (
         <header className={cn(
           "hidden md:flex flex-shrink-0 z-50 w-full",
-          "bg-white dark:bg-zinc-950 border-b border-gray-200 dark:border-zinc-800"
+          "bg-card border-b border-border"
         )}>
           {sidebar}
         </header>
@@ -39,7 +39,7 @@ export function AppLayout({ children, sidebar, headerMobile, bottomNav, fab }: A
 
       {/* ── HEADER MOBILE ── */}
       <header className={cn(
-        "md:hidden flex-shrink-0 sticky top-0 z-50 bg-inherit border-b border-gray-100 dark:border-zinc-900 flex items-center justify-between p-4",
+        "md:hidden flex-shrink-0 sticky top-0 z-50 bg-background border-b border-border flex items-center justify-between p-4",
         !headerMobile && "hidden"
       )}>
         {headerMobile}

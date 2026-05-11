@@ -2,6 +2,7 @@
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -22,21 +23,27 @@ export function MonthSelector() {
         prevYear
     } = useFinanceStore();
 
+    useEffect(() => {
+        if (viewMode === 'all') setViewMode('month');
+    }, [setViewMode, viewMode]);
+
+    const effectiveViewMode = viewMode === 'all' ? 'month' : viewMode;
+
     const handlePrev = () => {
-        if (viewMode === 'day') prevDay();
-        else if (viewMode === 'month') prevMonth();
-        else if (viewMode === 'year') prevYear();
+        if (effectiveViewMode === 'day') prevDay();
+        else if (effectiveViewMode === 'month') prevMonth();
+        else if (effectiveViewMode === 'year') prevYear();
     };
 
     const handleNext = () => {
-        if (viewMode === 'day') nextDay();
-        else if (viewMode === 'month') nextMonth();
-        else if (viewMode === 'year') nextYear();
+        if (effectiveViewMode === 'day') nextDay();
+        else if (effectiveViewMode === 'month') nextMonth();
+        else if (effectiveViewMode === 'year') nextYear();
     };
 
     const getFormat = () => {
-        if (viewMode === 'day') return "dd 'de' MMMM yyyy";
-        if (viewMode === 'month') return 'MMMM yyyy';
+        if (effectiveViewMode === 'day') return "dd 'de' MMMM yyyy";
+        if (effectiveViewMode === 'month') return 'MMMM yyyy';
         return 'yyyy';
     };
 
@@ -44,7 +51,7 @@ export function MonthSelector() {
         <div className="flex flex-col sm:flex-row items-center gap-3">
             {/* Mode Selector */}
             <div className="flex p-1 bg-muted rounded-xl">
-                {(['day', 'month', 'year', 'all'] as const).map((mode) => (
+                {(['day', 'month', 'year'] as const).map((mode) => (
                     <Button
                         key={mode}
                         variant="ghost"
@@ -52,16 +59,16 @@ export function MonthSelector() {
                         onClick={() => setViewMode(mode)}
                         className={cn(
                             "h-7 px-3 text-xs font-bold uppercase tracking-wider rounded-lg transition-all",
-                            viewMode === mode ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
+                            effectiveViewMode === mode ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
                         )}
                     >
-                        {mode === 'day' ? 'Dia' : mode === 'month' ? 'Mês' : mode === 'year' ? 'Ano' : 'Tudo'}
+                        {mode === 'day' ? 'Dia' : mode === 'month' ? 'Mês' : 'Ano'}
                     </Button>
                 ))}
             </div>
 
             {/* Date Navigator */}
-            {viewMode === 'all' ? (
+            {effectiveViewMode === 'all' ? (
                 <div className="flex items-center gap-2 bg-primary/10 text-primary px-4 py-1.5 rounded-xl border border-primary/20 animate-fade-in h-10">
                     <Calendar className="w-4 h-4" />
                     <span className="text-xs font-black uppercase tracking-widest">Visualizando Todo o Período</span>
