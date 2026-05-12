@@ -28,6 +28,7 @@ import {
     Receipt,
     CreditCard,
     Wallet,
+    Star,
     Rocket,
     Smartphone,
     AlertCircle,

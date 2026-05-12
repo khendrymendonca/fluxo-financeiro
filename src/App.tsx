@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { FinanceProvider } from "./hooks/useFinanceStore";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
+import EmailConfirmedPage from "./pages/EmailConfirmedPage";
 import SuperPage from "./pages/SuperPage";
 import ProjectionPage from "./pages/ProjectionPage";
 import NotFound from "./pages/NotFound";
@@ -38,24 +39,25 @@ const AppRoutes = () => {
     );
   }
 
-  if (!user) {
-    return <AuthPage />;
-  }
-
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
       <Routes>
-        <Route path="/" element={<Index />} />
+        <Route path="/" element={user ? <Index /> : <AuthPage />} />
+        <Route path="/auth/confirmado" element={<EmailConfirmedPage />} />
         <Route
           path="/projection"
           element={
-            <ProtectedRoute featureKey="debt_strategy" redirectTo="/?view=dashboard">
-              <ProjectionPage />
-            </ProtectedRoute>
+            user ? (
+              <ProtectedRoute featureKey="debt_strategy" redirectTo="/?view=dashboard">
+                <ProjectionPage />
+              </ProtectedRoute>
+            ) : (
+              <AuthPage />
+            )
           }
         />
-        <Route path="/super" element={<SuperPage />} />
-        <Route path="*" element={<NotFound />} />
+        <Route path="/super" element={user ? <SuperPage /> : <AuthPage />} />
+        <Route path="*" element={user ? <NotFound /> : <AuthPage />} />
       </Routes>
     </div>
   );
