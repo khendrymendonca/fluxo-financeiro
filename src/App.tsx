@@ -12,6 +12,11 @@ import { FinanceProvider } from "./hooks/useFinanceStore";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import EmailConfirmedPage from "./pages/EmailConfirmedPage";
+import EmailResetPasswordPage from "./pages/EmailResetPasswordPage";
+import InviteUserPage from "./pages/InviteUserPage";
+import MagicLinkAccessPage from "./pages/MagicLinkAccessPage";
+import EmailChangedPage from "./pages/EmailChangedPage";
+import ReauthenticationPage from "./pages/ReauthenticationPage";
 import SuperPage from "./pages/SuperPage";
 import ProjectionPage from "./pages/ProjectionPage";
 import NotFound from "./pages/NotFound";
@@ -44,6 +49,11 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/" element={user ? <Index /> : <AuthPage />} />
         <Route path="/auth/confirmado" element={<EmailConfirmedPage />} />
+        <Route path="/auth/redefinir-senha" element={<EmailResetPasswordPage />} />
+        <Route path="/auth/convite" element={<InviteUserPage />} />
+        <Route path="/auth/acesso" element={<MagicLinkAccessPage />} />
+        <Route path="/auth/email-alterado" element={<EmailChangedPage />} />
+        <Route path="/auth/reautenticacao" element={<ReauthenticationPage />} />
         <Route
           path="/projection"
           element={

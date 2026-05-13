@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 // UTF-8 Integrity Check: Áéíóú Ç ñ
 export default function AuthPage() {
     const [loading, setLoading] = useState(false);
+    const [isSendingRecovery, setIsSendingRecovery] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [nickname, setNickname] = useState('');
@@ -55,6 +56,39 @@ export default function AuthPage() {
             });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleForgotPassword = async () => {
+        if (!email.trim()) {
+            toast({
+                variant: "destructive",
+                title: "Email obrigatorio",
+                description: "Informe seu email para receber o link de recuperacao.",
+            });
+            return;
+        }
+
+        setIsSendingRecovery(true);
+
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+                redirectTo: `${window.location.origin}/auth/redefinir-senha`,
+            });
+            if (error) throw error;
+
+            toast({
+                title: "Link enviado",
+                description: "Enviamos um link de recuperacao para o seu email.",
+            });
+        } catch {
+            toast({
+                variant: "destructive",
+                title: "Nao foi possivel enviar o link",
+                description: "Tente novamente em instantes.",
+            });
+        } finally {
+            setIsSendingRecovery(false);
         }
     };
 
@@ -111,6 +145,18 @@ export default function AuthPage() {
                             className="rounded-xl"
                         />
                     </div>
+                    {!isSignUp && (
+                        <div className="flex justify-end">
+                            <button
+                                type="button"
+                                onClick={handleForgotPassword}
+                                className="text-xs text-primary hover:underline"
+                                disabled={loading || isSendingRecovery}
+                            >
+                                {isSendingRecovery ? 'Enviando...' : 'Esqueci minha senha'}
+                            </button>
+                        </div>
+                    )}
 
                     {/* Renderizar APENAS no modo cadastro */}
                     {isSignUp && (
@@ -140,7 +186,7 @@ export default function AuthPage() {
                     <Button 
                         type="submit" 
                         className="w-full rounded-xl py-6 font-semibold" 
-                        disabled={loading || (isSignUp && !consentAccepted)}
+                        disabled={loading || isSendingRecovery || (isSignUp && !consentAccepted)}
                     >
                         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (isSignUp ? 'Criar Conta' : 'Entrar')}
                     </Button>
