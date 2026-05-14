@@ -42,7 +42,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['favicon.ico', 'fluxo_logo.png', 'robots.txt'],
+      includeAssets: ['favicon-v2.svg', 'fluxo-logo-v2.svg', 'robots.txt'],
       workbox: {
         cleanupOutdatedCaches: true,
         skipWaiting: true,
@@ -59,21 +59,21 @@ export default defineConfig(({ mode }) => ({
         display: 'standalone',
         icons: [
           {
-            src: 'fluxo_logo.png',
-            sizes: '192x192',
-            type: 'image/png',
+            src: 'fluxo-logo-v2.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
             purpose: 'any'
           },
           {
-            src: 'fluxo_logo.png',
-            sizes: '512x512',
-            type: 'image/png',
+            src: 'fluxo-logo-v2.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
             purpose: 'any'
           },
           {
-            src: 'fluxo_logo.png',
-            sizes: '512x512',
-            type: 'image/png',
+            src: 'fluxo-logo-v2.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
             purpose: 'maskable'
           }
         ]

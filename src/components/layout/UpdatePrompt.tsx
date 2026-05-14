@@ -9,6 +9,7 @@ export function UpdatePrompt() {
   const {
     offlineReady: [offlineReady, setOfflineReady],
     needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r: any) {
       console.log('SW Registered:', r);
@@ -34,7 +35,8 @@ export function UpdatePrompt() {
 
   // SW ja atualizou em background (skipWaiting: true no workbox)
   // O botao apenas recarrega a pagina para o usuario ver a nova versao
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
+    await updateServiceWorker(true);
     window.location.reload();
   };
 

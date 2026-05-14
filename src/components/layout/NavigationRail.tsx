@@ -29,6 +29,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { ReactNode, useState, useRef } from 'react';
 import { Portal } from '@/components/ui/Portal';
+import { AppLogo } from '@/components/branding/AppLogo';
 
 // Grupos de navegaÃ§Ã£o para cabeÃ§alho compacto
 const navGroups = [
@@ -254,14 +255,9 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
         {/* Logo clicÃ¡vel */}
         <button
           onClick={() => onNavigate('dashboard')}
-          className="flex items-center gap-3 shrink-0 group"
+          className="flex items-center gap-3 shrink-0 group text-primary"
         >
-          <div className="w-9 h-9 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform duration-200">
-            <span className="text-primary-foreground font-bold text-base">F</span>
-          </div>
-          <span className="font-bold text-xl tracking-tight text-primary font-mono lowercase group-hover:opacity-80 transition-opacity duration-200">
-            Fluxo
-          </span>
+          <AppLogo className="h-9 w-28 group-hover:opacity-80 transition-opacity duration-200" />
         </button>
 
         {/* Tema */}

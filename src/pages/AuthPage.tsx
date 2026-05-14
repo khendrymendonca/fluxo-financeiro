@@ -7,6 +7,7 @@ import { Loader2, Sun, Moon, Monitor, Laptop } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
+import { AppLogo } from '@/components/branding/AppLogo';
 
 // UTF-8 Integrity Check: Áéíóú Ç ñ
 export default function AuthPage() {
@@ -96,8 +97,8 @@ export default function AuthPage() {
         <div className="min-h-screen flex items-center justify-center bg-background p-4 animate-fade-in">
             <div className="w-full max-w-sm bg-card p-8 rounded-3xl shadow-xl border border-border">
                 <div className="text-center mb-8">
-                    <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center mx-auto mb-4">
-                        <span className="text-primary-foreground font-bold text-xl">F</span>
+                    <div className="w-fit mx-auto mb-4 text-primary">
+                        <AppLogo className="h-14 w-40" />
                     </div>
                     <h1 className="text-2xl font-bold">{isSignUp ? 'Criar Conta' : 'Bem-vindo de volta'}</h1>
                     <p className="text-muted-foreground text-sm mt-2">

@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { AppLogo } from '@/components/branding/AppLogo';
 
 export function ProfileSettings() {
     const { user } = useAuth();
@@ -359,10 +360,9 @@ export function ProfileSettings() {
                         </div>
 
                         <div className="flex flex-col items-center py-4 bg-gray-50/50 dark:bg-zinc-950/50 rounded-3xl border border-gray-100 dark:border-zinc-800">
-                            <div className="w-16 h-16 rounded-3xl bg-primary flex items-center justify-center mb-4 shadow-xl shadow-primary/30">
-                                <span className="text-white font-black text-3xl">F</span>
+                            <div className="text-primary mb-4">
+                                <AppLogo className="h-16 w-48" />
                             </div>
-                            <h3 className="text-xl font-black text-primary">Fluxo</h3>
                             <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Gestão Inteligente</p>
                         </div>
                     </div>
