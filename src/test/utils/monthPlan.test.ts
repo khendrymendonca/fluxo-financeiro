@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Account, Category, Debt, Transaction } from '@/types/finance';
 import { buildMonthPlan } from '@/utils/monthPlan';
 
@@ -101,6 +101,15 @@ describe('buildMonthPlan', () => {
     id: 'lifestyle',
     name: 'Lazer',
     budgetGroup: 'lifestyle',
+  });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(viewDate);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('classifica um mes positivo como seguro e calcula folga com conservadorismo', () => {
@@ -492,12 +501,162 @@ describe('buildMonthPlan', () => {
     });
 
     expect(result.totalAccountBalance).toBe(3500);
-    expect(result.openExpensesTotal).toBe(1550);
+    expect(result.openExpensesTotal).toBe(1300);
     expect(result.overdueOpenExpensesTotal).toBe(250);
     expect(result.overdueOpenExpensesCount).toBe(1);
-    expect(result.cashBalance).toBe(1950);
+    expect(result.cashBalance).toBe(2200);
     expect(result.upcomingOpenExpenses.map((item) => item.id)).toEqual(['previous-overdue', 'current-open', 'invoice-open']);
     expect(result.upcomingOpenExpenses.map((item) => item.status)).toEqual(['overdue', 'soon', 'soon']);
+  });
+
+  it('na leitura mensal nao soma pendencia de mes anterior nos totais principais do mes selecionado', () => {
+    const result = buildMonthPlan({
+      viewDate: new Date('2026-06-15T12:00:00'),
+      accounts: [makeAccount({ balance: 1000 })],
+      categories: [essentialCategory],
+      debts: [],
+      transactions: [
+        makeTransaction({
+          id: 'may-pending',
+          categoryId: 'essential',
+          description: 'Vero - Internet maio',
+          amount: 102.41,
+          date: '2026-05-20',
+          isPaid: false,
+        }),
+        makeTransaction({
+          id: 'june-pending',
+          categoryId: 'essential',
+          description: 'Vero - Internet junho',
+          amount: 99.9,
+          date: '2026-06-20',
+          isPaid: false,
+        }),
+      ],
+    });
+
+    expect(result.pendingExpenses).toBe(99.9);
+    expect(result.totalCommitted).toBe(99.9);
+    expect(result.openExpensesTotal).toBe(99.9);
+    expect(result.cashBalance).toBe(900.1);
+    expect(result.overdueOpenExpensesTotal).toBe(0);
+    expect(result.upcomingOpenExpenses.map((item) => item.id)).toEqual(['may-pending', 'june-pending']);
+  });
+
+  it('usa a data atual, nao o fim do mes selecionado, para calcular vencidas', () => {
+    const result = buildMonthPlan({
+      viewDate: new Date('2026-07-15T12:00:00'),
+      currentDate: new Date('2026-05-14T12:00:00'),
+      accounts: [makeAccount({ balance: 1000 })],
+      categories: [essentialCategory],
+      debts: [],
+      transactions: [
+        makeTransaction({
+          id: 'may-overdue',
+          categoryId: 'essential',
+          description: 'Conta maio vencida',
+          amount: 50,
+          date: '2026-05-10',
+          isPaid: false,
+        }),
+        makeTransaction({
+          id: 'june-future',
+          categoryId: 'essential',
+          description: 'Conta junho futura',
+          amount: 60,
+          date: '2026-06-20',
+          isPaid: false,
+        }),
+        makeTransaction({
+          id: 'july-open',
+          categoryId: 'essential',
+          description: 'Conta julho',
+          amount: 100,
+          date: '2026-07-20',
+          isPaid: false,
+        }),
+        makeTransaction({
+          id: 'july-invoice',
+          categoryId: 'essential',
+          description: 'Fatura julho',
+          amount: 200,
+          date: '2026-07-21',
+          isPaid: false,
+          cardId: 'card-1',
+          isInvoicePayment: true,
+          invoiceMonthYear: '2026-07',
+        }),
+      ],
+    });
+
+    expect(result.pendingExpenses).toBe(100);
+    expect(result.cardCommitments).toBe(0);
+    expect(result.totalCommitted).toBe(100);
+    expect(result.openExpensesTotal).toBe(300);
+    expect(result.cashBalance).toBe(700);
+    expect(result.overdueOpenExpensesTotal).toBe(50);
+    expect(result.overdueOpenExpensesCount).toBe(1);
+    expect(result.upcomingOpenExpenses.map((item) => [item.id, item.status])).toEqual([
+      ['may-overdue', 'overdue'],
+      ['june-future', 'soon'],
+      ['july-open', 'soon'],
+      ['july-invoice', 'soon'],
+    ]);
+
+    const augustResult = buildMonthPlan({
+      viewDate: new Date('2026-08-15T12:00:00'),
+      currentDate: new Date('2026-05-14T12:00:00'),
+      accounts: [makeAccount({ balance: 1000 })],
+      categories: [essentialCategory],
+      debts: [],
+      transactions: [
+        makeTransaction({
+          id: 'may-overdue',
+          categoryId: 'essential',
+          description: 'Conta maio vencida',
+          amount: 50,
+          date: '2026-05-10',
+          isPaid: false,
+        }),
+        makeTransaction({
+          id: 'july-future',
+          categoryId: 'essential',
+          description: 'Conta julho futura',
+          amount: 70,
+          date: '2026-07-20',
+          isPaid: false,
+        }),
+        makeTransaction({
+          id: 'august-open',
+          categoryId: 'essential',
+          description: 'Conta agosto',
+          amount: 80,
+          date: '2026-08-20',
+          isPaid: false,
+        }),
+        makeTransaction({
+          id: 'august-invoice',
+          categoryId: 'essential',
+          description: 'Fatura agosto',
+          amount: 200,
+          date: '2026-08-21',
+          isPaid: false,
+          cardId: 'card-1',
+          isInvoicePayment: true,
+          invoiceMonthYear: '2026-08',
+        }),
+      ],
+    });
+
+    expect(augustResult.openExpensesTotal).toBe(280);
+    expect(augustResult.overdueOpenExpensesTotal).toBe(50);
+    expect(augustResult.overdueOpenExpensesCount).toBe(1);
+    expect(augustResult.upcomingOpenExpenses.map((item) => [item.id, item.status])).toEqual([
+      ['may-overdue', 'overdue'],
+      ['july-future', 'soon'],
+      ['august-open', 'soon'],
+      ['august-invoice', 'soon'],
+    ]);
   });
 
   it('ordena vencimentos abertos por vencidas, data mais proxima e maior valor no empate', () => {

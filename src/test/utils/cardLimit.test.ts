@@ -166,4 +166,64 @@ describe('card limit calculation', () => {
       },
     ])).toBe(500);
   });
+
+  it('pagamento parcial libera somente o valor pago e saldo carregado nao duplica limite', () => {
+    expect(getCardUsedLimitFromTransactions('card-1', [
+      {
+        cardId: 'card-1',
+        amount: 1000,
+        type: 'expense',
+        invoiceMonthYear: '2026-05',
+        date: '2026-05-02',
+      },
+      {
+        cardId: 'card-1',
+        amount: 600,
+        type: 'expense',
+        isInvoicePayment: true,
+        invoiceMonthYear: '2026-05',
+        date: '2026-05-20',
+      },
+      {
+        cardId: 'card-1',
+        amount: 400,
+        type: 'expense',
+        description: 'Saldo restante da fatura 05/2026',
+        transactionType: 'adjustment',
+        invoiceMonthYear: '2026-06',
+        date: '2026-06-01',
+      },
+    ])).toBe(400);
+  });
+
+  it('parcelamento de fatura substitui a fatura original sem duplicar limite', () => {
+    expect(getCardUsedLimitFromTransactions('card-1', [
+      {
+        cardId: 'card-1',
+        amount: 1000,
+        type: 'expense',
+        invoiceMonthYear: '2026-05',
+        date: '2026-05-02',
+        isPaid: true,
+      },
+      {
+        cardId: 'card-1',
+        amount: 200,
+        type: 'expense',
+        isInvoicePayment: true,
+        transactionType: 'adjustment',
+        invoiceMonthYear: '2026-05',
+        date: '2026-05-20',
+      },
+      {
+        cardId: 'card-1',
+        amount: 250,
+        type: 'expense',
+        description: 'Parcela fatura Nubank 05/2026 (1/4)',
+        transactionType: 'installment',
+        invoiceMonthYear: '2026-06',
+        date: '2026-06-01',
+      },
+    ])).toBe(0);
+  });
 });

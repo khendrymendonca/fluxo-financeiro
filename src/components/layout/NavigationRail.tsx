@@ -103,7 +103,11 @@ function NavGroupDropdown({
       const rect = btnRef.current.getBoundingClientRect();
       setPos({ top: rect.bottom + 6, left: rect.left });
     }
-    open ? onClose() : onOpen();
+    if (open) {
+      onClose();
+    } else {
+      onOpen();
+    }
   };
 
   return (
@@ -264,7 +268,7 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
         <ThemeButton theme={theme} setTheme={setTheme} />
       </div>
 
-      {/* â”€â”€ LINHA 2: ðŸ  + Grupos de nav â”€â”€ */}
+      {/* LINHA 2: Home + Grupos de nav */}
       <div className="flex flex-row items-center px-4 pb-2.5">
 
         {/* BotÃ£o casinha â€” fixo no inÃ­cio */}

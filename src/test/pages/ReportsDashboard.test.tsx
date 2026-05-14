@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import ReportsDashboard, { buildCategoryExpenseRanking } from '@/pages/ReportsDashboard';
+import ReportsDashboard, { buildCategoryExpenseRanking, buildProjectedReportPeriodData, buildReportPeriodData } from '@/pages/ReportsDashboard';
 import { Category, Transaction } from '@/types/finance';
 
 const financeStoreMock = vi.hoisted(() => ({
@@ -161,6 +161,348 @@ describe('ReportsDashboard - categoria de acordo', () => {
     expect(ranking[0]).toEqual(expect.objectContaining({ name: 'Pagamento de fatura', value: 300, barWidth: 100 }));
     expect(ranking[1]).toEqual(expect.objectContaining({ name: 'Moradia', value: 100 }));
     expect(ranking[1].barWidth).toBeCloseTo(100 / 3);
+  });
+
+  it('calcula os cards do periodo por despesa efetiva sem duplicar cartao e fatura', () => {
+    const categories = [makeCategory('cat-home', 'Moradia')];
+
+    const result = buildReportPeriodData({
+      transactions: [
+        makeTransaction({
+          id: 'salary',
+          type: 'income',
+          description: 'Salario',
+          amount: 3000,
+          date: '2026-04-05',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'unpaid-income',
+          type: 'income',
+          description: 'Receita pendente',
+          amount: 500,
+          date: '2026-04-06',
+          isPaid: false,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'wallet-expense',
+          categoryId: 'cat-home',
+          description: 'Aluguel',
+          amount: 1000,
+          date: '2026-04-10',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'open-expense',
+          categoryId: 'cat-home',
+          description: 'Conta pendente',
+          amount: 700,
+          date: '2026-04-11',
+          isPaid: false,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'card-purchase',
+          categoryId: 'cat-home',
+          description: 'Compra no cartao',
+          amount: 900,
+          date: '2026-04-12',
+          isPaid: true,
+          cardId: 'card-1',
+          invoiceMonthYear: '2026-04',
+        }),
+        makeTransaction({
+          id: 'invoice-payment',
+          categoryId: 'cat-home',
+          description: 'Pagamento fatura abril',
+          amount: 900,
+          date: '2026-04-25',
+          isPaid: true,
+          accountId: 'acc-1',
+          cardId: 'card-1',
+          isInvoicePayment: true,
+          invoiceMonthYear: '2026-04',
+        }),
+        makeTransaction({
+          id: 'transfer-out',
+          description: 'Transferencia saida',
+          amount: 250,
+          date: '2026-04-13',
+          isPaid: true,
+          accountId: 'acc-1',
+          isTransfer: true,
+        }),
+        makeTransaction({
+          id: 'transfer-in',
+          type: 'income',
+          description: 'Transferencia entrada',
+          amount: 250,
+          date: '2026-04-13',
+          isPaid: true,
+          accountId: 'acc-2',
+          isTransfer: true,
+        }),
+      ],
+      categories,
+      start: new Date(2026, 3, 1),
+      end: new Date(2026, 3, 30),
+      selectedAccountId: 'all',
+    });
+
+    expect(result.income).toBe(3000);
+    expect(result.total).toBe(1900);
+    expect(result.paid).toBe(1900);
+    expect(result.income - result.total).toBe(1100);
+  });
+
+  it('respeita filtro de conta nos totais efetivos do relatorio', () => {
+    const categories = [makeCategory('cat-home', 'Moradia')];
+
+    const result = buildReportPeriodData({
+      transactions: [
+        makeTransaction({
+          id: 'income-acc-1',
+          type: 'income',
+          amount: 2000,
+          date: '2026-04-05',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'income-acc-2',
+          type: 'income',
+          amount: 5000,
+          date: '2026-04-05',
+          isPaid: true,
+          accountId: 'acc-2',
+        }),
+        makeTransaction({
+          id: 'expense-acc-1',
+          categoryId: 'cat-home',
+          amount: 300,
+          date: '2026-04-10',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'invoice-acc-2',
+          categoryId: 'cat-home',
+          amount: 800,
+          date: '2026-04-25',
+          isPaid: true,
+          accountId: 'acc-2',
+          cardId: 'card-1',
+          isInvoicePayment: true,
+          invoiceMonthYear: '2026-04',
+        }),
+      ],
+      categories,
+      start: new Date(2026, 3, 1),
+      end: new Date(2026, 3, 30),
+      selectedAccountId: 'acc-1',
+    });
+
+    expect(result.income).toBe(2000);
+    expect(result.total).toBe(300);
+    expect(result.income - result.total).toBe(1700);
+  });
+
+  it('calcula o modo projetado por competencia com recorrencias, pendentes e fatura prevista sem duplicidade', () => {
+    const categories = [makeCategory('cat-home', 'Moradia')];
+
+    const result = buildProjectedReportPeriodData({
+      transactions: [
+        makeTransaction({
+          id: 'future-salary',
+          type: 'income',
+          transactionType: 'recurring',
+          description: 'Salario',
+          amount: 4330,
+          date: '2026-06-05',
+          isPaid: false,
+          isRecurring: true,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'future-rent',
+          categoryId: 'cat-home',
+          transactionType: 'recurring',
+          description: 'Aluguel',
+          amount: 1200,
+          date: '2026-06-10',
+          isPaid: false,
+          isRecurring: true,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'future-bill',
+          categoryId: 'cat-home',
+          description: 'Conta aberta',
+          amount: 300,
+          date: '2026-07-15',
+          isPaid: false,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'card-purchase',
+          categoryId: 'cat-home',
+          description: 'Compra no cartao',
+          amount: 900,
+          date: '2026-06-20',
+          isPaid: false,
+          cardId: 'card-1',
+          invoiceMonthYear: '2026-07',
+        }),
+        makeTransaction({
+          id: 'transfer',
+          description: 'Transferencia',
+          amount: 999,
+          date: '2026-07-12',
+          isPaid: true,
+          isTransfer: true,
+          accountId: 'acc-1',
+        }),
+      ],
+      creditCards: [
+        {
+          id: 'card-1',
+          userId: 'user-1',
+          name: 'Nubank',
+          bank: 'Nubank',
+          limit: 5000,
+          closingDay: 10,
+          dueDay: 20,
+          color: '#111111',
+          isClosingDateFixed: false,
+          isActive: true,
+        },
+      ],
+      categories,
+      start: new Date(2026, 6, 1),
+      end: new Date(2026, 6, 31),
+      selectedAccountId: 'all',
+    });
+
+    expect(result.income).toBe(4330);
+    expect(result.total).toBe(2400);
+    expect(result.income - result.total).toBe(1930);
+  });
+
+  it('renderiza os cards financeiros com valores efetivos e sem quebra no negativo', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      transactions: [
+        makeTransaction({
+          id: 'income',
+          type: 'income',
+          description: 'Salario',
+          amount: 1000,
+          date: '2026-04-05',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'cash-expense',
+          description: 'Despesa comum',
+          amount: 700,
+          date: '2026-04-10',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'card-purchase',
+          description: 'Compra no cartao',
+          amount: 900,
+          date: '2026-04-12',
+          isPaid: true,
+          cardId: 'card-1',
+          invoiceMonthYear: '2026-04',
+        }),
+        makeTransaction({
+          id: 'invoice-payment',
+          description: 'Pagamento fatura abril',
+          amount: 900,
+          date: '2026-04-25',
+          isPaid: true,
+          accountId: 'acc-1',
+          cardId: 'card-1',
+          isInvoicePayment: true,
+          invoiceMonthYear: '2026-04',
+        }),
+        makeTransaction({
+          id: 'transfer',
+          description: 'Transferencia',
+          amount: 300,
+          date: '2026-04-14',
+          isPaid: true,
+          accountId: 'acc-1',
+          isTransfer: true,
+        }),
+      ],
+      categories: [],
+      creditCards: [],
+      accounts: [],
+      viewDate: new Date(2026, 3, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<ReportsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'Realizado' }));
+
+    expect(screen.getByText('Receitas efetivas')).toBeInTheDocument();
+    expect(screen.getByText('Despesas efetivas')).toBeInTheDocument();
+    expect(screen.getAllByText('R$ 1.000,00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('R$ 1.600,00').length).toBeGreaterThan(0);
+    expect(screen.queryByText('R$ 2.500,00')).not.toBeInTheDocument();
+    const negativeBalance = screen.getAllByText('-R$ 600,00')[0];
+    expect(negativeBalance).toBeInTheDocument();
+    expect(negativeBalance).toHaveClass('whitespace-nowrap');
+    expect(negativeBalance).toHaveClass('tabular-nums');
+  });
+
+  it('usa Projetado como modo padrao e alterna os cards para Realizado', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      transactions: [
+        makeTransaction({
+          id: 'pending-income',
+          type: 'income',
+          amount: 4330,
+          date: '2026-04-05',
+          isPaid: false,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'pending-expense',
+          amount: 1200,
+          date: '2026-04-10',
+          isPaid: false,
+          accountId: 'acc-1',
+        }),
+      ],
+      categories: [],
+      creditCards: [],
+      accounts: [],
+      viewDate: new Date(2026, 3, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<ReportsDashboard />);
+
+    expect(screen.getByText('Receitas previstas')).toBeInTheDocument();
+    expect(screen.getByText('Despesas previstas')).toBeInTheDocument();
+    expect(screen.getByText('Saldo previsto')).toBeInTheDocument();
+    expect(screen.getAllByText('R$ 4.330,00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('R$ 1.200,00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('R$ 3.130,00').length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Realizado' }));
+
+    expect(screen.getByText('Receitas efetivas')).toBeInTheDocument();
+    expect(screen.getByText('Despesas efetivas')).toBeInTheDocument();
+    expect(screen.getByText('Saldo efetivo do período')).toBeInTheDocument();
+    expect(screen.getAllByText('R$ 0,00').length).toBeGreaterThan(0);
   });
 
   it('renderiza barras do Por Categoria com a maior categoria em 100%', () => {

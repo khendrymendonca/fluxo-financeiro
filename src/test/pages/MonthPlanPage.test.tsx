@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Account, Category, Debt, Transaction } from '@/types/finance';
 import MonthPlanPage from '@/pages/MonthPlanPage';
 import { buildMonthPlan } from '@/utils/monthPlan';
@@ -134,14 +134,18 @@ const lifestyleCategory = makeCategory({
 
 function renderPage({
   accounts = [makeAccount({ id: 'checking', balance: 3000 }), makeAccount({ id: 'wallet', balance: 500 })],
+  creditCards = [],
   transactions = [],
   debts = [],
   flags = { decision_engine: true, debt_strategy: true },
+  viewDate = new Date('2026-04-15T12:00:00'),
 }: {
   accounts?: Account[];
+  creditCards?: any[];
   transactions?: Transaction[];
   debts?: Debt[];
   flags?: Record<string, boolean>;
+  viewDate?: Date;
 }) {
   featureFlagsMock.useFeatureFlag.mockImplementation((key: string) => Boolean(flags[key]));
   mobileMock.useIsMobile.mockReturnValue(false);
@@ -151,11 +155,12 @@ function renderPage({
   });
   financeStoreMock.useFinanceStore.mockReturnValue({
     accounts,
+    creditCards,
     categories: [essentialCategory, lifestyleCategory],
     transactions,
     currentMonthTransactions: transactions,
     debts,
-    viewDate: new Date('2026-04-15T12:00:00'),
+    viewDate,
   });
 
   render(
@@ -172,7 +177,13 @@ function renderPage({
 
 describe('MonthPlanPage', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-15T12:00:00'));
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('mostra a estrutura principal como painel de caixa consolidado', () => {
@@ -410,6 +421,141 @@ describe('MonthPlanPage', () => {
 
     expect(screen.queryByText('Posso pagar?')).not.toBeInTheDocument();
     expect(screen.queryByText('Acordos em andamento')).not.toBeInTheDocument();
+  });
+
+  it('considera fatura aberta como despesa em aberto no painel do mes', () => {
+    renderPage({
+      accounts: [makeAccount({ id: 'checking', balance: 2000 })],
+      creditCards: [
+        {
+          id: 'card-1',
+          userId: 'user-1',
+          name: 'Nubank',
+          bank: 'Nubank',
+          limit: 5000,
+          closingDay: 10,
+          dueDay: 20,
+          color: '#111111',
+          isClosingDateFixed: false,
+          isActive: true,
+        },
+      ],
+      transactions: [
+        makeTransaction({
+          id: 'card-purchase',
+          description: 'Compra no cartao',
+          amount: 600,
+          date: '2026-04-05',
+          cardId: 'card-1',
+          invoiceMonthYear: '2026-04',
+          isPaid: false,
+        }),
+      ],
+    });
+
+    expect(screen.getByText('Fatura Nubank')).toBeInTheDocument();
+    expect(screen.getAllByText('R$ 600,00').length).toBeGreaterThan(0);
+  });
+
+  it('nao soma pendencia anterior nos cards principais da Home do mes selecionado', () => {
+    renderPage({
+      viewDate: new Date('2026-06-15T12:00:00'),
+      accounts: [makeAccount({ id: 'checking', balance: 1000 })],
+      transactions: [
+        makeTransaction({
+          id: 'may-pending',
+          categoryId: 'essential',
+          description: 'Vero - Internet maio',
+          amount: 102.41,
+          date: '2026-05-20',
+          isPaid: false,
+        }),
+        makeTransaction({
+          id: 'june-pending',
+          categoryId: 'essential',
+          description: 'Vero - Internet junho',
+          amount: 99.9,
+          date: '2026-06-20',
+          isPaid: false,
+        }),
+      ],
+    });
+
+    expect(screen.getByText('Painel de Junho de 2026')).toBeInTheDocument();
+    expect(screen.getByText('Vero - Internet maio')).toBeInTheDocument();
+    expect(screen.getByText('Vero - Internet junho')).toBeInTheDocument();
+    expect(screen.getByText('Vencidas')).toBeInTheDocument();
+    expect(screen.getAllByText('R$ 99,90').length).toBeGreaterThan(0);
+    expect(screen.getByText('R$ 900,10')).toBeInTheDocument();
+    expect(screen.queryByText('R$ 202,31')).not.toBeInTheDocument();
+    expect(screen.queryByText('R$ 797,69')).not.toBeInTheDocument();
+  });
+
+  it('calcula vencidas pela data atual sem transformar meses futuros em atraso', () => {
+    vi.setSystemTime(new Date('2026-05-14T12:00:00'));
+
+    renderPage({
+      viewDate: new Date('2026-07-15T12:00:00'),
+      accounts: [makeAccount({ id: 'checking', balance: 1000 })],
+      creditCards: [
+        {
+          id: 'card-1',
+          userId: 'user-1',
+          name: 'Nubank',
+          bank: 'Nubank',
+          limit: 5000,
+          closingDay: 10,
+          dueDay: 20,
+          color: '#111111',
+          isClosingDateFixed: false,
+          isActive: true,
+        },
+      ],
+      transactions: [
+        makeTransaction({
+          id: 'may-overdue',
+          categoryId: 'essential',
+          description: 'Conta maio vencida',
+          amount: 50,
+          date: '2026-05-10',
+          isPaid: false,
+        }),
+        makeTransaction({
+          id: 'june-future',
+          categoryId: 'essential',
+          description: 'Conta junho futura',
+          amount: 60,
+          date: '2026-06-20',
+          isPaid: false,
+        }),
+        makeTransaction({
+          id: 'july-open',
+          categoryId: 'essential',
+          description: 'Conta julho',
+          amount: 100,
+          date: '2026-07-20',
+          isPaid: false,
+        }),
+        makeTransaction({
+          id: 'july-card-purchase',
+          categoryId: 'lifestyle',
+          description: 'Compra julho cartao',
+          amount: 200,
+          date: '2026-07-05',
+          isPaid: false,
+          cardId: 'card-1',
+          invoiceMonthYear: '2026-07',
+        }),
+      ],
+    });
+
+    expect(screen.getByText('Painel de Julho de 2026')).toBeInTheDocument();
+    expect(screen.getByText('Fatura Nubank')).toBeInTheDocument();
+    expect(screen.getAllByText('R$ 300,00').length).toBeGreaterThan(0);
+    expect(screen.getByText('R$ 700,00')).toBeInTheDocument();
+    expect(screen.getAllByText('R$ 50,00').length).toBeGreaterThan(0);
+    expect(screen.queryByText('R$ 410,00')).not.toBeInTheDocument();
+    expect(screen.queryByText('R$ 590,00')).not.toBeInTheDocument();
   });
 
   it('calcula essenciais e estilo de vida pelo budgetGroup da categoria', () => {

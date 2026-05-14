@@ -46,9 +46,11 @@ import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { formatCurrency } from '@/utils/formatters';
 import { parseLocalDate } from '@/utils/dateUtils';
 import { getTransactionCategoryLabel } from '@/utils/transactionCategory';
-import { Category, Transaction } from '@/types/finance';
+import { buildCardInvoiceObligations } from '@/utils/invoiceObligations';
+import { Category, CreditCard, Transaction } from '@/types/finance';
 
 type Period = 'month' | 'semester' | 'year';
+type ReportMode = 'projected' | 'realized';
 
 type CategoryRankingItem = {
   name: string;
@@ -74,6 +76,141 @@ function isEffectiveCategoryExpense(transaction: Transaction) {
     !transaction.deleted_at &&
     (transaction.isInvoicePayment || !transaction.cardId)
   );
+}
+
+function isEffectiveReportIncome(transaction: Transaction) {
+  return (
+    transaction.type === 'income' &&
+    transaction.isPaid &&
+    !transaction.isTransfer &&
+    !transaction.deleted_at
+  );
+}
+
+function isProjectedReportIncome(transaction: Transaction) {
+  return (
+    transaction.type === 'income' &&
+    !transaction.isTransfer &&
+    !transaction.deleted_at
+  );
+}
+
+function isProjectedReportExpense(transaction: Transaction) {
+  return (
+    transaction.type === 'expense' &&
+    !transaction.isTransfer &&
+    !transaction.deleted_at &&
+    (transaction.isInvoicePayment || !transaction.cardId)
+  );
+}
+
+function getMonthTransactionsForReport({
+  transactions,
+  creditCards,
+  month,
+  selectedAccountId,
+}: {
+  transactions: Transaction[];
+  creditCards: CreditCard[];
+  month: Date;
+  selectedAccountId: string;
+}) {
+  const targetMonth = month.getMonth();
+  const targetYear = month.getFullYear();
+
+  const monthReal = transactions.filter((transaction) => {
+    if (transaction.isVirtual) return false;
+    if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return false;
+
+    const transactionDate = parseLocalDate(transaction.date);
+    const matchesDate = transactionDate.getMonth() === targetMonth && transactionDate.getFullYear() === targetYear;
+
+    if (transaction.isInvoicePayment && transaction.invoiceMonthYear) {
+      const [year, monthValue] = transaction.invoiceMonthYear.split('-').map(Number);
+      return monthValue - 1 === targetMonth && year === targetYear;
+    }
+
+    if (transaction.cardId && transaction.invoiceMonthYear) {
+      const [year, monthValue] = transaction.invoiceMonthYear.split('-').map(Number);
+      return monthValue - 1 === targetMonth && year === targetYear;
+    }
+
+    return matchesDate;
+  });
+
+  const projectedRecurring = transactions.flatMap((transaction) => {
+    if (!transaction.isRecurring || transaction.isVirtual || transaction.deleted_at) return [];
+    if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return [];
+
+    const transactionDate = parseLocalDate(transaction.date);
+    if (!isBefore(startOfMonth(transactionDate), addMonths(startOfMonth(month), 1))) return [];
+
+    const hasReal = monthReal.some((real) =>
+      real.originalId === transaction.id ||
+      (real.id === transaction.id && isSameMonth(parseLocalDate(real.date), month))
+    );
+
+    return hasReal ? [] : [{ ...transaction, originalId: transaction.id, isVirtual: true }];
+  });
+
+  const projectedInstallments = transactions.flatMap((transaction) => {
+    if (
+      transaction.isRecurring ||
+      transaction.isVirtual ||
+      transaction.deleted_at ||
+      !transaction.installmentGroupId ||
+      !transaction.installmentNumber ||
+      !transaction.installmentTotal ||
+      transaction.installmentNumber >= transaction.installmentTotal
+    ) {
+      return [];
+    }
+
+    if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return [];
+
+    const transactionDate = parseLocalDate(transaction.date);
+    if (!isBefore(transactionDate, startOfMonth(month))) return [];
+
+    const hasMoreRecentInPast = transactions.some((other) =>
+      !other.isVirtual &&
+      other.installmentGroupId === transaction.installmentGroupId &&
+      parseLocalDate(other.date).getTime() > transactionDate.getTime() &&
+      isBefore(parseLocalDate(other.date), startOfMonth(month))
+    );
+
+    if (hasMoreRecentInPast) return [];
+
+    const hasGroupInTargetMonth = monthReal.some((real) => real.installmentGroupId === transaction.installmentGroupId);
+    const hasRealEquivalent = monthReal.some((real) =>
+      real.originalId === transaction.id ||
+      (real.id === transaction.id && isSameMonth(parseLocalDate(real.date), month))
+    );
+
+    if (hasGroupInTargetMonth || hasRealEquivalent) return [];
+
+    const monthDiff = (targetYear - transactionDate.getFullYear()) * 12 + (targetMonth - transactionDate.getMonth());
+    const projectedInstallmentNumber = transaction.installmentNumber + monthDiff;
+
+    if (projectedInstallmentNumber > transaction.installmentTotal) return [];
+
+    return [{
+      ...transaction,
+      originalId: transaction.id,
+      installmentNumber: projectedInstallmentNumber,
+      isVirtual: true,
+    }];
+  });
+
+  const syntheticTransactions = [...monthReal, ...projectedRecurring, ...projectedInstallments] as Transaction[];
+  const invoiceObligations = selectedAccountId === 'all'
+    ? buildCardInvoiceObligations({
+        creditCards,
+        transactions: syntheticTransactions,
+        viewDate: month,
+      })
+    : [];
+
+  return [...syntheticTransactions, ...invoiceObligations];
 }
 
 export function buildCategoryExpenseRanking({
@@ -128,16 +265,159 @@ export function buildCategoryExpenseRanking({
   }));
 }
 
+export function buildReportPeriodData({
+  transactions,
+  categories,
+  start,
+  end,
+  selectedAccountId,
+}: {
+  transactions: Transaction[];
+  categories: Category[];
+  start: Date;
+  end: Date;
+  selectedAccountId: string;
+}) {
+  const periodKeys = new Set(
+    eachMonthOfInterval({ start, end }).map((month) => format(month, 'yyyy-MM'))
+  );
+  let total = 0;
+  let fixed = 0;
+  let paid = 0;
+  let income = 0;
+
+  transactions.forEach((transaction) => {
+    if (transaction.isVirtual && !transaction.isRecurring) return;
+    if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return;
+    if (!periodKeys.has(getReportPeriodKey(transaction))) return;
+
+    const val = Number(transaction.amount);
+    if (isEffectiveCategoryExpense(transaction)) {
+      total += val;
+      paid += val;
+      const cat = categories.find(c => c.id === transaction.categoryId);
+      if (cat?.isFixed) fixed += val;
+    } else if (isEffectiveReportIncome(transaction)) {
+      income += val;
+    }
+  });
+
+  return { total, fixed, paid, income };
+}
+
+export function buildProjectedReportPeriodData({
+  transactions,
+  creditCards,
+  categories,
+  start,
+  end,
+  selectedAccountId,
+}: {
+  transactions: Transaction[];
+  creditCards: CreditCard[];
+  categories: Category[];
+  start: Date;
+  end: Date;
+  selectedAccountId: string;
+}) {
+  const months = eachMonthOfInterval({ start, end });
+  let total = 0;
+  let fixed = 0;
+  let paid = 0;
+  let income = 0;
+
+  months.forEach((month) => {
+    const monthTransactions = getMonthTransactionsForReport({
+      transactions,
+      creditCards,
+      month,
+      selectedAccountId,
+    });
+
+    monthTransactions.forEach((transaction) => {
+      const val = Number(transaction.amount);
+      if (isProjectedReportExpense(transaction)) {
+        total += val;
+        if (transaction.isPaid) paid += val;
+        const cat = categories.find(c => c.id === transaction.categoryId);
+        if (cat?.isFixed) fixed += val;
+      } else if (isProjectedReportIncome(transaction)) {
+        income += val;
+      }
+    });
+  });
+
+  return { total, fixed, paid, income };
+}
+
+function buildProjectedCategoryExpenseRanking({
+  transactions,
+  creditCards,
+  categories,
+  start,
+  end,
+  selectedAccountId,
+  limit = 10,
+}: {
+  transactions: Transaction[];
+  creditCards: CreditCard[];
+  categories: Category[];
+  start: Date;
+  end: Date;
+  selectedAccountId: string;
+  limit?: number;
+}): CategoryRankingItem[] {
+  const distMap = new Map<string, number>();
+
+  eachMonthOfInterval({ start, end }).forEach((month) => {
+    getMonthTransactionsForReport({
+      transactions,
+      creditCards,
+      month,
+      selectedAccountId,
+    }).forEach((transaction) => {
+      if (!isProjectedReportExpense(transaction)) return;
+
+      const name = transaction.isInvoicePayment
+        ? 'Fatura de cartão'
+        : getTransactionCategoryLabel(transaction, categories, 'Outros');
+      distMap.set(name, (distMap.get(name) || 0) + Number(transaction.amount));
+    });
+  });
+
+  const ranked = Array.from(distMap.entries())
+    .map(([name, value]) => {
+      const cat = categories.find(c => c.name === name);
+      return {
+        name,
+        value,
+        budgetLimit: cat?.budgetLimit ?? null,
+        color: cat?.color,
+      };
+    })
+    .sort((a, b) => b.value - a.value)
+    .slice(0, limit);
+
+  const maxCategoryAmount = ranked[0]?.value ?? 0;
+
+  return ranked.map((category) => ({
+    ...category,
+    barWidth: maxCategoryAmount > 0 ? (category.value / maxCategoryAmount) * 100 : 0,
+  }));
+}
+
 export default function ReportsDashboard() {
   const {
     transactions,
     categories,
     accounts,
+    creditCards = [],
     viewDate,
     setViewDate
   } = useFinanceStore();
 
   const [period, setPeriod] = useState<Period>('month');
+  const [reportMode, setReportMode] = useState<ReportMode>('projected');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   const canUseAdvancedReports = useFeatureFlag('advanced_reports');
 
@@ -174,68 +454,25 @@ export default function ReportsDashboard() {
   }, [viewDate, period]);
 
   const getPeriodData = useCallback((start: Date, end: Date) => {
-    const months = eachMonthOfInterval({ start, end });
-    let total = 0;
-    let fixed = 0;
-    let paid = 0;
-    let income = 0;
-
-    months.forEach(month => {
-      const targetMonth = month.getMonth();
-      const targetYear = month.getFullYear();
-
-      const monthReal = transactions.filter(t => {
-        if (t.isVirtual && !t.isRecurring) return false;
-        if (selectedAccountId !== 'all' && t.accountId !== selectedAccountId) return false;
-
-        const d = parseLocalDate(t.date);
-        const matchesDate = d.getMonth() === targetMonth && d.getFullYear() === targetYear;
-
-        if (t.isInvoicePayment && t.invoiceMonthYear) {
-          const [y, m] = t.invoiceMonthYear.split('-').map(Number);
-          return m - 1 === targetMonth && y === targetYear;
-        }
-        return matchesDate;
+    if (reportMode === 'realized') {
+      return buildReportPeriodData({
+        transactions,
+        categories,
+        start,
+        end,
+        selectedAccountId,
       });
+    }
 
-      monthReal.forEach(t => {
-        if (t.isTransfer) return;
-        const val = Number(t.amount);
-        if (t.type === 'expense' && !t.isInvoicePayment) {
-          total += val;
-          if (t.isPaid) paid += val;
-          const cat = categories.find(c => c.id === t.categoryId);
-          if (cat?.isFixed) fixed += val;
-        } else if (t.type === 'income') {
-          income += val;
-        }
-      });
-
-      const recurringMothers = transactions.filter(t => t.isRecurring && !t.isVirtual);
-      recurringMothers.forEach(mother => {
-        if (selectedAccountId !== 'all' && mother.accountId !== selectedAccountId) return;
-        if (mother.isTransfer) return;
-
-        const motherDate = parseLocalDate(mother.date);
-        if (isBefore(startOfMonth(motherDate), addMonths(startOfMonth(month), 1))) {
-          const hasReal = monthReal.some(r => r.originalId === mother.id || (r.id === mother.id && isSameMonth(parseLocalDate(r.date), month)));
-
-          if (!hasReal) {
-            const val = Number(mother.amount);
-            if (mother.type === 'expense') {
-              total += val;
-              const cat = categories.find(c => c.id === mother.categoryId);
-              if (cat?.isFixed) fixed += val;
-            } else if (mother.type === 'income') {
-              income += val;
-            }
-          }
-        }
-      });
+    return buildProjectedReportPeriodData({
+      transactions,
+      creditCards,
+      categories,
+      start,
+      end,
+      selectedAccountId,
     });
-
-    return { total, fixed, paid, income };
-  }, [transactions, categories, selectedAccountId]);
+  }, [transactions, creditCards, categories, selectedAccountId, reportMode]);
 
   const metrics = useMemo(() => {
     const current = getPeriodData(intervals.start, intervals.end);
@@ -279,6 +516,17 @@ export default function ReportsDashboard() {
   }, [transactions, viewDate]);
 
   const topCategories = useMemo(() => {
+    if (reportMode === 'projected') {
+      return buildProjectedCategoryExpenseRanking({
+        transactions,
+        creditCards,
+        categories,
+        start: intervals.start,
+        end: intervals.end,
+        selectedAccountId,
+      });
+    }
+
     return buildCategoryExpenseRanking({
       transactions,
       categories,
@@ -286,97 +534,32 @@ export default function ReportsDashboard() {
       end: intervals.end,
       selectedAccountId,
     });
-  }, [transactions, categories, intervals, selectedAccountId]);
+  }, [transactions, creditCards, categories, intervals, selectedAccountId, reportMode]);
 
   const annualVision = useMemo(() => {
     const monthKeys = yearMonths.map((month) => format(month, 'yyyy-MM'));
 
-    const getSyntheticMonthTransactions = (month: Date) => {
-      const targetMonth = month.getMonth();
-      const targetYear = month.getFullYear();
-
-      const monthReal = transactions.filter((transaction) => {
-        if (transaction.isVirtual) return false;
-        if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return false;
-
-        const transactionDate = parseLocalDate(transaction.date);
-        const matchesDate = transactionDate.getMonth() === targetMonth && transactionDate.getFullYear() === targetYear;
-
-        if (transaction.isInvoicePayment && transaction.invoiceMonthYear) {
-          const [year, monthValue] = transaction.invoiceMonthYear.split('-').map(Number);
-          return monthValue - 1 === targetMonth && year === targetYear;
-        }
-
-        return matchesDate;
-      });
-
-      const projectedRecurring = transactions.flatMap((transaction) => {
-        if (!transaction.isRecurring || transaction.isVirtual) return [];
-        if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return [];
-
-        const transactionDate = parseLocalDate(transaction.date);
-        if (!isBefore(startOfMonth(transactionDate), addMonths(startOfMonth(month), 1))) return [];
-
-        const hasReal = monthReal.some((real) =>
-          real.originalId === transaction.id ||
-          (real.id === transaction.id && isSameMonth(parseLocalDate(real.date), month))
-        );
-
-        return hasReal ? [] : [{ ...transaction, originalId: transaction.id, isVirtual: true }];
-      });
-
-      const projectedInstallments = transactions.flatMap((transaction) => {
-        if (
-          transaction.isRecurring ||
-          transaction.isVirtual ||
-          !transaction.installmentGroupId ||
-          !transaction.installmentNumber ||
-          !transaction.installmentTotal ||
-          transaction.installmentNumber >= transaction.installmentTotal
-        ) {
-          return [];
-        }
-
-        if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return [];
-
-        const transactionDate = parseLocalDate(transaction.date);
-        if (!isBefore(transactionDate, startOfMonth(month))) return [];
-
-        const hasMoreRecentInPast = transactions.some((other) =>
-          !other.isVirtual &&
-          other.installmentGroupId === transaction.installmentGroupId &&
-          parseLocalDate(other.date).getTime() > transactionDate.getTime() &&
-          isBefore(parseLocalDate(other.date), startOfMonth(month))
-        );
-
-        if (hasMoreRecentInPast) return [];
-
-        const hasGroupInTargetMonth = monthReal.some((real) => real.installmentGroupId === transaction.installmentGroupId);
-        const hasRealEquivalent = monthReal.some((real) =>
-          real.originalId === transaction.id ||
-          (real.id === transaction.id && isSameMonth(parseLocalDate(real.date), month))
-        );
-
-        if (hasGroupInTargetMonth || hasRealEquivalent) return [];
-
-        const monthDiff = (targetYear - transactionDate.getFullYear()) * 12 + (targetMonth - transactionDate.getMonth());
-        const projectedInstallmentNumber = transaction.installmentNumber + monthDiff;
-
-        if (projectedInstallmentNumber > transaction.installmentTotal) return [];
-
-        return [{
-          ...transaction,
-          originalId: transaction.id,
-          installmentNumber: projectedInstallmentNumber,
-          isVirtual: true,
-        }];
-      });
-
-      return [...monthReal, ...projectedRecurring, ...projectedInstallments];
-    };
-
     const monthlyTransactionsMap = yearMonths.reduce<Record<string, typeof transactions>>((accumulator, month) => {
-      accumulator[format(month, 'yyyy-MM')] = getSyntheticMonthTransactions(month);
+      accumulator[format(month, 'yyyy-MM')] = reportMode === 'projected'
+        ? getMonthTransactionsForReport({
+            transactions,
+            creditCards,
+            month,
+            selectedAccountId,
+          })
+        : transactions.filter((transaction) => {
+            if (transaction.isVirtual) return false;
+            if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return false;
+
+            const transactionDate = parseLocalDate(transaction.date);
+            const matchesDate = isSameMonth(transactionDate, month);
+
+            if (transaction.isInvoicePayment && transaction.invoiceMonthYear) {
+              return transaction.invoiceMonthYear === format(month, 'yyyy-MM');
+            }
+
+            return matchesDate;
+          });
       return accumulator;
     }, {});
 
@@ -407,13 +590,21 @@ export default function ReportsDashboard() {
 
     monthKeys.forEach((monthKey) => {
       monthlyTransactionsMap[monthKey].forEach((transaction) => {
-        if (transaction.isTransfer || transaction.isInvoicePayment) return;
+        if (transaction.isTransfer) return;
+        if (transaction.type === 'income') {
+          if (reportMode === 'projected' ? !isProjectedReportIncome(transaction) : !isEffectiveReportIncome(transaction)) return;
+        }
+        if (transaction.type === 'expense') {
+          if (reportMode === 'projected' ? !isProjectedReportExpense(transaction) : !isEffectiveCategoryExpense(transaction)) return;
+        }
 
-        const rowName = getTransactionCategoryLabel(
-          transaction,
-          categories,
-          transaction.type === 'income' ? 'Receitas sem categoria' : 'Outros'
-        );
+        const rowName = transaction.isInvoicePayment
+          ? 'Pagamento de fatura'
+          : getTransactionCategoryLabel(
+              transaction,
+              categories,
+              transaction.type === 'income' ? 'Receitas sem categoria' : 'Outros'
+            );
         const rowId = `${transaction.type}-${transaction.categoryId ?? transaction.debtId ?? rowName}`;
         const row = ensureRow(rowId, rowName, transaction.type);
         row.monthValues[monthKey] += Number(transaction.amount);
@@ -488,7 +679,7 @@ export default function ReportsDashboard() {
       currentTotalBalance,
       projectedYearEndBalance,
     };
-  }, [accounts, categories, selectedAccountId, transactions, viewDate, yearMonths]);
+  }, [accounts, categories, creditCards, reportMode, selectedAccountId, transactions, viewDate, yearMonths]);
 
   return (
     <div className="space-y-8 animate-fade-in max-w-[1600px] mx-auto pb-10 px-4 xl:px-6">
@@ -553,6 +744,21 @@ export default function ReportsDashboard() {
           </Select>
 
           <div className="flex bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
+            {(['projected', 'realized'] as ReportMode[]).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setReportMode(mode)}
+                className={cn(
+                  "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
+                  reportMode === mode ? "bg-primary text-white shadow-lg" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {mode === 'projected' ? 'Projetado' : 'Realizado'}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
             {(['month', 'semester', 'year'] as Period[]).map((p) => (
               <button
                 key={p}
@@ -571,20 +777,20 @@ export default function ReportsDashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
-          label="Receitas"
+          label={reportMode === 'projected' ? 'Receitas previstas' : 'Receitas efetivas'}
           value={metrics.income}
           icon={<ArrowUpCircle className="text-emerald-500" />}
           trend={metrics.trend >= 0 ? `+${metrics.trend.toFixed(0)}%` : `${metrics.trend.toFixed(0)}%`}
         />
         <StatCard
-          label="Despesas"
+          label={reportMode === 'projected' ? 'Despesas previstas' : 'Despesas efetivas'}
           value={metrics.totalExpenses}
           icon={<ArrowDownCircle className="text-rose-500" />}
           trend={metrics.trend >= 0 ? `+${metrics.trend.toFixed(0)}%` : `${metrics.trend.toFixed(0)}%`}
           forceRed
         />
         <StatCard
-          label="Saldo do Período"
+          label={reportMode === 'projected' ? 'Saldo previsto' : 'Saldo efetivo do período'}
           value={metrics.balance}
           icon={<TrendingUp className={metrics.balance >= 0 ? "text-primary" : "text-rose-500"} />}
           isNeutral
@@ -940,7 +1146,7 @@ function StatCard({ label, value, icon, trend, isNeutral, forceRed }: { label: s
       </div>
       <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{label}</p>
       <p className={cn(
-        "text-2xl font-black tracking-tighter mt-1",
+        "mt-1 whitespace-nowrap text-2xl font-black tracking-tighter tabular-nums leading-none",
         forceRed ? "text-rose-500" : (!isNeutral && (value >= 0 ? "text-emerald-500" : "text-rose-500")),
         isNeutral && "text-gray-900 dark:text-zinc-50"
       )}>

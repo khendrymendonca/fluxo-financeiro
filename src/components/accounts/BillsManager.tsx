@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useUpdateTransaction, useDeleteTransaction, useAddTransaction, useToggleTransactionPaid, useBulkUpdateTransactions } from '@/hooks/useTransactionMutations';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -11,10 +12,11 @@ import {
 } from 'lucide-react';
 import { Portal } from '@/components/ui/Portal';
 import { cn } from '@/lib/utils';
-import { format, isSameMonth, isSameYear, isBefore, startOfMonth } from 'date-fns';
+import { addMonths, format, isBefore, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useIsMutating } from '@tanstack/react-query';
-import { getCardSettingsForDate, calcInvoiceMonthYearForCard } from '@/utils/creditCardUtils';
+import { calcInvoiceMonthYearForCard } from '@/utils/creditCardUtils';
+import { buildCardInvoiceObligations } from '@/utils/invoiceObligations';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
 import { BulkDeleteDialog } from '../transactions/BulkDeleteDialog';
 import {
@@ -60,6 +62,11 @@ export function BillsManager() {
     const [paymentDate, setPaymentDate] = useState<string>(todayLocalString());
     const [paymentAmount, setPaymentAmount] = useState<string>('');
     const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
+    const [invoiceSettlementMode, setInvoiceSettlementMode] = useState<'total' | 'partial' | 'installment'>('total');
+    const [invoiceAccountId, setInvoiceAccountId] = useState<string>('');
+    const [invoiceInstallmentCount, setInvoiceInstallmentCount] = useState<string>('2');
+    const [invoiceInstallmentAmount, setInvoiceInstallmentAmount] = useState<string>('');
+    const [invoiceFirstInstallmentMonth, setInvoiceFirstInstallmentMonth] = useState<string>(format(addMonths(viewDate, 1), 'yyyy-MM'));
     const [expandedTransactionId, setExpandedTransactionId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [editingBill, setEditingBill] = useState<Transaction | null>(null);
@@ -78,6 +85,172 @@ export function BillsManager() {
     const getEffectivePaymentAmount = (transaction: Transaction) => {
         const parsed = Number.parseFloat(paymentAmount);
         return Number.isFinite(parsed) && parsed > 0 ? parsed : transaction.amount;
+    };
+
+    const getInvoicePurchases = (invoice: Transaction) => transactions.filter(t =>
+        t.cardId === invoice.cardId &&
+        !t.isInvoicePayment &&
+        t.type === 'expense' &&
+        t.invoiceMonthYear === invoice.invoiceMonthYear &&
+        !t.deleted_at
+    );
+
+    const openPaymentFlow = (transaction: Transaction, date: string, amount: number, accountId?: string, cardId?: string) => {
+        setPaymentDate(date);
+        setPaymentAmount(amount.toFixed(2));
+        setPaymentMethod(cardId ? 'credit_card' : 'account');
+        setInvoiceSettlementMode('total');
+        setInvoiceAccountId(accountId || '');
+        setInvoiceInstallmentCount('2');
+        setInvoiceInstallmentAmount('');
+        setInvoiceFirstInstallmentMonth(format(addMonths(parseLocalDate(`${transaction.invoiceMonthYear || viewDateStr}-01`), 1), 'yyyy-MM'));
+        setIsPaying(transaction);
+    };
+
+    const handleInvoiceSettlement = async (invoice: Transaction) => {
+        if (isSubmitting) return;
+
+        const invoiceTotal = Number(invoice.amount || 0);
+        const paidAmount = Number.parseFloat(paymentAmount || '0');
+        const installmentCount = Number.parseInt(invoiceInstallmentCount || '0', 10);
+        const installmentAmount = Number.parseFloat(invoiceInstallmentAmount || '0');
+        const hasDownPayment = paidAmount > 0;
+
+        if (!paymentDate) {
+            toast({ title: 'Informe a data de pagamento.', variant: 'destructive' });
+            return;
+        }
+
+        if (invoiceSettlementMode === 'total' && (!invoiceAccountId || paidAmount !== invoiceTotal)) {
+            toast({ title: 'Pagamento total exige conta e valor igual ao total da fatura.', variant: 'destructive' });
+            return;
+        }
+
+        if (invoiceSettlementMode === 'partial' && (!invoiceAccountId || paidAmount <= 0 || paidAmount >= invoiceTotal)) {
+            toast({ title: 'Pagamento parcial exige conta e valor maior que zero e menor que a fatura.', variant: 'destructive' });
+            return;
+        }
+
+        if (invoiceSettlementMode === 'installment') {
+            if (hasDownPayment && !invoiceAccountId) {
+                toast({ title: 'Entrada maior que zero exige conta de origem.', variant: 'destructive' });
+                return;
+            }
+            if (installmentCount <= 0 || installmentAmount <= 0 || !invoiceFirstInstallmentMonth) {
+                toast({ title: 'Informe quantidade, valor e primeira competência das parcelas.', variant: 'destructive' });
+                return;
+            }
+        }
+
+        setIsSubmitting(true);
+        let insertedInvoiceMovementIds: string[] = [];
+
+        try {
+            const card = creditCards.find(c => c.id === invoice.cardId);
+            const cardName = card?.name || 'cartão';
+            const invoiceDate = parseLocalDate(`${invoice.invoiceMonthYear || viewDateStr}-01`);
+            const monthLabel = format(invoiceDate, 'MM/yyyy');
+            const mutations: Partial<Transaction>[] = [];
+
+            if (invoiceSettlementMode === 'total' || invoiceSettlementMode === 'partial' || hasDownPayment) {
+                mutations.push({
+                    description: invoiceSettlementMode === 'installment'
+                        ? `Entrada parcelamento fatura ${cardName} ${monthLabel}`
+                        : `Pagamento fatura ${cardName} ${monthLabel}`,
+                    amount: paidAmount,
+                    type: 'expense',
+                    transactionType: invoiceSettlementMode === 'installment' ? 'adjustment' : 'punctual',
+                    isRecurring: false,
+                    date: paymentDate,
+                    isPaid: true,
+                    paymentDate,
+                    accountId: invoiceAccountId,
+                    cardId: invoice.cardId,
+                    isInvoicePayment: true,
+                    invoiceMonthYear: invoice.invoiceMonthYear,
+                    categoryId: null,
+                    subcategoryId: null,
+                });
+            }
+
+            if (invoiceSettlementMode === 'partial') {
+                const nextMonth = format(addMonths(parseLocalDate(`${invoice.invoiceMonthYear || viewDateStr}-01`), 1), 'yyyy-MM');
+                const remainingAmount = Number((invoiceTotal - paidAmount).toFixed(2));
+                mutations.push({
+                    description: `Saldo restante da fatura ${monthLabel}`,
+                    amount: remainingAmount,
+                    type: 'expense',
+                    transactionType: 'adjustment',
+                    isRecurring: false,
+                    date: `${nextMonth}-01`,
+                    isPaid: false,
+                    accountId: null,
+                    cardId: invoice.cardId,
+                    isInvoicePayment: false,
+                    invoiceMonthYear: nextMonth,
+                    categoryId: null,
+                    subcategoryId: null,
+                });
+            }
+
+            if (invoiceSettlementMode === 'installment') {
+                const firstDate = parseLocalDate(`${invoiceFirstInstallmentMonth}-01`);
+                const groupId = crypto.randomUUID();
+                for (let index = 0; index < installmentCount; index += 1) {
+                    const monthDate = addMonths(firstDate, index);
+                    const monthKey = format(monthDate, 'yyyy-MM');
+                    mutations.push({
+                        description: `Parcela fatura ${cardName} ${monthLabel} (${index + 1}/${installmentCount})`,
+                        amount: installmentAmount,
+                        type: 'expense',
+                        transactionType: 'installment',
+                        isRecurring: false,
+                        date: `${monthKey}-01`,
+                        isPaid: false,
+                        accountId: null,
+                        cardId: invoice.cardId,
+                        isInvoicePayment: false,
+                        invoiceMonthYear: monthKey,
+                        installmentGroupId: groupId,
+                        installmentNumber: index + 1,
+                        installmentTotal: installmentCount,
+                        categoryId: null,
+                        subcategoryId: null,
+                    });
+                }
+            }
+
+            if (mutations.length > 0) {
+                const inserted = await addTransactionMutation(mutations);
+                insertedInvoiceMovementIds = Array.isArray(inserted)
+                    ? inserted.map((transaction: Transaction) => transaction.id).filter(Boolean)
+                    : [];
+            }
+
+            if (invoiceSettlementMode === 'total' || invoiceSettlementMode === 'installment') {
+                const invoicePurchaseIds = getInvoicePurchases(invoice).map(t => t.id);
+                if (invoicePurchaseIds.length > 0) {
+                    await bulkUpdateMutation({
+                        ids: invoicePurchaseIds,
+                        updates: { isPaid: true, paymentDate }
+                    });
+                }
+            }
+
+            setSettledTransactionIds(prev => new Set(prev).add(invoice.id));
+            setIsPaying(null);
+            toast({ title: 'Baixa de fatura registrada com sucesso!' });
+        } catch (error) {
+            if (insertedInvoiceMovementIds.length > 0) {
+                await supabase
+                    .from('transactions')
+                    .update({ deleted_at: new Date().toISOString() })
+                    .in('id', insertedInvoiceMovementIds);
+            }
+            toast({ title: 'Erro ao baixar fatura.', variant: 'destructive' });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleMarkAsPaid = async (transaction: Transaction, targetId: string, isCard: boolean) => {
@@ -159,57 +332,24 @@ export function BillsManager() {
 
     // 1. Calcular faturas virtuais dinâmicas
     const virtualInvoices: Transaction[] = useMemo(() => {
-        return creditCards.map(card => {
-            const viewDateStr = format(viewDate, 'yyyy-MM');
-
-            // Verifica se já existe um pagamento físico (baixado ou não) para esta fatura
-            const physicalPaymentExists = transactions.some(t =>
-                t.cardId === card.id &&
-                t.isInvoicePayment &&
-                t.invoiceMonthYear === viewDateStr
-            );
-
-            if (physicalPaymentExists) return null;
-
-            // Somar gastos reais deste cartão nesta competência
-            const totalAmount = transactions
-                .filter(t =>
-                    t.cardId === card.id &&
-                    !t.isVirtual &&
-                    !t.isInvoicePayment &&
-                    t.invoiceMonthYear === viewDateStr
-                )
-                .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
-
-            if (totalAmount <= 0) return null;
-
-            const { dueDay } = getCardSettingsForDate(card, viewDate);
-            const cardDueDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), dueDay);
-
-            return {
-                id: `fat-virtual-${card.id}`,
-                description: `Fatura ${card.name}`,
-                amount: totalAmount,
-                date: cardDueDate.toISOString(),
-                type: 'expense',
-                transactionType: 'recurring', // Marcar como recorrente para fluxos de caixa
-                categoryId: null,
-                cardId: card.id,
-                isPaid: false,
-                isVirtual: true,
-                isInvoicePayment: true,
-                userId: '',
-                invoiceMonthYear: viewDateStr
-            } as Transaction;
-        }).filter(Boolean) as Transaction[];
-    }, [creditCards, transactions, viewDate]);
+        return buildCardInvoiceObligations({
+            creditCards,
+            transactions,
+            viewDate,
+            settledTransactionIds,
+        });
+    }, [creditCards, transactions, viewDate, settledTransactionIds]);
 
     // 2. Filtrar transações recorrentes e injetar as virtuais
     const recurringTransactions = [...transactions, ...virtualInvoices].filter(t => {
         if (settledTransactionIds.has(t.id)) return false;
+        const scopeDate = parseLocalDate(t.date.slice(0, 10));
+        const isCurrentMonthInScope = (scopeDate.getMonth() === viewDate.getMonth() && scopeDate.getFullYear() === viewDate.getFullYear());
+        const isOverduePendingInScope = isBefore(scopeDate, startOfMonth(viewDate)) && !t.isPaid;
+        const isOpenObligationInScope = !t.isPaid && (isCurrentMonthInScope || isOverduePendingInScope);
         // Bloqueio de Isolamento: O Gerenciador de Contas não deve vazar lançamentos "pontuais".
         const isRecurringType = t.isRecurring || t.transactionType === 'recurring' || t.transactionType === 'installment' || t.isInvoicePayment || !!t.originalId;
-        if (!t.isVirtual && !isRecurringType) {
+        if (!t.isVirtual && !isRecurringType && !isOpenObligationInScope) {
             return false;
         }
 
@@ -402,7 +542,7 @@ export function BillsManager() {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            {!(transaction.transactionType === 'installment' && transaction.debtId) && !transaction.isPaid && (
+                                            {!(transaction.transactionType === 'installment' && transaction.debtId) && !transaction.isPaid && !transaction.isInvoicePayment && (
                                                 <Button
                                                     size="sm"
                                                     variant="ghost"
@@ -462,7 +602,7 @@ export function BillsManager() {
                                 {expandedTransactionId === transaction.id && transaction.isInvoicePayment && (
                                     <div className="card-elevated bg-muted/20 border-t-0 rounded-t-none p-4 -mt-1 ml-4 mr-2 animate-in slide-in-from-top-2 duration-200">
                                         <h5 className="text-xs font-black uppercase text-muted-foreground mb-3 flex items-center gap-2">
-                                            <Plus className="w-3 h-3" /> Itens desta Fatura (Recorrentes)
+                                            <Plus className="w-3 h-3" /> Itens desta fatura
                                         </h5>
                                         <div className="space-y-2">
                                             {transactions
@@ -470,7 +610,6 @@ export function BillsManager() {
                                                     t.cardId === transaction.cardId &&
                                                     !t.isPaid &&
                                                     !t.isInvoicePayment &&
-                                                    (t.isRecurring || t.transactionType === 'recurring') &&
                                                     t.invoiceMonthYear === viewDateStr
                                                 )
                                                 .map(b => (
@@ -493,7 +632,6 @@ export function BillsManager() {
                                                 t.cardId === transaction.cardId &&
                                                 !t.isPaid &&
                                                 !t.isInvoicePayment &&
-                                                (t.isRecurring || t.transactionType === 'recurring') &&
                                                 t.invoiceMonthYear === viewDateStr
                                             ).length === 0 && (
                                                     <p className="text-xs text-muted-foreground text-center py-2 italic">Nenhuma compra listada para esta fatura.</p>
@@ -516,7 +654,7 @@ export function BillsManager() {
                             onClick={e => e.stopPropagation()}>
                             <div className="px-5 py-4 border-b border-gray-100 dark:border-zinc-800 sticky top-0 bg-white dark:bg-zinc-900 rounded-t-2xl z-10">
                                 <h2 className="text-lg font-black tracking-tight">
-                                    {isPaying.type === 'income' ? 'Receber com qual conta?' : 'Pagar com qual conta?'}
+                                    {isPaying.isInvoicePayment ? 'Como deseja baixar esta fatura?' : (isPaying.type === 'income' ? 'Receber com qual conta?' : 'Pagar com qual conta?')}
                                 </h2>
                                 <p className="text-xs text-muted-foreground mt-0.5">
                                     <span className={cn("font-bold", isPaying.type === 'income' ? "text-success" : "text-danger")}>
@@ -525,6 +663,120 @@ export function BillsManager() {
                                 </p>
                             </div>
 
+                            {isPaying.isInvoicePayment && (
+                                <div className="p-4 space-y-4">
+                                    <div className="grid grid-cols-3 gap-2 rounded-2xl bg-muted/40 p-1">
+                                        {([
+                                            { id: 'total', label: 'Pagamento total' },
+                                            { id: 'partial', label: 'Pagamento parcial' },
+                                            { id: 'installment', label: 'Parcelar fatura' },
+                                        ] as const).map(option => (
+                                            <button
+                                                key={option.id}
+                                                onClick={() => {
+                                                    setInvoiceSettlementMode(option.id);
+                                                    setPaymentAmount(option.id === 'total' ? isPaying.amount.toFixed(2) : '');
+                                                }}
+                                                className={cn(
+                                                    "px-2 py-2 rounded-xl text-[11px] font-black uppercase leading-tight transition-all",
+                                                    invoiceSettlementMode === option.id ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                                                )}
+                                            >
+                                                {option.label}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+                                            {invoiceSettlementMode === 'installment' ? 'Data da entrada' : 'Data do pagamento'}
+                                        </label>
+                                        <Input type="date" value={paymentDate?.split('T')[0] || ''} onChange={e => setPaymentDate(e.target.value)} className="h-11 rounded-xl font-bold bg-muted/20" />
+                                    </div>
+
+                                    {(invoiceSettlementMode !== 'installment' || Number.parseFloat(paymentAmount || '0') > 0) && (
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Conta/carteira de origem</label>
+                                            <select
+                                                value={invoiceAccountId}
+                                                onChange={e => setInvoiceAccountId(e.target.value)}
+                                                className="h-11 w-full rounded-xl border border-input bg-muted/20 px-3 text-sm font-bold outline-none focus:border-primary"
+                                            >
+                                                <option value="">Selecione a conta</option>
+                                                {accounts
+                                                    .filter(acc => acc.accountType !== 'investment' && acc.accountType !== 'metas')
+                                                    .map(acc => (
+                                                        <option key={acc.id} value={acc.id}>{acc.bank} - {acc.name}</option>
+                                                    ))}
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+                                            {invoiceSettlementMode === 'installment' ? 'Valor da entrada' : 'Valor do pagamento'}
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">R$</span>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                min={invoiceSettlementMode === 'total' ? isPaying.amount : 0}
+                                                value={paymentAmount}
+                                                readOnly={invoiceSettlementMode === 'total'}
+                                                onChange={e => setPaymentAmount(e.target.value)}
+                                                className="pl-10 h-11 rounded-xl font-bold bg-muted/20"
+                                                placeholder="0.00"
+                                            />
+                                        </div>
+                                        {invoiceSettlementMode === 'partial' && (
+                                            <p className="text-xs font-bold text-muted-foreground">
+                                                Restante calculado: {formatCurrency(Math.max(0, isPaying.amount - Number.parseFloat(paymentAmount || '0')))}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {invoiceSettlementMode === 'partial' && (
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Próxima competência/fatura de destino</label>
+                                            <Input type="month" value={format(addMonths(parseLocalDate(`${isPaying.invoiceMonthYear || viewDateStr}-01`), 1), 'yyyy-MM')} readOnly className="h-11 rounded-xl font-bold bg-muted/20" />
+                                        </div>
+                                    )}
+
+                                    {invoiceSettlementMode === 'installment' && (
+                                        <div className="grid grid-cols-1 gap-3">
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Qtd. parcelas</label>
+                                                    <Input type="number" min={1} value={invoiceInstallmentCount} onChange={e => setInvoiceInstallmentCount(e.target.value)} className="h-11 rounded-xl font-bold bg-muted/20" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Valor da parcela</label>
+                                                    <Input type="number" min={0} step="0.01" value={invoiceInstallmentAmount} onChange={e => setInvoiceInstallmentAmount(e.target.value)} className="h-11 rounded-xl font-bold bg-muted/20" />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Primeira competência/fatura</label>
+                                                <Input type="month" value={invoiceFirstInstallmentMonth} onChange={e => setInvoiceFirstInstallmentMonth(e.target.value)} className="h-11 rounded-xl font-bold bg-muted/20" />
+                                            </div>
+                                            <p className="text-xs text-muted-foreground font-semibold leading-relaxed">
+                                                O Fluxo não calcula juros e não exige que entrada + parcelas fechem o total original. Informe os valores finais combinados com o banco.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    <Button
+                                        onClick={() => handleInvoiceSettlement(isPaying)}
+                                        disabled={isSubmitting}
+                                        className="w-full h-12 rounded-xl font-black uppercase tracking-widest bg-success hover:bg-success/90"
+                                    >
+                                        {isSubmitting ? 'Processando...' : 'Confirmar baixa da fatura'}
+                                    </Button>
+                                </div>
+                            )}
+
+                            {!isPaying.isInvoicePayment && (
+                                <>
                             <div className="p-4 space-y-4">
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Data do Pagamento</label>
@@ -643,6 +895,8 @@ export function BillsManager() {
                                     Cancelar
                                 </Button>
                             </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </Portal>
@@ -667,7 +921,7 @@ export function BillsManager() {
                                         setIsPaying(tx);
                                         setPaymentDate(billToConfirm.date);
                                         setPaymentAmount(billToConfirm.amount.toFixed(2));
-                                        setPaymentMethod(billToConfirm.cardId ? 'credit_card' : 'account');
+                                        openPaymentFlow(tx, billToConfirm.date, billToConfirm.amount, billToConfirm.accountId, billToConfirm.cardId);
                                     }
                                     setBillToConfirm(null);
                                 }

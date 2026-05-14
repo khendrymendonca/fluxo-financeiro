@@ -15,6 +15,7 @@ import { formatCurrency } from '@/utils/formatters';
 import { parseLocalDate } from '@/utils/dateUtils';
 import { cn } from '@/lib/utils';
 import { buildMonthPlan, type MonthPlanCashItem } from '@/utils/monthPlan';
+import { buildCardInvoiceObligations } from '@/utils/invoiceObligations';
 import { LegacyDashboardHome } from './LegacyDashboardHome';
 
 interface MonthPlanPageProps {
@@ -108,18 +109,30 @@ export default function MonthPlanPage({
   onNavigateToTransactions,
 }: MonthPlanPageProps) {
   const isMobile = useIsMobile();
-  const { accounts, categories, transactions, debts, viewDate } = useFinanceStore();
+  const { accounts, categories, creditCards, transactions, debts, viewDate } = useFinanceStore();
+
+  const transactionsWithInvoiceObligations = useMemo(
+    () => [
+      ...transactions,
+      ...buildCardInvoiceObligations({
+        creditCards,
+        transactions,
+        viewDate,
+      }),
+    ],
+    [creditCards, transactions, viewDate]
+  );
 
   const monthPlan = useMemo(
     () =>
       buildMonthPlan({
         accounts,
-        transactions,
+        transactions: transactionsWithInvoiceObligations,
         categories,
         debts,
         viewDate,
       }),
-    [accounts, categories, debts, transactions, viewDate]
+    [accounts, categories, debts, transactionsWithInvoiceObligations, viewDate]
   );
 
   const monthTitle = format(viewDate, "MMMM 'de' yyyy", { locale: ptBR }).replace(/^./, (char) => char.toUpperCase());

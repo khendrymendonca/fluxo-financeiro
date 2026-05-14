@@ -67,7 +67,7 @@ export function getInvoiceStatusDisplay(
   const today = startOfDay(new Date());
 
   // Constrói a data de vencimento exata para o mês de referência
-  let dueDate = setDate(viewDate, Number(dueDay));
+  const dueDate = setDate(viewDate, Number(dueDay));
 
   // Constrói a data de fechamento exata. 
   // Se o dia de fechamento for maior que o vencimento (ex: fecha dia 25, vence dia 5),

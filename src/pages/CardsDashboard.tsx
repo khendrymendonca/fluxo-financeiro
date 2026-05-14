@@ -1,31 +1,18 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useFinanceStore } from "@/hooks/useFinanceStore";
-import { useAddTransaction, useUpdateTransaction, useBulkUpdateTransactions } from "@/hooks/useTransactionMutations";
 import { CreditCardVisual } from "@/components/cards/CreditCardVisual";
 import { AddCardDialog } from "@/components/cards/AddCardDialog";
 import { EditCardDialog } from "@/components/cards/EditCardDialog";
 import { AnticipateInstallmentsDialog } from "@/components/cards/AnticipateInstallmentsDialog";
-import { AnticipatePaymentDialog } from "@/components/cards/AnticipatePaymentDialog";
-import { InstallInvoiceDialog } from "@/components/cards/InstallInvoiceDialog";
 import { Button } from "@/components/ui/button";
 import { Portal } from "@/components/ui/Portal";
 import { Progress } from "@/components/ui/progress";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Plus, Receipt, Calendar, CreditCard, Pencil, Download,
   ChevronLeft, ChevronRight, Search, TrendingUp, TrendingDown,
-  AlertCircle, CheckCircle2, Clock, XCircle, Check,
-  Banknote, ListOrdered
+  AlertCircle, CheckCircle2, Clock, XCircle
 } from "lucide-react";
-import { parseLocalDate, todayLocalString } from "@/utils/dateUtils";
+import { parseLocalDate } from "@/utils/dateUtils";
 import { cn } from "@/lib/utils";
 import { format, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -33,7 +20,6 @@ import { getCardSettingsForDate, getInvoiceStatusDisplay } from "@/utils/creditC
 import { Transaction, CreditCard as CreditCardType } from "@/types/finance";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { toast } from "@/components/ui/use-toast";
-import { supabase } from "@/lib/supabase";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useFeatureFlag } from "@/hooks/useFeatureFlags";
 import {
@@ -79,16 +65,11 @@ function StatusBadge({ status }: { status: ReturnType<typeof getInvoiceStatusDis
 export default function CardsDashboard() {
   const isMobile = useIsMobile();
   const canUseUnlimitedCards = useFeatureFlag('unlimited_cards');
-  const queryClient = useQueryClient();
   const {
-    creditCards, transactions, accounts, categories,
+    creditCards, transactions, categories,
     updateCreditCard, addCreditCard, getCardUsedLimit,
     viewDate, setViewDate
   } = useFinanceStore();
-
-  const { mutateAsync: addTransaction } = useAddTransaction();
-  const { mutateAsync: updateTransaction } = useUpdateTransaction();
-  const { mutateAsync: bulkUpdateTransactions } = useBulkUpdateTransactions();
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
 
@@ -99,17 +80,6 @@ export default function CardsDashboard() {
 
   const [showAddCard, setShowAddCard] = useState(false);
   const [showEditCard, setShowEditCard] = useState(false);
-  const [showPayInvoice, setShowPayInvoice] = useState(false);
-  const [showAnticipatePayment, setShowAnticipatePayment] = useState(false);
-  const [showInstallInvoice, setShowInstallInvoice] = useState(false);
-  const [selectedCardForAnticipation, setSelectedCardForAnticipation] = useState<any>(null);
-
-  // Pay Invoice State
-  const [payInvoiceAccountId, setPayInvoiceAccountId] = useState<string>("");
-  const [payInvoiceAmount, setPayInvoiceAmount] = useState<string>("");
-  const [payInvoiceDate, setPayInvoiceDate] = useState<string>(todayLocalString());
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-
   const [searchQuery, setSearchQuery] = useState("");
   const [chartPeriod, setChartPeriod] = useState<"mensal" | "anual">("mensal");
   const [transactionToAnticipate, setTransactionToAnticipate] = useState<Transaction | null>(null);
@@ -226,11 +196,6 @@ export default function CardsDashboard() {
     [currentInvoiceTransactions, searchQuery]
   );
 
-  const openPayInvoiceModal = useCallback(() => {
-    setPayInvoiceAmount(currentInvoiceTotal > 0 ? currentInvoiceTotal.toFixed(2) : "");
-    setShowPayInvoice(true);
-  }, [currentInvoiceTotal]);
-
   const openAddCardModal = useCallback(() => {
     if (hasReachedCardsLimit) {
       toast({
@@ -255,120 +220,10 @@ export default function CardsDashboard() {
     return addCreditCard(card);
   }, [addCreditCard, hasReachedCardsLimit]);
 
-  const handleConfirmPayment = async () => {
-    if (!selectedCard || !payInvoiceAccountId || !payInvoiceAmount) {
-      toast({ title: "Preencha todos os campos", variant: "destructive" });
-      return;
-    }
-
-    const valorPago = parseFloat(payInvoiceAmount);
-    const totalFatura = currentInvoiceTotal;
-
-    if (isNaN(valorPago) || valorPago <= 0) {
-      toast({ title: "Valor pago inválido", variant: "destructive" });
-      return;
-    }
-
-    setIsProcessingPayment(true);
-    const viewDateStr = format(viewDate, "yyyy-MM");
-    const saldoRestante = totalFatura - valorPago;
-
-    // ID da transação de pagamento — usado para rollback se etapas seguintes falharem
-    let paymentTransactionIds: string[] = [];
-
-    try {
-      // 1. Criar transação de pagamento (BAIXA)
-      const paymentResult = await addTransaction({
-        description: `Pagamento Fatura ${selectedCard.name} ${format(viewDate, 'MMM/yy', { locale: ptBR })}`,
-        amount: valorPago,
-        type: 'expense',
-        transactionType: 'punctual',
-        isInvoicePayment: true,
-        accountId: payInvoiceAccountId,
-        cardId: selectedCard.id,
-        invoiceMonthYear: viewDateStr,
-        isPaid: true,
-        date: parseLocalDate(payInvoiceDate).toISOString(),
-        paymentDate: payInvoiceDate
-      } as any);
-
-      // Capturar os IDs inseridos para possível rollback
-      if (Array.isArray(paymentResult)) {
-        paymentTransactionIds = paymentResult.map((r: any) => r.id).filter(Boolean);
-      }
-
-      // 2. Se parcial, criar saldo remanescente para o mês seguinte
-      if (false) {
-        const nextInvoiceMonthYear = format(addMonths(viewDate, 1), 'yyyy-MM');
-
-        // 🛡️ DEDUPLICAÇÃO: Buscar remainders existentes para este cartão no mesmo mês de fatura
-        const { data: existingRemainders } = await supabase
-          .from('transactions')
-          .select('id')
-          .eq('card_id', selectedCard.id)
-          .eq('transaction_type', 'invoiceremainder')
-          .eq('invoice_month_year', nextInvoiceMonthYear)
-          .is('deleted_at', null);
-
-        // Soft delete dos remainders existentes (padrão obrigatório do sistema)
-        if (existingRemainders && existingRemainders.length > 0) {
-          await supabase
-            .from('transactions')
-            .update({ deleted_at: new Date().toISOString() })
-            .in('id', existingRemainders.map(r => r.id));
-        }
-
-        await addTransaction({
-          description: `Saldo Fatura ${selectedCard.name} ${format(viewDate, 'MMM/yy', { locale: ptBR })}`,
-          amount: saldoRestante,
-          type: 'expense',
-          transactionType: 'invoiceremainder',
-          isInvoicePayment: false,
-          accountId: null,
-          cardId: selectedCard.id,
-          invoiceMonthYear: nextInvoiceMonthYear,
-          isPaid: false,
-          date: format(addMonths(parseLocalDate(payInvoiceDate), 1), 'yyyy-MM-dd')
-        } as any);
-      }
-
-      // 3. Atualizar compras originais jÃ¡ lanÃ§adas nesta competÃªncia
-      {
-        const ids = currentInvoiceTransactions
-          .filter((transaction) => transaction.type === 'expense' && !transaction.isInvoicePayment)
-          .map((transaction) => transaction.id);
-        if (ids.length > 0) {
-          try {
-            await bulkUpdateTransactions({ ids, updates: { isPaid: true, paymentDate: payInvoiceDate } });
-          } catch (bulkError) {
-            // 🔄 ROLLBACK MANUAL: desfaz a transação de pagamento criada no passo 1
-            if (paymentTransactionIds.length > 0) {
-              await supabase
-                .from('transactions')
-                .update({ deleted_at: new Date().toISOString() })
-                .in('id', paymentTransactionIds);
-            }
-            throw bulkError;
-          }
-        }
-      }
-
-      // 4. Finalizar
-      await queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      await queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
-      await queryClient.invalidateQueries({ queryKey: ['accounts'] });
-
-      setShowPayInvoice(false);
-      setPayInvoiceAccountId("");
-      setPayInvoiceAmount("");
-      toast({ title: "Pagamento registrado com sucesso!" });
-    } catch (error) {
-      console.error("Erro ao pagar fatura:", error);
-      toast({ title: "Erro ao processar pagamento", variant: "destructive" });
-    } finally {
-      setIsProcessingPayment(false);
-    }
-  };
+  const openAccountsManagement = useCallback(() => {
+    window.history.pushState({}, '', '/?view=bills');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, []);
 
   const handleExport = useCallback(() => {
     const header = "Data,Descrição,Categoria,Valor\n";
@@ -557,10 +412,10 @@ export default function CardsDashboard() {
                       </div>
                       {dynamicStatus?.text !== 'Paga' && (
                         <Button
-                          onClick={openPayInvoiceModal}
+                          onClick={openAccountsManagement}
                           className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-black uppercase text-xs tracking-widest px-6 h-11 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
                         >
-                          Pagar Fatura
+                          Gerenciar na Gestao de Contas
                         </Button>
                       )}
                     </div>
@@ -621,33 +476,12 @@ export default function CardsDashboard() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <p className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Ações</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={() => {
-                        setShowAnticipatePayment(true);
-                      }}
-                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-primary/40 hover:bg-primary/5 transition-all group"
-                    >
-                      <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
-                        <Banknote className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-black uppercase tracking-widest text-center leading-tight">Abater Fatura</span>
-                    </button>
-
-                    <button
-                      onClick={() => setShowInstallInvoice(true)}
-                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-info/40 hover:bg-info/5 transition-all group"
-                    >
-                      <div className="p-2 rounded-xl bg-info/10 text-info group-hover:bg-info/20 transition-colors">
-                        <ListOrdered className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-black uppercase tracking-widest text-center leading-tight">Parcelar Fatura</span>
-                    </button>
-                  </div>
+                <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
+                  <p className="text-xs font-black uppercase tracking-widest text-primary">Tela demonstrativa</p>
+                  <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                    Pagamento, baixa, abatimento e parcelamento de fatura sao executados somente na Gestao de Contas.
+                  </p>
                 </div>
-
                 {/* Gráfico de evolução */}
                 <div className="bg-card border border-border rounded-2xl p-5">
                   <div className="flex items-center justify-between mb-5">
@@ -878,7 +712,7 @@ export default function CardsDashboard() {
                     </h2>
                     {dynamicStatus?.text !== 'Paga' && (
                       <Button
-                        onClick={openPayInvoiceModal}
+                        onClick={openAccountsManagement}
                         className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-black uppercase text-[11px] tracking-widest px-4 h-10 shadow-lg shadow-primary/20"
                       >
                         Pagar
@@ -922,33 +756,12 @@ export default function CardsDashboard() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <p className="text-xs font-black uppercase tracking-widest text-zinc-400 ml-1">Ações</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => {
-                      setShowAnticipatePayment(true);
-                    }}
-                    className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-primary/40 hover:bg-primary/5 transition-all group"
-                  >
-                    <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
-                      <Banknote className="w-5 h-5" />
-                    </div>
-                    <span className="text-xs font-black uppercase tracking-widest text-center leading-tight">Abater Fatura</span>
-                  </button>
-
-                  <button
-                    onClick={() => setShowInstallInvoice(true)}
-                    className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-info/40 hover:bg-info/5 transition-all group"
-                  >
-                    <div className="p-2 rounded-xl bg-info/10 text-info group-hover:bg-info/20 transition-colors">
-                      <ListOrdered className="w-5 h-5" />
-                    </div>
-                    <span className="text-xs font-black uppercase tracking-widest text-center leading-tight">Parcelar Fatura</span>
-                  </button>
-                </div>
+              <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
+                <p className="text-xs font-black uppercase tracking-widest text-primary">Tela demonstrativa</p>
+                <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                  Pagamento, baixa, abatimento e parcelamento de fatura sao executados somente na Gestao de Contas.
+                </p>
               </div>
-
               {/* Gráfico mobile */}
               <div className="bg-card border border-border rounded-2xl p-4">
                 <p className="text-xs font-black text-foreground mb-4">Evolução de Gastos</p>
@@ -1047,15 +860,6 @@ export default function CardsDashboard() {
           />
         </Portal>
       )}
-      {showInstallInvoice && selectedCard && (
-        <InstallInvoiceDialog
-          card={selectedCard}
-          currentInvoiceAmount={currentInvoiceTotal}
-          invoiceMonthYear={format(viewDate, "yyyy-MM")}
-          isOpen={showInstallInvoice}
-          onClose={() => setShowInstallInvoice(false)}
-        />
-      )}
       {transactionToAnticipate && (
         <Portal>
           <AnticipateInstallmentsDialog
@@ -1066,113 +870,6 @@ export default function CardsDashboard() {
         </Portal>
       )}
 
-      {/* Pay Invoice Dialog */}
-      {showPayInvoice && selectedCard && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-card border-2 border-primary/20 rounded-[2.5rem] p-6 md:p-8 w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="flex flex-col items-center text-center space-y-4 mb-8">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-lg">
-                <Check className="w-8 h-8" />
-              </div>
-              <div>
-                <h3 className="text-xl font-black tracking-tight">Pagar Fatura</h3>
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest mt-1">
-                  {selectedCard.name} · {format(viewDate, 'MMMM yyyy', { locale: ptBR })}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-start">
-              {/* Seleção de Conta */}
-              <div className="space-y-2">
-                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Pagar com</label>
-                <select
-                  value={payInvoiceAccountId}
-                  onChange={e => setPayInvoiceAccountId(e.target.value)}
-                  className="h-14 w-full rounded-2xl border-2 border-muted bg-muted/30 px-4 font-bold text-sm outline-none focus:border-primary/20 transition-all appearance-none"
-                >
-                  <option value="">Selecione a conta</option>
-                  {accounts
-                    .filter(acc => acc.accountType !== 'investment' && acc.accountType !== 'metas')
-                    .map(acc => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.bank} - {acc.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              {/* Valor Pago */}
-              <div className="space-y-2">
-                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Valor pago</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-muted-foreground text-sm">R$</span>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={payInvoiceAmount}
-                    onChange={(e) => setPayInvoiceAmount(e.target.value)}
-                    className="h-14 rounded-2xl border-2 border-muted bg-muted/30 pl-10 font-black text-xl"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground font-bold ml-1">Total lançado: {fmtBRL(currentInvoiceTotal)}</p>
-                <p className="text-xs text-muted-foreground font-bold ml-1">Valor pago nesta competência: {fmtBRL(currentInvoicePaidTotal)}</p>
-                <p className="text-xs text-muted-foreground font-bold ml-1">Diferença a conciliar: {fmtBRL(Math.abs(currentInvoiceDifference))}</p>
-                {currentInvoiceDifference > 0 && (
-                  <p className="text-xs text-primary font-bold ml-1 leading-relaxed">
-                    O valor pago está acima do que foi lançado até agora. Essa diferença fica como falta lançar nesta competência.
-                  </p>
-                )}
-                {currentInvoiceTotal <= 0 && (
-                  <p className="text-xs text-primary font-bold ml-1 leading-relaxed">
-                    Sem lançamentos nesta competência. Você pode informar um valor manual para registrar a fatura e reconciliar depois com os lançamentos.
-                  </p>
-                )}
-              </div>
-
-              {/* Data do Pagamento */}
-              <div className="space-y-2">
-                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Data do pagamento</label>
-                <Input
-                  type="date"
-                  value={payInvoiceDate}
-                  onChange={(e) => setPayInvoiceDate(e.target.value)}
-                  className="h-14 rounded-2xl border-2 border-muted bg-muted/30 font-bold"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col-reverse md:flex-row gap-3 mt-8">
-              <Button
-                variant="ghost"
-                onClick={() => setShowPayInvoice(false)}
-                className="w-full md:flex-1 h-12 rounded-2xl font-bold text-muted-foreground hover:text-foreground"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleConfirmPayment}
-                disabled={isProcessingPayment}
-                className="w-full md:flex-1 h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl font-black text-base shadow-lg shadow-primary/20"
-              >
-                {isProcessingPayment ? "Processando..." : "Confirmar Pagamento"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Anticipate Payment Dialog */}
-      {showAnticipatePayment && selectedCard && (
-        <Portal>
-          <AnticipatePaymentDialog
-            card={selectedCard}
-            accounts={accounts}
-            isOpen={showAnticipatePayment}
-            onClose={() => setShowAnticipatePayment(false)}
-          />
-        </Portal>
-      )}
     </div>
   );
 }

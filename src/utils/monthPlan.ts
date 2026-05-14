@@ -76,6 +76,7 @@ export interface MonthPlanInput {
   categories: Category[];
   debts?: Debt[];
   viewDate: Date;
+  currentDate?: Date;
   debtSafeBaseline?: number;
   upcomingWindowDays?: number;
 }
@@ -258,6 +259,7 @@ export function buildMonthPlan({
   categories,
   debts = [],
   viewDate,
+  currentDate,
   debtSafeBaseline = 0,
   upcomingWindowDays = 7,
 }: MonthPlanInput): MonthPlanEngineResult {
@@ -268,7 +270,7 @@ export function buildMonthPlan({
 
   const monthStart = startOfMonth(viewDate);
   const monthEnd = endOfMonth(viewDate);
-  const referenceDay = startOfDay(viewDate);
+  const referenceDay = startOfDay(currentDate ?? new Date());
   const upcomingDeadline = addDays(referenceDay, upcomingWindowDays);
   const categoryById = new Map(safeCategories.map((category) => [category.id, category]));
 
@@ -333,7 +335,10 @@ export function buildMonthPlan({
     .filter((transaction) => isOpenCashExpense(transaction) && !isAfter(parseLocalDate(transaction.date), monthEnd))
     .map((transaction) => buildCashItem(transaction, referenceDay))
     .sort(sortCashItems);
-  const openExpensesTotal = openExpenseItems.reduce((sum, item) => sum + item.amount, 0);
+  const currentMonthOpenExpenseItems = safeTransactions
+    .filter((transaction) => isOpenCashExpense(transaction) && isMonthTransaction(transaction, monthStart, monthEnd))
+    .map((transaction) => buildCashItem(transaction, referenceDay));
+  const openExpensesTotal = currentMonthOpenExpenseItems.reduce((sum, item) => sum + item.amount, 0);
   const overdueOpenExpenses = openExpenseItems.filter((item) => item.isOverdue);
   const overdueOpenExpensesTotal = overdueOpenExpenses.reduce((sum, item) => sum + item.amount, 0);
   const cashBalance = totalAccountBalance - openExpensesTotal;

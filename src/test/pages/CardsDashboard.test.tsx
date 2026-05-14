@@ -136,4 +136,50 @@ describe('CardsDashboard - limite Free', () => {
 
     expect(await screen.findByText('Renegociacao de Pendencias (1/9)')).toBeInTheDocument();
   });
+
+  it('mantem Cartoes como demonstrativo sem acao direta de pagamento de fatura', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      creditCards: [
+        {
+          id: 'card-1',
+          userId: 'user-1',
+          name: 'Nubank',
+          brand: 'Visa',
+          limit: 3000,
+          closingDay: 10,
+          dueDay: 20,
+          color: '#111111',
+        },
+      ],
+      transactions: [
+        {
+          id: 'purchase-1',
+          userId: 'user-1',
+          type: 'expense',
+          transactionType: 'punctual',
+          description: 'Compra teste',
+          amount: 1000,
+          date: '2026-04-05',
+          cardId: 'card-1',
+          isPaid: false,
+          invoiceMonthYear: '2026-04',
+        },
+      ],
+      categories: [],
+      updateCreditCard: vi.fn(),
+      addCreditCard: vi.fn(),
+      getCardUsedLimit: vi.fn(() => 1000),
+      viewDate: new Date(2026, 3, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<CardsDashboard />);
+
+    expect(screen.queryByRole('button', { name: /^pagar fatura$/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Abater Fatura')).not.toBeInTheDocument();
+    expect(screen.queryByText('Parcelar Fatura')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Gerenciar na Gestao de Contas/i));
+    expect(window.location.href).toContain('/?view=bills');
+    expect(screen.getByText('Tela demonstrativa')).toBeInTheDocument();
+  });
 });

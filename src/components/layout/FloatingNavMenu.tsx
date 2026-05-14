@@ -73,8 +73,8 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
   // Geometria aprimorada: Arco Superior centralizado (180Â° a 0Â°)
   // O centro do botÃ£o central de 64px estÃ¡ a 32px do fundo do container.
   const RADIUS = 100;
-  const START_ANGLE = 180; // Totalmente Ã  esquerda
-  const END_ANGLE = 0;     // Totalmente Ã  direita
+  const START_ANGLE = 180; // Totalmente a esquerda
+  const END_ANGLE = 0;     // Totalmente a direita
 
   return (
     <>

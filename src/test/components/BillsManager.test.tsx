@@ -9,6 +9,8 @@ const financeStoreMock = vi.hoisted(() => ({
 }));
 
 const updateTransactionMock = vi.hoisted(() => vi.fn(async () => undefined));
+const addTransactionMock = vi.hoisted(() => vi.fn(async () => undefined));
+const bulkUpdateTransactionsMock = vi.hoisted(() => vi.fn(async () => undefined));
 const toastMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/hooks/useFinanceStore', () => financeStoreMock);
@@ -16,9 +18,9 @@ vi.mock('@/hooks/useFinanceStore', () => financeStoreMock);
 vi.mock('@/hooks/useTransactionMutations', () => ({
   useUpdateTransaction: () => ({ mutateAsync: updateTransactionMock }),
   useDeleteTransaction: () => ({ mutateAsync: vi.fn() }),
-  useAddTransaction: () => ({ mutateAsync: vi.fn() }),
+  useAddTransaction: () => ({ mutateAsync: addTransactionMock }),
   useToggleTransactionPaid: () => ({ mutateAsync: vi.fn() }),
-  useBulkUpdateTransactions: () => ({ mutateAsync: vi.fn() }),
+  useBulkUpdateTransactions: () => ({ mutateAsync: bulkUpdateTransactionsMock }),
 }));
 
 vi.mock('@/components/ui/use-toast', () => ({
@@ -136,6 +138,69 @@ function buildDebtInstallmentStore(options: { withCard?: boolean } = {}) {
   };
 }
 
+function buildInvoiceStore() {
+  return {
+    categories: [],
+    accounts: [
+      {
+        id: 'acc-1',
+        name: 'Conta teste',
+        bank: 'Banco A',
+        institution: 'Banco A',
+        balance: 2000,
+        color: '#000000',
+        accountType: 'corrente',
+        hasOverdraft: false,
+        overdraftLimit: 0,
+      },
+    ],
+    creditCards: [
+      {
+        id: 'card-1',
+        name: 'Nubank',
+        bank: 'Nubank',
+        limit: 5000,
+        closingDay: 10,
+        dueDay: 20,
+        color: '#111111',
+      },
+    ],
+    debts: [],
+    viewDate: new Date(2026, 4, 15),
+    currentMonthTransactions: [],
+    transactions: [
+      {
+        id: 'purchase-1',
+        description: 'Compra A',
+        amount: 600,
+        date: '2026-05-05',
+        type: 'expense',
+        isRecurring: false,
+        transactionType: 'punctual',
+        isPaid: false,
+        isVirtual: false,
+        cardId: 'card-1',
+        isInvoicePayment: false,
+        invoiceMonthYear: '2026-05',
+      },
+      {
+        id: 'purchase-2',
+        description: 'Compra B',
+        amount: 400,
+        date: '2026-05-06',
+        type: 'expense',
+        isRecurring: false,
+        transactionType: 'punctual',
+        isPaid: false,
+        isVirtual: false,
+        cardId: 'card-1',
+        isInvoicePayment: false,
+        invoiceMonthYear: '2026-05',
+      },
+    ],
+  };
+}
+
 async function openPaymentFlow() {
   fireEvent.click(screen.getByLabelText('Baixar conta'));
   fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pagamento' }));
@@ -146,6 +211,8 @@ describe('BillsManager - contas pendentes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     updateTransactionMock.mockResolvedValue(undefined);
+    addTransactionMock.mockResolvedValue(undefined);
+    bulkUpdateTransactionsMock.mockResolvedValue(undefined);
   });
 
   it('exibe contas pendentes atrasadas junto das contas do mes atual', () => {
@@ -271,6 +338,89 @@ describe('BillsManager - contas pendentes', () => {
 
     expect(screen.getByText('Internet paga')).toBeInTheDocument();
     expect(screen.getByLabelText('Baixar conta')).toBeInTheDocument();
+  });
+
+  it('mostra pendencias anteriores e do mes selecionado na busca sem depender de originalId', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      categories: [],
+      accounts: [],
+      creditCards: [],
+      debts: [],
+      viewDate: new Date(2026, 5, 15),
+      currentMonthTransactions: [],
+      transactions: [
+        {
+          id: 'vero-celular-maio',
+          description: 'Vero - Celular',
+          amount: 36.66,
+          date: '2026-05-20',
+          type: 'expense',
+          isRecurring: false,
+          transactionType: 'punctual',
+          isPaid: false,
+          isVirtual: false,
+          originalId: '954f87f4-0610-46e4-865c-e7144214a149',
+          cardId: null,
+          isInvoicePayment: false,
+        },
+        {
+          id: 'vero-internet-maio',
+          description: 'Vero - Internet',
+          amount: 102.41,
+          date: '2026-05-20',
+          type: 'expense',
+          isRecurring: false,
+          transactionType: 'punctual',
+          isPaid: false,
+          isVirtual: false,
+          originalId: null,
+          cardId: null,
+          isInvoicePayment: false,
+        },
+        {
+          id: 'vero-celular-junho',
+          description: 'Vero - Celular',
+          amount: 50,
+          date: '2026-06-20',
+          type: 'expense',
+          isRecurring: false,
+          transactionType: 'punctual',
+          isPaid: false,
+          isVirtual: true,
+          originalId: '954f87f4-0610-46e4-865c-e7144214a149',
+          cardId: null,
+          isInvoicePayment: false,
+        },
+        {
+          id: 'vero-internet-junho',
+          description: 'Vero - Internet',
+          amount: 99.9,
+          date: '2026-06-20',
+          type: 'expense',
+          isRecurring: false,
+          transactionType: 'punctual',
+          isPaid: false,
+          isVirtual: true,
+          originalId: 'internet-root',
+          cardId: null,
+          isInvoicePayment: false,
+        },
+      ],
+    });
+
+    render(<BillsManager />, { wrapper });
+
+    fireEvent.change(screen.getByPlaceholderText('Pesquisar contas ou categorias...'), {
+      target: { value: 'vero' },
+    });
+
+    expect(screen.getAllByLabelText('Baixar conta')).toHaveLength(4);
+    expect(screen.getAllByText('Vero - Celular')).toHaveLength(2);
+    expect(screen.getAllByText('Vero - Internet')).toHaveLength(2);
+    expect(screen.getByText('R$ 36,66')).toBeInTheDocument();
+    expect(screen.getByText('R$ 102,41')).toBeInTheDocument();
+    expect(screen.getByText('R$ 50,00')).toBeInTheDocument();
+    expect(screen.getByText('R$ 99,90')).toBeInTheDocument();
   });
 
   it('permite pagamento que leva o saldo para -110 com limite 110', async () => {
@@ -415,6 +565,110 @@ describe('BillsManager - contas pendentes', () => {
           amount: 180,
         },
       });
+    });
+  });
+
+  it('baixa fatura de cartao com pagamento total pela Gestao de Contas', async () => {
+    financeStoreMock.useFinanceStore.mockReturnValue(buildInvoiceStore());
+
+    render(<BillsManager />, { wrapper });
+
+    expect(screen.getByText('Fatura Nubank')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Baixar conta'));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pagamento' }));
+
+    expect(screen.getByText('Como deseja baixar esta fatura?')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'acc-1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar baixa da fatura' }));
+
+    await waitFor(() => {
+      expect(addTransactionMock).toHaveBeenCalledWith([
+        expect.objectContaining({
+          description: 'Pagamento fatura Nubank 05/2026',
+          amount: 1000,
+          type: 'expense',
+          transactionType: 'punctual',
+          isInvoicePayment: true,
+          accountId: 'acc-1',
+          cardId: 'card-1',
+          invoiceMonthYear: '2026-05',
+          isPaid: true,
+        }),
+      ]);
+    });
+    expect(bulkUpdateTransactionsMock).toHaveBeenCalledWith({
+      ids: ['purchase-1', 'purchase-2'],
+      updates: { isPaid: true, paymentDate: '2026-05-20' },
+    });
+  });
+
+  it('baixa fatura parcialmente e gera saldo restante na proxima competencia', async () => {
+    financeStoreMock.useFinanceStore.mockReturnValue(buildInvoiceStore());
+
+    render(<BillsManager />, { wrapper });
+
+    fireEvent.click(screen.getByLabelText('Baixar conta'));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pagamento' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pagamento parcial' }));
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'acc-1' } });
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '600' } });
+    expect(screen.getByText('Restante calculado: R$ 400,00')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar baixa da fatura' }));
+
+    await waitFor(() => {
+      expect(addTransactionMock).toHaveBeenCalledWith([
+        expect.objectContaining({
+          amount: 600,
+          isInvoicePayment: true,
+          accountId: 'acc-1',
+          invoiceMonthYear: '2026-05',
+        }),
+        expect.objectContaining({
+          description: 'Saldo restante da fatura 05/2026',
+          amount: 400,
+          transactionType: 'adjustment',
+          isInvoicePayment: false,
+          isPaid: false,
+          cardId: 'card-1',
+          invoiceMonthYear: '2026-06',
+        }),
+      ]);
+    });
+    expect(bulkUpdateTransactionsMock).not.toHaveBeenCalled();
+  });
+
+  it('parcela fatura sem recalcular juros e gera parcelas futuras informadas', async () => {
+    financeStoreMock.useFinanceStore.mockReturnValue(buildInvoiceStore());
+
+    render(<BillsManager />, { wrapper });
+
+    fireEvent.click(screen.getByLabelText('Baixar conta'));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pagamento' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Parcelar fatura' }));
+    fireEvent.change(screen.getAllByRole('spinbutton')[0], { target: { value: '200' } });
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'acc-1' } });
+    fireEvent.change(screen.getAllByRole('spinbutton')[1], { target: { value: '4' } });
+    fireEvent.change(screen.getAllByRole('spinbutton')[2], { target: { value: '250' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar baixa da fatura' }));
+
+    await waitFor(() => {
+      expect(addTransactionMock).toHaveBeenCalledWith([
+        expect.objectContaining({
+          description: 'Entrada parcelamento fatura Nubank 05/2026',
+          amount: 200,
+          transactionType: 'adjustment',
+          isInvoicePayment: true,
+          accountId: 'acc-1',
+        }),
+        expect.objectContaining({ amount: 250, transactionType: 'installment', installmentNumber: 1, installmentTotal: 4, invoiceMonthYear: '2026-06' }),
+        expect.objectContaining({ amount: 250, transactionType: 'installment', installmentNumber: 2, installmentTotal: 4, invoiceMonthYear: '2026-07' }),
+        expect.objectContaining({ amount: 250, transactionType: 'installment', installmentNumber: 3, installmentTotal: 4, invoiceMonthYear: '2026-08' }),
+        expect.objectContaining({ amount: 250, transactionType: 'installment', installmentNumber: 4, installmentTotal: 4, invoiceMonthYear: '2026-09' }),
+      ]);
+    });
+    expect(bulkUpdateTransactionsMock).toHaveBeenCalledWith({
+      ids: ['purchase-1', 'purchase-2'],
+      updates: { isPaid: true, paymentDate: '2026-05-20' },
     });
   });
 });
