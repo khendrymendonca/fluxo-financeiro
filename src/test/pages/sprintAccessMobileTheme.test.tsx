@@ -96,7 +96,7 @@ describe('Sprint de acesso, mobile, AMOLED e acento', () => {
   it('condiciona os dois FABs mobile ao estado central de overlay do shell', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/pages/Index.tsx'), 'utf8');
 
-    expect(source).toContain('const isAnyShellOverlayOpen = showTransactionForm || showGoalForm || isDrawerOpen;');
+    expect(source).toContain('const isAnyShellOverlayOpen = showTransactionForm || showGoalForm || isDrawerOpen || isTutorialOpen || isTutorialOfferOpen;');
     expect(source).toContain('const shouldShowMobileFabs = isMobile && !isAnyShellOverlayOpen;');
     expect(source).toContain('{shouldShowMobileFabs && (');
     expect(source).toContain("shouldShowMobileFabs && ['dashboard', 'transactions'].includes(currentView)");

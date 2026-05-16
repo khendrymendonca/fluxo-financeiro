@@ -276,7 +276,7 @@ async function syncDebtInstallments({
   return report;
 }
 
-// --- 1. ADICIONAR DÃ VIDA ---
+// --- 1. ADICIONAR DÍVIDA ---
 export function useAddDebt() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -318,7 +318,7 @@ export function useAddDebt() {
   });
 }
 
-// --- 2. ATUALIZAR DÃ VIDA ---
+// --- 2. ATUALIZAR DÍVIDA ---
 export function useUpdateDebt(deps: DebtMutationDeps = {}) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -376,7 +376,7 @@ export function useUpdateDebt(deps: DebtMutationDeps = {}) {
   });
 }
 
-// --- 3. DELETAR DÃVIDA ---
+// --- 3. DELETAR DÍVIDA ---
 export function useDeleteDebt() {
   const queryClient = useQueryClient();
 

@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { buildMonthPlan, type MonthPlanCashItem } from '@/utils/monthPlan';
 import { buildCardInvoiceObligations } from '@/utils/invoiceObligations';
 import { LegacyDashboardHome } from './LegacyDashboardHome';
+import { AppBootScreen } from '@/components/layout/AppBootScreen';
 
 interface MonthPlanPageProps {
   isBalanceVisible: boolean;
@@ -59,7 +60,7 @@ function ControlMetricCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-2">
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-muted-foreground">{label}</p>
-          <p className="text-2xl md:text-3xl font-black tracking-tight">{value}</p>
+          <p className="text-2xl md:text-3xl font-black tracking-tight whitespace-nowrap tabular-nums">{value}</p>
           <p className="text-sm font-bold text-foreground/80">{support}</p>
         </div>
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/55 ring-1 ring-slate-950/5 dark:bg-white/[0.07] dark:ring-white/10">
@@ -109,7 +110,7 @@ export default function MonthPlanPage({
   onNavigateToTransactions,
 }: MonthPlanPageProps) {
   const isMobile = useIsMobile();
-  const { accounts, categories, creditCards, transactions, debts, viewDate } = useFinanceStore();
+  const { accounts, categories, creditCards, transactions, debts, viewDate, loading } = useFinanceStore();
 
   const transactionsWithInvoiceObligations = useMemo(
     () => [
@@ -138,6 +139,11 @@ export default function MonthPlanPage({
   const monthTitle = format(viewDate, "MMMM 'de' yyyy", { locale: ptBR }).replace(/^./, (char) => char.toUpperCase());
   const dueItems = monthPlan.upcomingOpenExpenses.slice(0, 6);
   const cashBalanceTone = monthPlan.cashBalance < 0 ? 'risk' : monthPlan.openExpensesTotal > 0 ? 'attention' : 'safe';
+
+  // Se estiver carregando e não tivermos contas (indicando que é o primeiro load), mostramos boot screen
+  if (loading && accounts.length === 0) {
+    return <AppBootScreen message="Carregando dados financeiros..." detail="Quase pronto para voce assumir o controle" />;
+  }
 
   const controlCards = [
     {

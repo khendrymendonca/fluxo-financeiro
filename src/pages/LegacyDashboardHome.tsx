@@ -27,6 +27,7 @@ import { PendingPayments } from '@/components/dashboard/PendingPayments';
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { WeeklyFlowChart } from '@/components/dashboard/WeeklyFlowChart';
+import { AppBootScreen } from '@/components/layout/AppBootScreen';
 
 interface LegacyDashboardHomeProps {
   isBalanceVisible: boolean;
@@ -55,7 +56,9 @@ export function LegacyDashboardHome({
     currentMonthTransactions,
     totalPendingOutflows,
     viewDate,
+    loading
   } = useFinanceStore();
+
   const { cashflow, categoryExpenses } = useDashboardMetrics(viewDate, currentMonthTransactions);
 
   const totalNetWorth = useMemo(
@@ -70,6 +73,11 @@ export function LegacyDashboardHome({
     () => user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Usuário',
     [user]
   );
+
+  // Se estiver carregando e não tivermos contas (indicando que é o primeiro load), mostramos boot screen
+  if (loading && accounts.length === 0) {
+    return <AppBootScreen message="Sincronizando..." detail="Aguarde um momento enquanto preparamos sua home" />;
+  }
 
   if (!isMobile) {
     return (

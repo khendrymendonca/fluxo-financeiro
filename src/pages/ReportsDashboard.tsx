@@ -48,6 +48,7 @@ import { parseLocalDate } from '@/utils/dateUtils';
 import { getTransactionCategoryLabel } from '@/utils/transactionCategory';
 import { buildCardInvoiceObligations } from '@/utils/invoiceObligations';
 import { Category, CreditCard, Transaction } from '@/types/finance';
+import { BudgetOverview } from '@/components/budgets/BudgetOverview';
 
 type Period = 'month' | 'semester' | 'year';
 type ReportMode = 'projected' | 'realized';
@@ -796,6 +797,14 @@ export default function ReportsDashboard() {
           isNeutral
         />
       </div>
+
+      {period === 'month' && reportMode === 'projected' && selectedAccountId === 'all' && (
+        <BudgetOverview
+          categories={categories}
+          transactions={transactions}
+          month={viewDate}
+        />
+      )}
 
       {canUseAdvancedReports ? (
         <>

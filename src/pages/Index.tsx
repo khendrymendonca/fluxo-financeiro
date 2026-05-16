@@ -1,6 +1,5 @@
-﻿// UTF-8 Integrity Check
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+// UTF-8 Integrity Check
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -77,6 +76,11 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import { HelpButton } from '@/components/tutorial/HelpButton';
+import { GuidedTour } from '@/components/tutorial/GuidedTour';
+import { TutorialOfferDialog } from '@/components/tutorial/TutorialOfferDialog';
+import { useTutorialState } from '@/hooks/useTutorialState';
+import { useAppRefresh } from '@/hooks/useAppRefresh';
 
 type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export' | 'emergency' | 'menu' | 'profile' | 'projection';
 
@@ -105,7 +109,7 @@ function ViewGuard({
   const featureKey = PROTECTED_VIEWS[view];
   const isEnabled = useFeatureFlag(featureKey ?? '');
 
-  // Se nÃ£o tem feature key associada (ex: dashboard, profile), sempre libera
+  // Se não tem feature key associada (ex: dashboard, profile), sempre libera
   if (!featureKey) return <>{children}</>;
 
   if (!isEnabled) {
@@ -118,21 +122,30 @@ function ViewGuard({
 
 export default function Index() {
   const { user } = useAuth();
+  const userId = user?.id;
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const refreshAppData = useAppRefresh();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const handleRefreshData = useCallback(() => {
-    queryClient.invalidateQueries();
-    window.location.reload();
-  }, [queryClient]);
+  const handleRefreshData = useCallback(async () => {
+    try {
+      await refreshAppData();
+      toast({ title: 'Dados atualizados' });
+    } catch {
+      toast({
+        title: 'Nao foi possivel atualizar os dados',
+        description: 'Verifique sua conexao e tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  }, [refreshAppData]);
 
   const currentView = (searchParams.get('view') as ViewType) || 'dashboard';
   const viewMode = (searchParams.get('mode') as 'day' | 'month' | 'year' | 'all') || 'month';
 
-  const setCurrentView = (view: ViewType) => {
+  const setCurrentView = useCallback((view: ViewType) => {
     setSearchParams({ view, mode: viewMode });
-  };
+  }, [setSearchParams, viewMode]);
 
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
@@ -153,7 +166,7 @@ export default function Index() {
     debts,
     savingsGoals,
     categories,
-    transactions, // Usar a lista total para widgets analÃ­ticos
+    transactions, // Usar a lista total para widgets analíticos
     currentMonthTransactions,
     setEmergencyMonths,
     addTransaction,
@@ -180,7 +193,19 @@ export default function Index() {
   const isMobile = useIsMobile();
   const isSuperAdmin = useIsSuperAdmin();
   const easterEnabled = useGlobalFlag('theme_easter');
-  const isAnyShellOverlayOpen = showTransactionForm || showGoalForm || isDrawerOpen;
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [isTutorialOfferOpen, setIsTutorialOfferOpen] = useState(false);
+  const {
+    shouldShowInitialOffer,
+    completeTutorial,
+    dismissTutorialOffer,
+    markInitialOfferHandled,
+    state: tutorialState,
+    storageKey: tutorialStorageKey,
+    isLoaded: tutorialStateLoaded,
+  } = useTutorialState(userId);
+  const isAnyShellOverlayOpen = showTransactionForm || showGoalForm || isDrawerOpen || isTutorialOpen || isTutorialOfferOpen;
+  const isInitialTutorialBlocked = showTransactionForm || showGoalForm || isDrawerOpen || isTutorialOpen;
   const shouldShowMobileFabs = isMobile && !isAnyShellOverlayOpen;
 
   const totalNetWorth = useMemo(() => accounts.reduce((sum, acc) => sum + Number(acc.balance), 0), [accounts]);
@@ -195,10 +220,44 @@ export default function Index() {
   }, [user]);
 
   const userName = useMemo(() => {
-    return user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'UsuÃ¡rio';
+    return user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Usuário';
   }, [user]);
 
   const projectedBalance = useMemo(() => totalNetWorth - totalPendingOutflows, [totalNetWorth, totalPendingOutflows]);
+
+  useEffect(() => {
+    console.log('[Tutorial] Index auth userId', userId);
+    console.log('[Tutorial] Index storageKey', tutorialStorageKey);
+    console.log('[Tutorial] Index loaded/state/offer', tutorialStateLoaded, tutorialState, shouldShowInitialOffer);
+  }, [shouldShowInitialOffer, tutorialState, tutorialStateLoaded, tutorialStorageKey, userId]);
+
+  useEffect(() => {
+    if (!shouldShowInitialOffer) {
+      setIsTutorialOfferOpen(false);
+      return;
+    }
+
+    if (!isInitialTutorialBlocked) {
+      console.log('[Tutorial] opening automatic offer');
+      setIsTutorialOfferOpen(true);
+    }
+  }, [isInitialTutorialBlocked, shouldShowInitialOffer]);
+
+  const openTutorialManually = useCallback(() => {
+    setIsTutorialOfferOpen(false);
+    setIsTutorialOpen(true);
+  }, []);
+
+  const startOfferedTutorial = useCallback(() => {
+    markInitialOfferHandled();
+    setIsTutorialOfferOpen(false);
+    setIsTutorialOpen(true);
+  }, [markInitialOfferHandled]);
+
+  const dismissOfferedTutorial = useCallback(() => {
+    dismissTutorialOffer();
+    setIsTutorialOfferOpen(false);
+  }, [dismissTutorialOffer]);
 
   const handleEditTransaction = useCallback((item: Transaction) => {
     if (item.isTransfer) {
@@ -228,13 +287,13 @@ export default function Index() {
   const handleCopyTransaction = useCallback((item: Transaction) => {
     if (item.isTransfer) {
       toast({
-        title: 'CÃ³pia bloqueada',
-        description: 'TransferÃªncias devem ser corrigidas como grupo, nÃ£o copiadas como lanÃ§amento comum.',
+        title: 'Cópia bloqueada',
+        description: 'Transferências devem ser corrigidas como grupo, não copiadas como lançamento comum.',
         variant: 'destructive',
       });
       return;
     }
-    // ðŸ›¡ï¸ REGRA DE NEGÃ“CIO: Ao copiar, removemos o ID para que seja um novo lanÃ§amento
+    // 🛡️ REGRA DE NEGÓCIO: Ao copiar, removemos o ID para que seja um novo lançamento
     const { id, ...transactionData } = item;
     setEditingTransaction(transactionData as Transaction);
     setShowTransactionForm(true);
@@ -252,9 +311,9 @@ export default function Index() {
   useEffect(() => {
     if (currentView === 'menu') {
       setIsDrawerOpen(true);
-      setCurrentView('dashboard'); // Reset p/ nÃ£o ficar preso no estado 'menu'
+      setCurrentView('dashboard'); // Reset p/ não ficar preso no estado 'menu'
     }
-  }, [currentView]);
+  }, [currentView, setCurrentView]);
 
   const navigationItems = [
     { id: 'dashboard', icon: Home, label: 'Início' },
@@ -340,7 +399,7 @@ export default function Index() {
                     }}
                     className="bg-primary hover:bg-primary/90 text-white shadow-md hidden md:flex rounded-xl font-bold"
                   >
-                    <Plus className="w-4 h-4 mr-2" /> Novo LanÃ§amento
+                    <Plus className="w-4 h-4 mr-2" /> Novo Lançamento
                   </Button>
                   <MonthSelector />
                 </div>
@@ -374,7 +433,7 @@ export default function Index() {
             <div className="space-y-6 pt-2">
               <div className="flex items-center justify-between px-2">
                 <h2 className="text-2xl font-black tracking-tight">Sonhos & Projetos</h2>
-                <Button size="sm" className="rounded-xl font-bold bg-primary text-white" onClick={() => setShowGoalForm(true)}>LanÃ§ar Novo Projeto</Button>
+                <Button size="sm" className="rounded-xl font-bold bg-primary text-white" onClick={() => setShowGoalForm(true)}>Lançar Novo Projeto</Button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {savingsGoals.map(goal => (
@@ -493,18 +552,19 @@ export default function Index() {
         <NavigationRail
           currentView={currentView}
           onNavigate={(v) => setCurrentView(v as ViewType)}
+          onOpenHelp={openTutorialManually}
         />
       }
       headerMobile={
         <div className="flex items-center justify-between w-full">
           {/* Lado esquerdo: Home + Drawer */}
           <div className="flex items-center gap-1">
-            {/* BotÃ£o Home â€” volta para dashboard */}
+            {/* Botão Home — volta para dashboard */}
             {currentView !== 'dashboard' && (
               <button
                 onClick={() => setCurrentView('dashboard')}
                 className="p-2 rounded-xl text-zinc-500 hover:text-primary hover:bg-primary/5 transition-all"
-                aria-label="Voltar para inÃ­cio"
+                aria-label="Voltar para início"
               >
                 <Home className="w-5 h-5" />
               </button>
@@ -527,7 +587,7 @@ export default function Index() {
                         {accentColor === 'pascoa' && <Rabbit className="w-4 h-4 text-primary" />}
                       </SheetTitle>
                       <SheetDescription className="text-xs uppercase font-black tracking-widest text-zinc-500">
-                        {accentColor === 'pascoa' ? 'ðŸ° Feliz PÃ¡scoa!' : 'Menu Principal'}
+                        {accentColor === 'pascoa' ? '🐰 Feliz Páscoa!' : 'Menu Principal'}
                       </SheetDescription>
                     </div>
                   </div>
@@ -573,7 +633,7 @@ export default function Index() {
                       >
                         <div className="flex items-center gap-3">
                           <Rabbit className="w-5 h-5" />
-                          <span className="text-sm font-bold">Modo PÃ¡scoa</span>
+                          <span className="text-sm font-bold">Modo Páscoa</span>
                         </div>
                         {accentColor === 'pascoa' && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
                       </button>
@@ -581,7 +641,7 @@ export default function Index() {
                   )}
 
                   <div>
-                    <p className="text-xs uppercase font-black tracking-widest text-zinc-500 mb-4">AparÃªncia</p>
+                    <p className="text-xs uppercase font-black tracking-widest text-zinc-500 mb-4">Aparência</p>
                     <div className="grid grid-cols-3 gap-2">
                       {[{ id: 'light', icon: Sun, label: 'Claro' }, { id: 'dark', icon: Moon, label: 'Escuro' }, { id: 'amoled', icon: Zap, label: 'AMOLED' }]
                         .filter(t => isMobile || t.id !== 'amoled')
@@ -607,6 +667,7 @@ export default function Index() {
 
           {/* Lado direito: Avatar + toggle de visibilidade de saldo */}
           <div className="flex items-center gap-3">
+            <HelpButton onClick={openTutorialManually} className="h-9 w-9" />
             {isSuperAdmin && (
               <button
                 onClick={() => navigate('/super')}
@@ -631,7 +692,7 @@ export default function Index() {
       bottomNav={null}
       fab={
         <>
-          {/* FAB de navegaÃ§Ã£o semicircular */}
+          {/* FAB de navegação semicircular */}
           {shouldShowMobileFabs && (
             <FloatingNavMenu
               activeView={currentView}
@@ -639,7 +700,7 @@ export default function Index() {
             />
           )}
 
-          {/* FAB de adicionar transaÃ§Ã£o â€” sÃ³ nas views de extrato/dashboard */}
+          {/* FAB de adicionar transação — só nas views de extrato/dashboard */}
           {shouldShowMobileFabs && ['dashboard', 'transactions'].includes(currentView) && (
             <button
               onClick={() => {
@@ -654,7 +715,7 @@ export default function Index() {
                 'flex items-center justify-center',
                 'active:scale-95 transition-all duration-200'
               )}
-              aria-label="Novo lanÃ§amento"
+              aria-label="Novo lançamento"
             >
               <Plus className="w-6 h-6" />
             </button>
@@ -671,10 +732,10 @@ export default function Index() {
           initialData={editingTransaction}
           initialTab={initialFormTab}
           onSubmit={async (tx, _customInstallments, applyScope) => {
-            // ðŸ›¡ï¸ REGRA DE NEGÃ“CIO: 
+            // 🛡️ REGRA DE NEGÓCIO: 
             // 1. Se for VIRTUAL, estamos materializando uma conta fixa/parcelada em um registro real. (INSERT)
-            // 2. Se houver um ID real (nÃ£o virtual), Ã© uma ediÃ§Ã£o de registro existente. (UPDATE)
-            // 3. Se nÃ£o houver ID, Ã© uma nova transaÃ§Ã£o simples ou cÃ³pia. (INSERT)
+            // 2. Se houver um ID real (não virtual), é uma edição de registro existente. (UPDATE)
+            // 3. Se não houver ID, é uma nova transação simples ou cópia. (INSERT)
             if (editingTransaction?.isVirtual) {
               await addTransaction({
                 ...tx,
@@ -731,8 +792,18 @@ export default function Index() {
           }}
         />
       )}
+
+      <TutorialOfferDialog
+        open={isTutorialOfferOpen}
+        onStart={startOfferedTutorial}
+        onDismiss={dismissOfferedTutorial}
+      />
+
+      <GuidedTour
+        open={isTutorialOpen}
+        onOpenChange={setIsTutorialOpen}
+        onFinish={completeTutorial}
+      />
     </AppLayout>
   );
 }
-
-

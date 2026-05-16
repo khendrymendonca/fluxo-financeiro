@@ -4,7 +4,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Loader2 } from "lucide-react";
 import { ThemeProvider } from "./hooks/useTheme";
 import { ThemeColorProvider } from "./hooks/useThemeColor";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -22,6 +21,7 @@ import ProjectionPage from "./pages/ProjectionPage";
 import NotFound from "./pages/NotFound";
 import { UpdatePrompt } from "./components/layout/UpdatePrompt";
 import { ProtectedRoute } from "./components/layout/ProtectedRoute";
+import { AppBootGate } from "./components/layout/AppBootGate";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,40 +36,34 @@ const queryClient = new QueryClient({
 const AppRoutes = () => {
   const { user, loading } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
-      <Routes>
-        <Route path="/" element={user ? <Index /> : <AuthPage />} />
-        <Route path="/auth/confirmado" element={<EmailConfirmedPage />} />
-        <Route path="/auth/redefinir-senha" element={<EmailResetPasswordPage />} />
-        <Route path="/auth/convite" element={<InviteUserPage />} />
-        <Route path="/auth/acesso" element={<MagicLinkAccessPage />} />
-        <Route path="/auth/email-alterado" element={<EmailChangedPage />} />
-        <Route path="/auth/reautenticacao" element={<ReauthenticationPage />} />
-        <Route
-          path="/projection"
-          element={
-            user ? (
-              <ProtectedRoute featureKey="debt_strategy" redirectTo="/?view=dashboard">
-                <ProjectionPage />
-              </ProtectedRoute>
-            ) : (
-              <AuthPage />
-            )
-          }
-        />
-        <Route path="/super" element={user ? <SuperPage /> : <AuthPage />} />
-        <Route path="*" element={user ? <NotFound /> : <AuthPage />} />
-      </Routes>
-    </div>
+    <AppBootGate user={user} authLoading={loading}>
+      <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+        <Routes>
+          <Route path="/" element={user ? <Index /> : <AuthPage />} />
+          <Route path="/auth/confirmado" element={<EmailConfirmedPage />} />
+          <Route path="/auth/redefinir-senha" element={<EmailResetPasswordPage />} />
+          <Route path="/auth/convite" element={<InviteUserPage />} />
+          <Route path="/auth/acesso" element={<MagicLinkAccessPage />} />
+          <Route path="/auth/email-alterado" element={<EmailChangedPage />} />
+          <Route path="/auth/reautenticacao" element={<ReauthenticationPage />} />
+          <Route
+            path="/projection"
+            element={
+              user ? (
+                <ProtectedRoute featureKey="debt_strategy" redirectTo="/?view=dashboard">
+                  <ProjectionPage />
+                </ProtectedRoute>
+              ) : (
+                <AuthPage />
+              )
+            }
+          />
+          <Route path="/super" element={user ? <SuperPage /> : <AuthPage />} />
+          <Route path="*" element={user ? <NotFound /> : <AuthPage />} />
+        </Routes>
+      </div>
+    </AppBootGate>
   );
 };
 

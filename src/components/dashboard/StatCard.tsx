@@ -39,7 +39,7 @@ export function StatCard({
           </p>
           <p
             className={cn(
-              "text-xl md:text-2xl font-bold tracking-tight whitespace-nowrap overflow-hidden text-ellipsis block w-full",
+              "text-xl md:text-2xl font-bold tracking-tight whitespace-nowrap overflow-hidden text-ellipsis block w-full tabular-nums",
               variant === 'positive' && 'text-green-500 dark:text-green-500 md:dark:text-emerald-400',
               variant === 'negative' && 'text-red-500 dark:text-red-500 md:dark:text-rose-400',
               variant === 'neutral' && 'text-blue-500 dark:text-blue-500 md:dark:text-blue-400',

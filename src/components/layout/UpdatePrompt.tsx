@@ -4,6 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Rocket, RefreshCw, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { APP_BOOT_PHASE_STORAGE_KEY } from '@/components/layout/AppBootGate';
+
+function isBootPhase() {
+  try {
+    return sessionStorage.getItem(APP_BOOT_PHASE_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
 
 export function UpdatePrompt() {
   const {
@@ -13,6 +22,9 @@ export function UpdatePrompt() {
   } = useRegisterSW({
     onRegistered(r: any) {
       console.log('SW Registered:', r);
+      if (isBootPhase()) {
+        r?.update?.();
+      }
     },
     onRegisterError(error: any) {
       console.log('SW registration error', error);
@@ -23,9 +35,13 @@ export function UpdatePrompt() {
 
   useEffect(() => {
     if (needRefresh) {
+      if (isBootPhase()) {
+        updateServiceWorker(true);
+        return;
+      }
       setIsVisible(true);
     }
-  }, [needRefresh]);
+  }, [needRefresh, updateServiceWorker]);
 
   const close = () => {
     setOfflineReady(false);
