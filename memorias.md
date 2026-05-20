@@ -1,305 +1,1298 @@
-- 08/05/2026 | Arquitetura & Acesso | (1) Regra Definitiva: A Projeção e Estratégia é protegida exclusivamente pela feature `debt_strategy`. Fallback temporário com `reports_dashboard` removido. (2) Arquitetura Modular: O app é modular; módulos existem estruturalmente, mas acesso e visibilidade são controlados estritamente por feature flags vinculadas a planos ou overrides. (3) Hook `useFeatureFlag`: assinatura padronizada para string única; removido suporte a `string[]` para evitar fallback implícito e manter o gating modular explícito.
+# MEMÓRIAS — REGRAS CONSOLIDADAS DO FLUXO FINANCEIRO
 
-## PROTOCOLO OBRIGATÓRIO — ARQUITETURA MODULAR
-O app deve ser tratado como um conjunto de módulos independentes.
-1. **Existência:** O código do módulo (tela, rotas, lógica) deve sempre existir no projeto.
-2. **Gating:** O acesso é controlado EXCLUSIVAMENTE pela feature flag designada no `src/config/features.ts`.
-3. **Isolamento:** Não misturar permissões. Uma feature não deve servir de fallback para outra (ex: `reports_dashboard` não libera `debt_strategy`).
-4. **Planos:** A liberação de módulos para grupos de usuários deve ser feita via matriz de planos no banco de dados (`plan_features`).
+## REGRA GERAL DO PRODUTO
 
-## LEITURA OBRIGATÓRIA — INÍCIO DE SESSÃO
+O Fluxo Financeiro deve ser tratado como um app financeiro modular, robusto e profissional.
 
-Antes de qualquer resposta técnica, você deve:
-1. Confirmar que leu este arquivo
-2. Citar os 4 protocolos pelos nomes (não parafraseado, pelos títulos exatos)
-3. Só então perguntar qual é a tarefa
+O objetivo principal atual não é vender ainda, mas fazer o app funcionar de forma confiável para uso real e ser escalável no futuro.
 
-Se o usuário vier direto com uma tarefa, pare e diga:
-"Antes de começar, preciso confirmar que li o memorias.md desta sessão."
+O desenvolvimento deve evitar gambiarras, excesso de código e soluções temporárias sem documentação. Sempre que uma solução temporária for usada, ela deve ficar registrada como tal.
+
+O app deve ser modular:
+- As funcionalidades podem existir no backend/código.
+- O acesso/visibilidade deve ser controlado por plano/módulo/feature flag.
+- Não remover estruturalmente features apenas porque um plano não deve vê-las.
+- Planos futuros: Basic, Pro e Premium.
+- A matriz final de planos ainda não deve ser definida agora.
+
+Não mexer sem autorização explícita em:
+- Supabase migrations;
+- RLS;
+- SuperPage/admin;
+- estrutura multiusuário/família;
+- matriz de planos;
+- regras financeiras já estabilizadas.
 
 ---
 
-Memórias e Decisões de Arquitetura - Fluxo
-Este documento serve como a fonte da verdade para decisões de UI/UX, regras de negócio e correções de bugs críticos. ASSISTENTE DE IA: Leia este arquivo antes de sugerir refatorações estruturais ou criar novas telas.
+# REGRA DE UI/UX DO APP
 
-1. Padrões de UI/UX e Design System
-Bifurcação Web vs Mobile (Cartões): O layout não deve ser unificado.
+## Padrão visual geral
 
-Mobile: Usa um carrossel horizontal (snap-mandatory), com o cartão centralizado (aprox. 300px), sem ocupar a largura total da tela. Atualização de dados via swipe-to-update (sincronizado no scroll).
+O Fluxo deve parecer um produto financeiro profissional, não um tutorial.
 
-Web (Desktop): Usa arquitetura Master-Detail (Grid 12 colunas). Cartões empilhados em lista na esquerda (col-span-4), e detalhes completos na direita (col-span-8).
+Diretriz visual:
 
-Luxo Silencioso (Cores e Dark Mode): Proibido o uso de cores 'Neon' chapadas na versão Web. Textos de valores usam tons suaves (rose-400, emerald-400). Proibido usar 'glow' ou fundos coloridos (ex: verde neon) para indicar itens ativos. O foco de itens ativos no mobile é feito exclusivamente por opacity e scale.
+- Menos explicação.
+- Mais indicador.
+- Mais comparação.
+- Mais ação.
+- Menos texto.
+- Mais leitura executiva.
 
-Dashboard Web: Hierarquia rígida. Últimos lançamentos ocupam mais espaço que o gráfico de distribuição (que deve ser contido/esmagado). Valores financeiros nunca devem ser truncados (uso de text-2xl no máximo e formatação inteligente para valores acima de 100k).
+Evitar na interface:
+- parágrafos explicativos longos;
+- textos de onboarding no corpo das telas;
+- frases como “Compare...” ou “Quanto da receita vira despesa...”;
+- badges de regra técnica expostos sem necessidade;
+- explicações amadoras que diminuem a percepção profissional.
 
-2. Regras de Negócio de Cartões de Crédito
-Privacidade Absoluta: Os cartões NÃO devem exibir números fictícios (como '0000 0000...'). O design é focado apenas no Banco, Bandeira, Limite e Apelido do Cartão centralizado em destaque.
+Preferir:
+- labels curtas;
+- cards objetivos;
+- indicadores comparativos;
+- status visuais;
+- tooltips discretos;
+- ícones;
+- nomes financeiros fortes.
 
-Texturas Premium: Cartões suportam acabamentos visuais (texture: solid, black) aplicados via CSS (mix-blend-mode e gradientes) sobre a cor base.
+Exemplos de nomenclatura aprovada:
+- “Total de Consumo vs Receita”
+- “Composição das Despesas”
+- “Análise de Categoria”
+- “Orçamentos por Categoria”
+- “Orçamentos por Agrupamento”
+- “Receitas previstas”
+- “Despesas previstas”
+- “Saldo previsto”
+- “Receitas efetivas”
+- “Despesas efetivas”
+- “Saldo efetivo”
 
-3. Navegação Mobile Customizável
-Menu Orbital Semicircular (FAB): Substitui a barra linear inferior. Utiliza geometria de arco superior (160° a 20°), mantendo os itens sempre visíveis na área útil da tela. Ícone gatilho unificado (LayoutGrid) com indicador de status. Design baseado em glassmorphism dark e animações de escala com stagger.
+Regras de cálculo complexas devem ficar em tooltip, documentação ou código, não como texto fixo na tela.
 
-Botão Home Estratégico: Retorno à Dashboard via botão fixo no Header Mobile (visível em todas as telas exceto Home).
+---
 
-Menu Lateral (Drawer): Fonte da verdade absoluta de navegação, contendo todas as rotas do app.
+# REGRA DE BOOT / ENTRADA DO APP
 
-4. Motor de Lançamentos e Projeções
-Segregação de Responsabilidades (Pagamentos): A tela de 'Lançamentos' funciona apenas como um Extrato (Read-only para status). É estritamente proibido dar baixa (pagar) em contas fixas ou projeções por esta tela. A alteração do status isPaid de contas recorrentes/parceladas é exclusividade da tela 'Gestão de Contas'.
+Ao abrir o app em uma nova sessão real, o Fluxo pode exibir uma intro curta com a logo.
 
-Mapeamento DTO e Timezone: Conversão rigorosa de camelCase para snake_case no envio ao Supabase (ex: isRecurring → is_recurring, subcategoryId → subcategory_id). Uso obrigatório de parseLocalDate() em vez de new Date() para evitar bugs de fuso horário (UTC-3) que deslocam transações de mês.
+Se o usuário estiver logado:
+- o app deve mostrar uma tela de carregamento/sincronização;
+- deve executar automaticamente a mesma rotina do botão “Atualizar”;
+- deve carregar os dados reais antes de liberar a Home;
+- a Home não pode abrir com valores zerados falsos.
 
-Projeção Cíclica: A query principal de transações deve sempre usar um .or() para buscar transações do mês atual OU transações com is_recurring = true OU parcelamentos (installment_group_id), garantindo que o useProjectedTransactions tenha dados do passado para projetar as contas pendentes nos meses futuros.
+A rotina de boot deve:
+1. Aguardar autenticação/sessão pronta.
+2. Confirmar usuário autenticado.
+3. Executar refresh real dos dados financeiros.
+4. Só liberar o app após refresh ou timeout/falha controlada.
+5. Em erro, mostrar aviso discreto e abrir com dados disponíveis.
 
-Deduplicação de Projeções — REGRA CRÍTICA: A deduplicação no useProjectedTransactions deve usar exclusivamente vínculos explícitos de ID (originalId ou id). É proibido usar comparação por description + Math.abs(amount) como critério de deduplicação — isso causa falsos positivos que bloqueiam projeções legítimas de transações com mesma descrição e valor em meses diferentes.
+O usuário não deve precisar clicar em “Atualizar” ao abrir o app.
 
-ts
-// ✅ CORRETO
-const hasRealEquivalent = realTransactions.some(real =>
-  real.originalId === tx.id ||
-  real.id === tx.id
-);
+O botão “Atualizar” manual deve continuar existindo e funcionando como fallback.
 
-// ❌ PROIBIDO — causa falsos positivos
-// real.description === tx.description && Math.abs(real.amount) === Math.abs(tx.amount)
-Query de Transações — Filtro de Data nas Recorrentes: O `.filter('date', 'lte', end)` não deve ser aplicado globalmente. Transações com `is_recurring = true` e parcelamentos (`installment_group_id`) não têm teto de data — o filtro de período se aplica apenas a transações pontuais via `and(date.gte.${start},date.lte.${end})` dentro do `.or()`. Aplicar o `.filter` globalmente corta os dados históricos que o `useProjectedTransactions` precisa para gerar projeções de meses futuros.
+O app não deve recarregar automaticamente no meio de ações críticas, como:
+- editar lançamento;
+- pagar fatura;
+- criar acordo;
+- parcelar fatura;
+- cadastrar conta;
+- editar categoria.
 
-ts
-supabase
-  .from('transactions')
-  .select('*')
-  .is('deleted_at', null)
-  .or(
-    `and(date.gte.${start},date.lte.${end}),` +          // pontuais do mês
-    `is_recurring.eq.true,` +                             // fixas: SEM filtro de data
-    `installment_group_id.not.is.null`                    // parceladas: sem filtro de data
-  )
-Exclusão de Transações — Soft Delete Obrigatório: Transações nunca devem ser deletadas com .delete() direto. O padrão é soft delete via .update({ deleted_at: now }). O escopo da exclusão (this / future / all) determina o filtro adicional:
+Atualizações PWA/service worker podem ser aplicadas automaticamente apenas durante o boot. Durante uso normal, usar aviso/fallback manual.
 
-'this' → .eq('id', id)
+---
 
-'future' → .eq('installment_group_id', groupId).gte('date', date)
+# REGRA DE TUTORIAL
 
-'all' → .eq('installment_group_id', groupId)
+O tutorial guiado foi removido completamente do app.
 
-Cache Otimista Escopo-Aware (onMutate): O onMutate do useDeleteTransaction (e de qualquer mutation com applyScope) deve filtrar o cache local respeitando o escopo, não apenas pelo id da transação clicada. Isso garante que a UI reaja instantaneamente sem depender do invalidateQueries.
+Não deve existir:
+- oferta inicial de tutorial;
+- botão “?” / “Como utilizar”;
+- popups de tour guiado;
+- hook de tutorial;
+- localStorage de tutorial;
+- logs de tutorial;
+- componentes GuidedTour, HelpButton ou TutorialOfferDialog.
 
-ts
-// Padrão obrigatório no onMutate de operações com applyScope:
-return oldData.filter((tx) => {
-  if (applyScope === 'this' || !installmentGroupId) return tx.id !== id;
-  if (applyScope === 'all') return tx.installmentGroupId !== installmentGroupId;
-  if (applyScope === 'future') return tx.installmentGroupId !== installmentGroupId || tx.date < date;
-  return true;
-});
-⚠️ O mesmo padrão deve ser aplicado no onMutate do useUpdateTransaction quando ele suportar applyScope.
+Motivo:
+O tutorial estava gerando comportamento indesejado e atrapalhando a experiência. O app deve comunicar por UX profissional, não por explicações de onboarding.
 
-Payload do TransactionForm — Regras de Envio:
+Se no futuro houver ajuda, ela deve ser repensada como central de ajuda discreta, não como tutorial automático.
 
-subcategoryId deve ser enviado como null quando vazio, nunca como string vazia (''): subcategoryId: subcategoryId || null
+---
 
-isRecurring deve ser sempre um booleano derivado da activeTab, nunca de estado intermediário: isRecurring: Boolean(activeTab === 'fixo' || activeTab === 'renda_fixa')
+# REGRA DE LOGO / MARCA
 
-Nunca incluir chaves duplicadas no objeto payload — TypeScript ignora duplicatas silenciosamente, mas é fonte de confusão e bugs.
+A nova logo oficial do Fluxo deve substituir completamente:
+- logo antiga;
+- ícone provisório;
+- logo do Lovable;
+- favicon antigo;
+- PWA icons antigos;
+- manifest antigo;
+- qualquer resquício visual anterior.
 
-Regra do Extrato vs Gestão de Contas:
-Transações Recorrentes (Fixas) e Parcelamentos só devem ser visíveis na tela de 'Lançamentos' (Extrato) após serem marcadas como pagas (`isPaid: true`). Enquanto pendentes, elas residem exclusivamente na 'Gestão de Contas'. Isso evita poluição visual no extrato com itens que ainda não afetaram o saldo real.
+A logo dentro do app deve usar SVG/estrutura compatível com `currentColor`, para acompanhar a cor de destaque/accent color do cliente.
 
-Gestão de Contas — Inclusão de Atrasados:
-A tela de 'Gestão de Contas' deve obrigatoriamente incluir todos os lançamentos pendentes de meses anteriores (`isBefore(date, startOfMonth(viewDate)) && !isPaid`). Isso garante que o usuário visualize dívidas acumuladas que ainda precisam de atenção.
+No app:
+- a logo deve aparecer na intro;
+- login;
+- header;
+- sidebar;
+- mobile;
+- qualquer ponto de marca.
 
-### Contas Fixas — Forma de Pagamento
-Contas fixas (is_recurring: true) NÃO possuem vínculo de pagamento no cadastro. account_id e card_id são sempre null al criar.
-A forma de pagamento (débito em conta ou cartão) é escolhida exclusivamente no ato da baixa pelo BillsManager.
-Isso permite que uma mesma conta fixa (ex: internet) seja paga no débito em um mês e no crédito em outro.
+Para favicon/PWA:
+- pode usar versão estática da logo;
+- manifest e service worker devem apontar para novos arquivos versionados quando necessário;
+- o ícone instalado pode depender de cache do navegador/sistema operacional e pode demorar para atualizar.
 
-### Baixa de Conta Fixa no Cartão — invoiceMonthYear
-Quando uma conta fixa é paga via cartão de crédito no BillsManager, o sistema calcula automaticamente em qual fatura o valor entra:
-- Se dia_pagamento <= closing_day do cartão → fatura do mês atual
-- Se dia_pagamento > closing_day do cartão → fatura do mês seguinte
+---
 
-Isso consome o limite do cartão no mês correto via getCardUsedLimit (que já filtra por invoiceMonthYear). Nunca definir invoice_month_year manualmente fora dessa lógica.
+# REGRA DE ENCODING E TEXTOS VISÍVEIS
 
-### Controle de Versão (Build)
-Convenção Alfabética Cíclica: Todas as atualizações de build devem conter uma letra do alfabeto ao final do código da versão (ex: 3007082612K). A sequência segue de A a Z e reinicia em A (A -> B -> ... -> Z -> A). Isso permite o controle visual imediato da build ativa no dispositivo do usuário.
+Todos os arquivos devem permanecer em UTF-8.
 
-### Proteção de Integridade — Extrato (Lançamentos)
-Lançamentos originados na Gestão de Contas (recorrentes, parcelados, pagamentos de fatura ou materializados) são protegidos na aba 'Lançamentos'.
-- Cópia e Edição: Proibidas para estes itens nesta tela.
-- Ação Permitida: Apenas o "Estorno" (Desfazer Pagamento) é permitido.
-- Motivo: Garantir que a lógica de recorrência e competência de faturas não seja quebrada por edições manuais isoladas no extrato.
+É proibido finalizar sprint com mojibake/acentuação quebrada em textos visíveis.
 
-### Cálculo de Limite Global de Cartão — Solução de Inconsistência
-- **Regra de Ouro:** Compras no cartão (avulsas ou parcelas) sempre nascem com `is_paid = false`. O status só muda para `true` quando a **FATURA** inteira (ou parte dela) é quitada no BillsManager.
-- **Cálculo:** `getCardUsedLimit` utiliza `rawTransactions` para varrer todo o histórico. Ele ignora transações onde `is_invoice_payment: true` para evitar bitributação do limite.
-- **Disponível vs Gastos:** No painel de detalhes, "Gastos" refere-se à fatura do mês, enquanto "Disponível" refere-se ao limite real do cartão (global).
+Exemplos proibidos:
+- LanÃ§amento
+- Descri��o
+- A entrada � separada
+- N� de Parcelas
+- 1� Parcela
+- GestÃ£o
+- CartÃ£o
+- RelatÃ³rios
+- OrÃ§amentos
+- ConfiguraÃ§Ãµes
+- â€
 
-### Pagamento de Fatura do Cartão
-- Fatura sempre paga via CONTA BANCÁRIA — nunca com outro cartão.
-- Pagamento parcial: cria transação de saldo remanescente (transaction_type: 'invoice_remainder') na fatura do mês seguinte com is_paid: false. As compras originais NÃO são marcadas como pagas em pagamento parcial.
-- Pagamento total: todas as compras do mês são marcadas is_paid: true via bulk update.
+Textos corretos:
+- Lançamento
+- Descrição
+- Gestão
+- Cartão
+- Relatórios
+- Orçamentos
+- Configurações
+- Nº
+- 1ª
+- Mês
+- Próximo
+- Competência
 
-### REGRA DE NEGÓCIO — LANÇAMENTOS, CARTÃO, FATURA E TOTAIS
+Regra permanente:
+- antes de finalizar qualquer sprint, rodar `npm run check:encoding`;
+- não fazer conversão automática cega de arquivos inteiros;
+- corrigir manualmente textos quebrados;
+- allowlist deve ser mínima e justificada.
 
-- A tela de `Lançamentos` representa movimentos financeiros registrados ou efetivamente ocorridos. Ela funciona como extrato, não como tela principal de baixa.
-- Compra em conta/carteira deve aparecer em `Lançamentos` e somar como despesa efetiva do período quando estiver paga/baixada.
-- Receita recebida deve aparecer em `Lançamentos` e somar como receita efetiva do período quando estiver recebida/baixada.
-- Compra no cartão de crédito deve aparecer em `Lançamentos`, pois é uma compra realizada, e também deve aparecer em `Cartões/Fatura`.
-- Compra no cartão, seja à vista ou parcelada, consome limite do cartão e compõe compromissos da fatura, mas NÃO deve somar como despesa efetiva nos totais financeiros do mês.
-- O valor da compra no cartão só deve impactar a despesa efetiva quando houver `pagamento de fatura`, pois é nesse momento que ocorre a saída real de dinheiro.
-- Pagamento de fatura deve aparecer em `Lançamentos` e deve somar como despesa efetiva do período.
-- Transferência entre contas deve aparecer em `Lançamentos` como registro de movimentação, mas NÃO deve somar como receita nem como despesa.
-- Contas fixas, receitas fixas, parcelas futuras e dívidas pendentes permanecem como compromissos/previsões enquanto não forem baixadas, pagas ou recebidas.
-- Baixa, pagamento ou recebimento transforma o compromisso em movimento efetivo.
-- Estorno deve reverter a baixa quando aplicável e devolver o item ao estado pendente, sem duplicar movimento no extrato.
-- Visualmente, compras de cartão e pagamentos de fatura devem ser identificáveis no extrato para evitar confusão entre compromisso de fatura e saída real de caixa.
+Arquivos de proteção existentes:
+- `.editorconfig` com `charset = utf-8`;
+- `AGENTS.md` com regra obrigatória de encoding;
+- `scripts/check-mojibake.mjs`;
+- `package.json` com `check:encoding` e `validate`.
 
-### REGRA DE NEGÓCIO — CORREÇÃO ASSISTIDA DE COMPRAS PARCELADAS
+Validação recomendada de fechamento:
+- `npm run check:encoding`
+- `npm test`
+- `npm run build`
+- `npm run lint`
 
-- O app deve abraçar o usuário: se ele lançou uma compra ou parcelamento errado, precisa conseguir corrigir.
-- Compra parcelada no cartão deve ser corrigida preferencialmente como compra inteira, não como parcela isolada.
-- A ação principal deve ser `Corrigir compra parcelada`.
-- Ao corrigir a compra inteira, o sistema deve preservar a coerência de:
-  - `installmentGroupId`
-  - `cardId`
-  - `invoiceMonthYear`
-  - parcelas futuras
-  - limite consumido
-  - faturas envolvidas
-  - categorias e descrições
-- A correção pode ajustar:
-  - descrição
-  - categoria
-  - valor total
-  - número de parcelas
-  - cartão
-  - data inicial ou competência inicial
-- O sistema deve recalcular as parcelas futuras e manter o histórico coerente.
-- O app não deve tratar uma parcela de cartão como despesa comum isolada quando isso quebrar o grupo parcelado.
-- Edição de parcela isolada só deve existir no futuro como ação avançada e explícita, com aviso claro de que altera apenas aquela competência/fatura.
-- Pagamento de fatura deve ter fluxo próprio de ajuste/estorno, não deve ser editado como compra comum.
-- Transferência deve preservar a contraparte; não deve permitir quebrar apenas uma ponta sem tratamento.
+---
 
+# REGRA DE RESPONSIVIDADE
 
-5. Histórico de Mudanças Críticas
-Data	Arquivo	Mudança
-31/03/2026	useProjectedTransactions.ts	Refatoração do motor de projeções. Query .or() encadeada para suporte a projeções cíclicas sem duplicidade.
-31/03/2026	TransactionForm.tsx	Padronização rigorosa do DTO (is_recurring, subcategory_id: null, toISOString). Remoção de chave isRecurring duplicada. Blindagem contra edição estrutural de projeções virtuais.
-31/03/2026	useProjectedTransactions.ts	Deduplicação refatorada para usar apenas vínculos explícitos de ID (originalId / id). Removida comparação por description + amount que causava falsos positivos.
-31/03/2026	useDeleteTransaction.ts	onMutate refatorado para ser escopo-aware. Cache local agora reflete corretamente applyScope: 'this' / 'all' / 'future' de forma instantânea.
-31/03/2026	useFinanceQueries.ts	Removido .filter('date', 'lte', end) global. Filtro de data movido para dentro do .or() afetando apenas transações pontuais. Raiz do bug de projeções em branco em meses futuros.
-31/03/2026	TransactionList.tsx	Implementada regra de visibilidade: recorrentes e parcelamentos pendentes são ocultados do extrato até que o pagamento seja confirmado.
-31/03/2026	BillsManager.tsx    Refatorado filtro principal para incluir lançamentos atrasados (meses anteriores não pagos) de forma automática.
-31/03/2026	CardsDashboard.tsx  Reconstrução total da página de cartões com layout Master-Detail (Desktop) e Snap-Carousel (Mobile). Integração com Recharts para visualização de evolução de gastos.
-31/03/2026	tailwind.config.ts  Adicionado plugin utilitário `.no-scrollbar` para refinamento estético de containers roláveis.
-31/03/2026	CardsDashboard.tsx	Refinamento estético das barras de limite (progressColor dinâmica suportada no banco de dados), agrupamento no Hero da fatura e atenuamento da escala de foco (uso de shadow-lg em vez de box rings) alinhado ao princípio do Luxo Silencioso.
-31/03/2026	CategoriesManager.tsx	Refatoração estrutural (CSS Grid responsivo de 3 colunas separando Receitas/Objetivos) e limpa visual completa extirpando excessos de cores (bordas grossas e ícones saturados), optando por superfícies neutras em tons de zinco.
-31/03/2026	CardsDashboard.tsx	Tema Claro suportado dinamicamente no Dashboard (substituição de fundos AMOLED hardcoded #111118) e substituição de ring lines pelo Efeito Apple no foco (shadow-2xl, scale).
-31/03/2026	EditCardDialog.tsx	Corrigido Exception de banco de dados (HTTP 400) via expurgo de chave não tabulada 'history' do payload.
-31/03/2026	CardsDashboard.tsx	Correção de Shadow Clipping no Master-Detail alterando para overflow-x-visible + margens laterais. Seletor de meses convertido para background reativo do tema (bg-card).
-31/03/2026	App.tsx	Otimização radical de tráfego de API desabilitando o refetchOnWindowFocus do ReactQuery, impedindo Loop Infinito e Exception 429 via Supabase de usuários ociosos.
-31/03/2026	cardTextures.ts	Refinamento material de Blend Modes e Texturas Premium (migração de color-dodge para composições balanceadas overlay, soft-light e multiply) + adição global de Animação Holográfica contínua.
-31/03/2026	Dashboard (Componentes)	As listas RecentTransactions e PendingPayments tiveram sua lógica de getSourceLabel expandida. Injeção de tipografia analítica do formato 'Banco - Apelido' junto ao fallback nativo.
-31/03/2026	CreditCardVisual.tsx	Implementada ramificação condicional 'overrideColor' atrelada ao repositório CARD_TEXTURES. A engine domina a renderização estrita base em texturas opacas (ex: Metálico) anulando camadas children transparentes (otimização de render e bugfix de overlays sobrepostos).
-31/03/2026	CardsDashboard.tsx / CreditCardVisual.tsx	Refatorada a engine geométrica de iluminação do seletor mobile de cartões. Substituído o filter: 'drop-shadow' vulnerável à stacking context pelos injetores reativos de 'boxShadow' CSS strict. Removida a barreira de clip do container do CardsDashboard injetando 'overflowX: auto' e 'overflowY: visible' mitigando o shadow-clipping para o snap.
-31/03/2026	CardsDashboard.tsx	Implementação de UseMemo (sortedCards) para ordenação lexográfica estável (localeCompare via ID) de instâncias React. Preveniu repaginação em tela e flickering de cartões durante invalidações de cache transitórias vindas de useMutations do TanStack.
-31/03/2026	cardTextures.ts	Alterada Flag overrideColor do modo 'Metálico' de true para false, devolvendo a cor original a cartões de banco institucionais em exibição React. A Textura passa a entregar iluminação (verniz rgba com mix-blend) em vez de coloração primária base sólida.
-31/03/2026	Limpeza Estética Universal	Remoção completa de texturas satélites ('holographic', 'metallic', 'comic') de 'cardTextures.ts' e 'finance.ts'. Estabelecido novo padrão minimalista: fundos de cartão translúcidos (hex 18-08 limit color) e UI silenciada em CategoriesManager (destituição de borders e bg coloridos de containers pro background raw 'bg-card' e botões flat muted).
-31/03/2026	10-Point Mega Refactor	Implementação de bloqueios Lazy Load (try/catch) no LocalStorage para os reducers de UX `useFinanceStore` e `useEmergencyFund`, imunizando falhas de quota em Navegador Privado.
-31/03/2026	useProjectedTransactions.ts	Extensão lógica da engine para suportar Projeção Cíclica Infinita de parcelamentos reais do banco. Faturas parceladas contínuas espelham instâncias virtuais até o deadline caso não existam fixas reais detectadas.
-31/03/2026	useTransactionMutations.ts	Estorno de Acordos delegado p/ Supabase e Mutação Mestra robustecida: o `useUpdateTransaction` agora entrega ApplyScope reativo no Frontend aplicando Cache Otimista p/ UX instantânea em repetições ('future' e 'all'). Redundâncias de payload SnakeCase debeladas.
-31/03/2026	User Interface / UX	Layout `MobileNav.tsx` deletado + CSS do Vite nativo purgado. Cartões Mobile `CardsDashboard.tsx` recodificados para deslize horizontal via Intersection matemática fluida. Correção global na `BillsManager` inibindo despesas isoladas de sujarem o pool de competências de cartão.
-31/03/2026	Otimização PWA e Componentes	Implementada Modal `Dialog` nativa em CategoriesManager (substituindo .confirm() para compliance PWA Mobile). Tema primário atualizado meta-tags Teal (`#0d9488`). Variáveis raízes de CSS duplicadas em `App.css` expurgadas em prol do tailwind base.
-31/03/2026	UI/UX e Responsividade Mobile	Gestor de Instituições blindado com truncamento `min-w-0` evitando quebra de Viewport. CategoriaManager migrado de accordion complexo vertical para `Grid Flat Responsivo` sem isolamento visual excessivo. Design System text-2xl padronizado no Dashboard. Readequação semântica do Fallback do `CreditCardVisual` resgatando cartões com texturas mortas de telas brancas nulas.
-01/04/2026	CategoriesManager.tsx	Refatoração estrutural (Tabs para Despesas/Receitas) e uso do Accordion com suporte a Subcategorias in-line.
-01/04/2026	Competência de Cartão	Inversão de lógica: Extrato/Dashboard priorizam `date` (data da compra). Gerenciador de Contas (`BillsManager`) prioriza `invoiceMonthYear` para liquidação de fatura. Refatorados `useFinanceQueries`, `useFinanceStore` e `useProjectedTransactions`.
-01/04/2026	useFinanceQueries.ts	Padronização do formato de data para `yyyy-MM-dd` (evitando UTC drift) e remoção do filtro redundante `is_paid.eq.false` no hook `useTransactions`.
-01/04/2026	Index.tsx	Correção de erro crítico (ReferenceError: parseLocalDate is not defined) que impedia o carregamento da página principal. Adicionada importação de `@/utils/dateUtils`.
-01/04/2026	TransactionForm.tsx	Atualizado placeholder do campo descrição para "Ex: Salário" em todos os lançamentos de receita.
-01/04/2026	PWA / UpdatePrompt	Implementado sistema de notificação de nova versão (UpdatePrompt). Alterado VitePWA para modo 'prompt', permitindo que usuários atualizem o app manualmente para ver novas versões/temas sem perder o login.
-01/04/2026	Regra de Negócio	Apenas lançamentos do tipo "Pontual" podem ser duplicados/copiados. Lançamentos fixos ou parcelados devem ser gerenciados via edição ou novos fluxos para evitar inconsistências de recorrência.
-01/04/2026	useThemeColor.tsx	Ajuste da cor de Páscoa para tom Matte (HSL 267 60% 72%) alinhado ao princípio de Luxo Silencioso, removendo efeito neon no modo escuro.
-01/04/2026	useFinanceStore.tsx	Corrigida filtragem de transações virtuais em currentMonthTransactions, garantindo que projeções apareçam corretamente nas telas de destino (Gestão de Contas) respeitando a data visualizada.
-01/04/2026	CardsDashboard.tsx	Corrigido bug de abatimentos: Filtro de transações da fatura ajustado para incluir créditos/estornos (income) mesmo se marcados como isInvoicePayment, garantindo o cálculo correto do total da fatura.
-06/04/2026	Projeto Global	Correção Estrutural de Abatimentos: Refatorados `CardsDashboard.tsx`, `useCreditCardMetrics.ts`, `useFinanceStore.tsx`, `TransactionList.tsx` e `AccountEvolution.tsx`. A nova regra global garante que transações de "Crédito/Estorno" (tipo `income`) não sejam excluídas dos cálculos de fatura e limite (mesmo se marcadas como `isInvoicePayment`), permitindo que abatimentos reduzam corretamente os totais de gastos e o limite consumido.
-07/04/2026	Projeto Global	Substituição global de tamanhos de fonte críticos (8px, 9px, 10px) por padrões legíveis (11px e text-xs/12px) em todo o diretório `src/` para conformidade com acessibilidade e legibilidade mínima.
-08/04/2026	ProfileSettings.tsx / FloatingNavMenu.tsx	Remoção do item "Início" do menu de escolha de atalhos mobile. Novo limite estrito de 4 atalhos simultâneos. Refatoração geométrica do FAB orbital (arco 180° a 0°) com alinhamento vertical absoluto (offset -46px no bottom) para que o centro dos ícones coincida com o centro do gatilho Plus. Troca do ícone gatilho para Plus com rotação de 45°. Adicionado sufixo "K" na versão do app para validação de build.
-08/04/2026	Projeto Global	Limpeza de código morto (remoção do BottomNavigation.tsx), implementação da feature de Limite de Orçamento por Categoria (migration SQL, edição no CategoriesManager, novo componente BudgetAlerts), criação da suite de testes unitários reais com Vitest para utilitários e regras de deduplicação (26 assertions passing), e migração rigorosa do TypeScript para strict: true em utilitários, tipos e hooks (0 errors type check). Build da aplicação avançou para a versão 'L'.
-08/04/2026	Projeto Global	Padronização do uso de `todayLocalString()` em substituição a chamadas nativas de data nos arquivos `useGoalMutations.ts`, `GoalAportModal.tsx` e `EmergencyFund.tsx`, eliminando riscos de drift de fuso horário em aportes e transferências. Build da aplicação avançou para a versão 'M'.
-08/04/2026	Projeto Global	Implementação do Plano de Patches de Escalabilidade: Remoção de log sensível (URL do banco), otimização de pagamento de fatura em lote (bulk update), adição de `staleTime: 5min` em todas as queries principais para reduzir carga no banco e criação de índices compostos via migration SQL. Build da aplicação avançou para a versão 'N'.
-08/04/2026	Projeto Global	Remoção visual completa do sistema de notificações (Card em ProfileSettings, ícones de sino e estados de permissão push), conforme decisão estratégica de adiar a implementação. Build da aplicação avançou para a versão 'O'.
-08/04/2026	Projeto Global	Restrição do tema AMOLED exclusivamente para a version Mobile. Em dispositivos Web/Desktop (viewport >= 1024px), a opção foi removida da UI e o hook `useTheme` agora realiza downgrade automático para 'dark' caso o AMOLED esteja selecionado, mantendo a consistência visual. Build da aplicação avançou para a versão 'P'.
-09/04/2026	Supabase / migrations	Fase 1 de Segurança: RLS completo habilitado em todas as tabelas (transactions, accounts, categories, subcategories, credit_cards, debts, savings_goals, budget_rules). Políticas de SELECT/INSERT/UPDATE/DELETE criadas com isolamento por auth.uid() = user_id. Subcategories validadas via JOIN com a tabela categories. Trigger spawn_next_recurring_transaction atualizado para SECURITY DEFINER. Build da aplicação avançou para a versão 'Q'.
-09/04/2026	ProfileSettings.tsx	Bugfix: Correção de `ReferenceError: isMobile is not defined` via chamada do hook `useIsMobile()` no corpo do componente. Build da aplicação avançou para a versão 'R'.
-09/04/2026	Projeto Global	Fase 2 de Segurança: Criado helper `logSafeError` em `supabase.ts` para evitar vazamento de dados sensíveis em produção. Substituídos todos os `console.error` com dados brutos por `logSafeError` em 6 arquivos de hooks. Tipagem estrita de payloads (`CreditCardDbPayload`, `DebtDbPayload`) eliminando `any`. Sanitização de inputs de texto livre (`trim().slice()`) implementada em transações, contas, categorias, metas e dívidas. Adicionadas `future` flags do React Router v7 no `BrowserRouter`. Build da aplicação avançou para a versão 'S'.
-09/04/2026 | LGPD — Fase 3 (Completa) | Migration SQL 0016_delete_user_data.sql criada e executada no Supabase. Função delete_user_data() SECURITY DEFINER apaga em cascata transactions, subcategories, categories, accounts, credit_cards, debts, goals, budget_rules e auth.users. Hook useDeleteUserAccount adicionado em useAccountMutations.ts. Seção "Zona de Perigo" com confirmação por digitação de "EXCLUIR" adicionada em ProfileSettings.tsx. Checkbox de consentimento LGPD adicionado no formulário de cadastro em AuthPage.tsx com bloqueio do botão submit. robots.txt atualizado para Disallow: /. Build permanece na versão T.
-09/04/2026 | Fase 4 — Super | Sistema de controle de acesso por usuário. Migration 0017_super_system.sql: tabelas profiles (código FLX-XXXX automático) e user_feature_overrides (overrides individuais sem tabela de features no banco — lista hardcoded em src/config/features.ts). Hook useFeatureFlags.ts criado. Página SuperPage.tsx em /super — acesso exclusivo via VITE_SUPER_USER_ID. Super admin vê acesso irrestrito a tudo sem consulta ao banco. theme_customization desabilitada por padrão — usuários sem flag veem apenas o verde água #0d9488. Código do usuário exibido em ProfileSettings. Build avança para versão U.
-09/04/2026 | Fase 5 — Proteção de Rotas | ProtectedRoute criado em components/layout/ProtectedRoute.tsx. Rotas de cards, reports, emergency, debts, goals e simulator protegidas em App.tsx. Views internas do Index.tsx protegidas via ViewGuard com fallback para /?view=dashboard. NavigationRail, FloatingNavMenu e AppLayout Drawer ocultam automaticamente itens sem featureKey ativa via NavItemGuard. Link /super adicionado no Drawer — visível apenas para o super admin. Proteção do seletor de cores (theme_customization) confirmada em ProfileSettings.tsx. Build avança para versão V.
-09/04/2026 | Fase 6 — Super Mobile + Bugfixes | Botão Super adicionado no header mobile do Index.tsx (visível só para super admin via useIsSuperAdmin). Bug de ciclagem de tema corrigido em useTheme.tsx — implementada função `cycleTheme` que lê classes do DOM para evitar stale closure. Bug de click-through do EasterWelcome corrigido com z-200, stopPropagation e estrutura de overlay personalizada. Tema de Páscoa movido de disparo automático por data para feature flag `theme_easter` controlada na tela Super — nova seção "Temas Especiais" adicionada na SuperPage.tsx com visual roxo. Build avança para versão W.
-09/04/2026 | Bugfix Encoding | Corrigidos labels com caracteres UTF-8 corrompidos no formulário de Novo Acordo em DebtsManager.tsx. Substituídos caracteres quebrados (º, ª, ç, ã) por UTF-8 direto. Varredura global aplicada em BillsManager, ProfileSettings e TransactionForm. Build avança para versão X.
-09/04/2026 | Hotfix Index.tsx | Correção de `ReferenceError: isMobile is not defined` no componente Index. A variável foi restaurada via hook `useIsMobile()`.
-09/04/2026 | Fase 7 — Planos + Temas Globais | Migrations 0018_plans_system.sql (tabelas plans, plan_features, plan_id em profiles) e 0019_global_flags.sql (global_feature_flags com páscoa, natal e halloween). Hook useFeatureFlags.ts refatorado com cascata: override individual > plano > default. SuperPage.tsx refatorado em 3 abas: Usuários (com seletor de plano), Planos (CRUD completo + editor de features), Temas Globais (liga/desliga para todos). Temas globais controlados por global_feature_flags — não por user_feature_overrides. theme_easter removido de features.ts. EasterWelcome controlado por useGlobalFlag('theme_easter') no AppLayout.tsx. Build avança para versão Y.
-10/04/2026 | Bugfix Geral — Build Z | 8 correções aplicadas: (1) Delete future/all de recorrentes corrigido em `useTransactionMutations.ts` — recorrentes agora usam `or(id, original_id)` em vez de `installment_group_id`. `onMutate` de delete e update também corrigidos com mesma lógica. (2) `transaction_type: 'adjustment'` corrigido em `useGoalMutations.ts`. (3) Import CSV corrigido em `ExportManager.tsx` — resolve `categoryId` por nome (case-insensitive) e `accountId` por nome ou null. (4) Stub `getEmergencyFundData` e no-ops `fetchInitialData`/`seedCoach` removidos do `useFinanceStore.tsx`. (5) `BalanceEvolutionChart.tsx` deletado — componente morto sem referências. (6) `monthlyYieldRate` removido da UI (`EmergencyReserve`, `AccountsManager`), dos payloads (`useAccountMutations.ts`) e dos types (`finance.ts`) — campo permanece no banco sem uso. (7) `EmergencyFund.tsx` migrada para usar `useEmergencyFund` como única fonte de verdade — lógica duplicada removida da página, hook expandido com fallback duplo (groupe essencial → isFixed → recorrentes). Build avança para versão Z.
-10/04/2026 | Bugfix Build AB | (1) `useNavigate` não declarado no escopo do componente `Index` impedia o botão Super no header mobile de funcionar — corrigido com import e hook no corpo do componente. (2) Tema de Páscoa vinculado à flag global `theme_easter`: `ThemeColorProvider` agora reseta `accentColor` para 'teal' automaticamente quando o admin desabilita o tema na SuperPage. (3) Botão "Modo Páscoa" no Drawer oculto quando a flag global estiver desligada. Build avança para versão AB.
-11/04/2026 | Feature: Parcelar Fatura | Adicionada funcionalidade de parcelar fatura de cartão de crédito. Novo componente `InstallInvoiceDialog` gera: (1) Transação de pagamento parcial (entrada). (2) Acordo de dívida do tipo `invoice_installment`. (3) Transações parceladas futuras vinculadas ao `card_id` para integração automática com as próximas faturas. Atualizados `CardsDashboard` e `DebtsManager`.
-12/04/2026 | Bugfix Projeções | Refino crítico no motor de virtualização: Escopo 'this' cria filha física isolada. Escopo 'future' teve arquitetura evoluída para "Corte de Série": a raiz nativa de cálculo recebe soft-delete para isolamento contábil e a nova diretriz de persistência vira a nova raiz projetando do alvo vigente em diante perpetuando as validações TypeScript. BillsManager libera edição e id `-virtual-` escapa completo via frontend. Build avança para série AB-13.
-12/04/2026 | Relatórios & UX (Build AB-14) | (1) Relatórios Analíticos 2.0: Nova UI "Escultural" com containers 2.5rem e motor de Projeção Multimeses corrigindo comparativos retroativos. (2) Blindagem do Extrato: Lançamentos pendentes (isPaid: false) agora são ocultados da aba 'Lançamentos' para manter fidelidade ao saldo real. (3) Gestão de Contas: Filtro ajustado para visão estritamente mensal. (4) Corte de Série Histórico: Edição 'future' converte mãe antiga em pontual preservando o passado contábil. Build avança para série AB-14.
-12/04/2026 | Estabilidade & Receitas (Build AB-15) | (1) Trava de Concorrência: Motor de projeção agora impede duplicidade visual/física de virtuais se houver transação real paga idêntica no mês. (2) Refino Reports: Suporte a receitas recorrentes e normalização de data via parseLocalDate. (3) Split Inteligente: Edições no mesmo mês não geram mais 'Corte de Série', apenas atualização simples. Build avança para série AB-15.
-15/04/2026 | Bugfix & Acessibilidade | (1) Correção Crítica de Banco: Renomeada coluna `budgetlimit` para `budget_limit` no código e criada migration `0020` para seguir o padrão snake_case, resolvendo erro HTTP 400. (2) Acessibilidade: Adicionados `aria-describedby` e `DialogDescription` em componentes de Dialog para eliminar avisos no console. (3) Recharts: Adicionado `minHeight` em `ReportsDashboard.tsx` para evitar avisos de largura/altura zero. Build avança para série AB-16.
-16/04/2026 | UI Overhaul: Arquitetura de Categorias | (1) Novo Sistema de Ícones: Implementado `IconSelector` com 28 ícones específicos e lógica de contraste inteligente (preto/branco) baseada na cor da categoria. (2) Grid de Luxo: Substituído Accordion por um Grid responsivo com cards centralizados (Ícone + Nome). (3) Agrupamento Estrutural: Categorias agora são divididas visualmente por relevância (Essenciais, Estilo de Vida, Objetivos). (4) Editor Avançado: Modal de edição expandido com gestão de subcategorias integrada. Build avança para série AB-17.
-16/04/2026 | Bugfix & Mobile Polish | (1) Hotfix: Corrigido `ReferenceError: CategorySection is not defined` causado por renomeação inconsistente de subcomponente. (2) Mobile UX: Ajustados paddings (p-16 -> p-8) e dimensões de modais (w-95vw -> w-94vw) para evitar que preencham a tela de forma desproporcional em celulares. (3) Grid Responsivo: Fixado em 2 colunas no mobile para garantir simetria. Build avança para série AB-18.
-16/04/2026 | UI Refinement: Categories Card | (1) Estabilidade Visual: Substituído `aspect-square` por `min-h-[130px] md:min-h-[150px]` e removido `overflow-hidden` para evitar corte de nomes longos. (2) Legibilidade: Implementado `line-clamp-2` com largura total no texto das categorias. (3) Grid Ultra-Responsivo: Evolução do grid para 2→3→4→5→6 colunas dependendo do breakpoint, garantindo preenchimento harmônico em todas as telas. (4) Documentação: Inseridos comentários de "Regras Permanentes" no código para preservar a solução em futuras manutenções. Build avança para série AB-19.
-16/04/2026 | Core Logic: Transfer Tracking | (1) Rastreabilidade: Implementada coluna `is_transfer` (via mutation e mapeamento frontend) para identificar transações de transferência entre contas. (2) Integridade de Totais: Transações marcadas como `isTransfer` agora são excluídas dos cálculos de Receita, Despesa e Fluxo de Caixa no `useFinanceStore` e `useDashboardMetrics`, evitando a inflação artificial dos saldos. (3) Mapeamento Supabase: Atualizado `useTransactionMutations` para suportar o novo campo e garantir a limpeza de payloads camelCase. Build avança para série AB-20.
-16/04/2026 | UI/UX: Desktop Layout Overhaul | (1) Top Navigation: Transição da arquitetura lateral (Sidebar) para barra horizontal (Top Nav) no desktop, liberando ~300px de largura para os conteúdos. (2) Otimização Espacial: Grid de métricas e gráficos agora respira melhor, eliminando truncamentos em resoluções padrão. (3) NavigationRail: Convertido em barra horizontal com scroll interno (`no-scrollbar`) e seletor de tema integrado ao canto direito. (4) AppLayout: Refatorado para suportar o novo cabeçalho desktop via prop `sidebar` (agora topnav) mantendo a integridade do header mobile. Build avança para série AB-21.
-16/04/2026 | UI/UX: Grouped Navigation | (1) Hierarquia Semântica: Navegação desktop organizada em grupos (Financeiro, Planejamento, Análise, Conta) com dropdowns dinâmicos. (2) Cabeçalho Compacto: Redução drástica da ocupação horizontal, resolvendo problemas de overflow em zoom de 100%. (3) Acesso Rápido: Botão Home (`🏠`) e Logo clicável ancorados para navegação instantânea. (4) UX Refinement: Implementado `NavGroupDropdown` com animações, overlay de fechamento e destaque visual de grupo ativo. Build avança para série AB-22.
-20/04/2026 | Arquitetura & Projeções | (1) Novo Hook `useDebtProjection`: Implementada lógica especializada para projeção de dívidas e acordos. (2) Reports Analíticos: Refinamento do `ReportsDashboard` e `ProjectionPage` para maior precisão em comparativos multimeses. (3) Sincronização GitHub: Projeto sincronizado com o repositório remoto consolidando as evoluções da série AB. Build avança para série AB-23.
-21/04/2026 | Bugfix Abatimento de Fatura | Correção crítica em `transactionService.ts`: O segundo INSERT da função `anticipateCardPayment` apontava para a tabela inexistente `bills` (causando erro `Could not find the table 'public.bills'`). Corrigido para inserir na tabela `transactions` com `type: 'income'`, `transaction_type: 'adjustment'` e `is_invoice_payment: true`, seguindo o padrão de transações espelhadas do sistema.
-21/04/2026 | Auditoria & Correções de Integridade (4 Críticos) | (1) `useBulkDeleteTransactions` (`useTransactionMutations.ts`): Eliminada referência à tabela inexistente `bills` — IDs de itens do tipo 'bill' agora são soft-deletados em `transactions` junto com os demais. (2) `anticipateCardPayment` (`transactionService.ts`): Adicionado rollback manual — se o INSERT 2 (crédito na fatura) falhar, o INSERT 1 (débito na conta) recebe `deleted_at` automaticamente, evitando estado inconsistente. (3) `handleConfirmPayment` (`CardsDashboard.tsx`): Adicionado rollback da transação de pagamento se o `bulkUpdateTransactions` falhar, garantindo que compras não sejam deixadas em estado ambíguo. (4) `useRenegotiateDebt` (`useDebtMutations.ts`): Antes de inserir as novas parcelas, todas as parcelas pendentes antigas (`is_paid: false`, `deleted_at IS NULL`) do mesmo `debt_id` recebem soft delete, eliminando duplicidade de cobrança na renegociação.
-21/04/2026 | useTransactionMutations.ts | Expurgo global de Updates Otimistas defeituosos. Removido uso de `queryClient.setQueryData(['transactions'])` falho nas funções `useToggleTransactionPaid`, `useUpdateTransaction` e `useDeleteTransaction`, erradicando os loops visuais e o sintoma de "Duplo Clique" na baixa de transações e na interface geral.
-1. Regra de confirmação obrigatória no memorias.md
-Adicione uma seção de protocolo que o modelo deve seguir antes de qualquer alteração:
-markdown## PROTOCOLO OBRIGATÓRIO ANTES DE QUALQUER ALTERAÇÃO
+Modais com formulários longos devem ser responsivos.
 
-1. Ler o arquivo completo que será alterado
-2. Mostrar o trecho ATUAL (antes) explicitamente
-3. Mostrar o trecho NOVO (depois) explicitamente  
-4. Aguardar confirmação antes de aplicar
-5. Após aplicar, ler o arquivo novamente e confirmar que a mudança está lá
-6. NUNCA reportar sucesso sem ter feito a leitura de confirmação
+No desktop:
+- podem ocupar mais largura/altura da tela;
+- devem usar `max-height` baseado em viewport;
+- corpo do modal deve ter `overflow-y-auto`;
+- conteúdo não pode ficar cortado.
 
-PROIBIDO:
-- Alterar mais de um arquivo por mensagem sem confirmação entre eles
-- Deletar ou sobrescrever lógica existente sem mostrar o que será perdido
-- Rodar scripts no banco de dados sem mostrar o resultado de um SELECT antes
-- Reportar "corrigido com sucesso" sem reler o arquivo alterado
-2. Checklist de alteração no banco
-markdown## PROTOCOLO PARA ALTERAÇÕES NO BANCO
+No mobile:
+- modal deve ocupar quase toda a tela;
+- campos devem ir para uma coluna;
+- rolagem deve funcionar;
+- botões devem continuar acessíveis;
+- inputs não podem ficar escondidos pelo teclado.
 
-Antes de qualquer DELETE ou UPDATE no Supabase:
-1. Rodar SELECT com os mesmos filtros e mostrar o resultado
-2. Aguardar confirmação do usuário
-3. Só então executar a operação destrutiva
-4. Rodar SELECT novamente para confirmar o estado final
+Exemplo importante:
+O modal de Novo Acordo/Edição de Acordo deve ser largo o suficiente no desktop e rolável no mobile, porque agora possui campos de entrada, parcelas, datas e total.
 
-NUNCA assumir que uma operação teve efeito pelo status HTTP.
-3. Seção de arquitetura imutável
-markdown## REGRAS DE NEGÓCIO — NÃO ALTERAR SEM APROVAÇÃO EXPLÍCITA
+---
 
-- Transações mãe (is_recurring=true, original_id=null) NUNCA são deletadas, apenas convertidas em pontuais
-- Sombras de exclusão (deleted_at preenchido + original_id + is_recurring=false) são o mecanismo de bloqueio de projeção — não remover
-- O motor de virtualização (useProjectedTransactions) é o único responsável por gerar virtuais — não duplicar essa lógica em componentes
-- Filhos físicos (original_id preenchido, is_recurring=false) representam baixas — não confundir com mães
-4. Testes de regressão descritivos
-markdown## CASOS DE TESTE — VERIFICAR APÓS CADA ALTERAÇÃO
+# REGRA DE TELAS E RESPONSABILIDADES
 
-- [ ] Marcar salário recorrente como recebido: deve aparecer UMA vez no mês, pago
-- [ ] Alterar data de recorrente no mesmo mês (escopo futuro): não deve criar duplicata
-- [ ] Alterar data de recorrente para mês seguinte: mês atual preservado como pontual, série nova começa no próximo
-- [ ] Deletar ocorrência única de recorrente: mês seguinte continua aparecendo
-- [ ] Deletar todos os futuros: série para, histórico preservado
-Nota do Tech Lead: Este documento deve ser usado como contexto base em todos os prompts futuros que envolvam UI ou regras de negócio. Evitar refatorações gráficas e preservar filosofia de "Quiet Luxury" minimalista sem ruídos em cores ou blocos de grid.
+## Gestão de Contas
 
-18/05/2026 | UI/UX & Relatórios | Refinamento visual e semântico da tela de Relatórios (BI 2.0). (1) Limpeza de Interface: Remoção de textos explicativos e didáticos, transformando a tela em um dashboard executivo. (2) Nomenclatura Financeira: Blocos renomeados para termos executivos ("Total de Consumo vs Receita", "Composição das Despesas", "Análise de Categoria"). (3) ComparisonBadge: Implementação de componente de comparação com lógica de cores inteligente (verde para melhora, vermelho para piora) e ícones de tendência. (4) Interatividade: Gráfico de composição agora é clicável, permitindo filtrar e analisar categorias instantaneamente. (5) Visão Semestral: Melhoria da visão comparativa com histórico de 4 semestres para análise de evolução. Build validada com 221 testes passando.
-18/05/2026 | Arquitetura Financeira | Macrocategorias (Agrupamentos Orçamentários). (1) Estrutura Flexível: Implementado `useBudgetGroups` via `localStorage` (fluxo_budget_groups e fluxo_category_group_assignments) para evitar migrations rígidas na tabela read-only `category_groups`, permitindo que usuários criem grupos ilimitados. (2) Gestão Centralizada: Adicionada modal `BudgetGroupManagerModal` na Gestão de Categorias para criar/editar grupos com cores personalizadas e teto (% da receita). Seletor integrado no `EditCategoryDialog` para vínculo categoria-grupo. (3) Relatórios Dinâmicos: Componente `BudgetOverview` refatorado para suportar toggle entre "Por Categoria" e "Por Agrupamento". (4) Cálculo Temporal Inteligente: O consumo de agrupamentos agora respeita o período selecionado (Mês, Semestre, Ano), somando os gastos reais/projetados e comparando contra o percentual da Receita daquele exato período. Testes unitários (222/222) cobrindo recálculo e deduplicação de agrupamento.
+Gestão de Contas é a tela operacional.
 
+Ela responde:
+“O que preciso pagar ou baixar?”
+
+Regra:
+- mostra obrigações do mês selecionado;
+- mostra pendências anteriores ainda abertas;
+- não deve depender de `original_id` para exibir obrigação real;
+- pendência anterior em aberto deve aparecer mesmo sem `original_id`.
+
+No filtro por Mês:
+- mostra obrigações do mês inteiro;
+- mais pendências anteriores abertas.
+
+No filtro por Dia:
+- mostra obrigações daquele dia;
+- mais pendências anteriores abertas;
+- não mostra obrigações futuras depois do dia selecionado.
+
+Filtro Dia deve existir na Gestão de Contas.
+
+Pagamentos de fatura devem acontecer exclusivamente pela Gestão de Contas.
+
+---
+
+## Home / MonthPlan
+
+Home/MonthPlan é uma tela de decisão mensal.
+
+Ela responde:
+“Como está o mês selecionado?”
+
+Cards principais da Home devem usar competência do mês selecionado:
+- não somar despesas pendentes de meses anteriores dentro dos cards principais;
+- pendências anteriores podem aparecer apenas em indicador separado;
+- vencidas devem usar a data real de hoje, não o fim do mês selecionado.
+
+Regra importante:
+- `viewDate` define a competência analisada;
+- `currentDate`/data real define se algo está vencido.
+
+Home não deve funcionar como Gestão de Contas disfarçada.
+
+Filtro Dia não deve existir na Home.
+
+---
+
+## Cartões
+
+A tela de Cartões é demonstrativa.
+
+Ela deve mostrar:
+- cartão selecionado;
+- limite total;
+- limite usado;
+- limite disponível;
+- percentual usado;
+- fatura do mês selecionado;
+- lista de compras/parcelas da fatura;
+- status da fatura;
+- atalho para Gestão de Contas.
+
+A tela de Cartões não deve:
+- pagar fatura;
+- baixar fatura;
+- parcelar fatura;
+- fazer movimentação financeira real.
+
+Pagamentos e baixas de fatura acontecem somente na Gestão de Contas.
+
+Foram removidos da UI de Cartões os blocos:
+- Total lançado;
+- Valor pago;
+- Diferença a conciliar;
+- Gastos;
+- Disponível como card separado;
+- mensagens de conciliação visual que confundiam o usuário.
+
+Esses cálculos podem existir internamente, mas não devem poluir a tela.
+
+---
+
+## Lançamentos
+
+Lançamentos é o extrato/movimentos registrados.
+
+Deve mostrar:
+- compras;
+- despesas;
+- receitas;
+- transferências;
+- pagamentos de fatura;
+- compras de cartão;
+- acordos;
+- entradas e parcelas quando aplicável.
+
+Compra no cartão aparece em Lançamentos, mas não conta como despesa efetiva.
+
+Pagamento de fatura aparece em Lançamentos e conta como despesa efetiva.
+
+Transferências aparecem em Lançamentos, mas não contam como receita/despesa.
+
+Filtro Dia deve permanecer em Lançamentos.
+
+---
+
+## Relatórios
+
+Relatórios é uma tela analítica e projetiva.
+
+Ela deve responder:
+- como os meses futuros vão ficar;
+- quanto entra;
+- quanto sai;
+- quanto sobra/falta;
+- como evolui o consumo;
+- quais categorias/macrogrupos consomem mais;
+- como o período atual compara com o anterior.
+
+Relatórios deve ter modos:
+
+### Projetado
+
+Modo padrão.
+
+Considera:
+- receitas previstas;
+- despesas previstas;
+- contas fixas/futuras;
+- faturas futuras;
+- parcelas futuras;
+- acordos futuros;
+- despesas pendentes;
+- receitas pendentes;
+- recorrências;
+- compromissos do período.
+
+Não exige `isPaid`.
+
+### Realizado
+
+Considera somente caixa efetivo:
+- receitas pagas/recebidas;
+- despesas pagas;
+- pagamento de fatura;
+- não soma compra comum no cartão;
+- não soma transferência.
+
+### Cards principais
+
+Projetado:
+- Receitas previstas;
+- Despesas previstas;
+- Saldo previsto.
+
+Realizado:
+- Receitas efetivas;
+- Despesas efetivas;
+- Saldo efetivo.
+
+Comparativos dos cards devem ser visíveis e BI-like:
+- valor atual;
+- variação absoluta;
+- percentual;
+- direção;
+- cor semântica.
+
+Regra de cor:
+- receita/saldo aumentando = positivo;
+- receita/saldo reduzindo = negativo;
+- despesa aumentando = negativo;
+- despesa reduzindo = positivo;
+- consumo aumentando = negativo;
+- consumo reduzindo = positivo.
+
+### Períodos
+
+Mês:
+- calcula o mês selecionado;
+- compara com mês anterior.
+
+Semestre:
+- calcula semestre selecionado;
+- deve permitir selecionar 1º ou 2º semestre;
+- evolução semestral deve mostrar contexto como 1S/ano anterior, 2S/ano anterior, 1S/ano atual, 2S/ano atual;
+- compara com semestre anterior.
+
+Ano:
+- calcula ano selecionado;
+- compara com ano anterior.
+
+Filtro Dia não deve existir em Relatórios.
+
+---
+
+# REGRA DE RELATÓRIOS — TOTAL DE CONSUMO VS RECEITA
+
+O antigo gráfico de Evolução Mensal foi substituído por uma métrica mais útil: Total de Consumo vs Receita.
+
+Cálculo:
+
+Consumo da receita (%) =
+despesas do período / receitas do período × 100
+
+No modo Projetado:
+- usa receitas previstas;
+- usa despesas previstas.
+
+No modo Realizado:
+- usa receitas efetivas;
+- usa despesas efetivas.
+
+Deve exibir:
+- percentual;
+- valor consumido;
+- receita total;
+- variação contra período anterior em pontos percentuais;
+- gráfico de linha/evolução.
+
+Exemplo:
+Total de Consumo vs Receita
+81,0%
+R$ 3.506,71 de R$ 4.330,00
+↓ 17,6 p.p. vs mês anterior
+
+Sem textos explicativos longos.
+
+---
+
+# REGRA DE RELATÓRIOS — COMPOSIÇÃO DAS DESPESAS
+
+Composição das Despesas deve destrinchar o total de despesas do período selecionado por categoria.
+
+Mês:
+- despesas do mês por categoria.
+
+Semestre:
+- despesas acumuladas do semestre por categoria.
+
+Ano:
+- despesas acumuladas do ano por categoria.
+
+Modo Projetado:
+- despesas previstas/projetadas por categoria.
+
+Modo Realizado:
+- despesas efetivas por categoria.
+
+A composição deve respeitar o modo e o período selecionados.
+
+Clicar em uma categoria na Composição das Despesas deve alimentar a seção Análise de Categoria.
+
+Preferência:
+- cards principais continuam globais;
+- clique no gráfico/ranking seleciona categoria para análise;
+- a categoria clicada fica destacada;
+- usuário pode trocar pelo seletor.
+
+---
+
+# REGRA DE RELATÓRIOS — ANÁLISE DE CATEGORIA
+
+A seção deve se chamar:
+
+Análise de Categoria
+
+Deve conter:
+- seletor de categoria;
+- consumo do período atual;
+- consumo do período anterior;
+- diferença;
+- percentual de variação;
+- gráfico/linha de evolução.
+
+Regras:
+- Mês compara com mês anterior;
+- Semestre compara com semestre anterior;
+- Ano compara com ano anterior.
+
+Sem textos explicativos longos.
+
+---
+
+# REGRA DE ORÇAMENTOS
+
+Orçamentos comparam Planejado x Realizado por categoria ou agrupamento.
+
+Orçamento não é a mesma coisa que despesa efetiva financeira.
+
+## Orçamento por Categoria
+
+Unidade principal:
+Categoria.
+
+Deve mostrar:
+- categoria;
+- planejado;
+- consumo/realizado;
+- diferença;
+- percentual utilizado;
+- status.
+
+Status:
+- Dentro;
+- Atenção;
+- Estourado;
+- Sem orçamento definido.
+
+Regra fundamental:
+
+Acompanhar = visibilidade.
+Orçamento = meta.
+Movimento = consumo.
+
+Essas três coisas não podem ser misturadas.
+
+O usuário deve escolher explicitamente quais categorias quer acompanhar.
+
+A lista principal de Orçamentos por Categoria mostra somente categorias escolhidas pelo usuário.
+
+Não deve aparecer apenas porque:
+- tem `budgetLimit`;
+- tem movimento;
+- tem gasto;
+- tem categoria;
+- está em macrocategoria.
+
+Se o toggle “Acompanhar” estiver desligado:
+- categoria não aparece na lista principal;
+- mesmo com orçamento definido;
+- mesmo com movimento.
+
+Se estiver ligado:
+- aparece;
+- se tiver orçamento, mostra meta;
+- se não tiver orçamento, mostra “Sem orçamento definido”;
+- se não tiver movimento, mostra realizado R$ 0,00.
+
+O aviso de categorias com movimento não acompanhadas foi removido porque poluía a tela.
+
+## Cartão no orçamento por categoria
+
+Para métricas financeiras gerais:
+- compra no cartão não conta como despesa efetiva;
+- pagamento da fatura conta como despesa efetiva.
+
+Para orçamento por categoria:
+- compra no cartão conta no consumo da categoria da compra;
+- pagamento da fatura não entra no orçamento por categoria.
+
+Motivo:
+Orçamento mede comportamento de consumo por categoria. Fatura é forma de pagamento, não categoria de consumo.
+
+Exemplo:
+Compra no cartão:
+Mercado — R$ 300 — Alimentação
+
+Orçamento:
+Alimentação + R$ 300
+
+Relatório efetivo:
+só conta quando pagar a fatura.
+
+---
+
+# REGRA DE MACROCATEGORIAS / AGRUPAMENTOS ORÇAMENTÁRIOS
+
+Macrocategorias são agrupamentos personalizados de categorias.
+
+Exemplos:
+- Essencial;
+- Conforto;
+- Dívidas;
+- Lazer;
+- Investimentos;
+- Variáveis;
+- Família;
+- Empresa.
+
+Elas servem para análise estratégica acima das categorias.
+
+Exemplo:
+Essencial
+- Moradia;
+- Saúde;
+- Alimentação Base.
+
+Cada macrocategoria pode ter teto percentual sobre a receita do período.
+
+Exemplo:
+Essencial = 25% da receita.
+
+Cálculo:
+
+Teto do agrupamento =
+receita do período × percentual definido
+
+Consumo do agrupamento =
+soma dos gastos das categorias vinculadas no período
+
+Uso =
+consumo / teto
+
+Disponível =
+teto - consumo
+
+Status:
+- Dentro;
+- Atenção;
+- Estourado;
+- Sem teto definido.
+
+A tela de Relatórios/Orçamentos deve alternar entre:
+- Por Categoria;
+- Por Agrupamento.
+
+## Persistência atual
+
+A estrutura persistente oficial ainda não foi criada no Supabase.
+
+A implementação atual usa `localStorage` por usuário:
+- `fluxo_budget_groups:<userId>`;
+- `fluxo_category_group_assignments:<userId>`.
+
+Risco:
+- não sincroniza entre dispositivos/navegadores.
+
+Futuro recomendado:
+Criar migration oficial:
+- `budget_groups`;
+- `user_id`;
+- `name`;
+- `color`;
+- `icon`;
+- `budget_type`;
+- `budget_percent`;
+- `budget_amount`;
+- vínculo em `categories` ou tabela relacional.
+
+## Tela de Categorias
+
+O gerenciamento de macrocategorias acontece na tela de Categorias.
+
+Cada categoria pode ser associada a uma macrocategoria.
+
+O usuário deve conseguir:
+- criar macrocategoria;
+- editar nome/cor;
+- definir teto percentual da receita;
+- associar categoria;
+- trocar categoria de grupo;
+- deixar categoria sem agrupamento.
+
+---
+
+# REGRA DE CARTÃO DE CRÉDITO E FATURA
+
+Compra no cartão:
+- aparece em Lançamentos;
+- aparece em Cartões/Fatura;
+- consome limite do cartão;
+- não conta como despesa efetiva no momento da compra.
+
+Pagamento de fatura:
+- é despesa efetiva;
+- acontece somente pela Gestão de Contas;
+- pode ser total, parcial ou parcelado;
+- não pode duplicar compra + fatura.
+
+Cartões é demonstrativo.
+
+Gestão de Contas é o ponto único para baixa/pagamento de fatura.
+
+## Pagamento total
+
+Ao pagar fatura total:
+- registra despesa efetiva `isInvoicePayment`;
+- debita conta/carteira escolhida;
+- marca fatura/itens como baixados conforme regra;
+- não gera saldo futuro.
+
+## Pagamento parcial
+
+Ao pagar fatura parcialmente:
+- registra somente o valor pago como despesa efetiva;
+- marca a obrigação/fatura atual como baixada/settled;
+- gera saldo restante na próxima fatura como obrigação/despesa futura;
+- não duplica compras originais;
+- não libera limite total indevidamente se houver saldo remanescente.
+
+## Parcelamento de fatura
+
+Ao parcelar fatura:
+- usuário informa entrada, se houver;
+- usuário informa quantidade/valor das parcelas conforme banco/app do cartão;
+- o Fluxo não calcula juros;
+- fatura atual é considerada renegociada/baixada;
+- parcelas futuras são geradas conforme valores informados;
+- não exigir que entrada + parcelas fechem valor original, pois juros podem já estar embutidos pelo banco.
+
+---
+
+# REGRA DE LIMITE DO CARTÃO E isPaid
+
+Compras no cartão podem ser registradas como `isPaid = true` porque representam uma despesa baixada via cartão.
+
+Mas isso não significa que a fatura foi paga.
+
+Para limite de cartão:
+- compra no cartão continua consumindo limite até que a fatura correspondente seja quitada, renegociada ou tratada conforme regra;
+- pagamento de fatura (`isInvoicePayment`) é o evento financeiro que ajusta/libera limite;
+- o campo `isPaid` da compra individual não deve, sozinho, zerar o impacto da compra no limite.
+
+Erro corrigido:
+O cálculo de limite descartava compras no cartão marcadas como `isPaid = true`, o que fazia a fatura ter valor, mas o limite usado aparecer como 0.
+
+Regra correta:
+- fatura aberta com valor lançado e valor pago R$ 0,00 deve consumir limite;
+- limite disponível = limite total - limite usado;
+- percentual usado = limite usado / limite total.
+
+Exemplo:
+Limite: R$ 1.000,00
+Fatura aberta: R$ 771,89
+Pago: R$ 0,00
+
+Resultado esperado:
+- limite usado: R$ 771,89;
+- limite disponível: R$ 228,11;
+- uso: ~77%.
+
+---
+
+# REGRA DE ACORDOS
+
+Acordo = entrada opcional + parcelas futuras.
+
+Entrada não é parcela.
+
+Parcelas começam depois da entrada.
+
+O app não calcula juros; registra o acordo informado pelo usuário.
+
+Exemplo real:
+Entrada: R$ 79,60
+Parcelas: 11x de R$ 90,39
+Total: R$ 1.073,89
+
+Cálculo:
+R$ 79,60 + 11 × R$ 90,39 = R$ 1.073,89
+
+## Formulário de Acordos
+
+Campos:
+- Tem entrada?
+- Valor da entrada;
+- Data da entrada;
+- Entrada paga no ato?
+- Conta/Carteira da entrada;
+- Quantidade de parcelas;
+- Valor da parcela;
+- Total do acordo calculado automaticamente;
+- Data da 1ª parcela;
+- Dia de vencimento.
+
+## Entrada do acordo
+
+A entrada deve ser uma transação separada vinculada ao `debt_id`.
+
+Se paga no ato:
+- `is_paid = true`;
+- `payment_date` preenchido;
+- `account_id`/conta informada;
+- deve debitar conta/carteira se o fluxo atual faz isso.
+
+Se não paga:
+- fica pendente;
+- aparece na Gestão de Contas como obrigação separada.
+
+Descrição sugerida:
+Entrada acordo [nome]
+
+## Parcelas do acordo
+
+Gerar parcelas separadas:
+- Parcela 1/N acordo [nome]
+- Parcela 2/N acordo [nome]
+- ...
+- Parcela N/N acordo [nome]
+
+Entrada não entra na contagem.
+
+Exemplo:
+Entrada + 11 parcelas gera:
+- 1 transação de entrada;
+- 11 parcelas;
+- não 12 parcelas.
+
+## Novo Acordo vs Edição
+
+Novo Acordo deve abrir limpo.
+
+Não pode herdar:
+- dados de acordo editado;
+- valores de exemplo;
+- dados do último acordo;
+- valores como 90,39, 11, Inter etc.
+
+Editar Acordo:
+- deve abrir preenchido com dados reais do acordo selecionado.
+
+Regra técnica:
+- separar `createEmptyAgreementForm()`;
+- `resetFormState()`;
+- `handleEdit(...)`;
+- `openAddDebtForm()` deve resetar antes de abrir;
+- `handleCloseForm()` deve resetar;
+- usar key diferente entre novo e edição para evitar reaproveitamento indevido do subtree React.
+
+## Datas de acordo
+
+Ao lidar com strings `yyyy-mm-dd`, usar parsing local (`parseLocalDate`) em vez de `new Date(...)`, para evitar deslocamento por timezone.
+
+---
+
+# REGRA DE CLASSIFICAÇÃO CANÔNICA DE CATEGORIAS
+
+Relatórios e composições por categoria devem agrupar transações por chave canônica, não por label solto, `debt_id` individual ou fallback local.
+
+Regra geral:
+- label igual não basta;
+- agrupamento deve usar key canônica.
+
+## Buckets canônicos
+
+Categoria real:
+- key: `category:{category.id}`;
+- label: nome da categoria.
+
+Acordo:
+- key: `logical:agreement`;
+- label: `Acordo`.
+
+Renegociação:
+- key: `logical:renegotiation`;
+- label: `Renegociação`.
+
+Sem categoria:
+- key: `logical:uncategorized`;
+- label: `Não identificados`.
+
+Categoria órfã:
+- key: `logical:missing-category:{categoryId}`;
+- label: `Categoria não encontrada`.
+
+## Prioridade atual
+
+1. `debtId` → Acordo.
+2. Renegociação sistêmica → Renegociação.
+3. Categoria real chamada Acordo → Acordo.
+4. Categoria real diferente de Não Identificados → categoria real.
+5. Categoria real Não Identificados → Não identificados.
+6. `categoryId` órfão → Categoria não encontrada.
+7. Fallback → Não identificados.
+
+## Acordo
+
+Transações com `debt_id` devem cair na categoria lógica Acordo, quando não houver categoria real melhor.
+
+Todos os acordos devem somar no mesmo bucket:
+- `logical:agreement`.
+
+Não usar:
+- `debt_id` individual como key;
+- label solto;
+- fallback separado.
+
+Exemplo:
+99 - Empréstimo: R$ 167,67
+Inter: R$ 90,39
+
+Composição correta:
+Acordo — R$ 258,06
+
+Não:
+Acordo — R$ 167,67
+Acordo — R$ 90,39
+
+## Renegociação
+
+Renegociação é categoria lógica/nativa do sistema, assim como Acordo.
+
+Não Identificados é último recurso.
+
+Se o sistema sabe que a transação representa renegociação, ela deve aparecer como Renegociação, mesmo se estiver cadastrada com categoria real “Não Identificados”.
+
+Exemplos de transações que podem ser Renegociação:
+- Renegociação de Pendências;
+- Parcela fatura;
+- Saldo restante;
+- parcelamentos/ajustes sistêmicos de fatura;
+- registros com sinais estruturados como `transactionType`, `cardId`, `invoiceMonthYear`, desde que não sejam `isInvoicePayment`.
+
+Regra:
+- usar campo estruturado quando existir;
+- usar descrição como fallback controlado;
+- documentar que falta um campo dedicado de renegociação em Transaction.
+
+Exemplo real:
+Renegociação de Pendências (1/9)
+Categoria real: Não Identificados
+Resultado correto:
+Renegociação — R$ 483,86
+
+## Não Identificados
+
+Não Identificados deve ser usado apenas quando:
+- não há categoria real;
+- não há `debt_id`;
+- não há regra lógica nativa melhor;
+- não há categoria órfã identificável.
+
+Não deve esconder:
+- acordo;
+- renegociação;
+- categoria órfã.
+
+## Categoria não encontrada
+
+Se `category_id` existe, mas a categoria não é encontrada na lista carregada:
+- mostrar como `Categoria não encontrada`;
+- não misturar com Não Identificados.
+
+Isso indica problema de integridade:
+- categoria apagada;
+- categoria de outro usuário;
+- RLS/escopo;
+- dado órfão.
+
+---
+
+# REGRA DE RELATÓRIOS — CATEGORIAS LÓGICAS NATIVAS
+
+Algumas classificações não dependem apenas da categoria manual cadastrada pelo usuário.
+
+Categorias lógicas/nativas:
+- Acordo;
+- Renegociação;
+- Não identificados;
+- Categoria não encontrada.
+
+Acordo:
+- transações com `debt_id` ou categoria real Acordo.
+
+Renegociação:
+- transações sistêmicas de renegociação, saldo restante, parcela de fatura ou renegociação de pendências.
+
+Não Identificados:
+- usado apenas como último recurso.
+
+Categoria não encontrada:
+- usada quando há `category_id`, mas a categoria não resolve.
+
+---
+
+# REGRA DE RELATÓRIOS — ACORDOS
+
+Acordos devem entrar em Relatórios conforme competência/data.
+
+Modo Projetado:
+- entrada pendente ou paga entra no mês da entrada;
+- parcelas futuras entram nos meses de vencimento;
+- não exigir `is_paid`.
+
+Modo Realizado:
+- entrada/parcela só entra se paga.
+
+Composição das Despesas:
+- transações com `debt_id` e sem categoria real devem cair como Acordo;
+- múltiplos acordos no mesmo período somam em uma única linha Acordo.
+
+Exemplo:
+Entrada Inter: Maio/2026 — R$ 79,60
+Parcela 1/11 Inter: Junho/2026 — R$ 90,39
+Parcela 2/11 Inter: Julho/2026 — R$ 90,39
+
+Relatório Projetado:
+- Maio: Acordo inclui R$ 79,60;
+- Junho: Acordo inclui R$ 90,39;
+- Julho: Acordo inclui R$ 90,39.
+
+---
+
+# REGRA DE FILTROS DE PERÍODO
+
+Filtro Dia só deve existir em:
+- Lançamentos;
+- Gestão de Contas.
+
+Filtro Dia deve ser removido de:
+- Home;
+- Relatórios;
+- Orçamentos;
+- Cartões;
+- demais telas analíticas/planejamento.
+
+Relatórios devem trabalhar com:
+- Mês;
+- Semestre;
+- Ano.
+
+Quando selecionar Semestre:
+- toda a tela muda para visão de semestre;
+- cards somam semestre;
+- gráfico mostra semestres/meses do semestre conforme contexto;
+- comparativo usa semestre anterior;
+- orçamento por categoria só aparece se a visão suportar adequadamente.
+
+---
+
+# REGRA DE VALORES MONETÁRIOS
+
+Valores monetários não podem quebrar linha entre:
+- sinal negativo;
+- R$;
+- valor.
+
+Usar:
+- `whitespace-nowrap`;
+- `tabular-nums`;
+- `leading-tight`/`leading-none`;
+- `clamp` de fonte se necessário.
+
+Aplicar em:
+- cards da Home;
+- Relatórios;
+- Orçamentos;
+- Gestão de Contas;
+- Cartões;
+- resumos financeiros.
+
+Exemplo de problema corrigido:
+`-R$ 3.005,30` não deve quebrar depois do hífen.
+
+---
+
+# REGRA DE TESTES E VALIDAÇÃO DE SPRINT
+
+Antes de fechar sprint, executar:
+
+- `npm run check:encoding`
+- `npm test`
+- `npm run build`
+- `npm run lint`
+
+Quando mexer em cálculo financeiro, adicionar teste de regressão.
+
+Quando mexer em UI com texto acentuado, garantir `check:encoding` e testes com texto correto.
+
+Quando mexer em cartão/fatura/acordos/orçamentos/relatórios, validar manualmente cenários reais além dos testes.
+
+---
+
+# CORREÇÕES IMPORTANTES REGISTRADAS
+
+## Correção: Home zerada no boot
+
+Problema:
+Home abria com valores R$ 0,00 antes dos dados carregarem.
+
+Correção:
+Boot passou a executar a rotina real do botão Atualizar automaticamente ao acessar o app logado.
+
+Regra:
+Home não pode renderizar estado zerado falso enquanto dados ainda carregam.
+
+---
+
+## Correção: tutorial
+
+Problema:
+Tutorial reaparecia constantemente.
+
+Decisão final:
+Tutorial removido completamente.
+
+---
+
+## Correção: Acentuação/mojibake
+
+Problema:
+Textos como `Descri��o`, `N�`, `LanÃ§amento`.
+
+Correção:
+Textos corrigidos e proteção permanente criada:
+- `.editorconfig`;
+- `AGENTS.md`;
+- `scripts/check-mojibake.mjs`;
+- `npm run check:encoding`.
+
+---
+
+## Correção: Cartões — limite
+
+Problema:
+Fatura tinha valor, mas limite usado aparecia como 0%.
+
+Causa:
+Compra no cartão marcada como `isPaid = true` estava sendo removida do cálculo de limite.
+
+Correção:
+Compra no cartão continua consumindo limite até pagamento/baixa/renegociação da fatura.
+
+---
+
+## Correção: Cartões — UI
+
+Problema:
+Tela de Cartões tinha blocos inúteis e poluídos.
+
+Removidos da UI:
+- Total lançado;
+- Valor pago;
+- Diferença a conciliar;
+- Gastos;
+- Disponível como card separado.
+
+Mantidos:
+- limite;
+- fatura;
+- status;
+- lista de lançamentos;
+- atalho para Gestão de Contas.
+
+---
+
+## Correção: Orçamentos — categorias acompanhadas
+
+Problema:
+Categorias apareciam mesmo com toggle “Acompanhar” desligado.
+
+Correção:
+A lista principal mostra somente categorias explicitamente acompanhadas.
+
+Regra:
+Acompanhar = visibilidade.
+Orçamento = meta.
+Movimento = consumo.
+
+---
+
+## Correção: Relatórios — Acordo duplicado
+
+Problema:
+Acordo aparecia duplicado na Composição das Despesas.
+
+Causa:
+Agrupamento usava key por `debt_id`.
+
+Correção:
+Todos os acordos caem em `logical:agreement`.
+
+---
+
+## Correção: Relatórios — Renegociação
+
+Problema:
+Renegociação de Pendências aparecia como Não Identificados.
+
+Correção:
+Renegociação virou categoria lógica nativa:
+`logical:renegotiation`.
+
+---
+
+## Correção: Acordos — entrada
+
+Problema:
+Tela de Acordos não permitia entrada.
+
+Correção:
+Acordos agora suportam entrada opcional separada das parcelas.
+
+Exemplo:
+R$ 79,60 + 11x R$ 90,39 = R$ 1.073,89.
+
+---
+
+## Correção: Acordos — formulário herdava estado
+
+Problema:
+Novo Acordo abria com dados do acordo editado anteriormente.
+
+Correção:
+Estado de novo acordo e edição foi separado:
+- novo abre limpo;
+- edição abre preenchida;
+- fechamento reseta estado.
+
+---
+
+## Correção: Acordos — relatórios
+
+Problema:
+Acordos sem categoria não apareciam corretamente em Relatórios.
+
+Correção:
+Transação com `debt_id` e sem categoria cai em Acordo.
+
+---
+
+# PRÓXIMOS PONTOS TÉCNICOS FUTUROS
+
+## Persistir macrocategorias no backend
+
+Hoje macrocategorias usam localStorage.
+
+Futuro:
+criar migration oficial para persistir:
+- grupos;
+- percentual;
+- cor;
+- ícone;
+- vínculo com categorias;
+- user_id;
+- RLS.
+
+## Campo dedicado para Renegociação
+
+Hoje Renegociação é detectada por sinais estruturados + descrição.
+
+Futuro:
+adicionar campo estruturado para identificar renegociação, evitando dependência de texto.
+
+Possíveis campos:
+- `system_category`;
+- `financial_origin`;
+- `transaction_subtype`;
+- `is_renegotiation`;
+- `renegotiation_group_id`.
+
+## Edição segura de Acordos
+
+Se entrada já foi paga:
+- não permitir remover livremente;
+- exigir estorno/correção assistida;
+- preservar histórico.
+
+## Persistência das categorias acompanhadas
+
+Hoje categorias acompanhadas usam localStorage.
+
+Futuro:
+persistir no backend por usuário para sincronizar entre dispositivos.
+
+## Melhorias de recategorização
+
+Criar fluxo para recategorizar em massa:
+- parcelas de acordo;
+- renegociação;
+- transações sem categoria;
+- categorias órfãs.
