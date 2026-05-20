@@ -1,8 +1,7 @@
-// UTF-8 Integrity Check
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -12,143 +11,211 @@ import { cn } from '@/lib/utils';
 type SelectorMode = 'day' | 'month' | 'year';
 
 interface MonthSelectorProps {
-    modes?: SelectorMode[];
+  modes?: SelectorMode[];
 }
 
 const DEFAULT_MODES: SelectorMode[] = ['day', 'month', 'year'];
+const MONTH_OPTIONS = [
+  'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+  'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
+];
 
 export function MonthSelector({ modes = DEFAULT_MODES }: MonthSelectorProps) {
-    const {
-        viewDate,
-        setViewDate,
-        viewMode = 'month',
-        setViewMode = () => undefined,
-        nextMonth,
-        prevMonth,
-        nextDay,
-        prevDay,
-        nextYear,
-        prevYear
-    } = useFinanceStore();
+  const {
+    viewDate,
+    setViewDate,
+    viewMode = 'month',
+    setViewMode = () => undefined,
+    nextMonth,
+    prevMonth,
+    nextDay,
+    prevDay,
+    nextYear,
+    prevYear,
+  } = useFinanceStore();
 
-    useEffect(() => {
-        if (viewMode === 'all' || !modes.includes(viewMode as SelectorMode)) setViewMode('month');
-    }, [modes, setViewMode, viewMode]);
+  useEffect(() => {
+    if (viewMode === 'all' || !modes.includes(viewMode as SelectorMode)) setViewMode('month');
+  }, [modes, setViewMode, viewMode]);
 
-    const effectiveViewMode = viewMode === 'all' || !modes.includes(viewMode as SelectorMode) ? 'month' : viewMode;
+  const effectiveViewMode = viewMode === 'all' || !modes.includes(viewMode as SelectorMode) ? 'month' : viewMode;
+  const visibleYears = useMemo(() => {
+    const currentYear = viewDate.getFullYear();
+    return Array.from({ length: 6 }).map((_, index) => currentYear - 2 + index);
+  }, [viewDate]);
 
-    const handlePrev = () => {
-        if (effectiveViewMode === 'day') prevDay();
-        else if (effectiveViewMode === 'month') prevMonth();
-        else if (effectiveViewMode === 'year') prevYear();
-    };
+  const handlePrev = () => {
+    if (effectiveViewMode === 'day') prevDay();
+    else if (effectiveViewMode === 'month') prevMonth();
+    else if (effectiveViewMode === 'year') prevYear();
+  };
 
-    const handleNext = () => {
-        if (effectiveViewMode === 'day') nextDay();
-        else if (effectiveViewMode === 'month') nextMonth();
-        else if (effectiveViewMode === 'year') nextYear();
-    };
+  const handleNext = () => {
+    if (effectiveViewMode === 'day') nextDay();
+    else if (effectiveViewMode === 'month') nextMonth();
+    else if (effectiveViewMode === 'year') nextYear();
+  };
 
-    const getFormat = () => {
-        if (effectiveViewMode === 'day') return "dd 'de' MMMM yyyy";
-        if (effectiveViewMode === 'month') return 'MMMM yyyy';
-        return 'yyyy';
-    };
+  const selectorLabel = useMemo(() => {
+    if (effectiveViewMode === 'day') return format(viewDate, "dd 'de' MMMM yyyy", { locale: ptBR });
+    if (effectiveViewMode === 'month') {
+      return format(viewDate, "MMMM 'de' yyyy", { locale: ptBR }).replace(/^./, (char) => char.toUpperCase());
+    }
+    return String(viewDate.getFullYear());
+  }, [effectiveViewMode, viewDate]);
 
-    return (
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-            {/* Mode Selector */}
-            <div className="flex p-1 bg-muted rounded-xl">
-                {modes.map((mode) => (
-                    <Button
-                        key={mode}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setViewMode(mode)}
-                        className={cn(
-                            "h-7 px-3 text-xs font-bold uppercase tracking-wider rounded-lg transition-all",
-                            effectiveViewMode === mode ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
-                        )}
-                    >
-                        {mode === 'day' ? 'Dia' : mode === 'month' ? 'Mês' : 'Ano'}
-                    </Button>
-                ))}
-            </div>
-
-            {/* Date Navigator */}
-            {effectiveViewMode === 'all' ? (
-                <div className="flex items-center gap-2 bg-primary/10 text-primary px-4 py-1.5 rounded-xl border border-primary/20 animate-fade-in h-10">
-                    <Calendar className="w-4 h-4" />
-                    <span className="text-xs font-black uppercase tracking-widest">Visualizando Todo o Período</span>
-                </div>
-            ) : (
-                <div className="flex items-center gap-2 bg-card p-1 rounded-xl shadow-sm border border-border">
-                    <Button variant="ghost" size="icon" onClick={handlePrev} className="h-8 w-8 rounded-lg">
-                        <ChevronLeft className="w-4 h-4" />
-                    </Button>
-
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="ghost" className="h-8 min-w-[140px] font-medium capitalize rounded-lg">
-                                <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
-                                {format(viewDate, getFormat(), { locale: ptBR })}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 z-50 rounded-2xl shadow-xl" align="center">
-                            <CalendarPicker
-                                mode="single"
-                                selected={viewDate}
-                                onSelect={(date: Date | undefined) => date && setViewDate(date)}
-                                initialFocus
-                                locale={ptBR}
-                                className="p-3"
-                                classNames={{
-                                    day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
-                                }}
-                            />
-                        </PopoverContent>
-                    </Popover>
-
-                    <Button variant="ghost" size="icon" onClick={handleNext} className="h-8 w-8 rounded-lg">
-                        <ChevronRight className="w-4 h-4" />
-                    </Button>
-                </div>
+  return (
+    <div className="flex flex-col sm:flex-row items-center gap-3">
+      <div className="flex p-1 bg-muted rounded-xl">
+        {modes.map((mode) => (
+          <Button
+            key={mode}
+            variant="ghost"
+            size="sm"
+            onClick={() => setViewMode(mode)}
+            className={cn(
+              'h-7 px-3 text-xs font-bold uppercase tracking-wider rounded-lg transition-all',
+              effectiveViewMode === mode ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground'
             )}
+          >
+            {mode === 'day' ? 'Dia' : mode === 'month' ? 'Mês' : 'Ano'}
+          </Button>
+        ))}
+      </div>
+
+      {effectiveViewMode === 'all' ? null : (
+        <div className="flex items-center gap-2 bg-card p-1 rounded-xl shadow-sm border border-border">
+          <Button variant="ghost" size="icon" onClick={handlePrev} className="h-8 w-8 rounded-lg">
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" className="h-8 min-w-[160px] font-medium rounded-lg">
+                <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                {selectorLabel}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto rounded-2xl p-3 shadow-xl" align="center">
+              {effectiveViewMode === 'day' ? (
+                <CalendarPicker
+                  mode="single"
+                  selected={viewDate}
+                  onSelect={(date: Date | undefined) => date && setViewDate(date)}
+                  initialFocus
+                  locale={ptBR}
+                  className="p-0"
+                  classNames={{
+                    day_selected:
+                      'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
+                  }}
+                />
+              ) : effectiveViewMode === 'month' ? (
+                <div className="w-[280px] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-lg"
+                      onClick={() => setViewDate(new Date(viewDate.getFullYear() - 1, viewDate.getMonth(), 1))}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm font-black">{viewDate.getFullYear()}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-lg"
+                      onClick={() => setViewDate(new Date(viewDate.getFullYear() + 1, viewDate.getMonth(), 1))}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2" data-testid="financial-month-grid">
+                    {MONTH_OPTIONS.map((label, monthIndex) => {
+                      const isActive = viewDate.getMonth() === monthIndex;
+                      return (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => setViewDate(new Date(viewDate.getFullYear(), monthIndex, 1))}
+                          className={cn(
+                            'rounded-xl px-3 py-2 text-xs font-black transition-all',
+                            isActive ? 'bg-primary text-primary-foreground' : 'bg-muted/40 text-foreground hover:bg-muted'
+                          )}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="w-[240px]">
+                  <div className="grid grid-cols-2 gap-2" data-testid="financial-year-grid">
+                    {visibleYears.map((year) => {
+                      const isActive = viewDate.getFullYear() === year;
+                      return (
+                        <button
+                          key={year}
+                          type="button"
+                          onClick={() => setViewDate(new Date(year, 0, 1))}
+                          className={cn(
+                            'rounded-xl px-3 py-2 text-sm font-black transition-all',
+                            isActive ? 'bg-primary text-primary-foreground' : 'bg-muted/40 text-foreground hover:bg-muted'
+                          )}
+                        >
+                          {year}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+
+          <Button variant="ghost" size="icon" onClick={handleNext} className="h-8 w-8 rounded-lg">
+            <ChevronRight className="w-4 h-4" />
+          </Button>
         </div>
-    );
+      )}
+    </div>
+  );
 }
 
-// Wrapper for DayPicker with styles matching Shadcn UI roughly
 function CalendarPicker({ className, classNames, showOutsideDays = true, ...props }: any) {
-    return (
-        <DayPicker
-            showOutsideDays={showOutsideDays}
-            className={cn("p-3", className)}
-            classNames={{
-                months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-                month: "space-y-4",
-                caption: "flex justify-center pt-1 relative items-center",
-                caption_label: "text-sm font-medium",
-                nav: "space-x-1 flex items-center",
-                nav_button: cn("h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"),
-                nav_button_previous: "absolute left-1",
-                nav_button_next: "absolute right-1",
-                table: "w-full border-collapse space-y-1",
-                head_row: "flex",
-                head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-                row: "flex w-full mt-2",
-                cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                day: cn("h-9 w-9 p-0 font-normal aria-selected:opacity-100 rounded-md hover:bg-accent hover:text-accent-foreground"),
-                day_range_end: "day-range-end",
-                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                day_today: "bg-accent text-accent-foreground",
-                day_outside: "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
-                day_disabled: "text-muted-foreground opacity-50",
-                day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-                day_hidden: "invisible",
-                ...classNames,
-            }}
-            {...props}
-        />
-    );
+  return (
+    <DayPicker
+      showOutsideDays={showOutsideDays}
+      className={cn('p-3', className)}
+      classNames={{
+        months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
+        month: 'space-y-4',
+        caption: 'flex justify-center pt-1 relative items-center',
+        caption_label: 'text-sm font-medium',
+        nav: 'space-x-1 flex items-center',
+        nav_button: cn('h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100'),
+        nav_button_previous: 'absolute left-1',
+        nav_button_next: 'absolute right-1',
+        table: 'w-full border-collapse space-y-1',
+        head_row: 'flex',
+        head_cell: 'text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]',
+        row: 'flex w-full mt-2',
+        cell: 'h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
+        day: cn('h-9 w-9 p-0 font-normal aria-selected:opacity-100 rounded-md hover:bg-accent hover:text-accent-foreground'),
+        day_range_end: 'day-range-end',
+        day_selected: 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
+        day_today: 'bg-accent text-accent-foreground',
+        day_outside: 'day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30',
+        day_disabled: 'text-muted-foreground opacity-50',
+        day_range_middle: 'aria-selected:bg-accent aria-selected:text-accent-foreground',
+        day_hidden: 'invisible',
+        ...classNames,
+      }}
+      {...props}
+    />
+  );
 }

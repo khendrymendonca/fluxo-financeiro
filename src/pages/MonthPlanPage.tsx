@@ -110,7 +110,7 @@ export default function MonthPlanPage({
   onNavigateToTransactions,
 }: MonthPlanPageProps) {
   const isMobile = useIsMobile();
-  const { accounts, categories, creditCards, transactions, debts, viewDate, loading } = useFinanceStore();
+  const { accounts, categories, creditCards, transactions, debts, viewDate, viewMode, loading } = useFinanceStore();
 
   const transactionsWithInvoiceObligations = useMemo(
     () => [
@@ -132,11 +132,18 @@ export default function MonthPlanPage({
         categories,
         debts,
         viewDate,
+        periodMode: viewMode === 'year' ? 'year' : 'month',
       }),
-    [accounts, categories, debts, transactionsWithInvoiceObligations, viewDate]
+    [accounts, categories, debts, transactionsWithInvoiceObligations, viewDate, viewMode]
   );
 
-  const monthTitle = format(viewDate, "MMMM 'de' yyyy", { locale: ptBR }).replace(/^./, (char) => char.toUpperCase());
+  const periodTitle = useMemo(() => {
+    if (viewMode === 'year') {
+      return String(viewDate.getFullYear());
+    }
+
+    return format(viewDate, "MMMM 'de' yyyy", { locale: ptBR }).replace(/^./, (char) => char.toUpperCase());
+  }, [viewDate, viewMode]);
   const dueItems = monthPlan.upcomingOpenExpenses.slice(0, 6);
   const cashBalanceTone = monthPlan.cashBalance < 0 ? 'risk' : monthPlan.openExpensesTotal > 0 ? 'attention' : 'safe';
 
@@ -194,7 +201,7 @@ export default function MonthPlanPage({
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-muted-foreground">Controle financeiro</p>
-          <h1 className="mt-1 text-3xl font-black tracking-tight md:text-4xl">Painel de {monthTitle}</h1>
+          <h1 className="mt-1 text-3xl font-black tracking-tight md:text-4xl">Painel de {periodTitle}</h1>
         </div>
 
         <div className="flex items-center gap-3">

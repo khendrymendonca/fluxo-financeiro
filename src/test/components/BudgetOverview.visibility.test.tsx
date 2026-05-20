@@ -28,6 +28,10 @@ describe('BudgetOverview Visibility Bug', () => {
     localStorage.clear();
   });
 
+  function expandBudgets() {
+    fireEvent.click(screen.getByRole('button', { name: /Orçamentos/i }));
+  }
+
   it('SHOULD NOT show untracked categories even if they have movement', async () => {
     const categories = [
       category({ id: 'energy', name: 'Energia', budgetLimit: 100 }), // Auto-tracked at first
@@ -49,6 +53,7 @@ describe('BudgetOverview Visibility Bug', () => {
       />
     );
 
+    expandBudgets();
     // Initial state: Energia is auto-tracked (has limit), Alimentacao is not.
     const rows = within(screen.getByTestId('budget-rows-container'));
     expect(rows.getByText('Energia')).toBeInTheDocument();
@@ -97,6 +102,7 @@ describe('BudgetOverview Visibility Bug', () => {
       />
     );
 
+    expandBudgets();
     // Should NOT show Energia because it was explicitly untracked
     expect(screen.queryByText('Energia')).not.toBeInTheDocument();
   });

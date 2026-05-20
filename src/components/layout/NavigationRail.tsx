@@ -22,14 +22,23 @@ import {
   TrendingDown,
   Target,
   ChevronDown,
-  TrendingUp
+  TrendingUp,
+  UserCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { useFeatureFlag } from '@/hooks/useFeatureFlags';
-import { ReactNode, useState, useRef } from 'react';
+import { ReactNode, useMemo, useState, useRef } from 'react';
 import { Portal } from '@/components/ui/Portal';
 import { AppLogo } from '@/components/branding/AppLogo';
+import { useAuth } from '@/contexts/AuthContext';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 // Grupos de navegação para cabeçalho compacto
 const navGroups = [
@@ -244,13 +253,27 @@ interface NavigationRailProps {
 
 export function NavigationRail({ currentView, onNavigate }: NavigationRailProps) {
   const { theme, setTheme } = useTheme();
+  const { user, signOut } = useAuth();
   const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const nowHour = new Date().getHours();
+  const greeting = nowHour < 12 ? 'Bom dia' : nowHour < 18 ? 'Boa tarde' : 'Boa noite';
+  const profileName = useMemo(() => {
+    const metadataName = user?.user_metadata?.full_name || user?.user_metadata?.name;
+    if (typeof metadataName === 'string' && metadataName.trim()) return metadataName.trim();
+    if (user?.email) return user.email.split('@')[0];
+    return 'Usuário';
+  }, [user]);
+  const profileInitials = useMemo(() => {
+    const parts = profileName.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    return profileName.slice(0, 1).toUpperCase() || 'U';
+  }, [profileName]);
 
   return (
     <nav className="flex flex-col w-full">
 
       {/* ── LINHA 1: Logo (clicável) + Tema ── */}
-      <div className="flex items-center justify-between px-6 pt-3 pb-1.5">
+      <div className="flex items-center justify-between gap-4 px-6 pt-3 pb-1.5">
 
         {/* Logo clicável */}
         <button
@@ -260,8 +283,38 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
           <AppLogo className="h-9 w-28 group-hover:opacity-80 transition-opacity duration-200" />
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
+          <div className="min-w-0 text-right">
+            <p className="truncate text-sm font-black text-foreground">{greeting}, {profileName}</p>
+          </div>
           <ThemeButton theme={theme} setTheme={setTheme} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-2.5 py-2 text-sm font-bold text-foreground transition-all hover:border-primary/30 hover:bg-primary/5"
+                aria-label="Abrir menu de perfil"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary/10 text-xs font-black text-primary">
+                    {profileInitials}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44 rounded-2xl">
+              <div className="px-3 py-2">
+                <p className="truncate text-sm font-black text-foreground">{profileName}</p>
+              </div>
+              <DropdownMenuItem className="font-bold" onClick={() => onNavigate('profile')}>
+                <Settings2 className="mr-2 h-4 w-4" />
+                Configurações
+              </DropdownMenuItem>
+              <DropdownMenuItem className="font-bold text-rose-600 focus:text-rose-600" onClick={() => void signOut()}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

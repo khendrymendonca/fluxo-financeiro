@@ -121,6 +121,36 @@ async function renderTransactionListWithOpenPayment(amount: number, onPayBill: R
   };
 }
 
+async function renderTransactionListForFiltering(transactions: Transaction[], categories = financeStoreState.categories) {
+  vi.resetModules();
+
+  vi.doMock('@/hooks/useFinanceStore', () => ({
+    useFinanceStore: () => ({
+      ...financeStoreState,
+      categories,
+    }),
+  }));
+
+  vi.doMock('@/hooks/useTransactionMutations', () => ({
+    useToggleTransactionPaid: () => ({ mutateAsync: vi.fn() }),
+  }));
+
+  vi.doMock('@/components/ui/use-toast', () => ({
+    toast: vi.fn(),
+  }));
+
+  const { TransactionList } = await import('@/components/transactions/TransactionList');
+
+  render(
+    <TransactionList
+      transactions={transactions}
+      onEdit={vi.fn()}
+      onPayBill={vi.fn(async () => undefined)}
+    />,
+    { wrapper }
+  );
+}
+
 describe('TransactionList - fluxo interno de pagamento', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -721,5 +751,124 @@ describe('TransactionList - fluxo interno de pagamento', () => {
     vi.doUnmock('@/hooks/useFinanceStore');
     vi.doUnmock('@/hooks/useTransactionMutations');
     vi.doUnmock('@/components/ui/use-toast');
+  });
+  it('filtra lancamentos por categoria real e combina com busca textual', async () => {
+    await renderTransactionListForFiltering([
+      {
+        id: 'tx-home',
+        userId: 'user-1',
+        description: 'Aluguel apartamento',
+        amount: 900,
+        type: 'expense',
+        transactionType: 'punctual',
+        date: '2026-04-10',
+        isPaid: true,
+        accountId: 'acc-1',
+        categoryId: 'cat-1',
+      },
+      {
+        id: 'tx-food',
+        userId: 'user-1',
+        description: 'Mercado bairro',
+        amount: 180,
+        type: 'expense',
+        transactionType: 'punctual',
+        date: '2026-04-11',
+        isPaid: true,
+        accountId: 'acc-1',
+        categoryId: 'cat-2',
+      },
+    ], [
+      { id: 'cat-1', name: 'Moradia' },
+      { id: 'cat-2', name: 'Alimentação' },
+    ] as any);
+
+    expect(screen.getByText('Aluguel apartamento')).toBeInTheDocument();
+    expect(screen.getByText('Mercado bairro')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: 'category:cat-1' } });
+
+    expect(screen.getByText('Aluguel apartamento')).toBeInTheDocument();
+    expect(screen.queryByText('Mercado bairro')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText(/Pesquisar/), { target: { value: 'mercado' } });
+    expect(screen.queryByText('Aluguel apartamento')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: 'all' } });
+    expect(screen.getByText('Mercado bairro')).toBeInTheDocument();
+  });
+
+  it('filtra lancamentos pela categoria logica Acordo', async () => {
+    await renderTransactionListForFiltering([
+      {
+        id: 'tx-agreement',
+        userId: 'user-1',
+        description: 'Parcela acordo banco',
+        amount: 180,
+        type: 'expense',
+        transactionType: 'installment',
+        date: '2026-04-10',
+        isPaid: true,
+        accountId: 'acc-1',
+        debtId: 'debt-1',
+      },
+      {
+        id: 'tx-home',
+        userId: 'user-1',
+        description: 'Conta de luz',
+        amount: 90,
+        type: 'expense',
+        transactionType: 'punctual',
+        date: '2026-04-11',
+        isPaid: true,
+        accountId: 'acc-1',
+        categoryId: 'cat-1',
+      },
+    ]);
+
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: 'logical:agreement' } });
+
+    expect(screen.getByText('Parcela acordo banco')).toBeInTheDocument();
+    expect(screen.queryByText('Conta de luz')).not.toBeInTheDocument();
+  });
+
+  it('filtra lancamentos por Renegociacao e Nao identificados sem misturar buckets', async () => {
+    await renderTransactionListForFiltering([
+      {
+        id: 'tx-reneg',
+        userId: 'user-1',
+        description: 'Renegociação de Pendências (1/9)',
+        amount: 483.86,
+        type: 'expense',
+        transactionType: 'installment',
+        date: '2026-04-10',
+        isPaid: true,
+        accountId: 'acc-1',
+        categoryId: 'cat-unknown',
+        cardId: 'card-1',
+        invoiceMonthYear: '2026-04',
+      },
+      {
+        id: 'tx-uncategorized',
+        userId: 'user-1',
+        description: 'Despesa sem categoria',
+        amount: 42,
+        type: 'expense',
+        transactionType: 'punctual',
+        date: '2026-04-11',
+        isPaid: true,
+        accountId: 'acc-1',
+      },
+    ], [
+      { id: 'cat-unknown', name: 'Não Identificados' },
+    ] as any);
+
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: 'logical:renegotiation' } });
+    expect(screen.getByText('Renegociação de Pendências (1/9)')).toBeInTheDocument();
+    expect(screen.queryByText('Despesa sem categoria')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: 'logical:uncategorized' } });
+    expect(screen.getByText('Despesa sem categoria')).toBeInTheDocument();
+    expect(screen.queryByText('Renegociação de Pendências (1/9)')).not.toBeInTheDocument();
   });
 });

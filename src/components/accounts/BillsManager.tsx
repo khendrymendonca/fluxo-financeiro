@@ -30,12 +30,14 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { parseLocalDate, todayLocalString } from '@/utils/dateUtils';
+import { isDateOverdue, parseLocalDate, todayLocalString } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/formatters';
 import { Transaction } from '@/types/finance';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EditBillForm } from './EditBillForm';
 import { getAccountOverdraftMetrics } from '@/utils/accountOverdraft';
+import { buildCanonicalCategoryFilterOptions, matchesCanonicalCategoryFilter } from '@/utils/categoryFilter';
+import { isRenegotiationTransaction } from '@/utils/transactionCategory';
 
 export function BillsManager() {
     const {
@@ -70,6 +72,7 @@ export function BillsManager() {
     const [invoiceFirstInstallmentMonth, setInvoiceFirstInstallmentMonth] = useState<string>(format(addMonths(viewDate, 1), 'yyyy-MM'));
     const [expandedTransactionId, setExpandedTransactionId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCategoryKey, setSelectedCategoryKey] = useState('all');
     const [editingBill, setEditingBill] = useState<Transaction | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [settledTransactionIds, setSettledTransactionIds] = useState<Set<string>>(() => new Set());
@@ -341,6 +344,11 @@ export function BillsManager() {
         });
     }, [creditCards, transactions, viewDate, settledTransactionIds]);
 
+    const categoryFilterOptions = useMemo(
+        () => buildCanonicalCategoryFilterOptions([...transactions, ...virtualInvoices], categories, 'Não identificados'),
+        [transactions, virtualInvoices, categories]
+    );
+
     // 2. Filtrar transações recorrentes e injetar as virtuais
     const recurringTransactions = [...transactions, ...virtualInvoices].filter(t => {
         if (settledTransactionIds.has(t.id)) return false;
@@ -361,7 +369,14 @@ export function BillsManager() {
 
         // Esconder compras individuais feitas no cartão de crédito (estas são liquidadas via fatura)
         // Mas permite se for uma transação recorrente (fixa) ou filha de uma recorrente
-        if (t.cardId && !t.isInvoicePayment && !t.isRecurring && t.transactionType !== 'recurring' && !t.originalId) return false;
+        if (
+            t.cardId &&
+            !t.isInvoicePayment &&
+            !t.isRecurring &&
+            t.transactionType !== 'recurring' &&
+            !t.originalId &&
+            !isRenegotiationTransaction(t)
+        ) return false;
 
         const txDate = parseLocalDate(t.date.slice(0, 10));
 
@@ -383,9 +398,14 @@ export function BillsManager() {
         if (searchQuery.trim() !== '') {
             const query = searchQuery.toLowerCase();
             const matchesDescription = t.description.toLowerCase().includes(query);
-            const matchesCategory = categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(query);
+            const categoryOptions = categoryFilterOptions.find((option) =>
+                matchesCanonicalCategoryFilter(t, categories, option.key, 'Não identificados')
+            );
+            const matchesCategory = categoryOptions?.label.toLowerCase().includes(query) ?? false;
             if (!matchesDescription && !matchesCategory) return false;
         }
+
+        if (!matchesCanonicalCategoryFilter(t, categories, selectedCategoryKey, 'Não identificados')) return false;
 
         if (filter === 'all') return true;
         return t.type === filter;
@@ -429,19 +449,38 @@ export function BillsManager() {
                     )}
                 </div>
 
-                <div className="flex items-center gap-2 p-1 bg-muted rounded-2xl w-full overflow-x-auto no-scrollbar md:w-fit">
-                    {([
-                        { id: 'all', label: 'Todas', icon: Filter },
-                        { id: 'expense', label: 'A Pagar', icon: ArrowDownCircle },
-                        { id: 'income', label: 'A Receber', icon: ArrowUpCircle },
-                    ] as const).map(btn => (
-                        <button key={btn.id} onClick={() => setFilter(btn.id)}
-                            className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all",
-                                filter === btn.id ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}>
-                            <btn.icon className="w-4 h-4" />
-                            {btn.label}
-                        </button>
-                    ))}
+                <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                    <div className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900">
+                        <Filter className="h-4 w-4 text-muted-foreground" />
+                        <select
+                            aria-label="Categoria"
+                            value={selectedCategoryKey}
+                            onChange={(event) => setSelectedCategoryKey(event.target.value)}
+                            className="bg-transparent text-sm font-bold text-foreground outline-none"
+                        >
+                            <option value="all">Todas as categorias</option>
+                            {categoryFilterOptions.map((option) => (
+                                <option key={option.key} value={option.key}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="flex items-center gap-2 p-1 bg-muted rounded-2xl w-full overflow-x-auto no-scrollbar md:w-fit">
+                        {([
+                            { id: 'all', label: 'Todas', icon: Filter },
+                            { id: 'expense', label: 'A Pagar', icon: ArrowDownCircle },
+                            { id: 'income', label: 'A Receber', icon: ArrowUpCircle },
+                        ] as const).map(btn => (
+                            <button key={btn.id} onClick={() => setFilter(btn.id)}
+                                className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all",
+                                    filter === btn.id ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                                <btn.icon className="w-4 h-4" />
+                                {btn.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -454,7 +493,7 @@ export function BillsManager() {
                     </div>
                 ) : (
                     recurringTransactions.map(transaction => {
-                        const isLate = parseLocalDate(transaction.date) < new Date() && !transaction.isPaid;
+                        const isLate = isDateOverdue(transaction.date, new Date()) && !transaction.isPaid;
                         const category = categories.find(c => c.id === transaction.categoryId);
 
                         return (
@@ -709,6 +748,7 @@ export function BillsManager() {
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Conta/carteira de origem</label>
                                             <select
+                                                aria-label="Conta/carteira de origem"
                                                 value={invoiceAccountId}
                                                 onChange={e => setInvoiceAccountId(e.target.value)}
                                                 className="h-11 w-full rounded-xl border border-input bg-muted/20 px-3 text-sm font-bold outline-none focus:border-primary"

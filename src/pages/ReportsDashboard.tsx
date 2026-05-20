@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+﻿import { useState, useMemo, useCallback, useRef } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { PageHeader } from '@/components/ui/PageHeader';
 import {
@@ -43,11 +43,18 @@ import { cn } from '@/lib/utils';
 import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { formatCurrency } from '@/utils/formatters';
 import { parseLocalDate } from '@/utils/dateUtils';
-import { getTransactionCategoryBucket, getTransactionCategoryLabel } from '@/utils/transactionCategory';
+import {
+  getTransactionCategoryBucket,
+  getTransactionCategoryLabel,
+  LOGICAL_AGREEMENT_CATEGORY_KEY,
+  LOGICAL_RENEGOTIATION_CATEGORY_KEY,
+  LOGICAL_UNCATEGORIZED_CATEGORY_KEY,
+} from '@/utils/transactionCategory';
 import { buildCardInvoiceObligations } from '@/utils/invoiceObligations';
 import { buildIncomeConsumption, buildPeriodComparison, PeriodComparison } from '@/utils/reportComparisons';
 import { Category, CreditCard, Transaction } from '@/types/finance';
 import { BudgetOverview } from '@/components/budgets/BudgetOverview';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 type Period = 'month' | 'semester' | 'year';
 type ReportMode = 'projected' | 'realized';
@@ -68,22 +75,26 @@ type PeriodPoint = {
   isCurrent: boolean;
 };
 
-function formatComparison(comparison: PeriodComparison, periodLabel: string) {
-  if (!comparison.hasBase) return `sem base no ${periodLabel}`;
-  if (comparison.direction === 'flat') return `igual ao ${periodLabel}`;
+type CategoryAnalysisOption = {
+  id: string;
+  name: string;
+};
 
-  const arrow = comparison.direction === 'up' ? '+' : '-';
-  const percent = comparison.percent !== null ? ` (${Math.abs(comparison.percent).toFixed(1)}%)` : '';
-  return `${arrow} ${formatCurrency(Math.abs(comparison.diff))}${percent} vs ${periodLabel}`;
-}
+type CategoryAnalysisItem = {
+  id: string;
+  description: string;
+  date: string;
+  amount: number;
+  isPaid: boolean;
+};
 
-function formatPercentComparison(comparison: PeriodComparison, periodLabel: string) {
-  if (!comparison.hasBase) return `sem base no ${periodLabel}`;
-  if (comparison.direction === 'flat') return `igual ao ${periodLabel}`;
-
-  const arrow = comparison.direction === 'up' ? '+' : '-';
-  return `${arrow} ${Math.abs(comparison.diff).toFixed(1)} p.p. vs ${periodLabel}`;
-}
+type ConsumptionTrendPoint = {
+  name: string;
+  consumo: number;
+  receita: number;
+  despesa: number;
+  isCurrent: boolean;
+};
 
 function getReportPeriodKey(transaction: Transaction) {
   if (transaction.isInvoicePayment && transaction.invoiceMonthYear) {
@@ -271,7 +282,7 @@ export function buildCategoryExpenseRanking({
   start,
   end,
   selectedAccountId,
-  limit = 10,
+  limit = Number.MAX_SAFE_INTEGER,
 }: {
   transactions: Transaction[];
   categories: Category[];
@@ -423,7 +434,7 @@ function buildProjectedCategoryExpenseRanking({
   start,
   end,
   selectedAccountId,
-  limit = 10,
+  limit = Number.MAX_SAFE_INTEGER,
 }: {
   transactions: Transaction[];
   creditCards: CreditCard[];
@@ -542,7 +553,7 @@ function buildCategoryPeriodValue({
   end,
   selectedAccountId,
   reportMode,
-  categoryId,
+  bucketId,
 }: {
   transactions: Transaction[];
   creditCards: CreditCard[];
@@ -551,13 +562,88 @@ function buildCategoryPeriodValue({
   end: Date;
   selectedAccountId: string;
   reportMode: ReportMode;
-  categoryId: string;
+  bucketId: string;
 }) {
-  const rows = reportMode === 'projected'
-    ? buildProjectedCategoryExpenseRanking({ transactions, creditCards, categories, start, end, selectedAccountId, limit: 1000 })
-    : buildCategoryExpenseRanking({ transactions, categories, start, end, selectedAccountId, limit: 1000 });
+  return getCategoryTransactionsForPeriod({
+    transactions,
+    creditCards,
+    categories,
+    start,
+    end,
+    selectedAccountId,
+    reportMode,
+    bucketId,
+  }).reduce((total, transaction) => total + Number(transaction.amount), 0);
+}
 
-  return rows.find((row) => row.id === categoryId)?.value ?? 0;
+function getCategoryTransactionsForPeriod({
+  transactions,
+  creditCards,
+  categories,
+  start,
+  end,
+  selectedAccountId,
+  reportMode,
+  bucketId,
+}: {
+  transactions: Transaction[];
+  creditCards: CreditCard[];
+  categories: Category[];
+  start: Date;
+  end: Date;
+  selectedAccountId: string;
+  reportMode: ReportMode;
+  bucketId: string;
+}): Transaction[] {
+  const periodKeys = new Set(
+    eachMonthOfInterval({ start, end }).map((month) => format(month, 'yyyy-MM'))
+  );
+
+  const scopedTransactions = reportMode === 'projected'
+    ? eachMonthOfInterval({ start, end }).flatMap((month) =>
+        getMonthTransactionsForReport({
+          transactions,
+          creditCards,
+          month,
+          selectedAccountId,
+        })
+      )
+    : transactions;
+
+  return scopedTransactions
+    .filter((transaction) => {
+      if (reportMode === 'projected') {
+        if (!isProjectedCategoryConsumptionExpense(transaction)) return false;
+      } else {
+        if (!isRealizedCategoryConsumptionExpense(transaction)) return false;
+        if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return false;
+        if (!periodKeys.has(getCategoryConsumptionPeriodKey(transaction))) return false;
+      }
+
+
+      return getTransactionCategoryBucket(transaction, categories, 'Não identificados').key === bucketId;
+    });
+}
+
+function buildCategoryPeriodItems(params: {
+  transactions: Transaction[];
+  creditCards: CreditCard[];
+  categories: Category[];
+  start: Date;
+  end: Date;
+  selectedAccountId: string;
+  reportMode: ReportMode;
+  bucketId: string;
+}): CategoryAnalysisItem[] {
+  return getCategoryTransactionsForPeriod(params)
+    .map((transaction) => ({
+      id: transaction.id,
+      description: transaction.description,
+      date: transaction.date,
+      amount: Number(transaction.amount),
+      isPaid: Boolean(transaction.isPaid),
+    }))
+    .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
 }
 
 export default function ReportsDashboard() {
@@ -575,6 +661,19 @@ export default function ReportsDashboard() {
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const canUseAdvancedReports = useFeatureFlag('advanced_reports');
+  const isMobile = useIsMobile();
+  const analysisSectionRef = useRef<HTMLDivElement | null>(null);
+  const toggleSelectedCategory = useCallback((categoryId: string) => {
+    setSelectedCategoryId((current) => {
+      const nextValue = current === categoryId ? 'all' : categoryId;
+      if (isMobile && nextValue !== 'all') {
+        requestAnimationFrame(() => {
+          analysisSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+      return nextValue;
+    });
+  }, [isMobile]);
 
   const handlePrevMonth = () => setViewDate(subMonths(viewDate, 1));
   const handleNextMonth = () => setViewDate(addMonths(viewDate, 1));
@@ -661,7 +760,7 @@ export default function ReportsDashboard() {
     };
   }, [intervals, getPeriodData]);
 
-  const consumptionTrendData = useMemo(() => {
+  const consumptionTrendData = useMemo<ConsumptionTrendPoint[]>(() => {
     const points = buildTrendPeriodPoints(period, viewDate);
 
     return points.map((point) => {
@@ -716,9 +815,32 @@ export default function ReportsDashboard() {
     [categories]
   );
 
+  const categoryAnalysisOptions = useMemo(() => {
+    const optionMap = new Map<string, CategoryAnalysisOption>();
+
+    [
+      { id: LOGICAL_AGREEMENT_CATEGORY_KEY, name: 'Acordo' },
+      { id: LOGICAL_RENEGOTIATION_CATEGORY_KEY, name: 'Renegociação' },
+      { id: LOGICAL_UNCATEGORIZED_CATEGORY_KEY, name: 'Não identificados' },
+    ].forEach((option) => optionMap.set(option.id, option));
+
+    expenseCategories.forEach((category) => {
+      optionMap.set(`category:${category.id}`, {
+        id: `category:${category.id}`,
+        name: category.name,
+      });
+    });
+
+    topCategories.forEach((category) => {
+      optionMap.set(category.id, { id: category.id, name: category.name });
+    });
+
+    return Array.from(optionMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [expenseCategories, topCategories]);
+
   const selectedCategory = selectedCategoryId === 'all'
     ? null
-    : categories.find((category) => category.id === selectedCategoryId) ?? null;
+    : categoryAnalysisOptions.find((category) => category.id === selectedCategoryId) ?? null;
 
   const selectedCategoryAnalysis = useMemo(() => {
     if (!selectedCategory) return null;
@@ -731,7 +853,7 @@ export default function ReportsDashboard() {
       end: intervals.end,
       selectedAccountId,
       reportMode,
-      categoryId: selectedCategory.id,
+      bucketId: selectedCategory.id,
     });
     const previous = buildCategoryPeriodValue({
       transactions,
@@ -741,7 +863,7 @@ export default function ReportsDashboard() {
       end: intervals.prevEnd,
       selectedAccountId,
       reportMode,
-      categoryId: selectedCategory.id,
+      bucketId: selectedCategory.id,
     });
     const trend = buildTrendPeriodPoints(period, viewDate).map((point) => ({
       name: point.name,
@@ -753,7 +875,7 @@ export default function ReportsDashboard() {
         end: point.end,
         selectedAccountId,
         reportMode,
-        categoryId: selectedCategory.id,
+        bucketId: selectedCategory.id,
       }),
       isCurrent: point.isCurrent,
     }));
@@ -763,6 +885,16 @@ export default function ReportsDashboard() {
       previous,
       comparison: buildPeriodComparison(current, previous),
       trend,
+      items: buildCategoryPeriodItems({
+        transactions,
+        creditCards,
+        categories,
+        start: intervals.start,
+        end: intervals.end,
+        selectedAccountId,
+        reportMode,
+        bucketId: selectedCategory.id,
+      }),
     };
   }, [categories, creditCards, intervals, period, reportMode, selectedAccountId, selectedCategory, transactions, viewDate]);
 
@@ -1062,10 +1194,6 @@ export default function ReportsDashboard() {
 
       {canUseAdvancedReports ? (
         <>
-          <div className="lg:hidden bg-white dark:bg-zinc-900 rounded-[2rem] p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
-            <h3 className="text-base font-black tracking-tight">Mapa por categoria</h3>
-          </div>
-
           <div className="hidden lg:block bg-white dark:bg-zinc-900 rounded-[2.5rem] p-10 xl:p-12 border border-gray-100 dark:border-zinc-800 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
           <div>
@@ -1276,6 +1404,17 @@ export default function ReportsDashboard() {
             </div>
           </div>
 
+          <div className="mb-3 flex flex-wrap items-center gap-4 text-[11px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-white ring-1 ring-white/30" />
+              <span>Receitas</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-rose-500 ring-1 ring-rose-300/30" />
+              <span>Despesas</span>
+            </div>
+          </div>
+
           <div className="h-[260px] w-full">
             <ResponsiveContainer width="100%" height="100%" minHeight={240}>
               <LineChart data={consumptionTrendData} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
@@ -1286,33 +1425,60 @@ export default function ReportsDashboard() {
                   cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }}
                   content={({ active, payload, label }) => {
                     if (!active || !payload?.length) return null;
-                    const point = payload[0]?.payload;
+                    const point = payload[0]?.payload as ConsumptionTrendPoint | undefined;
+                    if (!point) return null;
                     return (
-                      <div className="min-w-[180px] rounded-2xl border border-white/10 bg-zinc-900 p-3 text-[10px] text-white shadow-xl">
+                      <div className="min-w-[210px] rounded-2xl border border-white/10 bg-zinc-900 p-3 text-[10px] text-white shadow-xl">
                         <p className="mb-2 font-black uppercase tracking-widest opacity-70">{label}</p>
                         <div className="flex items-center justify-between gap-4">
+                          <span className="font-bold uppercase tracking-widest text-white">Receitas</span>
+                          <span className="font-black whitespace-nowrap">{formatCurrency(point.receita)}</span>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between gap-4">
+                          <span className="font-bold uppercase tracking-widest text-rose-300">Despesas</span>
+                          <span className="font-black whitespace-nowrap text-rose-300">{formatCurrency(point.despesa)}</span>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between gap-4">
                           <span className="font-bold uppercase tracking-widest opacity-70">Consumo</span>
                           <span className="font-black">{Number(point.consumo).toFixed(1)}%</span>
                         </div>
                         <div className="mt-1 flex items-center justify-between gap-4">
-                          <span className="font-bold uppercase tracking-widest opacity-70">Receita</span>
-                          <span className="font-black">{formatCurrency(point.receita)}</span>
-                        </div>
-                        <div className="mt-1 flex items-center justify-between gap-4">
-                          <span className="font-bold uppercase tracking-widest opacity-70">Despesa</span>
-                          <span className="font-black">{formatCurrency(point.despesa)}</span>
+                          <span className="font-bold uppercase tracking-widest opacity-70">Saldo</span>
+                          <span className={cn(
+                            "font-black whitespace-nowrap",
+                            point.receita - point.despesa >= 0 ? "text-emerald-300" : "text-rose-300"
+                          )}>
+                            {formatCurrency(point.receita - point.despesa)}
+                          </span>
                         </div>
                       </div>
                     );
                   }}
                 />
-                <Line type="monotone" name="Consumo vs Receita" dataKey="consumo" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'hsl(var(--background))' }} activeDot={{ r: 6 }} />
+                <Line
+                  type="monotone"
+                  name="Receitas"
+                  dataKey="receita"
+                  stroke="#FFFFFF"
+                  strokeWidth={3}
+                  dot={{ r: 3.5, strokeWidth: 2, fill: '#FFFFFF' }}
+                  activeDot={{ r: 5, strokeWidth: 0, fill: '#FFFFFF' }}
+                />
+                <Line
+                  type="monotone"
+                  name="Despesas"
+                  dataKey="despesa"
+                  stroke="#F43F5E"
+                  strokeWidth={3}
+                  dot={{ r: 3.5, strokeWidth: 2, fill: '#F43F5E' }}
+                  activeDot={{ r: 5, strokeWidth: 0, fill: '#F43F5E' }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 rounded-[2rem] p-6 border border-gray-100 dark:border-zinc-800 shadow-sm">
+        <div ref={analysisSectionRef} className="bg-white dark:bg-zinc-900 rounded-[2rem] p-6 border border-gray-100 dark:border-zinc-800 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
             <h3 className="text-lg font-black tracking-tight">Análise de Categoria</h3>
             <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
@@ -1321,7 +1487,7 @@ export default function ReportsDashboard() {
               </SelectTrigger>
               <SelectContent className="rounded-2xl border-2">
                 <SelectItem value="all" className="font-bold">Selecionar categoria</SelectItem>
-                {expenseCategories.map((category) => (
+                {categoryAnalysisOptions.map((category) => (
                   <SelectItem key={category.id} value={category.id} className="font-bold">{category.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -1329,37 +1495,77 @@ export default function ReportsDashboard() {
           </div>
 
           {selectedCategory && selectedCategoryAnalysis ? (
-            <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6">
-              <div className="rounded-2xl border border-gray-100 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-950/40 p-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Atual</p>
-                <p className="mt-2 text-2xl font-black tabular-nums">{formatCurrency(selectedCategoryAnalysis.current)}</p>
-                <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Anterior</p>
-                <p className="mt-2 text-lg font-black tabular-nums text-muted-foreground">{formatCurrency(selectedCategoryAnalysis.previous)}</p>
-                <ComparisonBadge comparison={selectedCategoryAnalysis.comparison} periodLabel={periodLabel} invertColors className="mt-4" />
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6">
+                <div className="rounded-2xl border border-gray-100 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-950/40 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Atual</p>
+                  <p className="mt-2 text-2xl font-black tabular-nums">{formatCurrency(selectedCategoryAnalysis.current)}</p>
+                  <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Anterior</p>
+                  <p className="mt-2 text-lg font-black tabular-nums text-muted-foreground">{formatCurrency(selectedCategoryAnalysis.previous)}</p>
+                  <ComparisonBadge comparison={selectedCategoryAnalysis.comparison} periodLabel={periodLabel} invertColors className="mt-4" />
+                </div>
+                <div className="h-[220px] min-w-0">
+                  <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+                    <LineChart data={selectedCategoryAnalysis.trend} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
+                      <YAxis hide domain={[0, 'auto']} />
+                      <Tooltip cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }} formatter={(value) => formatCurrency(Number(value))} />
+                      <Line type="monotone" name={selectedCategory.name} dataKey="valor" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-              <div className="h-[220px] min-w-0">
-                <ResponsiveContainer width="100%" height="100%" minHeight={200}>
-                  <LineChart data={selectedCategoryAnalysis.trend} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
-                    <YAxis hide domain={[0, 'auto']} />
-                    <Tooltip cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }} formatter={(value) => formatCurrency(Number(value))} />
-                    <Line type="monotone" name={selectedCategory.name} dataKey="valor" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                  </LineChart>
-                </ResponsiveContainer>
+
+              <div className="rounded-2xl border border-gray-100 dark:border-zinc-800 bg-gray-50/60 dark:bg-zinc-950/30 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Itens do período</h4>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
+                    {selectedCategoryAnalysis.items.length}
+                  </span>
+                </div>
+
+                {selectedCategoryAnalysis.items.length > 0 ? (
+                  <div className="mt-4 space-y-2" data-testid="category-analysis-items">
+                    {selectedCategoryAnalysis.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between gap-3 rounded-2xl bg-background/90 px-3 py-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-foreground">{item.description}</p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                            <span>{format(parseLocalDate(item.date), 'dd/MM/yyyy')}</span>
+                            <span>{item.isPaid ? 'Pago' : 'Pendente'}</span>
+                          </div>
+                        </div>
+                        <span className="shrink-0 whitespace-nowrap tabular-nums text-sm font-black">
+                          {formatCurrency(item.amount)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-dashed border-border/70 px-4 py-6 text-center text-sm font-bold text-muted-foreground">
+                    Nenhum item no período
+                  </div>
+                )}
               </div>
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm font-bold text-muted-foreground">
-              Selecione uma categoria ou clique no gráfico ao lado para analisar.
+              Sem categoria selecionada
             </div>
           )}
         </div>
       </div>
 
         <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm">
-          <h3 className="text-lg font-black tracking-tight mb-6">Composição das Despesas</h3>
-          <div className="space-y-6">
+          <h3 className="text-lg font-black tracking-tight mb-6">Ranking de Despesas</h3>
+          <div
+            className="space-y-6 overflow-y-auto pr-1 max-h-[360px] md:max-h-[420px] lg:max-h-[480px]"
+            data-testid="category-ranking-scroll"
+          >
             {topCategories.map((cat, idx) => {
               // Lógica de cor baseada no limite
               const hasLimit = cat.budgetLimit !== null && cat.budgetLimit > 0;
@@ -1378,7 +1584,7 @@ export default function ReportsDashboard() {
                     "w-full text-left space-y-2 p-2 -m-2 rounded-2xl transition-all",
                     isSelected ? "bg-primary/5 ring-1 ring-primary/20" : "hover:bg-gray-50 dark:hover:bg-zinc-800/50"
                   )}
-                  onClick={() => setSelectedCategoryId(cat.id)}
+                  onClick={() => toggleSelectedCategory(cat.id)}
                 >
                   <div className="flex justify-between text-sm">
                     <div className="flex flex-col">
@@ -1391,7 +1597,7 @@ export default function ReportsDashboard() {
                     </div>
                     <span className="font-black tabular-nums">{formatCurrency(cat.value)}</span>
                   </div>
-                  <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="h-2 w-full overflow-visible" data-testid={`category-ranking-track-${idx}`}>
                     <div
                       className={cn(
                         "h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(var(--primary),0.3)]",
@@ -1508,3 +1714,4 @@ function StatCard({
     </div>
   );
 }
+

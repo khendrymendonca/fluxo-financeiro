@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+﻿import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ReportsDashboard, { buildCategoryExpenseRanking, buildProjectedReportPeriodData, buildReportPeriodData } from '@/pages/ReportsDashboard';
 import { buildIncomeConsumption, buildPeriodComparison } from '@/utils/reportComparisons';
@@ -12,8 +12,13 @@ const featureFlagsMock = vi.hoisted(() => ({
   useFeatureFlag: vi.fn(),
 }));
 
+const mobileMock = vi.hoisted(() => ({
+  useIsMobile: vi.fn(),
+}));
+
 vi.mock('@/hooks/useFinanceStore', () => financeStoreMock);
 vi.mock('@/hooks/useFeatureFlags', () => featureFlagsMock);
+vi.mock('@/hooks/useIsMobile', () => mobileMock);
 
 const makeCategory = (id: string, name: string): Category => ({
   id,
@@ -43,6 +48,7 @@ describe('ReportsDashboard - categoria de acordo', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     featureFlagsMock.useFeatureFlag.mockReturnValue(true);
+    mobileMock.useIsMobile.mockReturnValue(false);
     vi.stubGlobal('ResizeObserver', class {
       observe() {}
       unobserve() {}
@@ -312,7 +318,7 @@ describe('ReportsDashboard - categoria de acordo', () => {
     }).total).toBeCloseTo(90.39, 2);
   });
 
-  it('calcula Por Categoria como top 10 ordenado e proporcional ao maior gasto', () => {
+  it('calcula Por Categoria ordenado e proporcional ao maior gasto sem truncar categorias', () => {
     const categories = Array.from({ length: 11 }, (_, index) =>
       makeCategory(`cat-${index + 1}`, `Categoria ${String(index + 1).padStart(2, '0')}`)
     );
@@ -333,7 +339,7 @@ describe('ReportsDashboard - categoria de acordo', () => {
       selectedAccountId: 'all',
     });
 
-    expect(ranking).toHaveLength(10);
+    expect(ranking).toHaveLength(11);
     expect(ranking.map((item) => item.name)).toEqual([
       'Categoria 01',
       'Categoria 02',
@@ -345,8 +351,8 @@ describe('ReportsDashboard - categoria de acordo', () => {
       'Categoria 08',
       'Categoria 09',
       'Categoria 10',
+      'Categoria 11',
     ]);
-    expect(ranking.find((item) => item.name === 'Categoria 11')).toBeUndefined();
     expect(ranking[0].barWidth).toBe(100);
     expect(ranking[1].barWidth).toBe(50);
     expect(ranking[2].barWidth).toBe(20);
@@ -799,13 +805,17 @@ describe('ReportsDashboard - categoria de acordo', () => {
     expect(screen.getAllByText('R$ 3.130,00').length).toBeGreaterThan(0);
     expect(screen.getByText('27.7%')).toBeInTheDocument();
     expect(screen.queryAllByText(/anterior/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Receitas').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Despesas').length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'Realizado' }));
 
     expect(screen.getByText('Receitas efetivas')).toBeInTheDocument();
     expect(screen.getByText('Despesas efetivas')).toBeInTheDocument();
-    expect(screen.getByText('Saldo efetivo do período')).toBeInTheDocument();
+    expect(screen.getByText(/Saldo efetivo/)).toBeInTheDocument();
     expect(screen.getAllByText('R$ 0,00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Receitas').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Despesas').length).toBeGreaterThan(0);
   });
 
   it('modo Semestre soma o semestre, compara com semestre anterior e oculta orcamentos mensais', () => {
@@ -906,6 +916,337 @@ describe('ReportsDashboard - categoria de acordo', () => {
 
     expect(screen.queryByText('Mapa por categoria')).not.toBeInTheDocument();
     expect(screen.getByText('Total de Consumo vs Receita')).toBeInTheDocument();
-    expect(screen.getByText('Composição das Despesas')).toBeInTheDocument();
+    expect(screen.getByText('Ranking de Despesas')).toBeInTheDocument();
+    expect(screen.queryByText('Composição das Despesas')).not.toBeInTheDocument();
+  });
+
+  it('renderiza o ranking completo em area rolavel, ordenado e sem trilho cinza', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      transactions: [
+        makeTransaction({ id: 'cat-1', description: 'Moradia abril', categoryId: 'cat-home', amount: 300, date: '2026-04-10', isPaid: true, accountId: 'acc-1' }),
+        makeTransaction({ id: 'cat-2', description: 'Mercado abril', categoryId: 'cat-food', amount: 200, date: '2026-04-11', isPaid: true, accountId: 'acc-1' }),
+        makeTransaction({ id: 'cat-3', description: 'Pet abril', categoryId: 'cat-pet', amount: 100, date: '2026-04-12', isPaid: true, accountId: 'acc-1' }),
+        makeTransaction({ id: 'cat-4', description: 'Saúde abril', categoryId: 'cat-health', amount: 80, date: '2026-04-13', isPaid: true, accountId: 'acc-1' }),
+      ],
+      categories: [
+        makeCategory('cat-home', 'Moradia'),
+        makeCategory('cat-food', 'Alimentação'),
+        makeCategory('cat-pet', 'Pet'),
+        makeCategory('cat-health', 'Saúde'),
+      ],
+      creditCards: [],
+      accounts: [],
+      viewDate: new Date(2026, 3, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<ReportsDashboard />);
+
+    const rankingScroll = screen.getByTestId('category-ranking-scroll');
+    expect(rankingScroll).toHaveClass('overflow-y-auto');
+    expect(rankingScroll).toHaveClass('max-h-[360px]');
+    expect(rankingScroll).toHaveClass('md:max-h-[420px]');
+    expect(rankingScroll).toHaveClass('lg:max-h-[480px]');
+
+    const bars = screen.getAllByTestId(/category-ranking-bar-/);
+    expect(bars).toHaveLength(4);
+    expect(bars[0]).toHaveAttribute('data-category-name', 'Moradia');
+    expect(bars[1]).toHaveAttribute('data-category-name', 'Alimentação');
+    expect(bars[2]).toHaveAttribute('data-category-name', 'Pet');
+    expect(bars[3]).toHaveAttribute('data-category-name', 'Saúde');
+
+    expect(screen.getAllByText('Moradia').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Alimentação').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Pet').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Saúde').length).toBeGreaterThan(0);
+    expect(rankingScroll.querySelector('.bg-zinc-200\\/80')).toBeNull();
+  });
+
+  it('atualiza a Analise de Categoria ao clicar em uma categoria real na composicao das despesas', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      transactions: [
+        makeTransaction({
+          id: 'transport-current',
+          description: 'Uber abril',
+          categoryId: 'cat-transport',
+          amount: 120,
+          date: '2026-04-10',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'transport-previous',
+          description: 'Uber marco',
+          categoryId: 'cat-transport',
+          amount: 80,
+          date: '2026-03-10',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+      ],
+      categories: [makeCategory('cat-transport', 'Transporte')],
+      creditCards: [],
+      accounts: [],
+      viewDate: new Date(2026, 3, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<ReportsDashboard />);
+
+    fireEvent.click(screen.getAllByTestId(/category-ranking-bar-/)[0].closest('button') as HTMLButtonElement);
+
+    const analysisCard = screen.getByText('Análise de Categoria').closest('.bg-white') as HTMLElement;
+    expect(within(analysisCard).getAllByText('R$ 120,00').length).toBeGreaterThan(0);
+    expect(within(analysisCard).getAllByText('R$ 80,00').length).toBeGreaterThan(0);
+  });
+
+  it('permite clicar novamente na mesma categoria para limpar a Analise de Categoria', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      transactions: [
+        makeTransaction({
+          id: 'transport-current',
+          description: 'Uber abril',
+          categoryId: 'cat-transport',
+          amount: 120,
+          date: '2026-04-10',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+      ],
+      categories: [makeCategory('cat-transport', 'Transporte')],
+      creditCards: [],
+      accounts: [],
+      viewDate: new Date(2026, 3, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<ReportsDashboard />);
+
+    const rankingButton = screen.getAllByTestId(/category-ranking-bar-/)[0].closest('button') as HTMLButtonElement;
+    fireEvent.click(rankingButton);
+    expect(screen.queryByText('Sem categoria selecionada')).not.toBeInTheDocument();
+
+    fireEvent.click(rankingButton);
+    expect(screen.getByText('Sem categoria selecionada')).toBeInTheDocument();
+  });
+
+  it('mantem o ranking funcional no mobile', () => {
+    mobileMock.useIsMobile.mockReturnValue(true);
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      transactions: [
+        makeTransaction({
+          id: 'pet-current',
+          description: 'Plano de saúde da gata',
+          categoryId: 'cat-pet',
+          amount: 13.2,
+          date: '2026-04-20',
+          isPaid: false,
+          accountId: 'acc-1',
+          recurrenceId: 'rec-pet',
+        }),
+      ],
+      categories: [makeCategory('cat-pet', 'Pet')],
+      creditCards: [],
+      accounts: [],
+      viewDate: new Date(2026, 3, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<ReportsDashboard />);
+
+    const rankingScroll = screen.getByTestId('category-ranking-scroll');
+    expect(rankingScroll).toHaveClass('max-h-[360px]');
+
+    fireEvent.click(screen.getAllByTestId(/category-ranking-bar-/)[0].closest('button') as HTMLButtonElement);
+    expect(screen.getByText('Plano de saúde da gata')).toBeInTheDocument();
+  });
+
+  it('mostra itens do periodo em Projetado para categoria pendente da Gestao de Contas', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      transactions: [
+        makeTransaction({
+          id: 'pet-current',
+          description: 'Plano de saúde da gata',
+          categoryId: 'cat-pet',
+          amount: 13.2,
+          date: '2026-04-20',
+          dueDate: '2026-04-20',
+          isPaid: false,
+          accountId: 'acc-1',
+          recurrenceId: 'rec-pet',
+        }),
+        makeTransaction({
+          id: 'pet-previous',
+          description: 'Plano de saúde da gata março',
+          categoryId: 'cat-pet',
+          amount: 13.2,
+          date: '2026-03-20',
+          dueDate: '2026-03-20',
+          isPaid: false,
+          accountId: 'acc-1',
+          recurrenceId: 'rec-pet',
+        }),
+      ],
+      categories: [makeCategory('cat-pet', 'Pet')],
+      creditCards: [],
+      accounts: [],
+      viewDate: new Date(2026, 3, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<ReportsDashboard />);
+
+    fireEvent.click(screen.getAllByTestId(/category-ranking-bar-/)[0].closest('button') as HTMLButtonElement);
+
+    const analysisCard = screen.getByText('Análise de Categoria').closest('.bg-white') as HTMLElement;
+    expect(within(analysisCard).getAllByText('R$ 13,20').length).toBeGreaterThan(0);
+    expect(within(analysisCard).getByText('Plano de saúde da gata')).toBeInTheDocument();
+    expect(within(analysisCard).queryByText('Nenhum item no período')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Realizado' }));
+
+    const realizedAnalysisCard = screen.getByText('Análise de Categoria').closest('.bg-white') as HTMLElement;
+    expect(within(realizedAnalysisCard).getAllByText('R$ 0,00').length).toBeGreaterThan(0);
+    expect(within(realizedAnalysisCard).queryByText('Plano de saúde da gata')).not.toBeInTheDocument();
+  });
+
+  it('usa bucket canonico de Acordo na Analise de Categoria', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      transactions: [
+        makeTransaction({
+          id: 'agreement-current',
+          description: 'Parcela acordo abril',
+          amount: 90.39,
+          debtId: 'debt-1',
+          date: '2026-04-20',
+          isPaid: true,
+          accountId: 'acc-1',
+          transactionType: 'installment',
+        }),
+        makeTransaction({
+          id: 'agreement-previous',
+          description: 'Parcela acordo marco',
+          amount: 45.2,
+          debtId: 'debt-1',
+          date: '2026-03-20',
+          isPaid: true,
+          accountId: 'acc-1',
+          transactionType: 'installment',
+        }),
+      ],
+      categories: [],
+      creditCards: [],
+      accounts: [],
+      viewDate: new Date(2026, 3, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<ReportsDashboard />);
+
+    fireEvent.click(screen.getAllByTestId(/category-ranking-bar-/)[0].closest('button') as HTMLButtonElement);
+
+    const analysisCard = screen.getByText('Análise de Categoria').closest('.bg-white') as HTMLElement;
+    expect(within(analysisCard).getAllByText('R$ 90,39').length).toBeGreaterThan(0);
+    expect(within(analysisCard).getAllByText('R$ 45,20').length).toBeGreaterThan(0);
+  });
+
+  it('usa bucket canonico de Renegociacao e respeita Projetado x Realizado na Analise de Categoria', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      transactions: [
+        makeTransaction({
+          id: 'reneg-current',
+          description: 'Renegociação de Pendências (1/9)',
+          amount: 483.86,
+          categoryId: 'cat-uncategorized',
+          transactionType: 'installment',
+          cardId: 'card-1',
+          invoiceMonthYear: '2026-04',
+          date: '2026-04-18',
+          isPaid: false,
+          accountId: 'acc-1',
+        }),
+      ],
+      categories: [makeCategory('cat-uncategorized', 'Não Identificados')],
+      creditCards: [],
+      accounts: [],
+      viewDate: new Date(2026, 3, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<ReportsDashboard />);
+
+    fireEvent.click(screen.getAllByTestId(/category-ranking-bar-/)[0].closest('button') as HTMLButtonElement);
+
+    let analysisCard = screen.getByText('Análise de Categoria').closest('.bg-white') as HTMLElement;
+    expect(within(analysisCard).getAllByText('R$ 483,86').length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Realizado' }));
+
+    analysisCard = screen.getByText('Análise de Categoria').closest('.bg-white') as HTMLElement;
+    expect(within(analysisCard).getAllByText('R$ 0,00').length).toBeGreaterThan(0);
+  });
+
+  it('recalcula a Analise de Categoria em visoes de semestre e ano', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      transactions: [
+        makeTransaction({
+          id: 'semester-current',
+          description: 'Transporte 1S 2026',
+          categoryId: 'cat-transport',
+          amount: 300,
+          date: '2026-02-10',
+          isPaid: false,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'semester-previous',
+          description: 'Transporte 2S 2025',
+          categoryId: 'cat-transport',
+          amount: 150,
+          date: '2025-10-10',
+          isPaid: false,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'year-current',
+          description: 'Transporte 2026',
+          categoryId: 'cat-transport',
+          amount: 200,
+          date: '2026-09-10',
+          isPaid: false,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'year-previous',
+          description: 'Transporte 2025',
+          categoryId: 'cat-transport',
+          amount: 100,
+          date: '2025-04-10',
+          isPaid: false,
+          accountId: 'acc-1',
+        }),
+      ],
+      categories: [makeCategory('cat-transport', 'Transporte')],
+      creditCards: [],
+      accounts: [],
+      viewDate: new Date(2026, 2, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<ReportsDashboard />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Semestre' }));
+    fireEvent.click(screen.getAllByTestId(/category-ranking-bar-/)[0].closest('button') as HTMLButtonElement);
+
+    let analysisCard = screen.getByText('Análise de Categoria').closest('.bg-white') as HTMLElement;
+    expect(within(analysisCard).getAllByText('R$ 300,00').length).toBeGreaterThan(0);
+    expect(within(analysisCard).getAllByText('R$ 150,00').length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ano' }));
+
+    analysisCard = screen.getByText('Análise de Categoria').closest('.bg-white') as HTMLElement;
+    expect(within(analysisCard).getAllByText('R$ 500,00').length).toBeGreaterThan(0);
+    expect(within(analysisCard).getAllByText('R$ 250,00').length).toBeGreaterThan(0);
   });
 });
+

@@ -1,7 +1,7 @@
 import React, { PropsWithChildren } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BillsManager } from '@/components/accounts/BillsManager';
 
 const financeStoreMock = vi.hoisted(() => ({
@@ -215,6 +215,10 @@ describe('BillsManager - contas pendentes', () => {
     bulkUpdateTransactionsMock.mockResolvedValue(undefined);
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('exibe contas pendentes atrasadas junto das contas do mes atual', () => {
     financeStoreMock.useFinanceStore.mockReturnValue({
       categories: [],
@@ -305,6 +309,42 @@ describe('BillsManager - contas pendentes', () => {
 
     expect(screen.getByText('Internet pendente')).toBeInTheDocument();
     expect(screen.queryByText('Internet paga')).not.toBeInTheDocument();
+  });
+
+  it('nao marca vencimento de hoje como atrasado na Gestao de Contas', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 20, 15, 0, 0));
+
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      categories: [],
+      accounts: [],
+      creditCards: [],
+      debts: [],
+      viewDate: new Date(2026, 4, 20),
+      currentMonthTransactions: [],
+      transactions: [
+        {
+          id: 'bill-today',
+          description: 'Conta vence hoje',
+          amount: 120,
+          date: '2026-05-20',
+          type: 'expense',
+          isRecurring: true,
+          transactionType: 'recurring',
+          isPaid: false,
+          isVirtual: false,
+          originalId: null,
+          cardId: null,
+          isInvoicePayment: false,
+        },
+      ],
+    });
+
+    render(<BillsManager />, { wrapper });
+
+    expect(screen.getByText('Conta vence hoje')).toBeInTheDocument();
+    expect(screen.getByText('Pendente')).toBeInTheDocument();
+    expect(screen.queryByText('Atrasado')).not.toBeInTheDocument();
   });
 
   it('reapresenta filho materializado como pendente na Gestao de Contas apos estorno', () => {
@@ -722,7 +762,7 @@ describe('BillsManager - contas pendentes', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pagamento' }));
 
     expect(screen.getByText('Como deseja baixar esta fatura?')).toBeInTheDocument();
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'acc-1' } });
+    fireEvent.change(screen.getByLabelText('Conta/carteira de origem'), { target: { value: 'acc-1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar baixa da fatura' }));
 
     await waitFor(() => {
@@ -754,7 +794,7 @@ describe('BillsManager - contas pendentes', () => {
     fireEvent.click(screen.getByLabelText('Baixar conta'));
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pagamento' }));
     fireEvent.click(screen.getByRole('button', { name: 'Pagamento parcial' }));
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'acc-1' } });
+    fireEvent.change(screen.getByLabelText('Conta/carteira de origem'), { target: { value: 'acc-1' } });
     fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '600' } });
     expect(screen.getByText('Restante calculado: R$ 400,00')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar baixa da fatura' }));
@@ -790,7 +830,7 @@ describe('BillsManager - contas pendentes', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pagamento' }));
     fireEvent.click(screen.getByRole('button', { name: 'Parcelar fatura' }));
     fireEvent.change(screen.getAllByRole('spinbutton')[0], { target: { value: '200' } });
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'acc-1' } });
+    fireEvent.change(screen.getByLabelText('Conta/carteira de origem'), { target: { value: 'acc-1' } });
     fireEvent.change(screen.getAllByRole('spinbutton')[1], { target: { value: '4' } });
     fireEvent.change(screen.getAllByRole('spinbutton')[2], { target: { value: '250' } });
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar baixa da fatura' }));
@@ -814,5 +854,155 @@ describe('BillsManager - contas pendentes', () => {
       ids: ['purchase-1', 'purchase-2'],
       updates: { isPaid: true, paymentDate: '2026-05-20' },
     });
+  });
+  it('filtra a Gestao de Contas por categoria real e combina com A Pagar', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      categories: [
+        { id: 'cat-home', name: 'Moradia' },
+        { id: 'cat-food', name: 'Alimentação' },
+      ],
+      accounts: [],
+      creditCards: [],
+      debts: [],
+      viewDate: new Date(2026, 4, 20),
+      viewMode: 'month',
+      currentMonthTransactions: [],
+      transactions: [
+        {
+          id: 'bill-home',
+          description: 'Vero Internet',
+          amount: 120,
+          date: '2026-05-20',
+          type: 'expense',
+          isRecurring: true,
+          transactionType: 'recurring',
+          isPaid: false,
+          isVirtual: false,
+          categoryId: 'cat-home',
+          isInvoicePayment: false,
+        },
+        {
+          id: 'bill-food',
+          description: 'Mercado aberto',
+          amount: 90,
+          date: '2026-05-20',
+          type: 'expense',
+          isRecurring: true,
+          transactionType: 'recurring',
+          isPaid: false,
+          isVirtual: false,
+          categoryId: 'cat-food',
+          isInvoicePayment: false,
+        },
+      ],
+    });
+
+    render(<BillsManager />, { wrapper });
+
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: 'category:cat-home' } });
+
+    expect(screen.getByText('Vero Internet')).toBeInTheDocument();
+    expect(screen.queryByText('Mercado aberto')).not.toBeInTheDocument();
+  });
+
+  it('filtra a Gestao de Contas por Acordo e Renegociacao usando bucket canonico', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      categories: [{ id: 'cat-uncategorized', name: 'Não Identificados' }],
+      accounts: [],
+      creditCards: [],
+      debts: [{ id: 'debt-1', name: 'Acordo banco' }],
+      viewDate: new Date(2026, 4, 20),
+      viewMode: 'month',
+      currentMonthTransactions: [],
+      transactions: [
+        {
+          id: 'bill-agreement',
+          description: 'Parcela acordo banco',
+          amount: 180,
+          date: '2026-05-20',
+          type: 'expense',
+          isRecurring: false,
+          transactionType: 'installment',
+          isPaid: false,
+          isVirtual: false,
+          debtId: 'debt-1',
+          isInvoicePayment: false,
+        },
+        {
+          id: 'bill-reneg',
+          description: 'Renegociação de Pendências (1/9)',
+          amount: 483.86,
+          date: '2026-05-20',
+          type: 'expense',
+          isRecurring: false,
+          transactionType: 'installment',
+          isPaid: false,
+          isVirtual: false,
+          cardId: 'card-1',
+          invoiceMonthYear: '2026-05',
+          categoryId: 'cat-uncategorized',
+          isInvoicePayment: false,
+        },
+      ],
+    });
+
+    render(<BillsManager />, { wrapper });
+
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: 'logical:agreement' } });
+    expect(screen.getByText('Parcela acordo banco')).toBeInTheDocument();
+    expect(screen.queryByText('Renegociação de Pendências (1/9)')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: 'logical:renegotiation' } });
+    expect(screen.getByText('Renegociação de Pendências (1/9)')).toBeInTheDocument();
+    expect(screen.queryByText('Parcela acordo banco')).not.toBeInTheDocument();
+  });
+
+  it('filtra a Gestao de Contas por Nao identificados no modo dia sem perder a regra operacional', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      categories: [{ id: 'cat-home', name: 'Moradia' }],
+      accounts: [],
+      creditCards: [],
+      debts: [],
+      viewDate: new Date(2026, 5, 20),
+      viewMode: 'day',
+      currentMonthTransactions: [],
+      transactions: [
+        {
+          id: 'vero-june',
+          description: 'Vero Internet junho',
+          amount: 99.9,
+          date: '2026-06-20',
+          type: 'expense',
+          isRecurring: true,
+          transactionType: 'recurring',
+          isPaid: false,
+          isVirtual: false,
+          categoryId: 'cat-home',
+          isInvoicePayment: false,
+        },
+        {
+          id: 'uncategorized-day',
+          description: 'Conta sem categoria',
+          amount: 45,
+          date: '2026-06-20',
+          type: 'expense',
+          isRecurring: true,
+          transactionType: 'recurring',
+          isPaid: false,
+          isVirtual: false,
+          isInvoicePayment: false,
+        },
+      ],
+    });
+
+    render(<BillsManager />, { wrapper });
+
+    expect(screen.getByText('Vero Internet junho')).toBeInTheDocument();
+    expect(screen.getByText('Conta sem categoria')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Categoria'), { target: { value: 'logical:uncategorized' } });
+
+    expect(screen.getByText('Conta sem categoria')).toBeInTheDocument();
+    expect(screen.queryByText('Vero Internet junho')).not.toBeInTheDocument();
   });
 });

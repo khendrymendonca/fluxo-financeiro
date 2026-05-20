@@ -7,7 +7,7 @@ import { useToggleTransactionPaid } from '@/hooks/useTransactionMutations';
 import { addDays, endOfMonth, endOfYear, isBefore, startOfToday, startOfMonth } from 'date-fns';
 import { useIsMutating } from '@tanstack/react-query';
 
-import { parseLocalDate } from '@/utils/dateUtils';
+import { isDateOverdue, parseLocalDate } from '@/utils/dateUtils';
 
 type FilterPeriod = 'semana' | 'quinzena' | 'mes' | 'ano';
 
@@ -55,7 +55,7 @@ export function PendingPayments({ transactions, accounts, creditCards, viewDate 
             // 1. Está dentro do período selecionado (semana, mes, etc)
             // 2. OU está atrasado, mas pertence ao mês atual (não mostra lixo de meses muito antigos)
             const isWithinPeriod = isBefore(tDate, deadline);
-            const isCurrentMonthAtrasado = isBefore(tDate, today) && !isBefore(tDate, currentMonthStart);
+            const isCurrentMonthAtrasado = isDateOverdue(tDate, today) && !isBefore(tDate, currentMonthStart);
 
             return isWithinPeriod || isCurrentMonthAtrasado;
         })
@@ -120,7 +120,7 @@ export function PendingPayments({ transactions, accounts, creditCards, viewDate 
             ) : (
                 <div className={cn("space-y-1 transition-all duration-200", isMutating > 0 && "pointer-events-none opacity-60")}>
                     {pending.map((t) => {
-                        const isOverdue = isBefore(parseLocalDate(t.date), today);
+                        const isOverdue = isDateOverdue(t.date, today);
                         return (
                             <div key={t.id} className="flex items-center justify-between p-2 md:p-3 rounded-xl hover:bg-muted/30 transition-all group border border-transparent hover:border-border/50">
                                 <div className="flex items-center gap-3">

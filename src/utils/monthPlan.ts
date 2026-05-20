@@ -1,6 +1,6 @@
-import { addDays, endOfMonth, isAfter, isBefore, startOfDay, startOfMonth } from 'date-fns';
+import { addDays, endOfMonth, endOfYear, isAfter, isBefore, startOfDay, startOfMonth, startOfYear } from 'date-fns';
 import { Account, Category, Debt, Transaction } from '@/types/finance';
-import { parseLocalDate } from '@/utils/dateUtils';
+import { isDateOverdue, parseLocalDate } from '@/utils/dateUtils';
 
 export type MonthStatus = 'safe' | 'attention' | 'critical';
 export type MonthPlanAlertSeverity = 'info' | 'warning' | 'danger';
@@ -76,6 +76,7 @@ export interface MonthPlanInput {
   categories: Category[];
   debts?: Debt[];
   viewDate: Date;
+  periodMode?: 'month' | 'year';
   currentDate?: Date;
   debtSafeBaseline?: number;
   upcomingWindowDays?: number;
@@ -133,6 +134,20 @@ function isMonthTransaction(transaction: Transaction, monthStart: Date, monthEnd
   return !isBefore(date, monthStart) && !isAfter(date, monthEnd);
 }
 
+function getPeriodBounds(viewDate: Date, periodMode: 'month' | 'year') {
+  if (periodMode === 'year') {
+    return {
+      start: startOfYear(viewDate),
+      end: endOfYear(viewDate),
+    };
+  }
+
+  return {
+    start: startOfMonth(viewDate),
+    end: endOfMonth(viewDate),
+  };
+}
+
 function isRelevantIncome(transaction: Transaction): boolean {
   return transaction.type === 'income' && !transaction.isTransfer;
 }
@@ -169,7 +184,7 @@ function buildCommitmentItem(
 ): MonthPlanItem {
   const date = parseLocalDate(transaction.date);
   const amount = normalizeAmount(transaction.amount);
-  const overdue = isBefore(date, referenceDay);
+  const overdue = isDateOverdue(date, referenceDay);
   const upcoming = overdue || !isAfter(date, upcomingDeadline);
   const card = isCardCommitment(transaction);
   const debt = isDebtRelated(transaction);
@@ -231,7 +246,7 @@ function isOpenCashExpense(transaction: Transaction): boolean {
 function buildCashItem(transaction: Transaction, referenceDay: Date): MonthPlanCashItem {
   const date = parseLocalDate(transaction.date);
   const normalizedDate = startOfDay(date);
-  const isOverdue = isBefore(normalizedDate, referenceDay);
+  const isOverdue = isDateOverdue(normalizedDate, referenceDay);
   const isToday = normalizedDate.getTime() === referenceDay.getTime();
 
   return {
@@ -259,6 +274,7 @@ export function buildMonthPlan({
   categories,
   debts = [],
   viewDate,
+  periodMode = 'month',
   currentDate,
   debtSafeBaseline = 0,
   upcomingWindowDays = 7,
@@ -268,15 +284,14 @@ export function buildMonthPlan({
   const safeCategories = Array.isArray(categories) ? categories : [];
   const safeDebts = Array.isArray(debts) ? debts : [];
 
-  const monthStart = startOfMonth(viewDate);
-  const monthEnd = endOfMonth(viewDate);
+  const { start: periodStart, end: periodEnd } = getPeriodBounds(viewDate, periodMode);
   const referenceDay = startOfDay(currentDate ?? new Date());
   const upcomingDeadline = addDays(referenceDay, upcomingWindowDays);
   const categoryById = new Map(safeCategories.map((category) => [category.id, category]));
 
-  const monthTransactions = safeTransactions.filter((transaction) => isMonthTransaction(transaction, monthStart, monthEnd));
-  const incomes = monthTransactions.filter(isRelevantIncome);
-  const expenses = monthTransactions.filter(isRelevantExpense);
+  const periodTransactions = safeTransactions.filter((transaction) => isMonthTransaction(transaction, periodStart, periodEnd));
+  const incomes = periodTransactions.filter(isRelevantIncome);
+  const expenses = periodTransactions.filter(isRelevantExpense);
   const debtExpenseTransactions = expenses.filter(isDebtRelated);
   const nonDebtNonCardExpenses = expenses.filter((transaction) => !transaction.cardId && !isDebtRelated(transaction));
 
@@ -332,13 +347,13 @@ export function buildMonthPlan({
 
   const totalAccountBalance = safeAccounts.reduce((sum, account) => sum + Number(account.balance || 0), 0);
   const openExpenseItems = safeTransactions
-    .filter((transaction) => isOpenCashExpense(transaction) && !isAfter(parseLocalDate(transaction.date), monthEnd))
+    .filter((transaction) => isOpenCashExpense(transaction) && !isAfter(parseLocalDate(transaction.date), periodEnd))
     .map((transaction) => buildCashItem(transaction, referenceDay))
     .sort(sortCashItems);
-  const currentMonthOpenExpenseItems = safeTransactions
-    .filter((transaction) => isOpenCashExpense(transaction) && isMonthTransaction(transaction, monthStart, monthEnd))
+  const currentPeriodOpenExpenseItems = safeTransactions
+    .filter((transaction) => isOpenCashExpense(transaction) && isMonthTransaction(transaction, periodStart, periodEnd))
     .map((transaction) => buildCashItem(transaction, referenceDay));
-  const openExpensesTotal = currentMonthOpenExpenseItems.reduce((sum, item) => sum + item.amount, 0);
+  const openExpensesTotal = currentPeriodOpenExpenseItems.reduce((sum, item) => sum + item.amount, 0);
   const overdueOpenExpenses = openExpenseItems.filter((item) => item.isOverdue);
   const overdueOpenExpensesTotal = overdueOpenExpenses.reduce((sum, item) => sum + item.amount, 0);
   const cashBalance = totalAccountBalance - openExpensesTotal;

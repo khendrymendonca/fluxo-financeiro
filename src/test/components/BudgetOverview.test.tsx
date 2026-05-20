@@ -41,6 +41,34 @@ describe('BudgetOverview', () => {
     localStorage.clear();
   });
 
+  function expandBudgets() {
+    fireEvent.click(screen.getByRole('button', { name: /Orçamentos/i }));
+  }
+
+  it('inicia recolhido por padrao e alterna expandir/recolher', () => {
+    render(
+      <BudgetOverview
+        viewDate={new Date(2026, 4, 1)}
+        period="month"
+        reportMode="projected"
+        periodIncome={4000}
+        categories={[category({ id: 'food', name: 'Alimentacao', budgetLimit: 800, icon: 'UtensilsCrossed' })]}
+        transactions={[transaction({ categoryId: 'food', amount: 200 })]}
+      />
+    );
+
+    expect(screen.queryByTestId('budget-rows-container')).not.toBeInTheDocument();
+    expect(screen.queryByText('Planejado')).not.toBeInTheDocument();
+    expect(screen.queryByText(/RECOLHIDO POR PADRÃO/i)).not.toBeInTheDocument();
+
+    expandBudgets();
+    expect(screen.getByTestId('budget-rows-container')).toBeInTheDocument();
+    expect(screen.getByText('Planejado')).toBeInTheDocument();
+
+    expandBudgets();
+    expect(screen.queryByTestId('budget-rows-container')).not.toBeInTheDocument();
+  });
+
   it('permite escolher explicitamente categorias acompanhadas e persiste no localStorage', () => {
     render(
       <BudgetOverview
@@ -56,6 +84,7 @@ describe('BudgetOverview', () => {
       />
     );
 
+    expandBudgets();
     expect(screen.queryByText('Energia')).not.toBeInTheDocument();
     expect(screen.getByText('Alimentacao')).toBeInTheDocument();
     expect(screen.queryByText(/Algumas categorias com movimento/i)).not.toBeInTheDocument();
@@ -79,6 +108,7 @@ describe('BudgetOverview', () => {
       />
     );
 
+    expandBudgets();
     const row = screen.getByText('Moradia').closest('.rounded-2xl');
     expect(row).not.toBeNull();
     expect(within(row as HTMLElement).getByText('Moradia')).toBeInTheDocument();
@@ -113,6 +143,7 @@ describe('BudgetOverview', () => {
       />
     );
 
+    expandBudgets();
     // Switch to group view
     fireEvent.click(screen.getByRole('button', { name: 'Por Agrupamento' }));
 

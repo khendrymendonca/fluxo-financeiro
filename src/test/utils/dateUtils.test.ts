@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseLocalDate, todayLocalString } from '../../utils/dateUtils';
+import { isDateOverdue, parseLocalDate, todayLocalString } from '../../utils/dateUtils';
 
 describe('dateUtils', () => {
   describe('parseLocalDate', () => {
@@ -31,6 +31,20 @@ describe('dateUtils', () => {
     it('deve retornar a data de hoje no formato YYYY-MM-DD', () => {
       const result = todayLocalString();
       expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+  });
+
+  describe('isDateOverdue', () => {
+    it('marca vencimento de ontem como atrasado', () => {
+      expect(isDateOverdue('2026-05-19', '2026-05-20')).toBe(true);
+    });
+
+    it('nao marca vencimento de hoje como atrasado', () => {
+      expect(isDateOverdue('2026-05-20', '2026-05-20')).toBe(false);
+    });
+
+    it('nao marca vencimento de amanha como atrasado', () => {
+      expect(isDateOverdue('2026-05-21', '2026-05-20')).toBe(false);
     });
   });
 });

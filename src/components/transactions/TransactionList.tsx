@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { formatCurrency } from '@/utils/formatters';
-import { ArrowUpRight, ArrowDownRight, Trash2, Pencil, FastForward, ChevronDown, ChevronUp, Plus, RotateCcw, ArrowRight } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Trash2, Pencil, FastForward, ChevronDown, ChevronUp, Plus, RotateCcw, ArrowRight, Filter } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useToggleTransactionPaid } from '@/hooks/useTransactionMutations';
@@ -15,6 +15,7 @@ import { BulkDeleteDialog } from './BulkDeleteDialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getAccountOverdraftMetrics } from '@/utils/accountOverdraft';
 import { getTransactionCategoryLabel } from '@/utils/transactionCategory';
+import { buildCanonicalCategoryFilterOptions, matchesCanonicalCategoryFilter } from '@/utils/categoryFilter';
 
 export interface TransactionListProps {
   transactions: Transaction[];
@@ -45,6 +46,7 @@ export function TransactionList({
   const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState('all');
   const [anticipatingIds, setAnticipatingIds] = useState<Set<string>>(new Set());
   const [anticipateAccount, setAnticipateAccount] = useState('');
 
@@ -87,6 +89,11 @@ export function TransactionList({
 
     return { ...t, isPending };
   });
+
+  const categoryFilterOptions = useMemo(
+    () => buildCanonicalCategoryFilterOptions(displayItems, categories, 'Não identificados'),
+    [displayItems, categories]
+  );
 
   const getGroupDate = (item: any): string => {
     if (item.isRecurring) {
@@ -131,9 +138,11 @@ export function TransactionList({
       if (searchQuery.trim() !== '') {
         const query = searchQuery.toLowerCase();
         const matchesDescription = t.description.toLowerCase().includes(query);
-        const matchesCategory = categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(query);
-        if (!matchesDescription && !matchesCategory) return false;
+        const canonicalCategoryLabel = getTransactionCategoryLabel(t, categories, 'Não identificados').toLowerCase();
+        if (!matchesDescription && !canonicalCategoryLabel.includes(query)) return false;
       }
+
+      if (!matchesCanonicalCategoryFilter(t, categories, selectedCategoryKey, 'Não identificados')) return false;
 
       // Filtro de Categoria (Receita/Despesa)
       if (filter !== 'all' && t.type !== filter) return false;
@@ -299,6 +308,23 @@ export function TransactionList({
                   {f === 'all' ? 'Qualquer Tipo' : f === 'punctual' ? 'Pontual' : f === 'installment' ? 'Parcelado' : 'Fixo'}
                 </button>
               ))}
+            </div>
+
+            <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <select
+                aria-label="Categoria"
+                value={selectedCategoryKey}
+                onChange={(event) => setSelectedCategoryKey(event.target.value)}
+                className="bg-transparent text-sm font-bold text-foreground outline-none"
+              >
+                <option value="all">Todas as categorias</option>
+                {categoryFilterOptions.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
