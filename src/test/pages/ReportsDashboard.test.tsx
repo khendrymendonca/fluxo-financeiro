@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ReportsDashboard, { buildCategoryExpenseRanking, buildProjectedReportPeriodData, buildReportPeriodData } from '@/pages/ReportsDashboard';
+import { buildIncomeConsumption, buildPeriodComparison } from '@/utils/reportComparisons';
 import { Category, Transaction } from '@/types/finance';
 
 const financeStoreMock = vi.hoisted(() => ({
@@ -85,8 +86,230 @@ describe('ReportsDashboard - categoria de acordo', () => {
 
     expect(screen.getAllByText('Acordo').length).toBeGreaterThan(0);
     expect(screen.queryByText('Outros')).not.toBeInTheDocument();
-    expect(screen.getAllByText('Mapa anual por categoria').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Mapa por categoria').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Despesas').length).toBeGreaterThan(0);
+  });
+
+  it('agrupa dois acordos sem categoria em uma única linha Acordo', () => {
+    const ranking = buildCategoryExpenseRanking({
+      transactions: [
+        makeTransaction({
+          id: 'tx-debt-99',
+          description: 'Parcela 99 - Empréstimo',
+          amount: 167.67,
+          debtId: 'debt-99',
+          categoryId: null,
+          date: '2026-06-10',
+          isPaid: true,
+          accountId: 'acc-1',
+          transactionType: 'installment',
+        }),
+        makeTransaction({
+          id: 'tx-debt-inter',
+          description: 'Parcela Inter',
+          amount: 90.39,
+          debtId: 'debt-inter',
+          categoryId: null,
+          date: '2026-06-22',
+          isPaid: true,
+          accountId: 'acc-1',
+          transactionType: 'installment',
+        }),
+      ],
+      categories: [],
+      start: new Date(2026, 5, 1),
+      end: new Date(2026, 5, 30),
+      selectedAccountId: 'all',
+    });
+
+    expect(ranking).toHaveLength(1);
+    expect(ranking[0]).toEqual(expect.objectContaining({
+      name: 'Acordo',
+      value: 258.06,
+    }));
+  });
+
+  it('unifica categoria real Acordo com acordo sem category_id no mesmo bucket', () => {
+    const ranking = buildCategoryExpenseRanking({
+      transactions: [
+        makeTransaction({
+          id: 'tx-real-acordo',
+          description: 'Acordo categorizado',
+          amount: 167.67,
+          debtId: 'debt-99',
+          categoryId: 'cat-acordo',
+          date: '2026-06-10',
+          isPaid: true,
+          accountId: 'acc-1',
+          transactionType: 'installment',
+        }),
+        makeTransaction({
+          id: 'tx-fallback-acordo',
+          description: 'Acordo sem categoria',
+          amount: 90.39,
+          debtId: 'debt-inter',
+          categoryId: null,
+          date: '2026-06-22',
+          isPaid: true,
+          accountId: 'acc-1',
+          transactionType: 'installment',
+        }),
+      ],
+      categories: [makeCategory('cat-acordo', 'Acordo')],
+      start: new Date(2026, 5, 1),
+      end: new Date(2026, 5, 30),
+      selectedAccountId: 'all',
+    });
+
+    expect(ranking).toHaveLength(1);
+    expect(ranking[0]).toEqual(expect.objectContaining({
+      name: 'Acordo',
+      value: 258.06,
+    }));
+  });
+
+  it('classifica transação sem categoria e sem debtId como Não identificados', () => {
+    const ranking = buildCategoryExpenseRanking({
+      transactions: [
+        makeTransaction({
+          id: 'tx-uncat',
+          description: 'Despesa sem categoria',
+          amount: 42,
+          categoryId: null,
+          debtId: null,
+          date: '2026-04-10',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+      ],
+      categories: [],
+      start: new Date(2026, 3, 1),
+      end: new Date(2026, 3, 30),
+      selectedAccountId: 'all',
+    });
+
+    expect(ranking).toEqual([
+      expect.objectContaining({
+        name: 'Não identificados',
+        value: 42,
+      }),
+    ]);
+  });
+
+  it('classifica a composição das despesas de junho/2026 com Renegociação acima de Não identificados genérico', () => {
+    const categories = [
+      makeCategory('cat-uncategorized', 'Não Identificados'),
+      makeCategory('cat-home', 'Moradia'),
+    ];
+
+    const ranking = buildCategoryExpenseRanking({
+      transactions: [
+        makeTransaction({
+          id: 'tx-renegotiation',
+          description: 'Renegociação de Pendências (1/9)',
+          amount: 483.86,
+          categoryId: 'cat-uncategorized',
+          transactionType: 'installment',
+          cardId: '4207f524-9dd0-480a-970d-56ccc7691d0e',
+          invoiceMonthYear: '2026-06',
+          date: '2026-05-28',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'tx-uncategorized',
+          description: 'Despesa realmente sem categoria',
+          amount: 42,
+          categoryId: undefined,
+          transactionType: 'punctual',
+          date: '2026-06-14',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'tx-agreement',
+          description: 'Parcela acordo',
+          amount: 90.39,
+          categoryId: undefined,
+          debtId: 'debt-1',
+          transactionType: 'installment',
+          date: '2026-06-20',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+      ],
+      categories,
+      start: new Date(2026, 5, 1),
+      end: new Date(2026, 5, 30),
+      selectedAccountId: 'all',
+    });
+
+    expect(ranking).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Renegociação', value: 483.86 }),
+      expect.objectContaining({ name: 'Não identificados', value: 42 }),
+      expect.objectContaining({ name: 'Acordo', value: 90.39 }),
+    ]));
+    expect(ranking.find((item) => item.name === 'Não Identificados' && item.value === 483.86)).toBeUndefined();
+  });
+
+  it('inclui acordos pendentes no modo projetado e exclui no realizado até o pagamento', () => {
+    const mayEntry = makeTransaction({
+      id: 'tx-entry',
+      description: 'Entrada acordo Inter',
+      amount: 79.6,
+      date: '2026-05-22',
+      isPaid: false,
+      debtId: 'debt-inter',
+      categoryId: null,
+      transactionType: 'adjustment',
+      accountId: 'acc-1',
+    });
+
+    const juneInstallment = makeTransaction({
+      id: 'tx-installment-1',
+      description: 'Parcela 1/11 acordo Inter',
+      amount: 90.39,
+      date: '2026-06-22',
+      isPaid: false,
+      debtId: 'debt-inter',
+      categoryId: null,
+      transactionType: 'installment',
+      accountId: 'acc-1',
+    });
+
+    expect(buildProjectedReportPeriodData({
+      transactions: [mayEntry],
+      creditCards: [],
+      categories: [],
+      start: new Date(2026, 4, 1),
+      end: new Date(2026, 4, 31),
+      selectedAccountId: 'all',
+    }).total).toBeCloseTo(79.6, 2);
+
+    expect(buildProjectedReportPeriodData({
+      transactions: [juneInstallment],
+      creditCards: [],
+      categories: [],
+      start: new Date(2026, 5, 1),
+      end: new Date(2026, 5, 30),
+      selectedAccountId: 'all',
+    }).total).toBeCloseTo(90.39, 2);
+
+    expect(buildReportPeriodData({
+      transactions: [juneInstallment],
+      categories: [],
+      start: new Date(2026, 5, 1),
+      end: new Date(2026, 5, 30),
+      selectedAccountId: 'all',
+    }).total).toBe(0);
+
+    expect(buildReportPeriodData({
+      transactions: [{ ...juneInstallment, isPaid: true }],
+      categories: [],
+      start: new Date(2026, 5, 1),
+      end: new Date(2026, 5, 30),
+      selectedAccountId: 'all',
+    }).total).toBeCloseTo(90.39, 2);
   });
 
   it('calcula Por Categoria como top 10 ordenado e proporcional ao maior gasto', () => {
@@ -129,7 +352,7 @@ describe('ReportsDashboard - categoria de acordo', () => {
     expect(ranking[2].barWidth).toBe(20);
   });
 
-  it('ignora receitas, transferencias, soft-delete, pendentes, compra comum no cartao e fora do periodo', () => {
+  it('Por Categoria detalha consumo por categoria e ignora pagamento de fatura', () => {
     const categories = [makeCategory('cat-home', 'Moradia')];
 
     const ranking = buildCategoryExpenseRanking({
@@ -148,19 +371,17 @@ describe('ReportsDashboard - categoria de acordo', () => {
         makeTransaction({ id: 'transfer', amount: 888, isTransfer: true, accountId: 'acc-1' }),
         makeTransaction({ id: 'deleted', amount: 777, deleted_at: '2026-04-11T10:00:00.000Z', accountId: 'acc-1' }),
         makeTransaction({ id: 'pending', amount: 555, isPaid: false, accountId: 'acc-1' }),
-        makeTransaction({ id: 'card-purchase', amount: 666, cardId: 'card-1', isPaid: true }),
+        makeTransaction({ id: 'card-purchase', categoryId: 'cat-home', amount: 666, cardId: 'card-1', invoiceMonthYear: '2026-04', isPaid: true }),
         makeTransaction({ id: 'outside-period', amount: 444, date: '2026-05-01', accountId: 'acc-1' }),
       ],
       categories,
       start: new Date(2026, 3, 1),
       end: new Date(2026, 3, 30),
-      selectedAccountId: 'acc-1',
+      selectedAccountId: 'all',
     });
 
-    expect(ranking).toHaveLength(2);
-    expect(ranking[0]).toEqual(expect.objectContaining({ name: 'Pagamento de fatura', value: 300, barWidth: 100 }));
-    expect(ranking[1]).toEqual(expect.objectContaining({ name: 'Moradia', value: 100 }));
-    expect(ranking[1].barWidth).toBeCloseTo(100 / 3);
+    expect(ranking).toHaveLength(1);
+    expect(ranking[0]).toEqual(expect.objectContaining({ name: 'Moradia', value: 766, barWidth: 100 }));
   });
 
   it('calcula os cards do periodo por despesa efetiva sem duplicar cartao e fatura', () => {
@@ -256,6 +477,58 @@ describe('ReportsDashboard - categoria de acordo', () => {
     expect(result.total).toBe(1900);
     expect(result.paid).toBe(1900);
     expect(result.income - result.total).toBe(1100);
+  });
+
+  it('renderiza Renegociação na composição das despesas em junho/2026', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      transactions: [
+        makeTransaction({
+          id: 'tx-renegotiation',
+          description: 'Renegociação de Pendências (1/9)',
+          amount: 483.86,
+          categoryId: 'cat-uncategorized',
+          transactionType: 'installment',
+          cardId: '4207f524-9dd0-480a-970d-56ccc7691d0e',
+          invoiceMonthYear: '2026-06',
+          date: '2026-05-28',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'tx-uncategorized',
+          description: 'Despesa realmente sem categoria',
+          amount: 42,
+          categoryId: undefined,
+          transactionType: 'punctual',
+          date: '2026-06-14',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'tx-agreement',
+          description: 'Parcela acordo',
+          amount: 90.39,
+          categoryId: undefined,
+          debtId: 'debt-1',
+          transactionType: 'installment',
+          date: '2026-06-20',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+      ],
+      categories: [makeCategory('cat-uncategorized', 'Não Identificados')],
+      accounts: [],
+      creditCards: [],
+      viewDate: new Date(2026, 5, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<ReportsDashboard />);
+
+    expect(screen.getAllByText('Renegociação').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Não identificados').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Acordo').length).toBeGreaterThan(0);
+    expect(screen.getByText('R$ 483,86')).toBeInTheDocument();
   });
 
   it('respeita filtro de conta nos totais efetivos do relatorio', () => {
@@ -391,6 +664,33 @@ describe('ReportsDashboard - categoria de acordo', () => {
     expect(result.income - result.total).toBe(1930);
   });
 
+  it('calcula variacao contra periodo anterior com percentual seguro', () => {
+    expect(buildPeriodComparison(2975.88, 3416.32)).toMatchObject({
+      diff: -440.44,
+      direction: 'down',
+      hasBase: true,
+    });
+    expect(buildPeriodComparison(100, 0)).toMatchObject({
+      diff: 100,
+      percent: null,
+      hasBase: false,
+      direction: 'up',
+    });
+  });
+
+  it('calcula consumo da receita com seguranca', () => {
+    expect(buildIncomeConsumption(4000, 2800)).toEqual({
+      income: 4000,
+      expenses: 2800,
+      percent: 70,
+    });
+    expect(buildIncomeConsumption(0, 500)).toEqual({
+      income: 0,
+      expenses: 500,
+      percent: null,
+    });
+  });
+
   it('renderiza os cards financeiros com valores efetivos e sem quebra no negativo', () => {
     financeStoreMock.useFinanceStore.mockReturnValue({
       transactions: [
@@ -455,6 +755,7 @@ describe('ReportsDashboard - categoria de acordo', () => {
     expect(screen.getByText('Despesas efetivas')).toBeInTheDocument();
     expect(screen.getAllByText('R$ 1.000,00').length).toBeGreaterThan(0);
     expect(screen.getAllByText('R$ 1.600,00').length).toBeGreaterThan(0);
+    expect(screen.getByText('160.0%')).toBeInTheDocument();
     expect(screen.queryByText('R$ 2.500,00')).not.toBeInTheDocument();
     const negativeBalance = screen.getAllByText('-R$ 600,00')[0];
     expect(negativeBalance).toBeInTheDocument();
@@ -496,6 +797,8 @@ describe('ReportsDashboard - categoria de acordo', () => {
     expect(screen.getAllByText('R$ 4.330,00').length).toBeGreaterThan(0);
     expect(screen.getAllByText('R$ 1.200,00').length).toBeGreaterThan(0);
     expect(screen.getAllByText('R$ 3.130,00').length).toBeGreaterThan(0);
+    expect(screen.getByText('27.7%')).toBeInTheDocument();
+    expect(screen.queryAllByText(/anterior/).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'Realizado' }));
 
@@ -503,6 +806,66 @@ describe('ReportsDashboard - categoria de acordo', () => {
     expect(screen.getByText('Despesas efetivas')).toBeInTheDocument();
     expect(screen.getByText('Saldo efetivo do período')).toBeInTheDocument();
     expect(screen.getAllByText('R$ 0,00').length).toBeGreaterThan(0);
+  });
+
+  it('modo Semestre soma o semestre, compara com semestre anterior e oculta orcamentos mensais', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      transactions: [
+        makeTransaction({
+          id: 'jan-income',
+          type: 'income',
+          amount: 1000,
+          date: '2026-01-05',
+          isPaid: false,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'feb-income',
+          type: 'income',
+          amount: 2000,
+          date: '2026-02-05',
+          isPaid: false,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'jan-expense',
+          amount: 500,
+          date: '2026-01-10',
+          isPaid: false,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'jul-income-prev',
+          type: 'income',
+          amount: 400,
+          date: '2025-07-05',
+          isPaid: false,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'outside-semester',
+          type: 'income',
+          amount: 9999,
+          date: '2026-07-05',
+          isPaid: false,
+          accountId: 'acc-1',
+        }),
+      ],
+      categories: [],
+      creditCards: [],
+      accounts: [],
+      viewDate: new Date(2026, 2, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<ReportsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'Semestre' }));
+
+    expect(screen.getAllByText('R$ 3.000,00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('R$ 500,00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/semestre anterior/).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Orcamentos por categoria')).not.toBeInTheDocument();
+    expect(screen.queryByText('R$ 9.999,00')).not.toBeInTheDocument();
   });
 
   it('renderiza barras do Por Categoria com a maior categoria em 100%', () => {
@@ -541,8 +904,8 @@ describe('ReportsDashboard - categoria de acordo', () => {
 
     render(<ReportsDashboard />);
 
-    expect(screen.queryByText('Mapa anual por categoria')).not.toBeInTheDocument();
-    expect(screen.getByText('Evolução Mensal')).toBeInTheDocument();
-    expect(screen.getByText('Por Categoria')).toBeInTheDocument();
+    expect(screen.queryByText('Mapa por categoria')).not.toBeInTheDocument();
+    expect(screen.getByText('Total de Consumo vs Receita')).toBeInTheDocument();
+    expect(screen.getByText('Composição das Despesas')).toBeInTheDocument();
   });
 });

@@ -2,6 +2,54 @@ import { describe, expect, it } from 'vitest';
 import { getCardUsedLimitFromTransactions } from '@/utils/cardLimit';
 
 describe('card limit calculation', () => {
+  it('fatura julho aberta com 13,90 consome limite corretamente', () => {
+    const used = getCardUsedLimitFromTransactions('itau-7409', [
+      {
+        cardId: 'itau-7409',
+        amount: 13.9,
+        type: 'expense',
+        transactionType: 'punctual',
+        invoiceMonthYear: '2026-07',
+        date: '2026-05-19',
+        isInvoicePayment: false,
+        isPaid: false,
+        deleted_at: null,
+      },
+    ]);
+
+    expect(used).toBeCloseTo(13.9, 2);
+    expect(1000 - used).toBeCloseTo(986.1, 2);
+    expect((used / 1000) * 100).toBeCloseTo(1.39, 2);
+  });
+
+  it('compra de cartao marcada como isPaid ainda consome limite ate a fatura ser paga', () => {
+    expect(getCardUsedLimitFromTransactions('card-1', [
+      {
+        cardId: 'card-1',
+        amount: 771.89,
+        type: 'expense',
+        transactionType: 'punctual',
+        invoiceMonthYear: '2026-05',
+        date: '2026-04-28',
+        isInvoicePayment: false,
+        isPaid: true,
+      },
+    ])).toBeCloseTo(771.89, 2);
+  });
+
+  it('compra comum no cartao consome limite', () => {
+    expect(getCardUsedLimitFromTransactions('card-1', [
+      {
+        cardId: 'card-1',
+        amount: 250,
+        type: 'expense',
+        transactionType: 'punctual',
+        invoiceMonthYear: '2026-05',
+        date: '2026-05-02',
+      },
+    ])).toBe(250);
+  });
+
   it('fatura aberta consome limite', () => {
     expect(getCardUsedLimitFromTransactions('card-1', [
       {
@@ -58,6 +106,35 @@ describe('card limit calculation', () => {
         date: '2026-07-03',
       },
     ])).toBe(390);
+  });
+
+  it('compra parcelada consome limite pela soma das parcelas abertas', () => {
+    expect(getCardUsedLimitFromTransactions('card-1', [
+      {
+        cardId: 'card-1',
+        amount: 100,
+        type: 'expense',
+        transactionType: 'installment',
+        invoiceMonthYear: '2026-05',
+        date: '2026-05-02',
+      },
+      {
+        cardId: 'card-1',
+        amount: 100,
+        type: 'expense',
+        transactionType: 'installment',
+        invoiceMonthYear: '2026-06',
+        date: '2026-06-02',
+      },
+      {
+        cardId: 'card-1',
+        amount: 100,
+        type: 'expense',
+        transactionType: 'installment',
+        invoiceMonthYear: '2026-07',
+        date: '2026-07-02',
+      },
+    ])).toBe(300);
   });
 
   it('estorno ou abatimento reduz o limite usado', () => {

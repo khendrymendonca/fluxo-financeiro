@@ -99,7 +99,7 @@ export function LegacyDashboardHome({
             >
               <RefreshCw className="w-4 h-4" />
             </Button>
-            <MonthSelector />
+            <MonthSelector modes={['month', 'year']} />
           </div>
         </div>
 

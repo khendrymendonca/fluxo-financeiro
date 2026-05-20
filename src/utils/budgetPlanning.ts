@@ -8,6 +8,7 @@ export interface CategoryBudgetRow {
   categoryId: string;
   categoryName: string;
   categoryColor?: string;
+  categoryIcon?: string;
   planned: number;
   realized: number;
   difference: number;
@@ -21,6 +22,8 @@ export interface MonthlyBudgetSummary {
   remaining: number;
   usagePercent: number;
   rows: CategoryBudgetRow[];
+  unplannedRows: CategoryBudgetRow[];
+  unplannedRealized: number;
 }
 
 function isBudgetExpense(transaction: Transaction, targetMonthKey: string) {
@@ -45,13 +48,16 @@ export function buildMonthlyCategoryBudgets({
   categories,
   transactions,
   month,
+  trackedCategoryIds,
 }: {
   categories: Category[];
   transactions: Transaction[];
   month: Date;
+  trackedCategoryIds?: string[] | null;
 }): MonthlyBudgetSummary {
   const targetMonthKey = format(month, 'yyyy-MM');
   const realizedByCategory = new Map<string, number>();
+  const trackedCategorySet = trackedCategoryIds ? new Set(trackedCategoryIds) : null;
 
   transactions.forEach((transaction) => {
     if (!isBudgetExpense(transaction, targetMonthKey)) return;
@@ -61,7 +67,7 @@ export function buildMonthlyCategoryBudgets({
     );
   });
 
-  const rows = categories
+  const allRows = categories
     .filter((category) => category.type === 'expense')
     .map((category) => {
       const planned = Number(category.budgetLimit || 0);
@@ -73,6 +79,7 @@ export function buildMonthlyCategoryBudgets({
         categoryId: category.id,
         categoryName: category.name,
         categoryColor: category.color,
+        categoryIcon: category.icon,
         planned,
         realized,
         difference,
@@ -80,8 +87,12 @@ export function buildMonthlyCategoryBudgets({
         status: getBudgetStatus(planned, realized),
       };
     })
-    .filter((row) => row.planned > 0 || row.realized > 0)
-    .sort((a, b) => {
+    .filter((row) => {
+      if (trackedCategorySet) return trackedCategorySet.has(row.categoryId);
+      return row.planned > 0 || row.realized > 0;
+    });
+
+  const sortRows = (rows: CategoryBudgetRow[]) => rows.sort((a, b) => {
       if (a.status !== b.status) {
         const order: Record<BudgetStatus, number> = { over: 0, warning: 1, unplanned: 2, within: 3 };
         return order[a.status] - order[b.status];
@@ -89,8 +100,15 @@ export function buildMonthlyCategoryBudgets({
       return b.realized - a.realized;
     });
 
+  const rows = sortRows(trackedCategorySet
+    ? allRows.filter((row) => trackedCategorySet.has(row.categoryId))
+    : allRows.filter((row) => row.planned > 0));
+  const unplannedRows = sortRows(allRows.filter((row) =>
+    (trackedCategorySet ? trackedCategorySet.has(row.categoryId) && row.planned <= 0 : row.planned <= 0) && row.realized > 0
+  ));
   const totalPlanned = rows.reduce((sum, row) => sum + row.planned, 0);
   const totalRealized = rows.reduce((sum, row) => sum + row.realized, 0);
+  const unplannedRealized = unplannedRows.reduce((sum, row) => sum + row.realized, 0);
   const remaining = totalPlanned - totalRealized;
   const usagePercent = totalPlanned > 0 ? (totalRealized / totalPlanned) * 100 : 0;
 
@@ -100,5 +118,7 @@ export function buildMonthlyCategoryBudgets({
     remaining,
     usagePercent,
     rows,
+    unplannedRows,
+    unplannedRealized,
   };
 }

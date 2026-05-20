@@ -30,7 +30,6 @@ import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { ReactNode, useState, useRef } from 'react';
 import { Portal } from '@/components/ui/Portal';
 import { AppLogo } from '@/components/branding/AppLogo';
-import { HelpButton } from '@/components/tutorial/HelpButton';
 
 // Grupos de navegação para cabeçalho compacto
 const navGroups = [
@@ -241,10 +240,9 @@ function ThemeButton({ theme, setTheme }: { theme: string; setTheme: (t: string)
 interface NavigationRailProps {
   currentView: string;
   onNavigate: (view: string) => void;
-  onOpenHelp?: () => void;
 }
 
-export function NavigationRail({ currentView, onNavigate, onOpenHelp }: NavigationRailProps) {
+export function NavigationRail({ currentView, onNavigate }: NavigationRailProps) {
   const { theme, setTheme } = useTheme();
   const [openGroup, setOpenGroup] = useState<string | null>(null);
 
@@ -263,7 +261,6 @@ export function NavigationRail({ currentView, onNavigate, onOpenHelp }: Navigati
         </button>
 
         <div className="flex items-center gap-2">
-          {onOpenHelp && <HelpButton onClick={onOpenHelp} />}
           <ThemeButton theme={theme} setTheme={setTheme} />
         </div>
       </div>

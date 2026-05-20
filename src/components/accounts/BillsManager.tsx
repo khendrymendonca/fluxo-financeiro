@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Portal } from '@/components/ui/Portal';
 import { cn } from '@/lib/utils';
-import { addMonths, format, isBefore, startOfMonth } from 'date-fns';
+import { addMonths, format, isBefore, isSameDay, startOfMonth, startOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useIsMutating } from '@tanstack/react-query';
 import { calcInvoiceMonthYearForCard } from '@/utils/creditCardUtils';
@@ -44,6 +44,7 @@ export function BillsManager() {
         creditCards,
         debts,
         viewDate,
+        viewMode,
         currentMonthTransactions,
         transactions
     } = useFinanceStore();
@@ -344,9 +345,14 @@ export function BillsManager() {
     const recurringTransactions = [...transactions, ...virtualInvoices].filter(t => {
         if (settledTransactionIds.has(t.id)) return false;
         const scopeDate = parseLocalDate(t.date.slice(0, 10));
-        const isCurrentMonthInScope = (scopeDate.getMonth() === viewDate.getMonth() && scopeDate.getFullYear() === viewDate.getFullYear());
-        const isOverduePendingInScope = isBefore(scopeDate, startOfMonth(viewDate)) && !t.isPaid;
-        const isOpenObligationInScope = !t.isPaid && (isCurrentMonthInScope || isOverduePendingInScope);
+        const isCurrentPeriodInScope = viewMode === 'day'
+            ? isSameDay(scopeDate, viewDate)
+            : viewMode === 'year'
+                ? scopeDate.getFullYear() === viewDate.getFullYear()
+                : (scopeDate.getMonth() === viewDate.getMonth() && scopeDate.getFullYear() === viewDate.getFullYear());
+        const overdueScopeBoundary = viewMode === 'day' ? viewDate : viewMode === 'year' ? startOfYear(viewDate) : startOfMonth(viewDate);
+        const isOverduePendingInScope = isBefore(scopeDate, overdueScopeBoundary) && !t.isPaid;
+        const isOpenObligationInScope = !t.isPaid && (isCurrentPeriodInScope || isOverduePendingInScope);
         // Bloqueio de Isolamento: O Gerenciador de Contas não deve vazar lançamentos "pontuais".
         const isRecurringType = t.isRecurring || t.transactionType === 'recurring' || t.transactionType === 'installment' || t.isInvoicePayment || !!t.originalId;
         if (!t.isVirtual && !isRecurringType && !isOpenObligationInScope) {
@@ -360,9 +366,14 @@ export function BillsManager() {
         const txDate = parseLocalDate(t.date.slice(0, 10));
 
         // Fix: Usar uma margem de segurança para comparação de meses (evita bugs de fuso horário no limite do mês)
-        const isCurrentMonth = (txDate.getMonth() === viewDate.getMonth() && txDate.getFullYear() === viewDate.getFullYear());
+        const isCurrentMonth = viewMode === 'day'
+            ? isSameDay(txDate, viewDate)
+            : viewMode === 'year'
+                ? txDate.getFullYear() === viewDate.getFullYear()
+                : (txDate.getMonth() === viewDate.getMonth() && txDate.getFullYear() === viewDate.getFullYear());
 
-        const isOverduePending = isBefore(txDate, startOfMonth(viewDate)) && !t.isPaid;
+        const overdueBoundary = viewMode === 'day' ? viewDate : viewMode === 'year' ? startOfYear(viewDate) : startOfMonth(viewDate);
+        const isOverduePending = isBefore(txDate, overdueBoundary) && !t.isPaid;
         if (!isCurrentMonth && !isOverduePending) return false;
 
         // Regra da Gestão de Contas: itens reais já pagos saem da lista principal e residem no extrato.

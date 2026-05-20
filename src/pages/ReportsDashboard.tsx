@@ -6,7 +6,6 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   PieChart as PieIcon,
-  Calendar,
   ChevronLeft,
   ChevronRight,
   Wallet
@@ -19,14 +18,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-  Cell
+  ResponsiveContainer
 } from 'recharts';
 import {
   startOfMonth,
@@ -45,8 +43,9 @@ import { cn } from '@/lib/utils';
 import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { formatCurrency } from '@/utils/formatters';
 import { parseLocalDate } from '@/utils/dateUtils';
-import { getTransactionCategoryLabel } from '@/utils/transactionCategory';
+import { getTransactionCategoryBucket, getTransactionCategoryLabel } from '@/utils/transactionCategory';
 import { buildCardInvoiceObligations } from '@/utils/invoiceObligations';
+import { buildIncomeConsumption, buildPeriodComparison, PeriodComparison } from '@/utils/reportComparisons';
 import { Category, CreditCard, Transaction } from '@/types/finance';
 import { BudgetOverview } from '@/components/budgets/BudgetOverview';
 
@@ -54,12 +53,37 @@ type Period = 'month' | 'semester' | 'year';
 type ReportMode = 'projected' | 'realized';
 
 type CategoryRankingItem = {
+  id: string;
   name: string;
   value: number;
   budgetLimit: number | null;
   color?: string;
   barWidth: number;
 };
+
+type PeriodPoint = {
+  name: string;
+  start: Date;
+  end: Date;
+  isCurrent: boolean;
+};
+
+function formatComparison(comparison: PeriodComparison, periodLabel: string) {
+  if (!comparison.hasBase) return `sem base no ${periodLabel}`;
+  if (comparison.direction === 'flat') return `igual ao ${periodLabel}`;
+
+  const arrow = comparison.direction === 'up' ? '+' : '-';
+  const percent = comparison.percent !== null ? ` (${Math.abs(comparison.percent).toFixed(1)}%)` : '';
+  return `${arrow} ${formatCurrency(Math.abs(comparison.diff))}${percent} vs ${periodLabel}`;
+}
+
+function formatPercentComparison(comparison: PeriodComparison, periodLabel: string) {
+  if (!comparison.hasBase) return `sem base no ${periodLabel}`;
+  if (comparison.direction === 'flat') return `igual ao ${periodLabel}`;
+
+  const arrow = comparison.direction === 'up' ? '+' : '-';
+  return `${arrow} ${Math.abs(comparison.diff).toFixed(1)} p.p. vs ${periodLabel}`;
+}
 
 function getReportPeriodKey(transaction: Transaction) {
   if (transaction.isInvoicePayment && transaction.invoiceMonthYear) {
@@ -102,6 +126,33 @@ function isProjectedReportExpense(transaction: Transaction) {
     !transaction.isTransfer &&
     !transaction.deleted_at &&
     (transaction.isInvoicePayment || !transaction.cardId)
+  );
+}
+
+function getCategoryConsumptionPeriodKey(transaction: Transaction) {
+  if (transaction.cardId && transaction.invoiceMonthYear) {
+    return transaction.invoiceMonthYear;
+  }
+
+  return format(parseLocalDate(transaction.date), 'yyyy-MM');
+}
+
+function isRealizedCategoryConsumptionExpense(transaction: Transaction) {
+  return (
+    transaction.type === 'expense' &&
+    transaction.isPaid &&
+    !transaction.isTransfer &&
+    !transaction.deleted_at &&
+    !transaction.isInvoicePayment
+  );
+}
+
+function isProjectedCategoryConsumptionExpense(transaction: Transaction) {
+  return (
+    transaction.type === 'expense' &&
+    !transaction.isTransfer &&
+    !transaction.deleted_at &&
+    !transaction.isInvoicePayment
   );
 }
 
@@ -232,27 +283,41 @@ export function buildCategoryExpenseRanking({
   const periodKeys = new Set(
     eachMonthOfInterval({ start, end }).map((month) => format(month, 'yyyy-MM'))
   );
-  const distMap = new Map<string, number>();
+  const distMap = new Map<string, {
+    id: string;
+    name: string;
+    value: number;
+    category?: Pick<Category, 'id' | 'name' | 'budgetLimit' | 'color'>;
+  }>();
 
   transactions.forEach((transaction) => {
-    if (!isEffectiveCategoryExpense(transaction)) return;
+    if (!isRealizedCategoryConsumptionExpense(transaction)) return;
     if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return;
-    if (!periodKeys.has(getReportPeriodKey(transaction))) return;
+    if (!periodKeys.has(getCategoryConsumptionPeriodKey(transaction))) return;
 
-    const name = transaction.isInvoicePayment
-      ? 'Pagamento de fatura'
-      : getTransactionCategoryLabel(transaction, categories, 'Outros');
-    distMap.set(name, (distMap.get(name) || 0) + Number(transaction.amount));
+    const bucket = getTransactionCategoryBucket(transaction, categories, 'Não identificados');
+    const current = distMap.get(bucket.key) ?? {
+      id: bucket.key,
+      name: bucket.label,
+      value: 0,
+      category: bucket.category,
+    };
+    current.value += Number(transaction.amount);
+    if (!current.category && bucket.category) {
+      current.category = bucket.category;
+    }
+    distMap.set(bucket.key, current);
   });
 
-  const ranked = Array.from(distMap.entries())
-    .map(([name, value]) => {
-      const cat = categories.find(c => c.name === name);
+  const ranked = Array.from(distMap.values())
+    .map(({ id, name, value, category }) => {
+      const cat = category ?? categories.find((c) => 'category:' + c.id === id || c.name === name);
       return {
+        id,
         name,
         value,
         budgetLimit: cat?.budgetLimit ?? null,
-        color: cat?.color
+        color: cat?.color,
       };
     })
     .sort((a, b) => b.value - a.value)
@@ -368,7 +433,12 @@ function buildProjectedCategoryExpenseRanking({
   selectedAccountId: string;
   limit?: number;
 }): CategoryRankingItem[] {
-  const distMap = new Map<string, number>();
+  const distMap = new Map<string, {
+    id: string;
+    name: string;
+    value: number;
+    category?: Pick<Category, 'id' | 'name' | 'budgetLimit' | 'color'>;
+  }>();
 
   eachMonthOfInterval({ start, end }).forEach((month) => {
     getMonthTransactionsForReport({
@@ -377,19 +447,28 @@ function buildProjectedCategoryExpenseRanking({
       month,
       selectedAccountId,
     }).forEach((transaction) => {
-      if (!isProjectedReportExpense(transaction)) return;
+      if (!isProjectedCategoryConsumptionExpense(transaction)) return;
 
-      const name = transaction.isInvoicePayment
-        ? 'Fatura de cartão'
-        : getTransactionCategoryLabel(transaction, categories, 'Outros');
-      distMap.set(name, (distMap.get(name) || 0) + Number(transaction.amount));
+      const bucket = getTransactionCategoryBucket(transaction, categories, 'Não identificados');
+      const current = distMap.get(bucket.key) ?? {
+        id: bucket.key,
+        name: bucket.label,
+        value: 0,
+        category: bucket.category,
+      };
+      current.value += Number(transaction.amount);
+      if (!current.category && bucket.category) {
+        current.category = bucket.category;
+      }
+      distMap.set(bucket.key, current);
     });
   });
 
-  const ranked = Array.from(distMap.entries())
-    .map(([name, value]) => {
-      const cat = categories.find(c => c.name === name);
+  const ranked = Array.from(distMap.values())
+    .map(({ id, name, value, category }) => {
+      const cat = category ?? categories.find((c) => 'category:' + c.id === id || c.name === name);
       return {
+        id,
         name,
         value,
         budgetLimit: cat?.budgetLimit ?? null,
@@ -407,6 +486,80 @@ function buildProjectedCategoryExpenseRanking({
   }));
 }
 
+function getSemesterStart(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth() < 6 ? 0 : 6, 1);
+}
+
+function getSemesterLabel(date: Date) {
+  return `${date.getMonth() < 6 ? '1S' : '2S'}/${date.getFullYear()}`;
+}
+
+function buildPeriodPoint(start: Date, period: Period, currentStart: Date): PeriodPoint {
+  const end = period === 'month'
+    ? endOfMonth(start)
+    : period === 'semester'
+      ? endOfMonth(addMonths(start, 5))
+      : endOfYear(start);
+
+  return {
+    name: period === 'month'
+      ? format(start, 'MMM', { locale: ptBR })
+      : period === 'semester'
+        ? getSemesterLabel(start)
+        : format(start, 'yyyy'),
+    start,
+    end,
+    isCurrent: start.getFullYear() === currentStart.getFullYear() && start.getMonth() === currentStart.getMonth(),
+  };
+}
+
+function buildTrendPeriodPoints(period: Period, viewDate: Date): PeriodPoint[] {
+  if (period === 'month') {
+    const currentStart = startOfMonth(viewDate);
+    return Array.from({ length: 6 }).map((_, index) =>
+      buildPeriodPoint(subMonths(currentStart, 5 - index), period, currentStart)
+    );
+  }
+
+  if (period === 'semester') {
+    const currentStart = getSemesterStart(viewDate);
+    return Array.from({ length: 4 }).map((_, index) =>
+      buildPeriodPoint(subMonths(currentStart, (3 - index) * 6), period, currentStart)
+    );
+  }
+
+  const currentStart = startOfYear(viewDate);
+  return Array.from({ length: 5 }).map((_, index) =>
+    buildPeriodPoint(new Date(viewDate.getFullYear() - (4 - index), 0, 1), period, currentStart)
+  );
+}
+
+function buildCategoryPeriodValue({
+  transactions,
+  creditCards,
+  categories,
+  start,
+  end,
+  selectedAccountId,
+  reportMode,
+  categoryId,
+}: {
+  transactions: Transaction[];
+  creditCards: CreditCard[];
+  categories: Category[];
+  start: Date;
+  end: Date;
+  selectedAccountId: string;
+  reportMode: ReportMode;
+  categoryId: string;
+}) {
+  const rows = reportMode === 'projected'
+    ? buildProjectedCategoryExpenseRanking({ transactions, creditCards, categories, start, end, selectedAccountId, limit: 1000 })
+    : buildCategoryExpenseRanking({ transactions, categories, start, end, selectedAccountId, limit: 1000 });
+
+  return rows.find((row) => row.id === categoryId)?.value ?? 0;
+}
+
 export default function ReportsDashboard() {
   const {
     transactions,
@@ -420,6 +573,7 @@ export default function ReportsDashboard() {
   const [period, setPeriod] = useState<Period>('month');
   const [reportMode, setReportMode] = useState<ReportMode>('projected');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const canUseAdvancedReports = useFeatureFlag('advanced_reports');
 
   const handlePrevMonth = () => setViewDate(subMonths(viewDate, 1));
@@ -454,6 +608,13 @@ export default function ReportsDashboard() {
     return { start, end, prevStart, prevEnd };
   }, [viewDate, period]);
 
+  const periodMonths = useMemo(
+    () => eachMonthOfInterval({ start: intervals.start, end: intervals.end }),
+    [intervals]
+  );
+
+  const periodLabel = period === 'month' ? 'mês anterior' : period === 'semester' ? 'semestre anterior' : 'ano anterior';
+
   const getPeriodData = useCallback((start: Date, end: Date) => {
     if (reportMode === 'realized') {
       return buildReportPeriodData({
@@ -478,30 +639,43 @@ export default function ReportsDashboard() {
   const metrics = useMemo(() => {
     const current = getPeriodData(intervals.start, intervals.end);
     const previous = getPeriodData(intervals.prevStart, intervals.prevEnd);
-    const trend = previous.total > 0 ? ((current.total - previous.total) / previous.total) * 100 : 0;
+    const currentBalance = current.income - current.total;
+    const previousBalance = previous.income - previous.total;
+
+    const currentConsumption = buildIncomeConsumption(current.income, current.total);
+    const previousConsumption = buildIncomeConsumption(previous.income, previous.total);
 
     return {
       totalExpenses: current.total,
       paidExpenses: current.paid,
       fixedExpenses: current.fixed,
       income: current.income,
-      trend,
-      balance: current.income - current.total
+      balance: currentBalance,
+      consumption: currentConsumption,
+      comparisons: {
+        income: buildPeriodComparison(current.income, previous.income),
+        expenses: buildPeriodComparison(current.total, previous.total),
+        balance: buildPeriodComparison(currentBalance, previousBalance),
+        consumption: buildPeriodComparison(currentConsumption.percent ?? 0, previousConsumption.percent ?? 0),
+      },
     };
   }, [intervals, getPeriodData]);
 
-  const chartData = useMemo(() => {
-    return Array.from({ length: 6 }).map((_, i) => {
-      const monthDate = subMonths(startOfMonth(viewDate), 5 - i);
-      const data = getPeriodData(startOfMonth(monthDate), endOfMonth(monthDate));
+  const consumptionTrendData = useMemo(() => {
+    const points = buildTrendPeriodPoints(period, viewDate);
+
+    return points.map((point) => {
+      const data = getPeriodData(point.start, point.end);
+      const consumption = buildIncomeConsumption(data.income, data.total);
       return {
-        name: format(monthDate, 'MMM', { locale: ptBR }),
-        despesa: data.total,
+        name: point.name,
+        consumo: consumption.percent ?? 0,
         receita: data.income,
-        isCurrent: i === 5
+        despesa: data.total,
+        isCurrent: point.isCurrent,
       };
     });
-  }, [viewDate, getPeriodData]);
+  }, [period, viewDate, getPeriodData]);
 
   const yearOptions = useMemo(() => {
     const years = new Set<number>([new Date().getFullYear(), viewDate.getFullYear()]);
@@ -537,10 +711,66 @@ export default function ReportsDashboard() {
     });
   }, [transactions, creditCards, categories, intervals, selectedAccountId, reportMode]);
 
-  const annualVision = useMemo(() => {
-    const monthKeys = yearMonths.map((month) => format(month, 'yyyy-MM'));
+  const expenseCategories = useMemo(
+    () => categories.filter((category) => category.type === 'expense' && category.isActive !== false),
+    [categories]
+  );
 
-    const monthlyTransactionsMap = yearMonths.reduce<Record<string, typeof transactions>>((accumulator, month) => {
+  const selectedCategory = selectedCategoryId === 'all'
+    ? null
+    : categories.find((category) => category.id === selectedCategoryId) ?? null;
+
+  const selectedCategoryAnalysis = useMemo(() => {
+    if (!selectedCategory) return null;
+
+    const current = buildCategoryPeriodValue({
+      transactions,
+      creditCards,
+      categories,
+      start: intervals.start,
+      end: intervals.end,
+      selectedAccountId,
+      reportMode,
+      categoryId: selectedCategory.id,
+    });
+    const previous = buildCategoryPeriodValue({
+      transactions,
+      creditCards,
+      categories,
+      start: intervals.prevStart,
+      end: intervals.prevEnd,
+      selectedAccountId,
+      reportMode,
+      categoryId: selectedCategory.id,
+    });
+    const trend = buildTrendPeriodPoints(period, viewDate).map((point) => ({
+      name: point.name,
+      valor: buildCategoryPeriodValue({
+        transactions,
+        creditCards,
+        categories,
+        start: point.start,
+        end: point.end,
+        selectedAccountId,
+        reportMode,
+        categoryId: selectedCategory.id,
+      }),
+      isCurrent: point.isCurrent,
+    }));
+
+    return {
+      current,
+      previous,
+      comparison: buildPeriodComparison(current, previous),
+      trend,
+    };
+  }, [categories, creditCards, intervals, period, reportMode, selectedAccountId, selectedCategory, transactions, viewDate]);
+
+  const annualVision = useMemo(() => {
+    const tableMonths = period === 'year' ? yearMonths : periodMonths;
+    const monthKeys = tableMonths.map((month) => format(month, 'yyyy-MM'));
+
+    const monthlyTransactionsMap = tableMonths.reduce<Record<string, typeof transactions>>((accumulator, month) => {
       accumulator[format(month, 'yyyy-MM')] = reportMode === 'projected'
         ? getMonthTransactionsForReport({
             transactions,
@@ -604,7 +834,7 @@ export default function ReportsDashboard() {
           : getTransactionCategoryLabel(
               transaction,
               categories,
-              transaction.type === 'income' ? 'Receitas sem categoria' : 'Outros'
+              transaction.type === 'income' ? 'Receitas sem categoria' : 'Não identificados'
             );
         const rowId = `${transaction.type}-${transaction.categoryId ?? transaction.debtId ?? rowName}`;
         const row = ensureRow(rowId, rowName, transaction.type);
@@ -643,8 +873,8 @@ export default function ReportsDashboard() {
     const annualIncome = monthKeys.reduce((sum, monthKey) => sum + incomeByMonth[monthKey], 0);
     const annualExpenses = monthKeys.reduce((sum, monthKey) => sum + expenseByMonth[monthKey], 0);
     const annualNet = annualIncome - annualExpenses;
-    const negativeMonths = yearMonths.filter((month) => netByMonth[format(month, 'yyyy-MM')] < 0);
-    const strongestMonth = yearMonths.reduce((best, month) => {
+    const negativeMonths = tableMonths.filter((month) => netByMonth[format(month, 'yyyy-MM')] < 0);
+    const strongestMonth = tableMonths.reduce((best, month) => {
       const monthKey = format(month, 'yyyy-MM');
       const amount = netByMonth[monthKey];
       if (!best || amount > best.amount) {
@@ -658,7 +888,7 @@ export default function ReportsDashboard() {
       .reduce((sum, account) => sum + Number(account.balance || 0), 0);
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth();
-    const projectedYearEndBalance = viewDate.getFullYear() === currentYear
+    const projectedYearEndBalance = period === 'year' && viewDate.getFullYear() === currentYear
       ? currentTotalBalance + yearMonths.reduce((sum, month) => {
           if (month.getMonth() <= currentMonth) return sum;
           return sum + netByMonth[format(month, 'yyyy-MM')];
@@ -666,6 +896,7 @@ export default function ReportsDashboard() {
       : null;
 
     return {
+      tableMonths,
       rows,
       incomeRows,
       expenseRows,
@@ -680,7 +911,7 @@ export default function ReportsDashboard() {
       currentTotalBalance,
       projectedYearEndBalance,
     };
-  }, [accounts, categories, creditCards, reportMode, selectedAccountId, transactions, viewDate, yearMonths]);
+  }, [accounts, categories, creditCards, period, periodMonths, reportMode, selectedAccountId, transactions, viewDate, yearMonths]);
 
   return (
     <div className="space-y-8 animate-fade-in max-w-[1600px] mx-auto pb-10 px-4 xl:px-6">
@@ -702,18 +933,33 @@ export default function ReportsDashboard() {
                 </button>
               </>
             ) : period === 'semester' ? (
-              <Select
-                value={viewDate.getMonth() < 6 ? '1' : '2'}
-                onValueChange={(val) => setViewDate(new Date(viewDate.getFullYear(), val === '1' ? 0 : 6, 1))}
-              >
-                <SelectTrigger className="h-9 border-none bg-transparent font-black uppercase tracking-widest text-xs min-w-[160px] outline-none shadow-none focus:ring-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl border-2">
-                  <SelectItem value="1" className="font-bold">1º Semestre {viewDate.getFullYear()}</SelectItem>
-                  <SelectItem value="2" className="font-bold">2º Semestre {viewDate.getFullYear()}</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center">
+                <Select
+                  value={String(viewDate.getFullYear())}
+                  onValueChange={(val) => setViewDate(new Date(Number(val), viewDate.getMonth() < 6 ? 0 : 6, 1))}
+                >
+                  <SelectTrigger className="h-9 border-none bg-transparent font-black uppercase tracking-widest text-xs min-w-[90px] outline-none shadow-none focus:ring-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border-2">
+                    {yearOptions.map(year => (
+                      <SelectItem key={year} value={String(year)} className="font-bold">{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={viewDate.getMonth() < 6 ? '1' : '2'}
+                  onValueChange={(val) => setViewDate(new Date(viewDate.getFullYear(), val === '1' ? 0 : 6, 1))}
+                >
+                  <SelectTrigger className="h-9 border-none bg-transparent font-black uppercase tracking-widest text-xs min-w-[150px] outline-none shadow-none focus:ring-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border-2">
+                    <SelectItem value="1" className="font-bold">1º Semestre</SelectItem>
+                    <SelectItem value="2" className="font-bold">2º Semestre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             ) : (
               <Select
                 value={String(viewDate.getFullYear())}
@@ -781,49 +1027,49 @@ export default function ReportsDashboard() {
           label={reportMode === 'projected' ? 'Receitas previstas' : 'Receitas efetivas'}
           value={metrics.income}
           icon={<ArrowUpCircle className="text-emerald-500" />}
-          trend={metrics.trend >= 0 ? `+${metrics.trend.toFixed(0)}%` : `${metrics.trend.toFixed(0)}%`}
+          comparison={metrics.comparisons.income}
+          periodLabel={periodLabel}
         />
         <StatCard
           label={reportMode === 'projected' ? 'Despesas previstas' : 'Despesas efetivas'}
           value={metrics.totalExpenses}
           icon={<ArrowDownCircle className="text-rose-500" />}
-          trend={metrics.trend >= 0 ? `+${metrics.trend.toFixed(0)}%` : `${metrics.trend.toFixed(0)}%`}
+          comparison={metrics.comparisons.expenses}
+          periodLabel={periodLabel}
           forceRed
+          invertColors
         />
         <StatCard
           label={reportMode === 'projected' ? 'Saldo previsto' : 'Saldo efetivo do período'}
           value={metrics.balance}
           icon={<TrendingUp className={metrics.balance >= 0 ? "text-primary" : "text-rose-500"} />}
+          comparison={metrics.comparisons.balance}
+          periodLabel={periodLabel}
           isNeutral
         />
       </div>
 
-      {period === 'month' && reportMode === 'projected' && selectedAccountId === 'all' && (
+      {selectedAccountId === 'all' && (
         <BudgetOverview
           categories={categories}
           transactions={transactions}
-          month={viewDate}
+          viewDate={viewDate}
+          period={period}
+          reportMode={reportMode}
+          periodIncome={metrics.income}
         />
       )}
 
       {canUseAdvancedReports ? (
         <>
           <div className="lg:hidden bg-white dark:bg-zinc-900 rounded-[2rem] p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
-        <p className="text-[10px] font-black uppercase tracking-[0.25em] text-primary mb-2">Desktop</p>
-        <h3 className="text-base font-black tracking-tight">Mapa anual por categoria</h3>
-        <p className="text-sm text-muted-foreground mt-2">
-          Esse relatório fica visível só em telas maiores para não poluir o mobile.
-        </p>
+            <h3 className="text-base font-black tracking-tight">Mapa por categoria</h3>
           </div>
 
           <div className="hidden lg:block bg-white dark:bg-zinc-900 rounded-[2.5rem] p-10 xl:p-12 border border-gray-100 dark:border-zinc-800 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-2">Pergunta do Milhão</p>
-            <h3 className="text-2xl font-black tracking-tight">Mapa anual por categoria</h3>
-            <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
-              Uma linha por categoria de lançamento, um mês por coluna e o total do ano no fim. Assim você enxerga receita, moradia, transporte e onde o caixa desvia.
-            </p>
+            <h3 className="text-2xl font-black tracking-tight">Mapa por categoria</h3>
           </div>
 
           <div className="grid grid-cols-3 gap-3 min-w-[660px]">
@@ -836,7 +1082,7 @@ export default function ReportsDashboard() {
               <p className="text-xl font-black mt-2 text-rose-700 dark:text-rose-200">{annualVision.negativeMonths.length}</p>
             </div>
             <div className="rounded-[1.75rem] border border-primary/10 bg-primary/[0.06] p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-primary">Fechamento do ano</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary">Fechamento do período</p>
               <p className="text-xl font-black mt-2 text-foreground">
                 {annualVision.projectedYearEndBalance !== null ? formatCurrency(annualVision.projectedYearEndBalance) : formatCurrency(annualVision.annualNet)}
               </p>
@@ -852,7 +1098,7 @@ export default function ReportsDashboard() {
             </p>
           </div>
           <div className="rounded-[1.75rem] border border-gray-100 dark:border-zinc-800 bg-gray-50/60 dark:bg-zinc-950/40 p-4">
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Receita x despesa no ano</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Receita x despesa no período</p>
             <p className={cn(
               "text-sm font-black mt-2",
               annualVision.annualNet >= 0 ? "text-emerald-600 dark:text-emerald-300" : "text-rose-600 dark:text-rose-300"
@@ -864,7 +1110,7 @@ export default function ReportsDashboard() {
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Leitura</p>
             <p className="text-sm font-bold mt-2 text-foreground/80">
               {annualVision.negativeMonths.length === 0
-                ? 'O ano está sem meses deficitários nessa visão.'
+                ? 'O período está sem meses deficitários nessa visão.'
                 : `Há ${annualVision.negativeMonths.length} mês(es) pedindo ajuste de rota.`}
             </p>
           </div>
@@ -875,7 +1121,7 @@ export default function ReportsDashboard() {
             <thead className="bg-zinc-50 dark:bg-zinc-950/70">
               <tr>
                 <th className="sticky left-0 z-10 bg-zinc-50 dark:bg-zinc-950/70 px-5 py-4 text-left text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground min-w-[240px]">Categoria</th>
-                {yearMonths.map((month) => (
+                {annualVision.tableMonths.map((month) => (
                   <th key={month.toISOString()} className="px-4 py-4 text-right text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground min-w-[96px]">
                     {format(month, 'MMM', { locale: ptBR })}
                   </th>
@@ -889,7 +1135,7 @@ export default function ReportsDashboard() {
                   <td className="sticky left-0 z-10 bg-emerald-50/60 dark:bg-emerald-500/5 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
                     Receitas
                   </td>
-                  <td colSpan={yearMonths.length + 1} />
+                  <td colSpan={annualVision.tableMonths.length + 1} />
                 </tr>
               )}
 
@@ -898,7 +1144,7 @@ export default function ReportsDashboard() {
                   <td className="sticky left-0 z-10 bg-white dark:bg-zinc-900 px-5 py-4">
                     <span className="text-sm font-black text-foreground">{row.name}</span>
                   </td>
-                  {yearMonths.map((month) => {
+                  {annualVision.tableMonths.map((month) => {
                     const monthKey = format(month, 'yyyy-MM');
                     const value = row.monthValues[monthKey];
 
@@ -919,7 +1165,7 @@ export default function ReportsDashboard() {
                   <td className="sticky left-0 z-10 bg-rose-50/60 dark:bg-rose-500/5 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-rose-700 dark:text-rose-300">
                     Despesas
                   </td>
-                  <td colSpan={yearMonths.length + 1} />
+                  <td colSpan={annualVision.tableMonths.length + 1} />
                 </tr>
               )}
 
@@ -928,7 +1174,7 @@ export default function ReportsDashboard() {
                   <td className="sticky left-0 z-10 bg-white dark:bg-zinc-900 px-5 py-4">
                     <span className="text-sm font-black text-foreground">{row.name}</span>
                   </td>
-                  {yearMonths.map((month) => {
+                  {annualVision.tableMonths.map((month) => {
                     const monthKey = format(month, 'yyyy-MM');
                     const value = row.monthValues[monthKey];
 
@@ -948,7 +1194,7 @@ export default function ReportsDashboard() {
                 <td className="sticky left-0 z-10 bg-zinc-50 dark:bg-zinc-950 px-5 py-4 text-sm font-black uppercase tracking-[0.15em]">
                   Resultado líquido
                 </td>
-                {yearMonths.map((month) => {
+                {annualVision.tableMonths.map((month) => {
                   const monthKey = format(month, 'yyyy-MM');
                   const value = annualVision.netByMonth[monthKey];
 
@@ -976,7 +1222,7 @@ export default function ReportsDashboard() {
                 <td className="sticky left-0 z-10 bg-emerald-50 dark:bg-emerald-950 px-5 py-4 text-sm font-black uppercase tracking-[0.15em] text-emerald-700 dark:text-emerald-300">
                   Total receitas
                 </td>
-                {yearMonths.map((month) => {
+                {annualVision.tableMonths.map((month) => {
                   const monthKey = format(month, 'yyyy-MM');
                   return (
                     <td key={`income-${monthKey}`} className="px-4 py-4 text-right text-xs font-black tabular-nums text-emerald-600 dark:text-emerald-300">
@@ -993,7 +1239,7 @@ export default function ReportsDashboard() {
                 <td className="sticky left-0 z-10 bg-rose-50 dark:bg-rose-950 px-5 py-4 text-sm font-black uppercase tracking-[0.15em] text-rose-700 dark:text-rose-300">
                   Total despesas
                 </td>
-                {yearMonths.map((month) => {
+                {annualVision.tableMonths.map((month) => {
                   const monthKey = format(month, 'yyyy-MM');
                   return (
                     <td key={`expense-${monthKey}`} className="px-4 py-4 text-right text-xs font-black tabular-nums text-rose-600 dark:text-rose-300">
@@ -1008,91 +1254,111 @@ export default function ReportsDashboard() {
             </tbody>
           </table>
         </div>
-          </div>
-        </>
-      ) : null}
+      </div>
+    </>
+  ) : null}
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        <div className="lg:col-span-3 bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
+  <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <div className="lg:col-span-3 space-y-6">
+          <div className="bg-white dark:bg-zinc-900 rounded-[2rem] p-6 border border-gray-100 dark:border-zinc-800 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
             <div>
-              <h3 className="text-lg font-black tracking-tight">Evolução Mensal</h3>
-              <div className="flex items-center gap-4 mt-1">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Receitas</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Despesas</span>
-                </div>
-              </div>
+              <h3 className="text-lg font-black tracking-tight">Total de Consumo vs Receita</h3>
+              <p className="text-sm text-muted-foreground mt-1 tabular-nums">
+                {formatCurrency(metrics.totalExpenses)} de {formatCurrency(metrics.income)}
+              </p>
             </div>
-            <Calendar className="text-muted-foreground w-5 h-5 opacity-20" />
+            <div className="text-left md:text-right">
+              <p className="text-4xl font-black tracking-tighter tabular-nums">
+                {metrics.consumption.percent !== null ? `${metrics.consumption.percent.toFixed(1)}%` : 'Sem receita'}
+              </p>
+              <ComparisonBadge comparison={metrics.comparisons.consumption} periodLabel={periodLabel} isPercentPoints />
+            </div>
           </div>
 
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%" minHeight={300}>
-              <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }} barGap={8}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }}
-                  dy={10}
-                />
+          <div className="h-[260px] w-full">
+            <ResponsiveContainer width="100%" height="100%" minHeight={240}>
+              <LineChart data={consumptionTrendData} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
                 <YAxis hide domain={[0, 'auto']} />
                 <Tooltip
-                  cursor={{ fill: 'transparent' }}
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="bg-zinc-900 text-white p-3 rounded-2xl shadow-xl border border-white/10 text-[10px] space-y-1.5 min-w-[140px]">
-                          {payload.map((p, idx) => (
-                            <div key={idx} className="flex items-center justify-between gap-4">
-                              <div className="flex items-center gap-1.5">
-                                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.fill }} />
-                                <span className="font-bold uppercase tracking-widest opacity-70">{p.name}</span>
-                              </div>
-                              <span className="font-black">{formatCurrency(p.value as number)}</span>
-                            </div>
-                          ))}
-                          <div className="pt-1.5 mt-1.5 border-t border-white/10 flex justify-between items-center">
-                            <span className="font-bold uppercase tracking-widest opacity-70">Saldo</span>
-                            <span className={cn("font-black", (payload[0].value as number - (payload[1]?.value as number || 0)) >= 0 ? "text-emerald-400" : "text-rose-400")}>
-                              {formatCurrency((payload[0].value as number) - (payload[1]?.value as number || 0))}
-                            </span>
-                          </div>
+                  cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    const point = payload[0]?.payload;
+                    return (
+                      <div className="min-w-[180px] rounded-2xl border border-white/10 bg-zinc-900 p-3 text-[10px] text-white shadow-xl">
+                        <p className="mb-2 font-black uppercase tracking-widest opacity-70">{label}</p>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="font-bold uppercase tracking-widest opacity-70">Consumo</span>
+                          <span className="font-black">{Number(point.consumo).toFixed(1)}%</span>
                         </div>
-                      );
-                    }
-                    return null;
+                        <div className="mt-1 flex items-center justify-between gap-4">
+                          <span className="font-bold uppercase tracking-widest opacity-70">Receita</span>
+                          <span className="font-black">{formatCurrency(point.receita)}</span>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between gap-4">
+                          <span className="font-bold uppercase tracking-widest opacity-70">Despesa</span>
+                          <span className="font-black">{formatCurrency(point.despesa)}</span>
+                        </div>
+                      </div>
+                    );
                   }}
                 />
-                <Bar name="Receita" dataKey="receita" radius={[6, 6, 6, 6]} barSize={16}>
-                  {chartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-income-${index}`}
-                      fill={entry.isCurrent ? '#10b981' : 'rgba(16, 185, 129, 0.2)'}
-                    />
-                  ))}
-                </Bar>
-                <Bar name="Despesa" dataKey="despesa" radius={[6, 6, 6, 6]} barSize={16}>
-                  {chartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-expense-${index}`}
-                      fill={entry.isCurrent ? 'hsl(var(--primary))' : 'rgba(161, 161, 170, 0.2)'}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
+                <Line type="monotone" name="Consumo vs Receita" dataKey="consumo" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: 'hsl(var(--background))' }} activeDot={{ r: 6 }} />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
+        <div className="bg-white dark:bg-zinc-900 rounded-[2rem] p-6 border border-gray-100 dark:border-zinc-800 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
+            <h3 className="text-lg font-black tracking-tight">Análise de Categoria</h3>
+            <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+              <SelectTrigger className="h-11 w-full md:w-[240px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 font-bold">
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-2">
+                <SelectItem value="all" className="font-bold">Selecionar categoria</SelectItem>
+                {expenseCategories.map((category) => (
+                  <SelectItem key={category.id} value={category.id} className="font-bold">{category.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedCategory && selectedCategoryAnalysis ? (
+            <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6">
+              <div className="rounded-2xl border border-gray-100 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-950/40 p-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Atual</p>
+                <p className="mt-2 text-2xl font-black tabular-nums">{formatCurrency(selectedCategoryAnalysis.current)}</p>
+                <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Anterior</p>
+                <p className="mt-2 text-lg font-black tabular-nums text-muted-foreground">{formatCurrency(selectedCategoryAnalysis.previous)}</p>
+                <ComparisonBadge comparison={selectedCategoryAnalysis.comparison} periodLabel={periodLabel} invertColors className="mt-4" />
+              </div>
+              <div className="h-[220px] min-w-0">
+                <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+                  <LineChart data={selectedCategoryAnalysis.trend} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
+                    <YAxis hide domain={[0, 'auto']} />
+                    <Tooltip cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }} formatter={(value) => formatCurrency(Number(value))} />
+                    <Line type="monotone" name={selectedCategory.name} dataKey="valor" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm font-bold text-muted-foreground">
+              Selecione uma categoria ou clique no gráfico ao lado para analisar.
+            </div>
+          )}
+        </div>
+      </div>
+
         <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm">
-          <h3 className="text-lg font-black tracking-tight mb-6">Por Categoria</h3>
+          <h3 className="text-lg font-black tracking-tight mb-6">Composição das Despesas</h3>
           <div className="space-y-6">
             {topCategories.map((cat, idx) => {
               // Lógica de cor baseada no limite
@@ -1103,8 +1369,17 @@ export default function ReportsDashboard() {
                 limitPercentage > 100 ? "bg-rose-500" :
                   limitPercentage > 80 ? "bg-amber-500" : "bg-emerald-500";
 
+              const isSelected = selectedCategoryId === cat.id;
+
               return (
-                <div key={idx} className="space-y-2">
+                <button 
+                  key={idx} 
+                  className={cn(
+                    "w-full text-left space-y-2 p-2 -m-2 rounded-2xl transition-all",
+                    isSelected ? "bg-primary/5 ring-1 ring-primary/20" : "hover:bg-gray-50 dark:hover:bg-zinc-800/50"
+                  )}
+                  onClick={() => setSelectedCategoryId(cat.id)}
+                >
                   <div className="flex justify-between text-sm">
                     <div className="flex flex-col">
                       <span className="font-bold text-zinc-600 dark:text-zinc-400 leading-tight">{cat.name}</span>
@@ -1127,7 +1402,7 @@ export default function ReportsDashboard() {
                       style={{ width: `${Math.min(cat.barWidth, 100)}%` }}
                     />
                   </div>
-                </div>
+                </button>
               );
             })}
             {topCategories.length === 0 && (
@@ -1140,17 +1415,86 @@ export default function ReportsDashboard() {
   );
 }
 
-function StatCard({ label, value, icon, trend, isNeutral, forceRed }: { label: string, value: number, icon: React.ReactNode, trend?: string, isNeutral?: boolean, forceRed?: boolean }) {
+function ComparisonBadge({ 
+  comparison, 
+  periodLabel, 
+  invertColors = false, 
+  isPercentPoints = false,
+  className 
+}: { 
+  comparison: PeriodComparison, 
+  periodLabel: string, 
+  invertColors?: boolean, 
+  isPercentPoints?: boolean,
+  className?: string
+}) {
+  if (!comparison.hasBase) {
+    return (
+      <div className={cn("text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1", className)}>
+        <span>sem base no {periodLabel}</span>
+      </div>
+    );
+  }
+  
+  const isPositive = comparison.direction === 'up';
+  const isNeutral = comparison.direction === 'flat';
+  
+  // For expenses, UP is BAD (red), DOWN is GOOD (green)
+  // For revenue/balance, UP is GOOD (green), DOWN is BAD (red)
+  // invertColors=true means UP is BAD.
+  const colorClass = isNeutral 
+    ? "text-muted-foreground" 
+    : (isPositive !== invertColors ? "text-emerald-500" : "text-rose-500");
+    
+  const arrow = isNeutral ? "" : (isPositive ? "↑" : "↓");
+  const value = isPercentPoints 
+    ? `${Math.abs(comparison.diff).toFixed(1)} p.p.` 
+    : formatCurrency(Math.abs(comparison.diff));
+  
+  const percentText = !isPercentPoints && comparison.percent !== null 
+    ? ` (${Math.abs(comparison.percent).toFixed(1)}%)` 
+    : "";
+
+  return (
+    <div className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1", colorClass, className)}>
+      <span>{arrow} {value}{percentText}</span>
+      <span className="opacity-60">vs {periodLabel}</span>
+    </div>
+  );
+}
+
+function StatCard({ 
+  label, 
+  value, 
+  icon, 
+  comparison, 
+  periodLabel, 
+  isNeutral, 
+  forceRed, 
+  invertColors 
+}: { 
+  label: string, 
+  value: number, 
+  icon: React.ReactNode, 
+  comparison?: PeriodComparison, 
+  periodLabel?: string, 
+  isNeutral?: boolean, 
+  forceRed?: boolean,
+  invertColors?: boolean
+}) {
   return (
     <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-gray-100 dark:border-zinc-800 shadow-sm group hover:scale-[1.02] transition-all">
       <div className="flex justify-between items-start mb-4">
         <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800 group-hover:bg-primary/10 transition-colors">
           {icon}
         </div>
-        {trend && (
-          <span className="text-[10px] font-black bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-lg uppercase tracking-tighter opacity-60">
-            {trend}
-          </span>
+        {comparison && periodLabel && (
+          <ComparisonBadge 
+            comparison={comparison} 
+            periodLabel={periodLabel} 
+            invertColors={invertColors} 
+            className="bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-lg"
+          />
         )}
       </div>
       <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{label}</p>

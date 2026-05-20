@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useCategories, useSubcategories, useCategoryGroups } from '@/hooks/useFinanceQueries';
 import {
     useAddCategory,
@@ -7,6 +7,8 @@ import {
     useDeleteSubcategory,
     useUpdateCategory,
 } from '@/hooks/useCategoryMutations';
+import { useBudgetGroups } from '@/hooks/useBudgetGroups';
+import { BudgetGroupManagerModal } from './BudgetGroupManagerModal';
 import { BudgetGroup, Category } from '@/types/finance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -188,7 +190,10 @@ export function CategoriesManager() {
             {/* Cabeçalho */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pt-6 md:pt-10 border-b border-border/20 pb-8">
                 <div className="space-y-5">
-                    <PageHeader title="Gestão de Categorias" icon={LayoutGrid} />
+                    <div className="flex items-center gap-4">
+                        <PageHeader title="Gestão de Categorias" icon={LayoutGrid} />
+                        <BudgetGroupManagerModal />
+                    </div>
 
                     {/* Tabs */}
                     <div className="flex gap-8">
@@ -372,6 +377,7 @@ function EditCategoryDialog({
     const { mutate: addSubcategory } = useAddSubcategory();
     const { mutate: deleteSubcategory } = useDeleteSubcategory();
     const { data: subcategories = [] } = useSubcategories();
+    const { budgetGroups, categoryAssignments, assignCategory } = useBudgetGroups();
 
     const [name, setName] = useState(category.name);
     const [color, setColor] = useState(category.color);
@@ -379,6 +385,7 @@ function EditCategoryDialog({
     const [isFixed, setIsFixed] = useState(category.isFixed);
     const [budgetGroup, setBudgetGroup] = useState<BudgetGroup>(category.budgetGroup);
     const [budgetLimit, setBudgetLimit] = useState<string>(category.budgetLimit ? String(category.budgetLimit) : '');
+    const [macroGroupId, setMacroGroupId] = useState<string>(categoryAssignments[category.id] || '');
     const [newSubName, setNewSubName] = useState('');
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -399,7 +406,10 @@ function EditCategoryDialog({
                     budgetLimit: budgetLimit ? parseFloat(budgetLimit) : null
                 } 
             },
-            { onSuccess: onClose }
+            { onSuccess: () => {
+                assignCategory(category.id, macroGroupId || null);
+                onClose();
+            }}
         );
     };
 
@@ -436,18 +446,33 @@ function EditCategoryDialog({
                         </div>
 
                         {category.type === 'expense' && (
-                            <div className="space-y-2">
-                                <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Grupo</Label>
-                                <select
-                                    className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 text-sm font-bold appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                                    value={budgetGroup}
-                                    onChange={e => setBudgetGroup(e.target.value as BudgetGroup)}
-                                >
-                                    <option value="essential">Essenciais</option>
-                                    <option value="lifestyle">Estilo de Vida</option>
-                                    <option value="financial">Objetivos</option>
-                                </select>
-                            </div>
+                            <>
+                                <div className="space-y-2">
+                                    <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Grupo de Relatório</Label>
+                                    <select
+                                        className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 text-sm font-bold appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                                        value={budgetGroup}
+                                        onChange={e => setBudgetGroup(e.target.value as BudgetGroup)}
+                                    >
+                                        <option value="essential">Essenciais</option>
+                                        <option value="lifestyle">Estilo de Vida</option>
+                                        <option value="financial">Objetivos</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Macrocategoria</Label>
+                                    <select
+                                        className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 text-sm font-bold appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                                        value={macroGroupId}
+                                        onChange={e => setMacroGroupId(e.target.value)}
+                                    >
+                                        <option value="">Sem Agrupamento</option>
+                                        {budgetGroups.map(bg => (
+                                            <option key={bg.id} value={bg.id}>{bg.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </>
                         )}
 
                         <div className="flex items-center justify-between p-3.5 rounded-xl bg-background border border-border/30">

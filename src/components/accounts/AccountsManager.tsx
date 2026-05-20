@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 // formatCurrency local from '@/utils/formatters';
 import { Building2, Plus, Trash2, X, Wallet, Pencil, ShieldCheck, ArrowRightLeft, TrendingUp } from 'lucide-react';
 import { Account, AccountType } from '@/types/finance';

@@ -76,10 +76,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import { HelpButton } from '@/components/tutorial/HelpButton';
-import { GuidedTour } from '@/components/tutorial/GuidedTour';
-import { TutorialOfferDialog } from '@/components/tutorial/TutorialOfferDialog';
-import { useTutorialState } from '@/hooks/useTutorialState';
 import { useAppRefresh } from '@/hooks/useAppRefresh';
 
 type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export' | 'emergency' | 'menu' | 'profile' | 'projection';
@@ -122,7 +118,6 @@ function ViewGuard({
 
 export default function Index() {
   const { user } = useAuth();
-  const userId = user?.id;
   const navigate = useNavigate();
   const refreshAppData = useAppRefresh();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -193,19 +188,7 @@ export default function Index() {
   const isMobile = useIsMobile();
   const isSuperAdmin = useIsSuperAdmin();
   const easterEnabled = useGlobalFlag('theme_easter');
-  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
-  const [isTutorialOfferOpen, setIsTutorialOfferOpen] = useState(false);
-  const {
-    shouldShowInitialOffer,
-    completeTutorial,
-    dismissTutorialOffer,
-    markInitialOfferHandled,
-    state: tutorialState,
-    storageKey: tutorialStorageKey,
-    isLoaded: tutorialStateLoaded,
-  } = useTutorialState(userId);
-  const isAnyShellOverlayOpen = showTransactionForm || showGoalForm || isDrawerOpen || isTutorialOpen || isTutorialOfferOpen;
-  const isInitialTutorialBlocked = showTransactionForm || showGoalForm || isDrawerOpen || isTutorialOpen;
+  const isAnyShellOverlayOpen = showTransactionForm || showGoalForm || isDrawerOpen;
   const shouldShowMobileFabs = isMobile && !isAnyShellOverlayOpen;
 
   const totalNetWorth = useMemo(() => accounts.reduce((sum, acc) => sum + Number(acc.balance), 0), [accounts]);
@@ -224,40 +207,6 @@ export default function Index() {
   }, [user]);
 
   const projectedBalance = useMemo(() => totalNetWorth - totalPendingOutflows, [totalNetWorth, totalPendingOutflows]);
-
-  useEffect(() => {
-    console.log('[Tutorial] Index auth userId', userId);
-    console.log('[Tutorial] Index storageKey', tutorialStorageKey);
-    console.log('[Tutorial] Index loaded/state/offer', tutorialStateLoaded, tutorialState, shouldShowInitialOffer);
-  }, [shouldShowInitialOffer, tutorialState, tutorialStateLoaded, tutorialStorageKey, userId]);
-
-  useEffect(() => {
-    if (!shouldShowInitialOffer) {
-      setIsTutorialOfferOpen(false);
-      return;
-    }
-
-    if (!isInitialTutorialBlocked) {
-      console.log('[Tutorial] opening automatic offer');
-      setIsTutorialOfferOpen(true);
-    }
-  }, [isInitialTutorialBlocked, shouldShowInitialOffer]);
-
-  const openTutorialManually = useCallback(() => {
-    setIsTutorialOfferOpen(false);
-    setIsTutorialOpen(true);
-  }, []);
-
-  const startOfferedTutorial = useCallback(() => {
-    markInitialOfferHandled();
-    setIsTutorialOfferOpen(false);
-    setIsTutorialOpen(true);
-  }, [markInitialOfferHandled]);
-
-  const dismissOfferedTutorial = useCallback(() => {
-    dismissTutorialOffer();
-    setIsTutorialOfferOpen(false);
-  }, [dismissTutorialOffer]);
 
   const handleEditTransaction = useCallback((item: Transaction) => {
     if (item.isTransfer) {
@@ -552,7 +501,6 @@ export default function Index() {
         <NavigationRail
           currentView={currentView}
           onNavigate={(v) => setCurrentView(v as ViewType)}
-          onOpenHelp={openTutorialManually}
         />
       }
       headerMobile={
@@ -667,7 +615,6 @@ export default function Index() {
 
           {/* Lado direito: Avatar + toggle de visibilidade de saldo */}
           <div className="flex items-center gap-3">
-            <HelpButton onClick={openTutorialManually} className="h-9 w-9" />
             {isSuperAdmin && (
               <button
                 onClick={() => navigate('/super')}
@@ -793,17 +740,6 @@ export default function Index() {
         />
       )}
 
-      <TutorialOfferDialog
-        open={isTutorialOfferOpen}
-        onStart={startOfferedTutorial}
-        onDismiss={dismissOfferedTutorial}
-      />
-
-      <GuidedTour
-        open={isTutorialOpen}
-        onOpenChange={setIsTutorialOpen}
-        onFinish={completeTutorial}
-      />
     </AppLayout>
   );
 }

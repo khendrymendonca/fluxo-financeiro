@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useRenegotiateDebt, useUpdateDebt } from '@/hooks/useDebtMutations';
+import { useAddDebt, useRenegotiateDebt, useUpdateDebt } from '@/hooks/useDebtMutations';
 import type { Debt } from '@/types/finance';
 
 const supabaseMock = vi.hoisted(() => ({
@@ -102,6 +102,14 @@ const createDebtUpdateQuery = (updatedDebtRow = baseDebtRow()): QueryBuilder => 
   return builder;
 };
 
+const createDebtInsertQuery = (insertedDebtRow = baseDebtRow()): QueryBuilder => {
+  const builder: QueryBuilder = {};
+  builder.insert = vi.fn(() => builder);
+  builder.select = vi.fn(() => builder);
+  builder.single = vi.fn(async () => ({ data: insertedDebtRow, error: null }));
+  return builder;
+};
+
 const createFetchInstallmentsQuery = (rows: Record<string, unknown>[]): QueryBuilder => {
   const builder: QueryBuilder = {};
   builder.select = vi.fn(() => builder);
@@ -121,6 +129,28 @@ const createInsertTransactionQuery = (): QueryBuilder => {
   const builder: QueryBuilder = {};
   builder.insert = vi.fn(() => builder);
   builder.select = vi.fn(async () => ({ data: [{ id: 'inserted-transaction' }], error: null }));
+  return builder;
+};
+
+const createInsertSingleTransactionQuery = (): QueryBuilder => {
+  const builder: QueryBuilder = {};
+  builder.insert = vi.fn(() => builder);
+  builder.select = vi.fn(() => builder);
+  builder.single = vi.fn(async () => ({ data: { id: 'inserted-transaction' }, error: null }));
+  return builder;
+};
+
+const createSnapshotFetchQuery = (rows: Record<string, unknown>[]): QueryBuilder => {
+  const builder: QueryBuilder = {};
+  builder.select = vi.fn(() => builder);
+  builder.eq = vi.fn(async () => ({ data: rows, error: null }));
+  return builder;
+};
+
+const createDebtSnapshotUpdateQuery = (): QueryBuilder => {
+  const builder: QueryBuilder = {};
+  builder.update = vi.fn(() => builder);
+  builder.eq = vi.fn(async () => ({ data: [{ id: 'debt-1' }], error: null }));
   return builder;
 };
 
@@ -160,6 +190,174 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
     expect(source).not.toContain('useFinanceStore(');
   });
 
+  it('cria acordo sem entrada com total calculado e 10 parcelas', async () => {
+    const debtInsert = createDebtInsertQuery(
+      baseDebtRow({
+        total_amount: 1000,
+        remaining_amount: 1000,
+        installment_amount: 100,
+        total_installments: 10,
+        start_date: '2026-06-10',
+        status: 'renegotiated',
+      }),
+    );
+    const fetchEntry = createFetchInstallmentsQuery([]);
+    const fetchInstallments = createFetchInstallmentsQuery([]);
+    const installmentInserts = Array.from({ length: 10 }, () => createInsertTransactionQuery());
+    const snapshotFetch = createSnapshotFetchQuery(
+      Array.from({ length: 10 }, () => ({ amount: 100, is_paid: false, deleted_at: null })),
+    );
+    const snapshotUpdate = createDebtSnapshotUpdateQuery();
+
+    supabaseMock.from
+      .mockReturnValueOnce(debtInsert)
+      .mockReturnValueOnce(fetchEntry)
+      .mockReturnValueOnce(fetchInstallments);
+
+    installmentInserts.forEach((query) => {
+      supabaseMock.from.mockReturnValueOnce(query);
+    });
+
+    supabaseMock.from
+      .mockReturnValueOnce(snapshotFetch)
+      .mockReturnValueOnce(snapshotUpdate);
+
+    const { result } = renderHook(() => useAddDebt(), { wrapper: createWrapper() });
+
+    await result.current.mutateAsync({
+      name: 'Acordo banco',
+      totalAmount: 1000,
+      remainingAmount: 1000,
+      installmentAmount: 100,
+      interestRateMonthly: 0,
+      totalInstallments: 10,
+      status: 'renegotiated',
+      startDate: '2026-06-10',
+      debtType: 'agreement',
+      entryAmount: 0,
+      entryIsPaid: false,
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(debtInsert.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        total_amount: 1000,
+        remaining_amount: 1000,
+        installment_amount: 100,
+        total_installments: 10,
+        status: 'renegotiated',
+      }),
+    );
+
+    const payloads = installmentInserts.map(getInsertPayload);
+    expect(payloads).toHaveLength(10);
+    expect(payloads.map((payload) => payload.installment_number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(payloads[0]).toEqual(
+      expect.objectContaining({
+        description: 'Parcela 1/10 acordo Acordo banco',
+        amount: 100,
+        is_paid: false,
+      }),
+    );
+    expect(payloads[9]).toEqual(
+      expect.objectContaining({
+        description: 'Parcela 10/10 acordo Acordo banco',
+        amount: 100,
+        is_paid: false,
+      }),
+    );
+    expect(snapshotUpdate.update).toHaveBeenCalledWith({
+      total_amount: 1000,
+      remaining_amount: 1000,
+    });
+  });
+
+  it('cria acordo com entrada separada e 11 parcelas sem duplicar a entrada', async () => {
+    const debtInsert = createDebtInsertQuery(
+      baseDebtRow({
+        total_amount: 1073.89,
+        remaining_amount: 994.29,
+        installment_amount: 90.39,
+        total_installments: 11,
+        start_date: '2026-05-10',
+        status: 'renegotiated',
+      }),
+    );
+    const fetchEntry = createFetchInstallmentsQuery([]);
+    const entryInsert = createInsertSingleTransactionQuery();
+    const fetchInstallments = createFetchInstallmentsQuery([]);
+    const installmentInserts = Array.from({ length: 11 }, () => createInsertTransactionQuery());
+    const snapshotFetch = createSnapshotFetchQuery([
+      { amount: 79.6, is_paid: true, deleted_at: null },
+      ...Array.from({ length: 11 }, () => ({ amount: 90.39, is_paid: false, deleted_at: null })),
+    ]);
+    const snapshotUpdate = createDebtSnapshotUpdateQuery();
+
+    supabaseMock.from
+      .mockReturnValueOnce(debtInsert)
+      .mockReturnValueOnce(fetchEntry)
+      .mockReturnValueOnce(entryInsert)
+      .mockReturnValueOnce(fetchInstallments);
+
+    installmentInserts.forEach((query) => {
+      supabaseMock.from.mockReturnValueOnce(query);
+    });
+
+    supabaseMock.from
+      .mockReturnValueOnce(snapshotFetch)
+      .mockReturnValueOnce(snapshotUpdate);
+
+    const { result } = renderHook(() => useAddDebt(), { wrapper: createWrapper() });
+
+    await result.current.mutateAsync({
+      name: 'Acordo banco',
+      totalAmount: 1073.89,
+      remainingAmount: 994.29,
+      installmentAmount: 90.39,
+      interestRateMonthly: 0,
+      totalInstallments: 11,
+      status: 'renegotiated',
+      startDate: '2026-05-10',
+      dueDay: 10,
+      debtType: 'agreement',
+      entryAmount: 79.6,
+      entryDate: '2026-05-05',
+      entryIsPaid: true,
+      entryAccountId: 'account-1',
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(debtInsert.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        total_amount: 1073.89,
+        remaining_amount: 994.29,
+      }),
+    );
+
+    expect(getInsertPayload(entryInsert)).toEqual(
+      expect.objectContaining({
+        description: 'Entrada acordo Acordo banco',
+        amount: 79.6,
+        is_paid: true,
+        payment_date: '2026-05-05',
+        account_id: 'account-1',
+        installment_number: null,
+        installment_total: null,
+      }),
+    );
+
+    const payloads = installmentInserts.map(getInsertPayload);
+    expect(payloads).toHaveLength(11);
+    expect(payloads.every((payload) => payload.amount === 90.39)).toBe(true);
+    expect(payloads.map((payload) => payload.installment_number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    expect(snapshotUpdate.update).toHaveBeenCalledWith({
+      total_amount: 1073.89,
+      remaining_amount: 994.29,
+    });
+  });
+
   it('cria todas as parcelas esperadas quando o acordo atualizado ainda nao tem transactions', async () => {
     const debtUpdate = createDebtUpdateQuery(
       baseDebtRow({
@@ -176,13 +374,21 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
       createInsertTransactionQuery(),
       createInsertTransactionQuery(),
     ];
+    const snapshotFetch = createSnapshotFetchQuery([
+      { amount: 200, is_paid: false, deleted_at: null },
+      { amount: 200, is_paid: false, deleted_at: null },
+      { amount: 200, is_paid: false, deleted_at: null },
+    ]);
+    const snapshotUpdate = createDebtSnapshotUpdateQuery();
 
     supabaseMock.from
       .mockReturnValueOnce(debtUpdate)
       .mockReturnValueOnce(fetchInstallments)
       .mockReturnValueOnce(inserts[0])
       .mockReturnValueOnce(inserts[1])
-      .mockReturnValueOnce(inserts[2]);
+      .mockReturnValueOnce(inserts[2])
+      .mockReturnValueOnce(snapshotFetch)
+      .mockReturnValueOnce(snapshotUpdate);
 
     const { result } = renderHook(() => useUpdateDebt(), { wrapper: createWrapper() });
 
@@ -226,7 +432,7 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
         installment_number: 1,
         installment_total: 3,
         amount: 200,
-        description: 'Acordo Acordo banco (1/3)',
+        description: 'Parcela 1/3 acordo Acordo banco',
       }),
     );
     expect(response.syncReport).toEqual(
@@ -247,14 +453,23 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
       baseInstallmentRow({ id: 'tx-1', installment_number: 1, installment_total: 2 }),
       baseInstallmentRow({ id: 'tx-2', installment_number: 2, installment_total: 2 }),
     ]);
+    const fetchEntry = createFetchInstallmentsQuery([]);
     const updateFirst = createUpdateTransactionQuery();
     const updateSecond = createUpdateTransactionQuery();
+    const snapshotFetch = createSnapshotFetchQuery([
+      { amount: 250, is_paid: false, deleted_at: null },
+      { amount: 250, is_paid: false, deleted_at: null },
+    ]);
+    const snapshotUpdate = createDebtSnapshotUpdateQuery();
 
     supabaseMock.from
       .mockReturnValueOnce(debtUpdate)
+      .mockReturnValueOnce(fetchEntry)
       .mockReturnValueOnce(fetchInstallments)
       .mockReturnValueOnce(updateFirst)
-      .mockReturnValueOnce(updateSecond);
+      .mockReturnValueOnce(updateSecond)
+      .mockReturnValueOnce(snapshotFetch)
+      .mockReturnValueOnce(snapshotUpdate);
 
     const { result } = renderHook(() => useUpdateDebt(), { wrapper: createWrapper() });
 
@@ -274,7 +489,7 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
     expect(updateSecond.eq).toHaveBeenCalledWith('id', 'tx-2');
     expect(getUpdatePayload(updateFirst)).toEqual(
       expect.objectContaining({
-        description: 'Acordo Acordo atualizado (1/2)',
+        description: 'Parcela 1/2 acordo Acordo atualizado',
         amount: 250,
         date: '2026-07-05',
         debt_id: 'debt-1',
@@ -285,14 +500,14 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
     );
     expect(getUpdatePayload(updateSecond)).toEqual(
       expect.objectContaining({
-        description: 'Acordo Acordo atualizado (2/2)',
+        description: 'Parcela 2/2 acordo Acordo atualizado',
         amount: 250,
         date: '2026-08-05',
         installment_number: 2,
         installment_total: 2,
       }),
     );
-    expect(supabaseMock.from).toHaveBeenCalledTimes(4);
+    expect(supabaseMock.from).toHaveBeenCalledTimes(7);
     expect(response.syncReport).toEqual(
       expect.objectContaining({ created: 0, updated: 2, preservedPaid: 0 }),
     );
@@ -314,6 +529,13 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
     const updateSecond = createUpdateTransactionQuery();
     const insertThird = createInsertTransactionQuery();
     const insertFourth = createInsertTransactionQuery();
+    const snapshotFetch = createSnapshotFetchQuery([
+      { amount: 150, is_paid: false, deleted_at: null },
+      { amount: 150, is_paid: false, deleted_at: null },
+      { amount: 150, is_paid: false, deleted_at: null },
+      { amount: 150, is_paid: false, deleted_at: null },
+    ]);
+    const snapshotUpdate = createDebtSnapshotUpdateQuery();
 
     supabaseMock.from
       .mockReturnValueOnce(debtUpdate)
@@ -321,7 +543,9 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
       .mockReturnValueOnce(updateFirst)
       .mockReturnValueOnce(updateSecond)
       .mockReturnValueOnce(insertThird)
-      .mockReturnValueOnce(insertFourth);
+      .mockReturnValueOnce(insertFourth)
+      .mockReturnValueOnce(snapshotFetch)
+      .mockReturnValueOnce(snapshotUpdate);
 
     const { result } = renderHook(() => useUpdateDebt(), { wrapper: createWrapper() });
 
@@ -392,11 +616,18 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
       }),
     ]);
     const updatePending = createUpdateTransactionQuery();
+    const snapshotFetch = createSnapshotFetchQuery([
+      { amount: 450, is_paid: true, deleted_at: null },
+      { amount: 450, is_paid: false, deleted_at: null },
+    ]);
+    const snapshotUpdate = createDebtSnapshotUpdateQuery();
 
     supabaseMock.from
       .mockReturnValueOnce(debtUpdate)
       .mockReturnValueOnce(fetchInstallments)
-      .mockReturnValueOnce(updatePending);
+      .mockReturnValueOnce(updatePending)
+      .mockReturnValueOnce(snapshotFetch)
+      .mockReturnValueOnce(snapshotUpdate);
 
     const { result } = renderHook(() => useUpdateDebt(), { wrapper: createWrapper() });
 
@@ -420,7 +651,7 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
         card_id: expect.anything(),
       }),
     );
-    expect(supabaseMock.from).toHaveBeenCalledTimes(3);
+    expect(supabaseMock.from).toHaveBeenCalledTimes(5);
     expect(response.syncReport).toEqual(
       expect.objectContaining({ created: 0, updated: 1, preservedPaid: 1 }),
     );
@@ -565,3 +796,4 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
     expect(payloads.map((payload) => payload.invoice_month_year)).toEqual(['2026-06', '2026-07', '2026-08']);
   });
 });
+

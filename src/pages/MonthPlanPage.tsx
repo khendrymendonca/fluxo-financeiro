@@ -198,7 +198,7 @@ export default function MonthPlanPage({
         </div>
 
         <div className="flex items-center gap-3">
-          <MonthSelector />
+          <MonthSelector modes={['month', 'year']} />
           {!isMobile ? (
             <Button variant="outline" className="rounded-xl" onClick={onRefreshData}>
               Atualizar

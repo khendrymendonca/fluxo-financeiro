@@ -9,12 +9,20 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { DayPicker } from 'react-day-picker';
 import { cn } from '@/lib/utils';
 
-export function MonthSelector() {
+type SelectorMode = 'day' | 'month' | 'year';
+
+interface MonthSelectorProps {
+    modes?: SelectorMode[];
+}
+
+const DEFAULT_MODES: SelectorMode[] = ['day', 'month', 'year'];
+
+export function MonthSelector({ modes = DEFAULT_MODES }: MonthSelectorProps) {
     const {
         viewDate,
         setViewDate,
-        viewMode,
-        setViewMode,
+        viewMode = 'month',
+        setViewMode = () => undefined,
         nextMonth,
         prevMonth,
         nextDay,
@@ -24,10 +32,10 @@ export function MonthSelector() {
     } = useFinanceStore();
 
     useEffect(() => {
-        if (viewMode === 'all') setViewMode('month');
-    }, [setViewMode, viewMode]);
+        if (viewMode === 'all' || !modes.includes(viewMode as SelectorMode)) setViewMode('month');
+    }, [modes, setViewMode, viewMode]);
 
-    const effectiveViewMode = viewMode === 'all' ? 'month' : viewMode;
+    const effectiveViewMode = viewMode === 'all' || !modes.includes(viewMode as SelectorMode) ? 'month' : viewMode;
 
     const handlePrev = () => {
         if (effectiveViewMode === 'day') prevDay();
@@ -51,7 +59,7 @@ export function MonthSelector() {
         <div className="flex flex-col sm:flex-row items-center gap-3">
             {/* Mode Selector */}
             <div className="flex p-1 bg-muted rounded-xl">
-                {(['day', 'month', 'year'] as const).map((mode) => (
+                {modes.map((mode) => (
                     <Button
                         key={mode}
                         variant="ghost"

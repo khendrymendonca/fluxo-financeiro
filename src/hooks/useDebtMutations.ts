@@ -7,10 +7,31 @@ import { addMonths, format } from 'date-fns';
 import { parseLocalDate } from '@/utils/dateUtils';
 import { Category, CreditCard } from '@/types/finance';
 import { calcInvoiceMonthYearForCard } from '@/utils/creditCardUtils';
+import {
+  buildAgreementEntryDescription,
+  buildAgreementInstallmentDescription,
+  calculateAgreementRemaining,
+  calculateAgreementTotal,
+  isAgreementEntryTransaction,
+  roundCurrency,
+} from '@/utils/debtAgreement';
 
 interface DebtMutationDeps {
   creditCards?: CreditCard[];
   categories?: Category[];
+}
+
+function findAgreementCategoryId(categories: Category[]) {
+  return categories.find((category) => {
+    const normalizedName = category.name
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase();
+
+    return normalizedName === 'acordo' ||
+      normalizedName.includes('acordo') ||
+      normalizedName.includes('renegociacao');
+  })?.id;
 }
 
 interface DebtDbPayload {
@@ -66,6 +87,14 @@ const GRID_AFFECTING_DEBT_FIELDS: (keyof Debt)[] = [
   'debtType',
 ];
 
+const ENTRY_AFFECTING_DEBT_FIELDS: (keyof Debt)[] = [
+  'name',
+  'entryAmount',
+  'entryDate',
+  'entryAccountId',
+  'entryIsPaid',
+];
+
 function mapDebtRow(row: any, fallback?: Partial<Debt>): Debt {
   return {
     id: row.id,
@@ -88,6 +117,12 @@ function mapDebtRow(row: any, fallback?: Partial<Debt>): Debt {
 
 function shouldSyncDebtInstallments(updates: Partial<Debt>) {
   return GRID_AFFECTING_DEBT_FIELDS.some((field) =>
+    Object.prototype.hasOwnProperty.call(updates, field)
+  );
+}
+
+function shouldSyncDebtEntry(updates: Partial<Debt>) {
+  return ENTRY_AFFECTING_DEBT_FIELDS.some((field) =>
     Object.prototype.hasOwnProperty.call(updates, field)
   );
 }
@@ -145,7 +180,7 @@ function buildExpectedDebtInstallments(
     user_id: userId,
     type: 'expense',
     transaction_type: 'installment',
-    description: `Acordo ${debt.name} (${index + 1}/${count})`,
+    description: buildAgreementInstallmentDescription(debt.name, index + 1, count),
     amount,
     date: installmentDate,
     debt_id: debt.id,
@@ -276,6 +311,121 @@ async function syncDebtInstallments({
   return report;
 }
 
+async function syncDebtEntryTransaction({
+  debt,
+  userId,
+  categoryId,
+}: {
+  debt: Debt;
+  userId: string;
+  categoryId?: string | null;
+}) {
+  const entryAmount = roundCurrency(Number(debt.entryAmount || 0));
+
+  const { data: existingTransactions, error: fetchError } = await supabase
+    .from('transactions')
+    .select('id, description, amount, date, is_paid, payment_date, account_id, card_id, category_id, debt_id, installment_group_id, installment_number, installment_total, deleted_at')
+    .eq('debt_id', debt.id);
+
+  if (fetchError) throw fetchError;
+
+  const activeEntry = ((existingTransactions || []) as DebtInstallmentRow[]).find((row) =>
+    !row.deleted_at &&
+    isAgreementEntryTransaction({
+      debtId: row.debt_id || undefined,
+      type: 'expense',
+      description: row.description || '',
+      installmentNumber: row.installment_number || undefined,
+      installmentTotal: row.installment_total || undefined,
+    }, debt.id)
+  );
+
+  if (entryAmount <= 0) {
+    if (activeEntry) {
+      const { error: deleteError } = await supabase
+        .from('transactions')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', activeEntry.id);
+
+      if (deleteError) throw deleteError;
+    }
+    return null;
+  }
+
+  const entryPayload = {
+    user_id: userId,
+    type: 'expense',
+    transaction_type: debt.entryIsPaid ? 'punctual' : 'adjustment',
+    description: buildAgreementEntryDescription(debt.name),
+    amount: entryAmount,
+    date: debt.entryDate || debt.startDate || format(new Date(), 'yyyy-MM-dd'),
+    debt_id: debt.id,
+    category_id: categoryId || activeEntry?.category_id || null,
+    card_id: null,
+    invoice_month_year: null,
+    is_paid: Boolean(debt.entryIsPaid),
+    payment_date: debt.entryIsPaid ? (debt.entryDate || debt.startDate || format(new Date(), 'yyyy-MM-dd')) : null,
+    account_id: debt.entryIsPaid ? (debt.entryAccountId || null) : null,
+    installment_group_id: null,
+    installment_number: null,
+    installment_total: null,
+  };
+
+  if (activeEntry) {
+    const { error: updateError } = await supabase
+      .from('transactions')
+      .update(entryPayload)
+      .eq('id', activeEntry.id)
+      .select('id');
+
+    if (updateError) throw updateError;
+    return activeEntry.id;
+  }
+
+  const { data: insertedEntry, error: insertError } = await supabase
+    .from('transactions')
+    .insert(entryPayload)
+    .select('id')
+    .single();
+
+  if (insertError) throw insertError;
+  return insertedEntry?.id ?? null;
+}
+
+async function syncDebtSnapshotTotals(debtId: string) {
+  const { data: debtTransactions, error: fetchError } = await supabase
+    .from('transactions')
+    .select('amount, is_paid, deleted_at')
+    .eq('debt_id', debtId);
+
+  if (fetchError) throw fetchError;
+
+  const activeTransactions = (debtTransactions || []).filter((row: any) => !row.deleted_at);
+
+  if (activeTransactions.length === 0) {
+    return null;
+  }
+
+  const totalAmount = roundCurrency(activeTransactions.reduce((sum: number, row: any) => sum + Number(row.amount || 0), 0));
+  const remainingAmount = roundCurrency(
+    activeTransactions
+      .filter((row: any) => !row.is_paid)
+      .reduce((sum: number, row: any) => sum + Number(row.amount || 0), 0)
+  );
+
+  const { error: updateError } = await supabase
+    .from('debts')
+    .update({
+      total_amount: totalAmount,
+      remaining_amount: remainingAmount,
+    })
+    .eq('id', debtId);
+
+  if (updateError) throw updateError;
+
+  return { totalAmount, remainingAmount };
+}
+
 // --- 1. ADICIONAR DÍVIDA ---
 export function useAddDebt() {
   const queryClient = useQueryClient();
@@ -290,20 +440,55 @@ export function useAddDebt() {
       const payload = {
         user_id: user.id,
         name: safeName,
-        total_amount: debt.totalAmount,
-        remaining_amount: debt.remainingAmount,
+        total_amount: calculateAgreementTotal(debt.entryAmount || 0, debt.installmentAmount, debt.totalInstallments || 1),
+        remaining_amount: calculateAgreementRemaining(
+          debt.entryAmount || 0,
+          debt.installmentAmount,
+          debt.totalInstallments || 1,
+          Boolean(debt.entryIsPaid),
+        ),
         installment_amount: debt.installmentAmount,
         interest_rate_monthly: debt.interestRateMonthly,
         due_day: debt.dueDay,
         strategy_priority: debt.strategyPriority,
-        status: debt.status || 'active',
+        status: debt.status || 'renegotiated',
         total_installments: debt.totalInstallments,
         card_id: debt.cardId,
         debt_type: debt.debtType,
+        start_date: debt.startDate,
       };
 
-      const { data, error } = await supabase.from('debts').insert(payload).select();
+      const { data, error } = await supabase.from('debts').insert(payload).select().single();
       if (error) throw error;
+
+      const insertedDebt = mapDebtRow(data, debt);
+      const categories = queryClient.getQueryData<Category[]>(['categories']) ?? [];
+      const creditCards = queryClient.getQueryData<CreditCard[]>(['credit-cards']) ?? [];
+      const agreementCategoryId = findAgreementCategoryId(categories);
+
+      if (insertedDebt.status === 'renegotiated') {
+        await syncDebtEntryTransaction({
+          debt: {
+            ...insertedDebt,
+            entryAmount: debt.entryAmount,
+            entryDate: debt.entryDate,
+            entryAccountId: debt.entryAccountId,
+            entryIsPaid: debt.entryIsPaid,
+          },
+          userId: user.id,
+          categoryId: agreementCategoryId,
+        });
+
+        await syncDebtInstallments({
+          debt: insertedDebt,
+          userId: user.id,
+          categoryId: agreementCategoryId,
+          creditCards,
+        });
+
+        await syncDebtSnapshotTotals(insertedDebt.id);
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -351,14 +536,36 @@ export function useUpdateDebt(deps: DebtMutationDeps = {}) {
       if (error) throw error;
 
       let syncReport: SyncDebtInstallmentsReport | null = null;
-      if (user && shouldSyncDebtInstallments(updates)) {
+      if (user && (shouldSyncDebtInstallments(updates) || shouldSyncDebtEntry(updates))) {
         const updatedDebt = mapDebtRow(updatedDebtRow, updates);
+        const categories = deps.categories ?? queryClient.getQueryData<Category[]>(['categories']) ?? [];
         const creditCards = deps.creditCards ?? queryClient.getQueryData<CreditCard[]>(['credit-cards']) ?? [];
+        const agreementCategoryId = findAgreementCategoryId(categories);
+
+        if (shouldSyncDebtEntry(updates) && updatedDebt.status === 'renegotiated') {
+          await syncDebtEntryTransaction({
+            debt: {
+              ...updatedDebt,
+              entryAmount: updates.entryAmount,
+              entryDate: updates.entryDate,
+              entryAccountId: updates.entryAccountId,
+              entryIsPaid: updates.entryIsPaid,
+            },
+            userId: user.id,
+            categoryId: agreementCategoryId,
+          });
+        }
+
         syncReport = await syncDebtInstallments({
           debt: updatedDebt,
           userId: user.id,
+          categoryId: agreementCategoryId,
           creditCards,
         });
+
+        if (updatedDebt.status === 'renegotiated') {
+          await syncDebtSnapshotTotals(updatedDebt.id);
+        }
       }
 
       return { id, syncReport };
@@ -440,9 +647,7 @@ export function useRenegotiateDebt(deps: DebtMutationDeps = {}) {
       // 2. Recalcular/materializar parcelas sem sobrescrever pagamentos já efetivados
       const categories = deps.categories ?? queryClient.getQueryData<Category[]>(['categories']) ?? [];
       const creditCards = deps.creditCards ?? queryClient.getQueryData<CreditCard[]>(['credit-cards']) ?? [];
-      const agreementCategoryId = categories.find((category) =>
-        ['Acordo', 'Metas/Acordos', 'Renegociação'].includes(category.name)
-      )?.id;
+      const agreementCategoryId = findAgreementCategoryId(categories);
 
       const updatedDebt = mapDebtRow(updatedDebtRow, {
         ...debt,

@@ -13,6 +13,7 @@ function category(overrides: Partial<Category>): Category {
     isActive: true,
     budgetLimit: overrides.budgetLimit ?? null,
     color: overrides.color ?? '#0d9488',
+    icon: overrides.icon ?? 'Tag',
   };
 }
 
@@ -49,6 +50,7 @@ describe('budgetPlanning', () => {
     expect(result.totalRealized).toBe(620);
     expect(result.rows[0]).toMatchObject({
       categoryName: 'Alimentacao',
+      categoryIcon: 'Tag',
       planned: 800,
       realized: 620,
       difference: 180,
@@ -156,18 +158,59 @@ describe('budgetPlanning', () => {
     expect(result.rows[0].realized).toBe(1200);
   });
 
-  it('exibe categoria movimentada sem orcamento como sem orcamento definido', () => {
+  it('separa categoria movimentada sem orcamento da lista principal', () => {
     const result = buildMonthlyCategoryBudgets({
       month: new Date(2026, 4, 1),
       categories: [category({ id: 'leisure', name: 'Lazer', budgetLimit: null })],
       transactions: [transaction({ categoryId: 'leisure', amount: 150 })],
     });
 
-    expect(result.rows[0]).toMatchObject({
+    expect(result.rows).toHaveLength(0);
+    expect(result.unplannedRealized).toBe(150);
+    expect(result.unplannedRows[0]).toMatchObject({
       categoryName: 'Lazer',
       planned: 0,
       realized: 150,
       status: 'unplanned',
     });
+  });
+
+  it('exibe categoria acompanhada mesmo sem movimento no mes', () => {
+    const result = buildMonthlyCategoryBudgets({
+      month: new Date(2026, 4, 1),
+      categories: [category({ id: 'health', name: 'Saude', budgetLimit: 300, icon: 'Heart' })],
+      transactions: [],
+    });
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]).toMatchObject({
+      categoryName: 'Saude',
+      categoryIcon: 'Heart',
+      planned: 300,
+      realized: 0,
+      status: 'within',
+    });
+  });
+
+  it('exibe categoria explicitamente acompanhada mesmo sem orcamento', () => {
+    const result = buildMonthlyCategoryBudgets({
+      month: new Date(2026, 4, 1),
+      categories: [
+        category({ id: 'energy', name: 'Energia', budgetLimit: null, icon: 'Zap' }),
+        category({ id: 'food', name: 'Alimentacao', budgetLimit: 800 }),
+      ],
+      transactions: [transaction({ categoryId: 'food', amount: 200 })],
+      trackedCategoryIds: ['energy'],
+    });
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]).toMatchObject({
+      categoryName: 'Energia',
+      categoryIcon: 'Zap',
+      planned: 0,
+      realized: 0,
+      status: 'unplanned',
+    });
+    expect(result.unplannedRows).toHaveLength(0);
   });
 });

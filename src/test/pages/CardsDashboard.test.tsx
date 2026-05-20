@@ -49,7 +49,7 @@ describe('CardsDashboard - limite Free', () => {
         {
           id: 'card-1',
           userId: 'user-1',
-          name: 'Cartao Principal',
+          name: 'Cartão Principal',
           brand: 'Visa',
           limit: 3000,
           closingDay: 10,
@@ -68,7 +68,7 @@ describe('CardsDashboard - limite Free', () => {
     });
   });
 
-  it('bloqueia a abertura do modal ao atingir 1 cartao sem unlimited_cards', () => {
+  it('bloqueia a abertura do modal ao atingir 1 cartão sem unlimited_cards', () => {
     render(<CardsDashboard />);
 
     fireEvent.click(screen.getAllByRole('button', { name: /novo cart/i })[0]);
@@ -79,7 +79,7 @@ describe('CardsDashboard - limite Free', () => {
     }));
   });
 
-  it('lista compra pela invoiceMonthYear da fatura e nao pelo mes da data da compra', async () => {
+  it('lista compra pela invoiceMonthYear da fatura e não pelo mês da data da compra', async () => {
     const store = {
       creditCards: [
         {
@@ -102,7 +102,7 @@ describe('CardsDashboard - limite Free', () => {
           userId: 'user-1',
           type: 'expense',
           transactionType: 'installment',
-          description: 'Renegociacao de Pendencias (1/9)',
+          description: 'Renegociação de Pendências (1/9)',
           amount: 483.85,
           date: '2026-05-05',
           cardId: 'card-1',
@@ -126,7 +126,7 @@ describe('CardsDashboard - limite Free', () => {
 
     const { rerender } = render(<CardsDashboard />);
 
-    expect(screen.queryByText('Renegociacao de Pendencias (1/9)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Renegociação de Pendências (1/9)')).not.toBeInTheDocument();
 
     financeStoreMock.useFinanceStore.mockReturnValue({
       ...store,
@@ -134,10 +134,10 @@ describe('CardsDashboard - limite Free', () => {
     });
     rerender(<CardsDashboard />);
 
-    expect(await screen.findByText('Renegociacao de Pendencias (1/9)')).toBeInTheDocument();
+    expect(await screen.findByText('Renegociação de Pendências (1/9)')).toBeInTheDocument();
   });
 
-  it('mantem Cartoes como demonstrativo sem acao direta de pagamento de fatura', () => {
+  it('mantém Cartões como demonstrativo sem ação direta de pagamento de fatura', () => {
     financeStoreMock.useFinanceStore.mockReturnValue({
       creditCards: [
         {
@@ -178,8 +178,124 @@ describe('CardsDashboard - limite Free', () => {
     expect(screen.queryByRole('button', { name: /^pagar fatura$/i })).not.toBeInTheDocument();
     expect(screen.queryByText('Abater Fatura')).not.toBeInTheDocument();
     expect(screen.queryByText('Parcelar Fatura')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText(/Gerenciar na Gestao de Contas/i));
+    fireEvent.click(screen.getByText(/Gerenciar na Gestão de Contas/i));
     expect(window.location.href).toContain('/?view=bills');
     expect(screen.getByText('Tela demonstrativa')).toBeInTheDocument();
+  });
+
+  it('exibe limite usado para fatura aberta sem pagamento', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      creditCards: [
+        {
+          id: 'itau-7409',
+          userId: 'user-1',
+          name: 'Itau / 7409 - V',
+          brand: 'Visa',
+          limit: 1000,
+          closingDay: 10,
+          dueDay: 20,
+          color: '#111111',
+        },
+      ],
+      transactions: [
+        {
+          id: 'purchase-1',
+          userId: 'user-1',
+          type: 'expense',
+          transactionType: 'punctual',
+          description: 'Compra teste',
+          amount: 13.9,
+          date: '2026-05-19',
+          cardId: 'itau-7409',
+          isInvoicePayment: false,
+          isPaid: false,
+          invoiceMonthYear: '2026-07',
+        },
+      ],
+      categories: [],
+      updateCreditCard: vi.fn(),
+      addCreditCard: vi.fn(),
+      getCardUsedLimit: vi.fn(() => 13.9),
+      viewDate: new Date(2026, 6, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<CardsDashboard />);
+
+    expect(screen.getAllByText('R$ 986,10').length).toBeGreaterThan(0);
+    expect(screen.getByText(/1% usado/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Total lançado/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Valor pago/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Diferença a conciliar/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Gastos$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Disponível$/i)).not.toBeInTheDocument();
+  });
+
+  it('usa o mesmo cálculo visual no cartão e na fatura para uma fatura aberta de 771,89', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      creditCards: [
+        {
+          id: 'itau-7409',
+          userId: 'user-1',
+          name: 'Itau 7409 - V',
+          brand: 'Visa',
+          limit: 1000,
+          closingDay: 10,
+          dueDay: 20,
+          color: '#111111',
+        },
+      ],
+      transactions: [
+        {
+          id: 'purchase-1',
+          userId: 'user-1',
+          type: 'expense',
+          transactionType: 'punctual',
+          description: 'Compra A',
+          amount: 500,
+          date: '2026-04-20',
+          cardId: 'itau-7409',
+          isInvoicePayment: false,
+          isPaid: true,
+          invoiceMonthYear: '2026-05',
+        },
+        {
+          id: 'purchase-2',
+          userId: 'user-1',
+          type: 'expense',
+          transactionType: 'punctual',
+          description: 'Compra B',
+          amount: 271.89,
+          date: '2026-05-02',
+          cardId: 'itau-7409',
+          isInvoicePayment: false,
+          isPaid: true,
+          invoiceMonthYear: '2026-05',
+        },
+      ],
+      categories: [],
+      updateCreditCard: vi.fn(),
+      addCreditCard: vi.fn(),
+      getCardUsedLimit: vi.fn(() => 771.89),
+      viewDate: new Date(2026, 4, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<CardsDashboard />);
+
+    expect(screen.getAllByText('R$ 771,89').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('R$ 228,11').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/77%/i).length).toBeGreaterThan(0);
+    expect(screen.getByText('Compra A')).toBeInTheDocument();
+    expect(screen.getByText('Compra B')).toBeInTheDocument();
+    expect(screen.getByText(/Gerenciar na Gestão de Contas/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Total lançado/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Valor pago/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Diferença a conciliar/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Gastos$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Disponível$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Há mais lançamentos do que pagamento registrado nesta competência/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('R$ 1.000,00 disponível')).not.toBeInTheDocument();
+    expect(screen.queryByText(/0% usado/i)).not.toBeInTheDocument();
   });
 });

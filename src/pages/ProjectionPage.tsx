@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDebtProjection, calcularProjecaoDivida, calcularImpactoCorte } from '@/hooks/useDebtProjection';
 import { useFinanceStore } from '@/hooks/useFinanceStore';

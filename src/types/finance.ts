@@ -124,6 +124,10 @@ export interface Debt {
   // ✅ ADICIONADO: vínculo de fatura parcelada
   cardId?: string;
   debtType?: 'agreement' | 'invoice_installment';
+  entryAmount?: number;
+  entryDate?: string;
+  entryAccountId?: string;
+  entryIsPaid?: boolean;
 }
 
 export type GoalPaymentMethod = 'cash' | 'credit';

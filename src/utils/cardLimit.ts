@@ -15,12 +15,11 @@ type CardLimitTransaction = Pick<
   description?: string;
 };
 
-function isExpenseInvoicePayment(transaction: CardLimitTransaction): boolean {
+function isInvoicePaymentTransaction(transaction: CardLimitTransaction): boolean {
   return Boolean(
     transaction.cardId &&
     !transaction.deleted_at &&
-    transaction.isInvoicePayment &&
-    transaction.type === 'expense'
+    transaction.isInvoicePayment
   );
 }
 
@@ -36,13 +35,27 @@ function isRenegotiatedInvoiceObligation(transaction: CardLimitTransaction): boo
   return description.startsWith('saldo restante da fatura') || description.startsWith('parcela fatura');
 }
 
+function getConvertedInvoiceMonthFromDescription(description?: string): string | null {
+  const normalized = String(description || '').toLowerCase();
+  if (!normalized.startsWith('parcela fatura')) return null;
+
+  const match = normalized.match(/(\d{2})\/(\d{4})/);
+  if (!match) return null;
+
+  const [, month, year] = match;
+  return `${year}-${month}`;
+}
+
 export function getCardLimitImpact(
   transaction: CardLimitTransaction,
-  settledInvoiceMonths: ReadonlySet<string> = new Set()
+  settledInvoiceMonths: ReadonlySet<string> = new Set(),
+  convertedInvoiceMonths: ReadonlySet<string> = new Set()
 ): number {
   if (!transaction.cardId || transaction.deleted_at) return 0;
 
-  if (transaction.isInvoicePayment && transaction.type === 'expense') {
+  // Compras no cartao podem nascer com isPaid=true porque o gasto ocorreu,
+  // mas o limite so deve ser liberado por pagamento real de fatura.
+  if (transaction.isInvoicePayment) {
     return 0;
   }
 
@@ -50,12 +63,12 @@ export function getCardLimitImpact(
     return 0;
   }
 
-  if (transaction.isPaid && transaction.type === 'expense') {
+  const invoiceMonthKey = getCardInvoiceMonthKey(transaction);
+  if (invoiceMonthKey && settledInvoiceMonths.has(invoiceMonthKey)) {
     return 0;
   }
 
-  const invoiceMonthKey = getCardInvoiceMonthKey(transaction);
-  if (invoiceMonthKey && settledInvoiceMonths.has(invoiceMonthKey)) {
+  if (transaction.type === 'expense' && transaction.isPaid && invoiceMonthKey && convertedInvoiceMonths.has(invoiceMonthKey)) {
     return 0;
   }
 
@@ -76,6 +89,7 @@ export function getCardUsedLimitFromTransactions(
       .map(getCardInvoiceMonthKey)
       .filter((monthKey): monthKey is string => Boolean(monthKey))
   ));
+
   const settledInvoiceMonths = new Set(
     months.filter((monthKey) => {
       const invoiceTotal = cardTransactions
@@ -87,25 +101,27 @@ export function getCardUsedLimitFromTransactions(
         .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
 
       const paidTotal = cardTransactions
-        .filter((transaction) => isExpenseInvoicePayment(transaction) && getCardInvoiceMonthKey(transaction) === monthKey)
+        .filter((transaction) => isInvoicePaymentTransaction(transaction) && getCardInvoiceMonthKey(transaction) === monthKey)
         .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
 
       return invoiceTotal > 0 && paidTotal >= invoiceTotal;
     })
   );
 
-  const grossUsed = cardTransactions.reduce((acc, transaction) => {
-    if (isExpenseInvoicePayment(transaction)) {
-      return acc;
-    }
+  const convertedInvoiceMonths = new Set(
+    cardTransactions
+      .map((transaction) => getConvertedInvoiceMonthFromDescription(transaction.description))
+      .filter((monthKey): monthKey is string => Boolean(monthKey))
+  );
 
-    return acc + getCardLimitImpact(transaction, settledInvoiceMonths);
+  const grossUsed = cardTransactions.reduce((acc, transaction) => {
+    return acc + getCardLimitImpact(transaction, settledInvoiceMonths, convertedInvoiceMonths);
   }, 0);
 
   const partialPaymentOffset = cardTransactions
     .filter((transaction) => {
       const monthKey = getCardInvoiceMonthKey(transaction);
-      return isExpenseInvoicePayment(transaction) && monthKey && !settledInvoiceMonths.has(monthKey);
+      return isInvoicePaymentTransaction(transaction) && monthKey && !settledInvoiceMonths.has(monthKey);
     })
     .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
 

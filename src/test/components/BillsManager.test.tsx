@@ -423,6 +423,115 @@ describe('BillsManager - contas pendentes', () => {
     expect(screen.getByText('R$ 99,90')).toBeInTheDocument();
   });
 
+  it('modo Dia mostra conta do dia e pendencia anterior aberta, mas nao obrigacao futura', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      categories: [],
+      accounts: [],
+      creditCards: [],
+      debts: [],
+      viewDate: new Date(2026, 5, 20),
+      viewMode: 'day',
+      currentMonthTransactions: [],
+      transactions: [
+        {
+          id: 'previous-open',
+          description: 'Conta anterior aberta',
+          amount: 80,
+          date: '2026-05-20',
+          type: 'expense',
+          isRecurring: true,
+          transactionType: 'recurring',
+          isPaid: false,
+          isVirtual: false,
+          originalId: null,
+          cardId: null,
+          isInvoicePayment: false,
+        },
+        {
+          id: 'same-day',
+          description: 'Conta do dia',
+          amount: 120,
+          date: '2026-06-20',
+          type: 'expense',
+          isRecurring: true,
+          transactionType: 'recurring',
+          isPaid: false,
+          isVirtual: false,
+          originalId: null,
+          cardId: null,
+          isInvoicePayment: false,
+        },
+        {
+          id: 'future',
+          description: 'Conta futura',
+          amount: 150,
+          date: '2026-06-21',
+          type: 'expense',
+          isRecurring: true,
+          transactionType: 'recurring',
+          isPaid: false,
+          isVirtual: false,
+          originalId: null,
+          cardId: null,
+          isInvoicePayment: false,
+        },
+      ],
+    });
+
+    render(<BillsManager />, { wrapper });
+
+    expect(screen.getByText('Conta anterior aberta')).toBeInTheDocument();
+    expect(screen.getByText('Conta do dia')).toBeInTheDocument();
+    expect(screen.queryByText('Conta futura')).not.toBeInTheDocument();
+  });
+
+  it('modo Mes continua mostrando mes selecionado e pendencias anteriores', () => {
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      categories: [],
+      accounts: [],
+      creditCards: [],
+      debts: [],
+      viewDate: new Date(2026, 5, 15),
+      viewMode: 'month',
+      currentMonthTransactions: [],
+      transactions: [
+        {
+          id: 'previous-open',
+          description: 'Pendencia de maio',
+          amount: 80,
+          date: '2026-05-20',
+          type: 'expense',
+          isRecurring: true,
+          transactionType: 'recurring',
+          isPaid: false,
+          isVirtual: false,
+          originalId: null,
+          cardId: null,
+          isInvoicePayment: false,
+        },
+        {
+          id: 'month-open',
+          description: 'Conta de junho',
+          amount: 120,
+          date: '2026-06-25',
+          type: 'expense',
+          isRecurring: true,
+          transactionType: 'recurring',
+          isPaid: false,
+          isVirtual: false,
+          originalId: null,
+          cardId: null,
+          isInvoicePayment: false,
+        },
+      ],
+    });
+
+    render(<BillsManager />, { wrapper });
+
+    expect(screen.getByText('Pendencia de maio')).toBeInTheDocument();
+    expect(screen.getByText('Conta de junho')).toBeInTheDocument();
+  });
+
   it('permite pagamento que leva o saldo para -110 com limite 110', async () => {
     financeStoreMock.useFinanceStore.mockReturnValue(buildStore(110));
 
@@ -541,6 +650,41 @@ describe('BillsManager - contas pendentes', () => {
         },
       });
     });
+  });
+
+  it('entrada de acordo em aberto aparece como obrigacao separada na Gestao de Contas', () => {
+    const store = buildDebtInstallmentStore();
+    store.transactions = [
+      {
+        id: 'debt-entry-1',
+        description: 'Entrada acordo Acordo banco',
+        amount: 79.6,
+        date: '2026-04-05',
+        type: 'expense',
+        isRecurring: false,
+        transactionType: 'adjustment',
+        isPaid: false,
+        isVirtual: false,
+        originalId: null,
+        accountId: null,
+        cardId: null,
+        debtId: 'debt-1',
+        installmentGroupId: null,
+        installmentNumber: null,
+        installmentTotal: null,
+        isInvoicePayment: false,
+        categoryId: 'cat-debt',
+      },
+      ...store.transactions,
+    ];
+
+    financeStoreMock.useFinanceStore.mockReturnValue(store);
+
+    render(<BillsManager />, { wrapper });
+
+    expect(screen.getByText('Entrada acordo Acordo banco')).toBeInTheDocument();
+    expect(screen.getByText('R$ 79,60')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Baixar conta').length).toBeGreaterThan(0);
   });
 
   it('pagamento de parcela de acordo por cartao registra cardId e competencia da fatura', async () => {

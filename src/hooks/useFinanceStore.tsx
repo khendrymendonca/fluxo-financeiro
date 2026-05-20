@@ -113,7 +113,7 @@ function useFinanceProvider() {
   const depositGoalMutation = useDepositToGoal();
 
   const addDebtMutation = useAddDebt();
-  const updateDebtMutation = useUpdateDebt({ creditCards });
+  const updateDebtMutation = useUpdateDebt({ creditCards, categories });
   const deleteDebtMutation = useDeleteDebt();
 
   // --- Selection Methods ---
@@ -327,7 +327,7 @@ function useFinanceProvider() {
     getCardUsedLimit: useCallback((cardId: string) => {
       // Regra explícita: só impactam o limite compras parceladas, contas fixas pagas via cartão
       // e pagamentos pontuais; abatimentos/entradas no cartão reduzem o limite usado.
-      return getCardUsedLimitFromTransactions(cardId, rawTransactions);
-    }, [rawTransactions])
+      return getCardUsedLimitFromTransactions(cardId, transactions);
+    }, [transactions])
   };
 }

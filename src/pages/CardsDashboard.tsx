@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+﻿import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useFinanceStore } from "@/hooks/useFinanceStore";
 import { CreditCardVisual } from "@/components/cards/CreditCardVisual";
 import { AddCardDialog } from "@/components/cards/AddCardDialog";
@@ -125,25 +125,6 @@ export default function CardsDashboard() {
       (s, t) => s + (t.type === "income" ? -t.amount : t.amount), 0
     ),
     [currentInvoiceTransactions]
-  );
-
-  const currentInvoicePaidTotal = useMemo(() => {
-    if (!selectedCardId) return 0;
-    const viewDateStr = format(viewDate, "yyyy-MM");
-    return transactions
-      .filter(
-        (t) =>
-          t.cardId === selectedCardId &&
-          t.isInvoicePayment &&
-          t.type === "expense" &&
-          t.invoiceMonthYear === viewDateStr
-      )
-      .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
-  }, [selectedCardId, viewDate, transactions]);
-
-  const currentInvoiceDifference = useMemo(
-    () => currentInvoicePaidTotal - currentInvoiceTotal,
-    [currentInvoicePaidTotal, currentInvoiceTotal]
   );
 
   const stats = useMemo(() => {
@@ -406,16 +387,13 @@ export default function CardsDashboard() {
                         <h2 className="text-5xl lg:text-6xl font-black tracking-tighter tabular-nums text-foreground">
                           {fmtBRL(currentInvoiceTotal)}
                         </h2>
-                        <p className="mt-2 text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
-                          Total lançado / calculado
-                        </p>
                       </div>
                       {dynamicStatus?.text !== 'Paga' && (
                         <Button
                           onClick={openAccountsManagement}
                           className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-black uppercase text-xs tracking-widest px-6 h-11 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
                         >
-                          Gerenciar na Gestao de Contas
+                          Gerenciar na Gestão de Contas
                         </Button>
                       )}
                     </div>
@@ -436,50 +414,13 @@ export default function CardsDashboard() {
                         )} style={{ width: `${stats.percentUsed}%` }} />
                       </div>
                     </div>
-                    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div className="rounded-2xl border border-border bg-muted/20 p-4">
-                        <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Total lançado</p>
-                        <p className="mt-1 text-xl font-black tabular-nums text-foreground">{fmtBRL(currentInvoiceTotal)}</p>
-                      </div>
-                      <div className="rounded-2xl border border-border bg-muted/20 p-4">
-                        <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Valor pago</p>
-                        <p className="mt-1 text-xl font-black tabular-nums text-foreground">{fmtBRL(currentInvoicePaidTotal)}</p>
-                      </div>
-                      <div className="rounded-2xl border border-border bg-muted/20 p-4">
-                        <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Diferença a conciliar</p>
-                        <p className="mt-1 text-xl font-black tabular-nums text-foreground">{fmtBRL(Math.abs(currentInvoiceDifference))}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {currentInvoiceDifference > 0
-                            ? 'Pago acima do lançado. Ainda falta lançar essa diferença.'
-                            : currentInvoiceDifference < 0
-                              ? 'Há mais lançamentos do que pagamento registrado nesta competência.'
-                              : 'Fatura conciliada.'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stats — 2 cards (sem Cashback) */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-card border border-border rounded-2xl p-5">
-                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Gastos</p>
-                    <p className="text-2xl font-black tabular-nums text-foreground">{fmtBRL(currentInvoiceTotal)}</p>
-                  </div>
-                  <div className="bg-card border border-border rounded-2xl p-5 relative group">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Disponível</p>
-                        <p className="text-2xl font-black tabular-nums text-foreground">{fmtBRL(stats.available)}</p>
-                      </div>
-                    </div>
                   </div>
                 </div>
 
                 <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
                   <p className="text-xs font-black uppercase tracking-widest text-primary">Tela demonstrativa</p>
                   <p className="mt-1 text-xs font-semibold text-muted-foreground">
-                    Pagamento, baixa, abatimento e parcelamento de fatura sao executados somente na Gestao de Contas.
+                    Pagamento, baixa, abatimento e parcelamento de fatura são executados somente na Gestão de Contas.
                   </p>
                 </div>
                 {/* Gráfico de evolução */}
@@ -715,7 +656,7 @@ export default function CardsDashboard() {
                         onClick={openAccountsManagement}
                         className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-black uppercase text-[11px] tracking-widest px-4 h-10 shadow-lg shadow-primary/20"
                       >
-                        Pagar
+                        Gestão
                       </Button>
                     )}
                   </div>
@@ -740,26 +681,10 @@ export default function CardsDashboard() {
                 </div>
               </div>
 
-              {/* Stats mobile */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-card border border-border rounded-2xl p-4">
-                  <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Gastos</p>
-                  <p className="text-xl font-black tabular-nums text-foreground">{fmtBRL(currentInvoiceTotal)}</p>
-                </div>
-                <div className="bg-card border border-border rounded-2xl p-4 relative group">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-1">Disponível</p>
-                      <p className="text-xl font-black tabular-nums text-foreground">{fmtBRL(stats.available)}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
                 <p className="text-xs font-black uppercase tracking-widest text-primary">Tela demonstrativa</p>
                 <p className="mt-1 text-xs font-semibold text-muted-foreground">
-                  Pagamento, baixa, abatimento e parcelamento de fatura sao executados somente na Gestao de Contas.
+                  Pagamento, baixa, abatimento e parcelamento de fatura são executados somente na Gestão de Contas.
                 </p>
               </div>
               {/* Gráfico mobile */}
