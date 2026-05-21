@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useGlobalFlag } from '@/hooks/useFeatureFlags';
@@ -19,6 +19,12 @@ export const accentColors = [
     { id: 'pascoa', name: 'Páscoa', hsl: '267 60% 72%' },
 ];
 
+const ACCENT_STORAGE_KEY = 'accent-color';
+
+function readStoredAccentColor() {
+    return localStorage.getItem(ACCENT_STORAGE_KEY);
+}
+
 interface ThemeColorContextType {
     accentColor: string;
     setAccentColor: (color: string) => void;
@@ -28,46 +34,88 @@ interface ThemeColorContextType {
 const ThemeColorContext = createContext<ThemeColorContextType | undefined>(undefined);
 
 export function ThemeColorProvider({ children }: { children: React.ReactNode }) {
-    const [accentColor, setAccentColorState] = useState(() => {
-        return localStorage.getItem('accent-color') || 'blue';
-    });
-
     const { user } = useAuth();
     const easterEnabled = useGlobalFlag('theme_easter');
+    const hasHydratedRemoteAccentRef = useRef(false);
 
-    // Se o admin desabilitar o tema de Páscoa globalmente,
-    // reseta automaticamente quem ainda tiver 'pascoa' como cor ativa
+    const persistAccentLocally = useCallback((nextAccentColor: string) => {
+        if (readStoredAccentColor() !== nextAccentColor) {
+            localStorage.setItem(ACCENT_STORAGE_KEY, nextAccentColor);
+        }
+    }, []);
+
+    const [accentColor, setAccentColorState] = useState(() => {
+        return readStoredAccentColor() || 'blue';
+    });
+
+    const applyAccentColorState = useCallback((nextAccentColor: string) => {
+        const normalizedAccentColor = accentColors.some((color) => color.id === nextAccentColor)
+            ? nextAccentColor
+            : accentColors[0].id;
+
+        setAccentColorState((currentAccentColor) => (
+            currentAccentColor === normalizedAccentColor ? currentAccentColor : normalizedAccentColor
+        ));
+        persistAccentLocally(normalizedAccentColor);
+        return normalizedAccentColor;
+    }, [persistAccentLocally]);
+
+    const syncAccentColorRemotely = useCallback(async (nextAccentColor: string) => {
+        if (!user) {
+            return;
+        }
+
+        try {
+            await supabase.auth.updateUser({
+                data: { ...user.user_metadata, accent_color: nextAccentColor }
+            });
+        } catch {
+            // Mantem a preferencia local como fonte da verdade da sessao.
+        }
+    }, [user]);
+
+    const setAccentColor = useCallback((nextAccentColor: string) => {
+        const normalizedAccentColor = applyAccentColorState(nextAccentColor);
+        void syncAccentColorRemotely(normalizedAccentColor);
+    }, [applyAccentColorState, syncAccentColorRemotely]);
+
+    useEffect(() => {
+        const color = accentColors.find((entry) => entry.id === accentColor) || accentColors[0];
+        const root = window.document.documentElement;
+
+        root.style.setProperty('--primary', color.hsl);
+    }, [accentColor]);
+
     useEffect(() => {
         if (!easterEnabled && accentColor === 'pascoa') {
             setAccentColor('teal');
         }
-    }, [easterEnabled]);
-
-    const setAccentColor = async (color: string) => {
-        setAccentColorState(color);
-        if (user) {
-            await supabase.auth.updateUser({
-                data: { ...user.user_metadata, accent_color: color }
-            });
-        }
-    };
+    }, [accentColor, easterEnabled, setAccentColor]);
 
     useEffect(() => {
-        const color = accentColors.find(c => c.id === accentColor) || accentColors[0];
-        const root = window.document.documentElement;
-
-        // Atualiza a variável --primary do Tailwind
-        root.style.setProperty('--primary', color.hsl);
-        localStorage.setItem('accent-color', accentColor);
-    }, [accentColor]);
-
-    // Restauração via Supabase Auth (v6.4)
-    useEffect(() => {
-        const savedColor = user?.user_metadata?.accent_color;
-        if (savedColor && savedColor !== accentColor) {
-            setAccentColor(savedColor);
+        if (!user) {
+            hasHydratedRemoteAccentRef.current = false;
+            return;
         }
-    }, [user]);
+
+        const storedAccentColor = readStoredAccentColor();
+        if (storedAccentColor) {
+            applyAccentColorState(storedAccentColor);
+            hasHydratedRemoteAccentRef.current = true;
+            return;
+        }
+
+        if (hasHydratedRemoteAccentRef.current) {
+            return;
+        }
+
+        const remoteAccentColor = user.user_metadata?.accent_color;
+        if (typeof remoteAccentColor === 'string' && remoteAccentColor.length > 0) {
+            applyAccentColorState(remoteAccentColor);
+        }
+
+        hasHydratedRemoteAccentRef.current = true;
+    }, [applyAccentColorState, user]);
 
     return (
         <ThemeColorContext.Provider value={{ accentColor, setAccentColor, accentColors }}>

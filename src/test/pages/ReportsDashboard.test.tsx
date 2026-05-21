@@ -16,9 +16,14 @@ const mobileMock = vi.hoisted(() => ({
   useIsMobile: vi.fn(),
 }));
 
+const themeMock = vi.hoisted(() => ({
+  useTheme: vi.fn(),
+}));
+
 vi.mock('@/hooks/useFinanceStore', () => financeStoreMock);
 vi.mock('@/hooks/useFeatureFlags', () => featureFlagsMock);
 vi.mock('@/hooks/useIsMobile', () => mobileMock);
+vi.mock('@/hooks/useTheme', () => themeMock);
 
 const makeCategory = (id: string, name: string): Category => ({
   id,
@@ -49,6 +54,11 @@ describe('ReportsDashboard - categoria de acordo', () => {
     vi.clearAllMocks();
     featureFlagsMock.useFeatureFlag.mockReturnValue(true);
     mobileMock.useIsMobile.mockReturnValue(false);
+    themeMock.useTheme.mockReturnValue({
+      theme: 'dark',
+      setTheme: vi.fn(),
+      cycleTheme: vi.fn(),
+    });
     vi.stubGlobal('ResizeObserver', class {
       observe() {}
       unobserve() {}

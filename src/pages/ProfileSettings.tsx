@@ -53,7 +53,9 @@ export function ProfileSettings() {
     const appVersion = `${dayVersion}07${monthVersion}08${yearVersion}12Z`;
 
     // Feature Flags & Profile
-    const canCustomizeTheme = useFeatureFlag('theme_customization');
+    const hasThemeCustomizationAccess = useFeatureFlag('theme_customization');
+    const themeCustomizationTemporarilyUnlocked = true;
+    const canCustomizeTheme = themeCustomizationTemporarilyUnlocked || hasThemeCustomizationAccess;
     const { data: profile } = useUserProfile();
 
     // Estados para o formulário

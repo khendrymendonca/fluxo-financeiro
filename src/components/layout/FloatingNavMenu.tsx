@@ -1,5 +1,5 @@
 import { useState, useEffect, ReactNode } from 'react';
-import { X, Plus } from 'lucide-react';
+import { LayoutGrid, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMobileShortcuts, ShortcutId } from '@/hooks/useMobileShortcuts';
 import { useFeatureFlag } from '@/hooks/useFeatureFlags';
@@ -159,10 +159,7 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
           {isOpen ? (
             <X className="w-7 h-7" />
           ) : (
-            <div className="relative">
-              <Plus className="w-7 h-7" />
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-zinc-900" />
-            </div>
+            <LayoutGrid className="w-7 h-7" />
           )}
           
           {!isOpen && (

@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Sun, Moon, Monitor, Laptop } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useTheme } from '@/hooks/useTheme';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { cn } from '@/lib/utils';
 import { AppLogo } from '@/components/branding/AppLogo';
 
@@ -20,6 +21,7 @@ export default function AuthPage() {
     const [consentAccepted, setConsentAccepted] = useState(false);
     const { theme, setTheme } = useTheme();
     const { toast } = useToast();
+    const isMobile = useIsMobile();
 
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -214,7 +216,7 @@ export default function AuthPage() {
                             { id: 'dark', icon: Moon, label: 'Escuro' },
                             { id: 'amoled', icon: Laptop, label: 'OLED' },
                             { id: 'system', icon: Monitor, label: 'Sistema' }
-                        ].map((t) => (
+                        ].filter((t) => isMobile || t.id !== 'amoled').map((t) => (
                             <button
                                 key={t.id}
                                 onClick={() => setTheme(t.id as any)}

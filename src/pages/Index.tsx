@@ -4,8 +4,8 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import {
+  ArrowUpDown,
   Home,
-  List,
   CreditCard as CardIcon,
   Plus,
   Menu,
@@ -254,7 +254,7 @@ export default function Index() {
 
   const navigationItems = [
     { id: 'dashboard', icon: Home, label: 'Início' },
-    { id: 'transactions', icon: List, label: 'Lançamentos', featureKey: 'transactions' },
+    { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos', featureKey: 'transactions' },
     { id: 'cards', icon: CardIcon, label: 'Cartões', featureKey: 'cards_dashboard' },
     { id: 'bills', icon: Receipt, label: 'Gestão de Contas', featureKey: 'accounts' },
     { id: 'accounts', icon: Wallet, label: 'Minhas Contas (Carteira)', featureKey: 'accounts' },
@@ -327,7 +327,7 @@ export default function Index() {
           <ViewGuard view="transactions">
             <div className="space-y-4 pt-2">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <PageHeader title="Lançamentos" icon={List} />
+                <PageHeader title="Lançamentos" icon={ArrowUpDown} />
                 <div className="flex items-center gap-3">
                   <Button
                     onClick={() => {

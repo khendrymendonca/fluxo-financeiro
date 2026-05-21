@@ -41,6 +41,7 @@ import {
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useFeatureFlag } from '@/hooks/useFeatureFlags';
+import { useTheme } from '@/hooks/useTheme';
 import { formatCurrency } from '@/utils/formatters';
 import { parseLocalDate } from '@/utils/dateUtils';
 import {
@@ -659,6 +660,7 @@ function getFinancialPeriodLabel(period: Period, date: Date) {
 }
 
 export default function ReportsDashboard() {
+  const { theme } = useTheme();
   const {
     transactions,
     categories,
@@ -674,6 +676,15 @@ export default function ReportsDashboard() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const canUseAdvancedReports = useFeatureFlag('advanced_reports');
   const isMobile = useIsMobile();
+  const isDarkTheme = useMemo(() => {
+    if (theme === 'dark' || theme === 'amoled') return true;
+    if (theme === 'system') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  }, [theme]);
+  const incomeTrendColor = isDarkTheme ? '#FFFFFF' : 'hsl(var(--primary))';
+  const expenseTrendColor = '#F43F5E';
   const analysisSectionRef = useRef<HTMLDivElement | null>(null);
   const toggleSelectedCategory = useCallback((categoryId: string) => {
     setSelectedCategoryId((current) => {
@@ -1635,19 +1646,19 @@ export default function ReportsDashboard() {
                   type="monotone"
                   name="Receitas"
                   dataKey="receita"
-                  stroke="#FFFFFF"
+                  stroke={incomeTrendColor}
                   strokeWidth={3}
-                  dot={{ r: 3.5, strokeWidth: 2, fill: '#FFFFFF' }}
-                  activeDot={{ r: 5, strokeWidth: 0, fill: '#FFFFFF' }}
+                  dot={{ r: 3.5, strokeWidth: 2, fill: incomeTrendColor }}
+                  activeDot={{ r: 5, strokeWidth: 0, fill: incomeTrendColor }}
                 />
                 <Line
                   type="monotone"
                   name="Despesas"
                   dataKey="despesa"
-                  stroke="#F43F5E"
+                  stroke={expenseTrendColor}
                   strokeWidth={3}
-                  dot={{ r: 3.5, strokeWidth: 2, fill: '#F43F5E' }}
-                  activeDot={{ r: 5, strokeWidth: 0, fill: '#F43F5E' }}
+                  dot={{ r: 3.5, strokeWidth: 2, fill: expenseTrendColor }}
+                  activeDot={{ r: 5, strokeWidth: 0, fill: expenseTrendColor }}
                 />
               </LineChart>
             </ResponsiveContainer>

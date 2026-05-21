@@ -4,14 +4,12 @@ import {
   Database,
   LayoutDashboard,
   LineChart,
-  List,
   LogOut,
   Moon,
   Receipt,
   Settings2,
   Sun,
   Shield,
-  Zap,
   User,
   Rocket,
   Wallet,
@@ -49,7 +47,7 @@ const navGroups = [
       { id: 'bills', icon: Receipt, label: 'Gestão de Contas', featureKey: 'accounts' },
       { id: 'cards', icon: CardIcon, label: 'Cartões', featureKey: 'cards_dashboard' },
       { id: 'accounts', icon: Wallet, label: 'Minhas Contas', featureKey: 'accounts' },
-      { id: 'transactions', icon: List, label: 'Lançamentos', featureKey: 'transactions' },
+      { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos', featureKey: 'transactions' },
     ],
   },
   {
@@ -185,64 +183,42 @@ function NavGroupDropdown({
 const THEMES = [
   { id: 'light',  icon: Sun,  label: 'Claro'  },
   { id: 'dark',   icon: Moon, label: 'Escuro' },
-  { id: 'amoled', icon: Zap,  label: 'AMOLED' },
 ] as const;
 
 function ThemeButton({ theme, setTheme }: { theme: string; setTheme: (t: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const current = THEMES.find(t => t.id === theme) ?? THEMES[0];
-  const Icon = current.icon;
+  const activeTheme = theme === 'dark' ? 'dark' : 'light';
 
   return (
-    <div className="relative">
-      {/* Botão gatilho */}
-      <button
-        onClick={() => setOpen(prev => !prev)}
-        className={cn(
-          "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-200 text-sm font-bold",
-          "bg-muted/50 border-border hover:border-primary/40 hover:bg-primary/5",
-          "text-foreground"
-        )}
-      >
-        <Icon className="w-4 h-4 text-primary" />
-        <span>{current.label}</span>
-        <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform duration-200", open && "rotate-180")} />
-      </button>
-
-      {/* Dropdown grid */}
-      {open && (
-        <>
-          {/* Overlay para fechar ao clicar fora */}
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-
-          <div className={cn(
-            "absolute right-0 top-full mt-2 z-50",
-            "bg-card border border-border rounded-2xl shadow-xl p-3",
-            "grid grid-cols-3 gap-2 w-52",
-            "animate-in fade-in zoom-in-95 duration-150"
-          )}>
-            {THEMES.map((t) => {
-              const TIcon = t.icon;
-              const isActive = theme === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => { setTheme(t.id); setOpen(false); }}
-                  className={cn(
-                    "flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-200",
-                    isActive
-                      ? "bg-primary/10 border-primary text-primary"
-                      : "border-transparent hover:bg-muted text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <TIcon className="w-5 h-5" />
-                  <span className="text-xs font-bold">{t.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </>
+    <div
+      className={cn(
+        "inline-flex items-center gap-1 rounded-2xl border border-border bg-muted/55 p-1 shadow-sm backdrop-blur-sm"
       )}
+      role="tablist"
+      aria-label="Selecionar tema"
+    >
+      {THEMES.map((option) => {
+        const OptionIcon = option.icon;
+        const isActive = activeTheme === option.id;
+
+        return (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => setTheme(option.id)}
+            className={cn(
+              "inline-flex min-w-[104px] items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition-all duration-200",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+              isActive
+                ? "bg-background text-foreground shadow-[0_10px_24px_rgba(15,23,42,0.10)] ring-1 ring-border"
+                : "text-muted-foreground hover:bg-background/65 hover:text-foreground"
+            )}
+            aria-pressed={isActive}
+          >
+            <OptionIcon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
+            <span>{option.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

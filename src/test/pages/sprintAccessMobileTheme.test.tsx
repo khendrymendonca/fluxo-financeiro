@@ -110,15 +110,18 @@ describe('Sprint de acesso, mobile, AMOLED e acento', () => {
     expect(source).toContain("shouldShowMobileFabs && ['dashboard', 'transactions'].includes(currentView)");
   });
 
-  it('aplica AMOLED preto real por tokens compartilhados entre web e mobile', () => {
+  it('mantem AMOLED disponivel nos tokens, mas faz fallback para Escuro no desktop', () => {
     const css = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8');
     const themeHook = readFileSync(resolve(process.cwd(), 'src/hooks/useTheme.tsx'), 'utf8');
     const appLayout = readFileSync(resolve(process.cwd(), 'src/components/layout/AppLayout.tsx'), 'utf8');
+    const navigationRail = readFileSync(resolve(process.cwd(), 'src/components/layout/NavigationRail.tsx'), 'utf8');
 
     expect(css).toContain('.theme-amoled');
     expect(css).toContain('--background: 0 0% 0%');
     expect(css).toContain('--card: 0 0% 3%');
-    expect(themeHook).not.toContain("effectiveTheme = 'dark';");
+    expect(themeHook).toContain('normalizeThemeForViewport');
+    expect(themeHook).toContain("if (theme === 'amoled' && viewportWidth >= DESKTOP_BREAKPOINT)");
+    expect(navigationRail).not.toContain("label: 'AMOLED'");
     expect(appLayout).toContain('bg-card border-b border-border');
     expect(appLayout).toContain('bg-background border-b border-border');
   });
@@ -131,5 +134,46 @@ describe('Sprint de acesso, mobile, AMOLED e acento', () => {
     expect(source).not.toContain('#0a0a0f');
     expect(source).toContain('bg-primary hover:bg-primary/90 text-primary-foreground');
     expect(source).toContain('hsl(var(--primary))');
+  });
+
+  it('ajusta a linha de Receitas para verde no modo claro sem mexer na linha vermelha de Despesas', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/pages/ReportsDashboard.tsx'), 'utf8');
+
+    expect(source).toContain("const incomeTrendColor = isDarkTheme ? '#FFFFFF' : 'hsl(var(--primary))';");
+    expect(source).toContain("const expenseTrendColor = '#F43F5E';");
+    expect(source).toContain('stroke={incomeTrendColor}');
+    expect(source).toContain('stroke={expenseTrendColor}');
+  });
+
+  it('remove o aviso premium da cor de destaque e libera a personalizacao no perfil', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/pages/ProfileSettings.tsx'), 'utf8');
+
+    expect(source).toContain('const themeCustomizationTemporarilyUnlocked = true;');
+    expect(source).toContain('const canCustomizeTheme = themeCustomizationTemporarilyUnlocked || hasThemeCustomizationAccess;');
+  });
+
+  it('troca o icone da roleta de telas por um atalho de navegacao', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/layout/FloatingNavMenu.tsx'), 'utf8');
+
+    expect(source).toContain('LayoutGrid');
+    expect(source).not.toContain('<Plus className="w-7 h-7" />');
+  });
+
+  it('usa um controle segmentado mais resolvido para Claro e Escuro no desktop', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/layout/NavigationRail.tsx'), 'utf8');
+
+    expect(source).toContain('role="tablist"');
+    expect(source).toContain('aria-label="Selecionar tema"');
+    expect(source).toContain('min-w-[104px]');
+    expect(source).not.toContain('Dropdown grid');
+  });
+
+  it('troca o icone de Lancamentos para uma semantica de movimentacao em vez de menu', () => {
+    const navigationRail = readFileSync(resolve(process.cwd(), 'src/components/layout/NavigationRail.tsx'), 'utf8');
+    const index = readFileSync(resolve(process.cwd(), 'src/pages/Index.tsx'), 'utf8');
+
+    expect(navigationRail).toContain("icon: ArrowUpDown, label: 'Lançamentos'");
+    expect(index).toContain("icon: ArrowUpDown, label: 'Lançamentos'");
+    expect(index).toContain('PageHeader title="Lançamentos" icon={ArrowUpDown}');
   });
 });
