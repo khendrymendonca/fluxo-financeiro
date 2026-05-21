@@ -68,8 +68,8 @@ export interface Account {
   id: string;
   userId: string;
   name: string;
-  bank: string; // Mantido por retrocompatibilidade, mas usaremos institution preferencialmente
-  institution: string;
+  bank: string;
+  institution?: string; // legado de UI; não deve ser enviado ao Supabase
   balance: number;
   color: string;
   icon?: string;

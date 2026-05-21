@@ -1296,3 +1296,77 @@ Criar fluxo para recategorizar em massa:
 - renegociação;
 - transações sem categoria;
 - categorias órfãs.
+
+---
+
+# REGRA DE SEGURANÇA — EXCLUSÃO DE CONTA / LGPD
+
+A exclusão de conta deve ser feita pela RPC:
+
+`public.delete_user_data(target_user_id uuid)`
+
+A função deve:
+
+- permitir exclusão apenas do próprio usuário autenticado;
+- validar `auth.uid() IS NOT NULL`;
+- validar `auth.uid() = target_user_id`;
+- usar `SECURITY DEFINER` apenas porque precisa remover o registro final em `auth.users`;
+- usar `search_path` seguro;
+- qualificar tabelas por schema;
+- apagar `auth.users` por último;
+- executar `NOTIFY pgrst, 'reload schema'` após criação/alteração;
+- revogar execução pública;
+- conceder execução apenas para `authenticated`.
+
+A função não deve permitir exclusão cruzada de dados entre usuários.
+
+Antes de aplicar ou testar exclusão real:
+- usar somente usuário de teste;
+- confirmar existência da função;
+- confirmar grants;
+- validar que o frontend não retorna `PGRST202`;
+- nunca testar primeiro em usuário real.
+
+---
+
+# REGRA DE UX — FILTROS MOBILE EM RELATÓRIOS
+
+No mobile, os controles de Relatórios não podem se sobrepor.
+
+Projetado/Realizado deve ficar em uma linha própria.
+
+Mês/Semestre/Ano deve ficar em outra linha própria.
+
+Os filtros precisam ser tocáveis, legíveis e sem sobreposição em telas pequenas.
+
+---
+
+# REGRA DE DEVTOOLS
+
+TanStack/React Query Devtools não deve aparecer para o usuário.
+
+O Devtools só pode renderizar quando:
+
+- ambiente for DEV;
+- e `VITE_ENABLE_QUERY_DEVTOOLS=true`.
+
+Por padrão, ele deve ficar desativado para não atrapalhar web nem mobile.
+
+---
+
+# REGRA TÉCNICA — CONTAS / BANCO
+
+A tabela `accounts` no Supabase usa o campo técnico `bank`.
+
+O app não deve enviar `institution` em inserts ou updates de contas.
+
+`institution` pode existir apenas como fallback legado de leitura em objetos antigos de UI/testes, mas não deve ser persistido no Supabase.
+
+Regra:
+- campo visual pode ser “Instituição” ou “Banco”;
+- campo técnico persistido deve ser sempre `bank`;
+- seletores de conta devem exibir banco + nome, por exemplo: `Itaú — Khendry`.
+
+Não criar migration para adicionar `institution`.
+Não renomear `bank`.
+Não alterar contas existentes por causa disso.

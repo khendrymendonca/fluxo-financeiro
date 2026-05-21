@@ -117,7 +117,7 @@ export function AccountsManager({
   const openEditForm = (account: Account) => {
     setEditingAccount(account);
     setAccountName(account.name);
-    setAccountInstitution(account.institution || account.bank || '');
+    setAccountInstitution(account.bank || account.institution || '');
     setAccountBalance(account.balance.toFixed(2));
     setAccountType(account.accountType);
     setAccountColor(account.color);
@@ -188,7 +188,7 @@ export function AccountsManager({
       // Propagate color to all accounts of the same institution if color changed
       if (accountColor !== editingAccount.color) {
         const sameInstAccounts = accounts.filter(a =>
-          (a.institution || a.bank) === (editingAccount.institution || editingAccount.bank) &&
+          (a.bank || a.institution) === (editingAccount.bank || editingAccount.institution) &&
           a.id !== editingAccount.id
         );
 
@@ -218,12 +218,11 @@ export function AccountsManager({
       }
 
       // Check if institution already exists to inherit color if not explicitly changed
-      const existingInst = accounts.find(a => (a.institution || a.bank) === accountInstitution);
+      const existingInst = accounts.find(a => (a.bank || a.institution) === accountInstitution);
       const finalColor = existingInst ? existingInst.color : accountColor;
 
       const accountData = {
         name: finalName,
-        institution: accountInstitution,
         bank: accountInstitution,
         balance: parsedNewBalance,
         color: finalColor,
@@ -342,7 +341,7 @@ export function AccountsManager({
       <div className="space-y-4 animate-fade-in pb-20 md:pb-0">
         {Object.entries(
           accounts.reduce((acc, account) => {
-            const inst = account.institution || account.bank || 'Instituição não informada';
+            const inst = account.bank || account.institution || 'Instituição não informada';
             if (!acc[inst]) acc[inst] = [];
             acc[inst].push(account);
             return acc;

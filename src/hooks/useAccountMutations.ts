@@ -14,7 +14,7 @@ export function useAddAccount() {
       if (!user) throw new Error('Utilizador não autenticado');
 
       const safeName = (account.name ?? '').trim().slice(0, 100);
-      const safeInstitution = (account.institution ?? (account as any).bank ?? '').trim().slice(0, 100);
+      const safeBank = ((account as any).bank ?? account.institution ?? '').trim().slice(0, 100);
 
       const supabasePayload: any = {
         name: safeName,
@@ -22,8 +22,7 @@ export function useAddAccount() {
         color: account.color,
         icon: account.icon,
         user_id: user.id,
-        institution: safeInstitution,
-        bank: safeInstitution,
+        bank: safeBank,
       };
 
       if (account.accountType !== undefined) supabasePayload.account_type = account.accountType;
