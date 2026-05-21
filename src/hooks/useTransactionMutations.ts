@@ -31,6 +31,20 @@ function getTransferGroupId(transaction: any): string | null {
   return transaction?.transferGroupId || transaction?.transfer_group_id || null;
 }
 
+function buildSettlementReversalUpdates(clearLinkedSourceFields = false) {
+  return {
+    is_paid: false,
+    payment_date: null,
+    account_id: null,
+    ...(clearLinkedSourceFields
+      ? {
+          card_id: null,
+          invoice_month_year: null,
+        }
+      : {}),
+  };
+}
+
 async function getSafeTransferDeleteIds(transaction: any, targetId: string): Promise<string[]> {
   const transferGroupId = getTransferGroupId(transaction);
 
@@ -402,18 +416,14 @@ export function useToggleTransactionPaid() {
     mutationFn: async ({ id, isPaid, date, accountId, isChild, clearSourceOnUnpay }: { id: string, isPaid: boolean, date?: string, accountId?: string, isChild?: boolean, clearSourceOnUnpay?: boolean }) => {
       const shouldClearSourceOnUnpay = !isPaid && (isChild || clearSourceOnUnpay);
 
-      // Estorno de filho materializado ou parcela de acordo limpa a fonte para
-      // devolver o item ao estado pendente sem manter baixa financeira ativa.
-      if (shouldClearSourceOnUnpay) {
+      // Baixa e estorno precisam ser simetricos: ao estornar, a fonte financeira
+      // usada no pagamento precisa ser removida para que o saldo volte ao estado
+      // anterior. Para filhos materializados/parcela de acordo tambem limpamos os
+      // metadados de cartao vinculados a baixa protegida.
+      if (!isPaid) {
         const { error } = await supabase
           .from('transactions')
-          .update({
-            is_paid: false,
-            payment_date: null,
-            account_id: null,
-            card_id: null,
-            invoice_month_year: null,
-          })
+          .update(buildSettlementReversalUpdates(shouldClearSourceOnUnpay))
           .eq('id', id)
           .select();
         if (error) throw error;

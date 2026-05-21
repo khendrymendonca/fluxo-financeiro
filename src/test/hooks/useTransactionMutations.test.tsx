@@ -567,6 +567,48 @@ describe('useTransactionMutations - soft delete and payment status', () => {
     expect(updateQuery.eq).toHaveBeenCalledWith('id', 'child-1');
   });
 
+  it('estorna despesa comum removendo a conta original da baixa', async () => {
+    const updateQuery = chain({
+      select: vi.fn(async () => ({ error: null })),
+    });
+    supabaseMock.from.mockReturnValueOnce(updateQuery);
+
+    const { result } = renderHook(() => useToggleTransactionPaid(), { wrapper });
+
+    await result.current.mutateAsync({
+      id: 'expense-1',
+      isPaid: false,
+    });
+
+    expect(updateQuery.update).toHaveBeenCalledWith({
+      is_paid: false,
+      payment_date: null,
+      account_id: null,
+    });
+    expect(updateQuery.eq).toHaveBeenCalledWith('id', 'expense-1');
+  });
+
+  it('estorna receita removendo a conta original do recebimento', async () => {
+    const updateQuery = chain({
+      select: vi.fn(async () => ({ error: null })),
+    });
+    supabaseMock.from.mockReturnValueOnce(updateQuery);
+
+    const { result } = renderHook(() => useToggleTransactionPaid(), { wrapper });
+
+    await result.current.mutateAsync({
+      id: 'income-1',
+      isPaid: false,
+    });
+
+    expect(updateQuery.update).toHaveBeenCalledWith({
+      is_paid: false,
+      payment_date: null,
+      account_id: null,
+    });
+    expect(updateQuery.eq).toHaveBeenCalledWith('id', 'income-1');
+  });
+
   it('marca transacao como paga preservando data e conta informadas', async () => {
     const updateQuery = chain({
       select: vi.fn(async () => ({ error: null })),
@@ -626,6 +668,41 @@ describe('useTransactionMutations - soft delete and payment status', () => {
       invoice_month_year: null,
     });
     expect(updateQuery.eq).toHaveBeenCalledWith('id', 'debt-installment-1');
+  });
+
+  it('mantem o estorno idempotente sem gerar payload financeiro extra', async () => {
+    const firstUpdateQuery = chain({
+      select: vi.fn(async () => ({ error: null })),
+    });
+    const secondUpdateQuery = chain({
+      select: vi.fn(async () => ({ error: null })),
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(firstUpdateQuery)
+      .mockReturnValueOnce(secondUpdateQuery);
+
+    const { result } = renderHook(() => useToggleTransactionPaid(), { wrapper });
+
+    await result.current.mutateAsync({
+      id: 'expense-2',
+      isPaid: false,
+    });
+
+    await result.current.mutateAsync({
+      id: 'expense-2',
+      isPaid: false,
+    });
+
+    expect(firstUpdateQuery.update).toHaveBeenCalledWith({
+      is_paid: false,
+      payment_date: null,
+      account_id: null,
+    });
+    expect(secondUpdateQuery.update).toHaveBeenCalledWith({
+      is_paid: false,
+      payment_date: null,
+      account_id: null,
+    });
   });
 });
 
@@ -1127,6 +1204,101 @@ describe('useTransactionMutations - useUpdateTransaction scopes', () => {
       payment_date: '2026-04-10',
     }));
     expect(updateInstallment.eq).toHaveBeenCalledWith('id', 'debt-installment-1');
+  });
+
+  it('troca a conta de uma despesa paga sem duplicar a transacao', async () => {
+    const transaction = {
+      id: 'expense-paid-1',
+      description: 'Cemig',
+      amount: 174.6,
+      date: '2026-05-22',
+      type: 'expense',
+      is_paid: true,
+      payment_date: '2026-05-22',
+      account_id: 'account-inter',
+      card_id: null,
+      invoice_month_year: null,
+      is_recurring: false,
+      original_id: null,
+      installment_group_id: null,
+    };
+    const selectTransaction = chain({
+      single: vi.fn(async () => ({ data: transaction, error: null })),
+    });
+    const updateExpense = chain({
+      select: vi.fn(async () => ({ data: [{ id: 'expense-paid-1' }], error: null })),
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(selectTransaction)
+      .mockReturnValueOnce(updateExpense);
+
+    const { result } = renderHook(() => useUpdateTransaction(), { wrapper });
+
+    await result.current.mutateAsync({
+      id: 'expense-paid-1',
+      updates: {
+        accountId: 'account-itau',
+        isPaid: true,
+        paymentDate: '2026-05-22',
+        amount: 174.6,
+      },
+    });
+
+    expect(updateExpense.update).toHaveBeenCalledWith(expect.objectContaining({
+      account_id: 'account-itau',
+      is_paid: true,
+      payment_date: '2026-05-22',
+      amount: 174.6,
+    }));
+    expect(updateExpense.eq).toHaveBeenCalledWith('id', 'expense-paid-1');
+    expect(supabaseMock.from).toHaveBeenCalledTimes(2);
+  });
+
+  it('recalcula o payload de uma despesa paga quando o valor muda mantendo a mesma conta', async () => {
+    const transaction = {
+      id: 'expense-paid-2',
+      description: 'Conta de luz',
+      amount: 120,
+      date: '2026-05-10',
+      type: 'expense',
+      is_paid: true,
+      payment_date: '2026-05-10',
+      account_id: 'account-1',
+      card_id: null,
+      invoice_month_year: null,
+      is_recurring: false,
+      original_id: null,
+      installment_group_id: null,
+    };
+    const selectTransaction = chain({
+      single: vi.fn(async () => ({ data: transaction, error: null })),
+    });
+    const updateExpense = chain({
+      select: vi.fn(async () => ({ data: [{ id: 'expense-paid-2' }], error: null })),
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(selectTransaction)
+      .mockReturnValueOnce(updateExpense);
+
+    const { result } = renderHook(() => useUpdateTransaction(), { wrapper });
+
+    await result.current.mutateAsync({
+      id: 'expense-paid-2',
+      updates: {
+        amount: 174.6,
+        isPaid: true,
+        paymentDate: '2026-05-10',
+        accountId: 'account-1',
+      },
+    });
+
+    expect(updateExpense.update).toHaveBeenCalledWith(expect.objectContaining({
+      amount: 174.6,
+      account_id: 'account-1',
+      is_paid: true,
+      payment_date: '2026-05-10',
+    }));
+    expect(updateExpense.eq).toHaveBeenCalledWith('id', 'expense-paid-2');
   });
 
   it('invalida queries financeiras apos baixa de parcela de acordo', async () => {

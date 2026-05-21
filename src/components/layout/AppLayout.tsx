@@ -39,7 +39,7 @@ export function AppLayout({ children, sidebar, headerMobile, bottomNav, fab }: A
 
       {/* ── HEADER MOBILE ── */}
       <header className={cn(
-        "md:hidden flex-shrink-0 sticky top-0 z-50 bg-background border-b border-border flex items-center justify-between p-4",
+        "md:hidden flex-shrink-0 sticky top-0 z-50 bg-background border-b border-border flex items-center justify-between px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.875rem)]",
         !headerMobile && "hidden"
       )}>
         {headerMobile}

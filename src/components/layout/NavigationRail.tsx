@@ -33,6 +33,7 @@ import { Portal } from '@/components/ui/Portal';
 import { AppLogo } from '@/components/branding/AppLogo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { getGreetingForHour, getUserDisplayName, getUserInitials } from '@/utils/userIdentity';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -255,19 +256,9 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
   const { theme, setTheme } = useTheme();
   const { user, signOut } = useAuth();
   const [openGroup, setOpenGroup] = useState<string | null>(null);
-  const nowHour = new Date().getHours();
-  const greeting = nowHour < 12 ? 'Bom dia' : nowHour < 18 ? 'Boa tarde' : 'Boa noite';
-  const profileName = useMemo(() => {
-    const metadataName = user?.user_metadata?.full_name || user?.user_metadata?.name;
-    if (typeof metadataName === 'string' && metadataName.trim()) return metadataName.trim();
-    if (user?.email) return user.email.split('@')[0];
-    return 'Usuário';
-  }, [user]);
-  const profileInitials = useMemo(() => {
-    const parts = profileName.split(/\s+/).filter(Boolean);
-    if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-    return profileName.slice(0, 1).toUpperCase() || 'U';
-  }, [profileName]);
+  const greeting = useMemo(() => getGreetingForHour(new Date().getHours()), []);
+  const profileName = useMemo(() => getUserDisplayName(user), [user]);
+  const profileInitials = useMemo(() => getUserInitials(user), [user]);
 
   return (
     <nav className="flex flex-col w-full">

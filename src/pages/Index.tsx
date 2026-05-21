@@ -11,8 +11,6 @@ import {
   Menu,
   Settings2,
   Database,
-  Eye,
-  EyeOff,
   History,
   BarChart3,
   Sun,
@@ -25,6 +23,8 @@ import {
   Calculator,
   Rabbit,
   TrendingUp,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFeatureFlag, useIsSuperAdmin, useGlobalFlag } from '@/hooks/useFeatureFlags';
@@ -57,16 +57,12 @@ import { CategoriesManager } from '@/components/settings/CategoriesManager';
 import { ProfileSettings } from './ProfileSettings';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { toast } from '@/components/ui/use-toast';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FloatingNavMenu } from '@/components/layout/FloatingNavMenu';
 import EmergencyFund from './EmergencyFund';
 import { BillsManager } from '@/components/accounts/BillsManager';
 import { HealthScore } from '@/components/dashboard/HealthScore';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
 import { ExportManager } from '@/components/dashboard/ExportManager';
-import {
-  Tooltip,
-} from "@/components/ui/tooltip";
 import {
   Sheet,
   SheetContent,
@@ -75,8 +71,10 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 import { useAppRefresh } from '@/hooks/useAppRefresh';
+import { MobileTopHeader } from '@/components/layout/MobileTopHeader';
+import { getGreetingForHour, getUserFirstName, getUserInitial } from '@/utils/userIdentity';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export' | 'emergency' | 'menu' | 'profile' | 'projection';
 
@@ -117,7 +115,7 @@ function ViewGuard({
 }
 
 export default function Index() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const refreshAppData = useAppRefresh();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -193,19 +191,13 @@ export default function Index() {
 
   const totalNetWorth = useMemo(() => accounts.reduce((sum, acc) => sum + Number(acc.balance), 0), [accounts]);
 
-  const userInitials = useMemo(() => {
-    if (user?.user_metadata?.full_name) {
-      const parts = user.user_metadata.full_name.split(' ');
-      if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-      return parts[0].substring(0, 2).toUpperCase();
-    }
-    return user?.email?.substring(0, 2).toUpperCase() || '??';
-  }, [user]);
+  const userInitial = useMemo(() => getUserInitial(user), [user]);
 
   const userName = useMemo(() => {
     return user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Usuário';
   }, [user]);
 
+  const mobileGreeting = useMemo(() => getGreetingForHour(new Date().getHours()), []);
   const projectedBalance = useMemo(() => totalNetWorth - totalPendingOutflows, [totalNetWorth, totalPendingOutflows]);
 
   const handleEditTransaction = useCallback((item: Transaction) => {
@@ -252,10 +244,6 @@ export default function Index() {
     await togglePaid({ id: item.id, isPaid: false, isChild: !!item.originalId });
     toast({ title: "Pagamento estornado com sucesso." });
   }, [togglePaid]);
-
-  const handleToggleSidebar = useCallback((expanded: boolean) => {
-    // No longer toggleable in Web
-  }, []);
 
   useEffect(() => {
     if (currentView === 'menu') {
@@ -504,9 +492,18 @@ export default function Index() {
         />
       }
       headerMobile={
-        <div className="flex items-center justify-between w-full">
+        <div className="w-full">
+          <MobileTopHeader
+            greeting={mobileGreeting}
+            userName={userName}
+            userInitial={userInitial}
+            onGoHome={() => setCurrentView('dashboard')}
+            onOpenNavigation={() => setIsDrawerOpen(true)}
+            onOpenProfile={() => setCurrentView('profile')}
+            onSignOut={() => void signOut()}
+          />
           {/* Lado esquerdo: Home + Drawer */}
-          <div className="flex items-center gap-1">
+          <div className="sr-only">
             {/* Botão Home — volta para dashboard */}
             {currentView !== 'dashboard' && (
               <button
@@ -527,7 +524,7 @@ export default function Index() {
                 <SheetHeader className="p-6 text-left border-b border-gray-100 dark:border-zinc-900 shrink-0">
                   <div className="flex items-center gap-3">
                     <Avatar className="w-10 h-10">
-                      <AvatarFallback className="bg-primary/10 text-primary font-bold">{userInitials}</AvatarFallback>
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold">{userInitial}</AvatarFallback>
                     </Avatar>
                     <div>
                       <SheetTitle className="text-sm font-bold flex items-center gap-2">
@@ -614,7 +611,7 @@ export default function Index() {
           </div>
 
           {/* Lado direito: Avatar + toggle de visibilidade de saldo */}
-          <div className="flex items-center gap-3">
+          <div className="hidden items-center gap-3">
             {isSuperAdmin && (
               <button
                 onClick={() => navigate('/super')}
@@ -626,7 +623,7 @@ export default function Index() {
             )}
             <div className="flex items-center gap-2">
               <Avatar className="w-8 h-8">
-                <AvatarFallback className="bg-gray-100 dark:bg-zinc-900 text-gray-500 dark:text-zinc-400 font-bold text-xs">{userInitials}</AvatarFallback>
+                <AvatarFallback className="bg-gray-100 dark:bg-zinc-900 text-gray-500 dark:text-zinc-400 font-bold text-xs">{userInitial}</AvatarFallback>
               </Avatar>
               <p className="font-bold text-sm">{userName}</p>
             </div>

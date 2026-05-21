@@ -944,7 +944,7 @@ describe('ReportsDashboard - categoria de acordo', () => {
 
     const rankingScroll = screen.getByTestId('category-ranking-scroll');
     expect(rankingScroll).toHaveClass('overflow-y-auto');
-    expect(rankingScroll).toHaveClass('max-h-[360px]');
+    expect(rankingScroll).toHaveClass('max-h-[320px]');
     expect(rankingScroll).toHaveClass('md:max-h-[420px]');
     expect(rankingScroll).toHaveClass('lg:max-h-[480px]');
 
@@ -1055,10 +1055,51 @@ describe('ReportsDashboard - categoria de acordo', () => {
     render(<ReportsDashboard />);
 
     const rankingScroll = screen.getByTestId('category-ranking-scroll');
-    expect(rankingScroll).toHaveClass('max-h-[360px]');
+    expect(rankingScroll).toHaveClass('max-h-[320px]');
 
     fireEvent.click(screen.getAllByTestId(/category-ranking-bar-/)[0].closest('button') as HTMLButtonElement);
     expect(screen.getByText('Plano de saúde da gata')).toBeInTheDocument();
+  });
+
+  it('renderiza topo mobile sem calendario diario e com cards compactos', () => {
+    mobileMock.useIsMobile.mockReturnValue(true);
+    financeStoreMock.useFinanceStore.mockReturnValue({
+      transactions: [
+        makeTransaction({
+          id: 'mobile-income',
+          description: 'Salário',
+          type: 'income',
+          amount: 3000,
+          date: '2026-04-05',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+        makeTransaction({
+          id: 'mobile-expense',
+          description: 'Mercado',
+          categoryId: 'cat-food',
+          amount: 500,
+          date: '2026-04-10',
+          isPaid: true,
+          accountId: 'acc-1',
+        }),
+      ],
+      categories: [makeCategory('cat-food', 'Alimentação')],
+      creditCards: [],
+      accounts: [{ id: 'acc-1', name: 'Conta Principal', balance: 1000 }],
+      viewDate: new Date(2026, 3, 15),
+      setViewDate: vi.fn(),
+    });
+
+    render(<ReportsDashboard />);
+
+    expect(screen.getByText('Consumo vs receita')).toBeInTheDocument();
+    expect(screen.getByLabelText('Período anterior')).toBeInTheDocument();
+    expect(screen.getByLabelText('Próximo período')).toBeInTheDocument();
+    expect(screen.queryByText('dom')).not.toBeInTheDocument();
+    expect(screen.queryByText('seg')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Receitas').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Despesas').length).toBeGreaterThan(0);
   });
 
   it('mostra itens do periodo em Projetado para categoria pendente da Gestao de Contas', () => {

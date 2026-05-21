@@ -646,6 +646,18 @@ function buildCategoryPeriodItems(params: {
     .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
 }
 
+function getFinancialPeriodLabel(period: Period, date: Date) {
+  if (period === 'month') {
+    return format(date, 'MMMM yyyy', { locale: ptBR });
+  }
+
+  if (period === 'semester') {
+    return `${date.getMonth() < 6 ? '1º Semestre' : '2º Semestre'} ${date.getFullYear()}`;
+  }
+
+  return String(date.getFullYear());
+}
+
 export default function ReportsDashboard() {
   const {
     transactions,
@@ -675,8 +687,22 @@ export default function ReportsDashboard() {
     });
   }, [isMobile]);
 
-  const handlePrevMonth = () => setViewDate(subMonths(viewDate, 1));
-  const handleNextMonth = () => setViewDate(addMonths(viewDate, 1));
+  const shiftPeriodDate = useCallback((direction: -1 | 1) => {
+    if (period === 'month') {
+      setViewDate(addMonths(viewDate, direction));
+      return;
+    }
+
+    if (period === 'semester') {
+      setViewDate(addMonths(viewDate, direction * 6));
+      return;
+    }
+
+    setViewDate(new Date(viewDate.getFullYear() + direction, 0, 1));
+  }, [period, setViewDate, viewDate]);
+
+  const handlePrevPeriod = () => shiftPeriodDate(-1);
+  const handleNextPeriod = () => shiftPeriodDate(1);
 
   const yearMonths = useMemo(
     () => eachMonthOfInterval({ start: startOfYear(viewDate), end: endOfYear(viewDate) }),
@@ -713,6 +739,7 @@ export default function ReportsDashboard() {
   );
 
   const periodLabel = period === 'month' ? 'mês anterior' : period === 'semester' ? 'semestre anterior' : 'ano anterior';
+  const currentPeriodLabel = useMemo(() => getFinancialPeriodLabel(period, viewDate), [period, viewDate]);
 
   const getPeriodData = useCallback((start: Date, end: Date) => {
     if (reportMode === 'realized') {
@@ -1048,29 +1075,189 @@ export default function ReportsDashboard() {
   return (
     <div className="space-y-8 animate-fade-in max-w-[1600px] mx-auto pb-10 px-4 xl:px-6">
       <PageHeader title="Relatórios Analíticos" icon={PieIcon}>
-        <div className="flex flex-wrap items-center gap-3 no-print">
-          <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl p-1">
-            {period === 'month' ? (
-              <>
-                <button onClick={handlePrevMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
+        {isMobile ? (
+          <div className="w-full space-y-3 no-print">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
+                {(['projected', 'realized'] as ReportMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setReportMode(mode)}
+                    className={cn(
+                      "flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
+                      reportMode === mode ? "bg-primary text-white shadow-lg" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {mode === 'projected' ? 'Projetado' : 'Realizado'}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
+                {(['month', 'semester', 'year'] as Period[]).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPeriod(p)}
+                    className={cn(
+                      "flex-1 px-2 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
+                      period === p ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-lg" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {p === 'month' ? 'Mês' : p === 'semester' ? 'Semestre' : 'Ano'}
+                  </button>
+                ))}
+	      </div>
+
+      {isMobile && selectedAccountId === 'all' && (
+        <BudgetOverview
+          categories={categories}
+          transactions={transactions}
+          viewDate={viewDate}
+          period={period}
+          reportMode={reportMode}
+          periodIncome={metrics.income}
+        />
+      )}
+	    </div>
+
+            <div className="rounded-[1.75rem] border border-gray-100 bg-white/90 p-2 dark:border-zinc-800 dark:bg-zinc-900/90">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePrevPeriod}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-gray-100 bg-gray-50 transition-colors hover:bg-gray-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                  aria-label="Período anterior"
+                >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <div className="px-2 min-w-[120px] text-center">
-                  <span className="text-xs font-black uppercase tracking-widest truncate">
-                    {format(viewDate, 'MMMM yyyy', { locale: ptBR })}
-                  </span>
+
+                <div className="min-w-0 flex-1 rounded-2xl bg-gray-50/70 px-3 py-2 text-center dark:bg-zinc-800/60">
+                  <p className="truncate text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+                    {period === 'month' ? 'Mês' : period === 'semester' ? 'Semestre' : 'Ano'}
+                  </p>
+                  <p className="truncate text-sm font-black text-foreground">{currentPeriodLabel}</p>
                 </div>
-                <button onClick={handleNextMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
+
+                <button
+                  onClick={handleNextPeriod}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-gray-100 bg-gray-50 transition-colors hover:bg-gray-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                  aria-label="Próximo período"
+                >
                   <ChevronRight className="w-4 h-4" />
                 </button>
-              </>
-            ) : period === 'semester' ? (
-              <div className="flex items-center">
+              </div>
+
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Select
                   value={String(viewDate.getFullYear())}
-                  onValueChange={(val) => setViewDate(new Date(Number(val), viewDate.getMonth() < 6 ? 0 : 6, 1))}
+                  onValueChange={(val) => setViewDate(new Date(Number(val), period === 'semester' ? (viewDate.getMonth() < 6 ? 0 : 6) : 0, 1))}
                 >
-                  <SelectTrigger className="h-9 border-none bg-transparent font-black uppercase tracking-widest text-xs min-w-[90px] outline-none shadow-none focus:ring-0">
+                  <SelectTrigger className="h-10 rounded-2xl border-0 bg-gray-50 font-black text-xs uppercase tracking-widest dark:bg-zinc-800/80">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border-2">
+                    {yearOptions.map((year) => (
+                      <SelectItem key={year} value={String(year)} className="font-bold">{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {period === 'semester' ? (
+                  <Select
+                    value={viewDate.getMonth() < 6 ? '1' : '2'}
+                    onValueChange={(val) => setViewDate(new Date(viewDate.getFullYear(), val === '1' ? 0 : 6, 1))}
+                  >
+                    <SelectTrigger className="h-10 rounded-2xl border-0 bg-gray-50 font-black text-xs uppercase tracking-widest dark:bg-zinc-800/80">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-2">
+                      <SelectItem value="1" className="font-bold">1º Semestre</SelectItem>
+                      <SelectItem value="2" className="font-bold">2º Semestre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : period === 'month' ? (
+                  <Select
+                    value={String(viewDate.getMonth())}
+                    onValueChange={(val) => setViewDate(new Date(viewDate.getFullYear(), Number(val), 1))}
+                  >
+                    <SelectTrigger className="h-10 rounded-2xl border-0 bg-gray-50 font-black text-xs uppercase tracking-widest dark:bg-zinc-800/80">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-2">
+                      {Array.from({ length: 12 }).map((_, monthIndex) => (
+                        <SelectItem key={monthIndex} value={String(monthIndex)} className="font-bold">
+                          {format(new Date(2026, monthIndex, 1), 'MMMM', { locale: ptBR })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+              </div>
+            </div>
+
+            <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+              <SelectTrigger className="h-11 w-full rounded-2xl bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 font-bold text-gray-900 dark:text-zinc-50 outline-none">
+                <Wallet className="w-4 h-4 mr-2 text-primary" />
+                <SelectValue placeholder="Conta" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-2">
+                <SelectItem value="all" className="font-bold">Todas as Contas</SelectItem>
+                {accounts.map((acc) => (
+                  <SelectItem key={acc.id} value={acc.id} className="font-bold">{acc.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3 no-print">
+            <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl p-1">
+              {period === 'month' ? (
+                <>
+                  <button onClick={handlePrevPeriod} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <div className="px-2 min-w-[120px] text-center">
+                    <span className="text-xs font-black uppercase tracking-widest truncate">
+                      {format(viewDate, 'MMMM yyyy', { locale: ptBR })}
+                    </span>
+                  </div>
+                  <button onClick={handleNextPeriod} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </>
+              ) : period === 'semester' ? (
+                <div className="flex items-center">
+                  <Select
+                    value={String(viewDate.getFullYear())}
+                    onValueChange={(val) => setViewDate(new Date(Number(val), viewDate.getMonth() < 6 ? 0 : 6, 1))}
+                  >
+                    <SelectTrigger className="h-9 border-none bg-transparent font-black uppercase tracking-widest text-xs min-w-[90px] outline-none shadow-none focus:ring-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-2">
+                      {yearOptions.map(year => (
+                        <SelectItem key={year} value={String(year)} className="font-bold">{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={viewDate.getMonth() < 6 ? '1' : '2'}
+                    onValueChange={(val) => setViewDate(new Date(viewDate.getFullYear(), val === '1' ? 0 : 6, 1))}
+                  >
+                    <SelectTrigger className="h-9 border-none bg-transparent font-black uppercase tracking-widest text-xs min-w-[150px] outline-none shadow-none focus:ring-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-2">
+                      <SelectItem value="1" className="font-bold">1º Semestre</SelectItem>
+                      <SelectItem value="2" className="font-bold">2º Semestre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <Select
+                  value={String(viewDate.getFullYear())}
+                  onValueChange={(val) => setViewDate(new Date(Number(val), 0, 1))}
+                >
+                  <SelectTrigger className="h-9 border-none bg-transparent font-black uppercase tracking-widest text-xs min-w-[100px] outline-none shadow-none focus:ring-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-2">
@@ -1079,88 +1266,63 @@ export default function ReportsDashboard() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select
-                  value={viewDate.getMonth() < 6 ? '1' : '2'}
-                  onValueChange={(val) => setViewDate(new Date(viewDate.getFullYear(), val === '1' ? 0 : 6, 1))}
+              )}
+            </div>
+
+            <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+              <SelectTrigger className="h-11 w-[180px] rounded-2xl bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 font-bold text-gray-900 dark:text-zinc-50 outline-none">
+                <Wallet className="w-4 h-4 mr-2 text-primary" />
+                <SelectValue placeholder="Conta" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-2">
+                <SelectItem value="all" className="font-bold">Todas as Contas</SelectItem>
+                {accounts.map(acc => (
+                  <SelectItem key={acc.id} value={acc.id} className="font-bold">{acc.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="flex bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
+              {(['projected', 'realized'] as ReportMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setReportMode(mode)}
+                  className={cn(
+                    "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
+                    reportMode === mode ? "bg-primary text-white shadow-lg" : "text-muted-foreground hover:text-foreground"
+                  )}
                 >
-                  <SelectTrigger className="h-9 border-none bg-transparent font-black uppercase tracking-widest text-xs min-w-[150px] outline-none shadow-none focus:ring-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-2xl border-2">
-                    <SelectItem value="1" className="font-bold">1º Semestre</SelectItem>
-                    <SelectItem value="2" className="font-bold">2º Semestre</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : (
-              <Select
-                value={String(viewDate.getFullYear())}
-                onValueChange={(val) => setViewDate(new Date(Number(val), 0, 1))}
-              >
-                <SelectTrigger className="h-9 border-none bg-transparent font-black uppercase tracking-widest text-xs min-w-[100px] outline-none shadow-none focus:ring-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl border-2">
-                  {yearOptions.map(year => (
-                    <SelectItem key={year} value={String(year)} className="font-bold">{year}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-
-          <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-            <SelectTrigger className="h-11 w-[180px] rounded-2xl bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 font-bold text-gray-900 dark:text-zinc-50 outline-none">
-              <Wallet className="w-4 h-4 mr-2 text-primary" />
-              <SelectValue placeholder="Conta" />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl border-2">
-              <SelectItem value="all" className="font-bold">Todas as Contas</SelectItem>
-              {accounts.map(acc => (
-                <SelectItem key={acc.id} value={acc.id} className="font-bold">{acc.name}</SelectItem>
+                  {mode === 'projected' ? 'Projetado' : 'Realizado'}
+                </button>
               ))}
-            </SelectContent>
-          </Select>
+            </div>
 
-          <div className="flex bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
-            {(['projected', 'realized'] as ReportMode[]).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setReportMode(mode)}
-                className={cn(
-                  "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
-                  reportMode === mode ? "bg-primary text-white shadow-lg" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {mode === 'projected' ? 'Projetado' : 'Realizado'}
-              </button>
-            ))}
+            <div className="flex bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
+              {(['month', 'semester', 'year'] as Period[]).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={cn(
+                    "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
+                    period === p ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-lg" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {p === 'month' ? 'Mês' : p === 'semester' ? 'Semestre' : 'Ano'}
+                </button>
+              ))}
+            </div>
           </div>
-
-          <div className="flex bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
-            {(['month', 'semester', 'year'] as Period[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={cn(
-                  "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
-                  period === p ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-lg" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {p === 'month' ? 'Mês' : p === 'semester' ? 'Semestre' : 'Ano'}
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
       </PageHeader>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-6">
         <StatCard
           label={reportMode === 'projected' ? 'Receitas previstas' : 'Receitas efetivas'}
           value={metrics.income}
           icon={<ArrowUpCircle className="text-emerald-500" />}
           comparison={metrics.comparisons.income}
           periodLabel={periodLabel}
+          compact={isMobile}
         />
         <StatCard
           label={reportMode === 'projected' ? 'Despesas previstas' : 'Despesas efetivas'}
@@ -1170,6 +1332,7 @@ export default function ReportsDashboard() {
           periodLabel={periodLabel}
           forceRed
           invertColors
+          compact={isMobile}
         />
         <StatCard
           label={reportMode === 'projected' ? 'Saldo previsto' : 'Saldo efetivo do período'}
@@ -1178,10 +1341,23 @@ export default function ReportsDashboard() {
           comparison={metrics.comparisons.balance}
           periodLabel={periodLabel}
           isNeutral
+          compact={isMobile}
         />
+        {isMobile && (
+          <StatCard
+            label="Consumo vs receita"
+            value={metrics.consumption.percent ?? 0}
+            icon={<TrendingUp className="text-primary" />}
+            comparison={metrics.comparisons.consumption}
+            periodLabel={periodLabel}
+            invertColors
+            compact
+            isPercentValue
+          />
+        )}
       </div>
 
-      {selectedAccountId === 'all' && (
+      {!isMobile && selectedAccountId === 'all' && (
         <BudgetOverview
           categories={categories}
           transactions={transactions}
@@ -1386,9 +1562,9 @@ export default function ReportsDashboard() {
     </>
   ) : null}
 
-  <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        <div className="lg:col-span-3 space-y-6">
-          <div className="bg-white dark:bg-zinc-900 rounded-[2rem] p-6 border border-gray-100 dark:border-zinc-800 shadow-sm">
+  <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 lg:gap-8">
+        <div className="order-1 lg:col-span-3 space-y-5 lg:space-y-6">
+          <div className="bg-white dark:bg-zinc-900 rounded-[1.75rem] lg:rounded-[2rem] p-4 lg:p-6 border border-gray-100 dark:border-zinc-800 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
             <div>
               <h3 className="text-lg font-black tracking-tight">Total de Consumo vs Receita</h3>
@@ -1400,11 +1576,11 @@ export default function ReportsDashboard() {
               <p className="text-4xl font-black tracking-tighter tabular-nums">
                 {metrics.consumption.percent !== null ? `${metrics.consumption.percent.toFixed(1)}%` : 'Sem receita'}
               </p>
-              <ComparisonBadge comparison={metrics.comparisons.consumption} periodLabel={periodLabel} isPercentPoints />
+              <ComparisonBadge comparison={metrics.comparisons.consumption} periodLabel={periodLabel} isPercentPoints compact={isMobile} />
             </div>
           </div>
 
-          <div className="mb-3 flex flex-wrap items-center gap-4 text-[11px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+          <div className="mb-3 flex flex-wrap items-center gap-3 text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-white ring-1 ring-white/30" />
               <span>Receitas</span>
@@ -1415,8 +1591,8 @@ export default function ReportsDashboard() {
             </div>
           </div>
 
-          <div className="h-[260px] w-full">
-            <ResponsiveContainer width="100%" height="100%" minHeight={240}>
+          <div className="h-[220px] lg:h-[260px] w-full">
+            <ResponsiveContainer width="100%" height="100%" minHeight={isMobile ? 200 : 240}>
               <LineChart data={consumptionTrendData} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
@@ -1478,7 +1654,7 @@ export default function ReportsDashboard() {
           </div>
         </div>
 
-        <div ref={analysisSectionRef} className="bg-white dark:bg-zinc-900 rounded-[2rem] p-6 border border-gray-100 dark:border-zinc-800 shadow-sm">
+        <div ref={analysisSectionRef} className="bg-white dark:bg-zinc-900 rounded-[1.75rem] lg:rounded-[2rem] p-4 lg:p-6 border border-gray-100 dark:border-zinc-800 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
             <h3 className="text-lg font-black tracking-tight">Análise de Categoria</h3>
             <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
@@ -1502,10 +1678,10 @@ export default function ReportsDashboard() {
                   <p className="mt-2 text-2xl font-black tabular-nums">{formatCurrency(selectedCategoryAnalysis.current)}</p>
                   <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Anterior</p>
                   <p className="mt-2 text-lg font-black tabular-nums text-muted-foreground">{formatCurrency(selectedCategoryAnalysis.previous)}</p>
-                  <ComparisonBadge comparison={selectedCategoryAnalysis.comparison} periodLabel={periodLabel} invertColors className="mt-4" />
+                  <ComparisonBadge comparison={selectedCategoryAnalysis.comparison} periodLabel={periodLabel} invertColors compact={isMobile} className="mt-4" />
                 </div>
-                <div className="h-[220px] min-w-0">
-                  <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+                <div className="h-[200px] lg:h-[220px] min-w-0">
+                  <ResponsiveContainer width="100%" height="100%" minHeight={180}>
                     <LineChart data={selectedCategoryAnalysis.trend} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
@@ -1526,7 +1702,7 @@ export default function ReportsDashboard() {
                 </div>
 
                 {selectedCategoryAnalysis.items.length > 0 ? (
-                  <div className="mt-4 space-y-2" data-testid="category-analysis-items">
+                  <div className="mt-4 space-y-2 max-h-[280px] overflow-y-auto pr-1" data-testid="category-analysis-items">
                     {selectedCategoryAnalysis.items.map((item) => (
                       <div
                         key={item.id}
@@ -1560,10 +1736,10 @@ export default function ReportsDashboard() {
         </div>
       </div>
 
-        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm">
-          <h3 className="text-lg font-black tracking-tight mb-6">Ranking de Despesas</h3>
+        <div className="order-2 lg:col-span-2 bg-white dark:bg-zinc-900 rounded-[1.75rem] lg:rounded-[2.5rem] p-4 lg:p-8 border border-gray-100 dark:border-zinc-800 shadow-sm">
+          <h3 className="text-lg font-black tracking-tight mb-4 lg:mb-6">Ranking de Despesas</h3>
           <div
-            className="space-y-6 overflow-y-auto pr-1 max-h-[360px] md:max-h-[420px] lg:max-h-[480px]"
+            className="space-y-4 lg:space-y-6 overflow-y-auto pr-1 max-h-[320px] md:max-h-[420px] lg:max-h-[480px]"
             data-testid="category-ranking-scroll"
           >
             {topCategories.map((cat, idx) => {
@@ -1626,18 +1802,20 @@ function ComparisonBadge({
   periodLabel, 
   invertColors = false, 
   isPercentPoints = false,
+  compact = false,
   className 
 }: { 
   comparison: PeriodComparison, 
   periodLabel: string, 
   invertColors?: boolean, 
   isPercentPoints?: boolean,
+  compact?: boolean,
   className?: string
 }) {
   if (!comparison.hasBase) {
     return (
       <div className={cn("text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1", className)}>
-        <span>sem base no {periodLabel}</span>
+        <span>{compact ? '→ 0%' : `sem base no ${periodLabel}`}</span>
       </div>
     );
   }
@@ -1652,7 +1830,10 @@ function ComparisonBadge({
     ? "text-muted-foreground" 
     : (isPositive !== invertColors ? "text-emerald-500" : "text-rose-500");
     
-  const arrow = isNeutral ? "" : (isPositive ? "↑" : "↓");
+  const arrow = isNeutral ? "→" : (isPositive ? "↑" : "↓");
+  const compactPercent = isPercentPoints
+    ? Math.abs(comparison.diff)
+    : Math.abs(comparison.percent ?? 0);
   const value = isPercentPoints 
     ? `${Math.abs(comparison.diff).toFixed(1)} p.p.` 
     : formatCurrency(Math.abs(comparison.diff));
@@ -1660,6 +1841,14 @@ function ComparisonBadge({
   const percentText = !isPercentPoints && comparison.percent !== null 
     ? ` (${Math.abs(comparison.percent).toFixed(1)}%)` 
     : "";
+
+  if (compact) {
+    return (
+      <div className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1", colorClass, className)}>
+        <span>{arrow} {compactPercent.toFixed(1)}%</span>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1", colorClass, className)}>
@@ -1677,7 +1866,9 @@ function StatCard({
   periodLabel, 
   isNeutral, 
   forceRed, 
-  invertColors 
+  invertColors,
+  compact = false,
+  isPercentValue = false,
 }: { 
   label: string, 
   value: number, 
@@ -1686,12 +1877,17 @@ function StatCard({
   periodLabel?: string, 
   isNeutral?: boolean, 
   forceRed?: boolean,
-  invertColors?: boolean
+  invertColors?: boolean,
+  compact?: boolean,
+  isPercentValue?: boolean,
 }) {
   return (
-    <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-gray-100 dark:border-zinc-800 shadow-sm group hover:scale-[1.02] transition-all">
-      <div className="flex justify-between items-start mb-4">
-        <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800 group-hover:bg-primary/10 transition-colors">
+    <div className={cn(
+      "bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 shadow-sm group transition-all",
+      compact ? "rounded-[1.5rem] p-4" : "rounded-[2rem] p-6 hover:scale-[1.02]"
+    )}>
+      <div className={cn("flex justify-between items-start", compact ? "mb-3" : "mb-4")}>
+        <div className={cn("rounded-2xl bg-zinc-50 dark:bg-zinc-800 group-hover:bg-primary/10 transition-colors", compact ? "p-2.5" : "p-3")}>
           {icon}
         </div>
         {comparison && periodLabel && (
@@ -1699,17 +1895,19 @@ function StatCard({
             comparison={comparison} 
             periodLabel={periodLabel} 
             invertColors={invertColors} 
+            compact={compact}
             className="bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-lg"
           />
         )}
       </div>
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{label}</p>
+      <p className={cn("font-bold text-muted-foreground uppercase tracking-widest", compact ? "text-[10px]" : "text-xs")}>{label}</p>
       <p className={cn(
-        "mt-1 whitespace-nowrap text-2xl font-black tracking-tighter tabular-nums leading-none",
+        "mt-1 whitespace-nowrap font-black tracking-tighter tabular-nums leading-none",
+        compact ? "text-lg" : "text-2xl",
         forceRed ? "text-rose-500" : (!isNeutral && (value >= 0 ? "text-emerald-500" : "text-rose-500")),
         isNeutral && "text-gray-900 dark:text-zinc-50"
       )}>
-        {formatCurrency(value)}
+        {isPercentValue ? `${value.toFixed(1)}%` : formatCurrency(value)}
       </p>
     </div>
   );
