@@ -136,13 +136,35 @@ describe('Sprint de acesso, mobile, AMOLED e acento', () => {
     expect(source).toContain('hsl(var(--primary))');
   });
 
-  it('ajusta a linha de Receitas para verde no modo claro sem mexer na linha vermelha de Despesas', () => {
+  it('usa branco no dark e a cor de destaque do usuario no light para a linha de Receitas', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/pages/ReportsDashboard.tsx'), 'utf8');
 
-    expect(source).toContain("const incomeTrendColor = isDarkTheme ? '#FFFFFF' : 'hsl(var(--primary))';");
+    expect(source).toContain("import { accentColors, useThemeColor } from '@/hooks/useThemeColor';");
+    expect(source).toContain('const { accentColor } = useThemeColor();');
+    expect(source).toContain('const activeAccentColor = useMemo(() => (');
+    expect(source).toContain("const incomeTrendColor = isDarkTheme ? '#FFFFFF' : `hsl(${activeAccentColor.hsl})`;");
     expect(source).toContain("const expenseTrendColor = '#F43F5E';");
     expect(source).toContain('stroke={incomeTrendColor}');
     expect(source).toContain('stroke={expenseTrendColor}');
+  });
+
+  it('empilha os filtros mobile de Relatórios sem sobrepor Projetado/Realizado e Mês/Semestre/Ano', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/pages/ReportsDashboard.tsx'), 'utf8');
+
+    expect(source).toContain('<div className="space-y-2">');
+    expect(source).toContain('flex w-full bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2');
+    expect(source).not.toContain('<div className="grid grid-cols-2 gap-2">');
+  });
+
+  it('desativa o React Query Devtools por padrão e nunca o renderiza sem flag explícita', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
+
+    expect(source).toContain("const enableQueryDevtools =");
+    expect(source).toContain('import.meta.env.DEV && import.meta.env.VITE_ENABLE_QUERY_DEVTOOLS === "true"');
+    expect(source).toContain('lazy(() =>');
+    expect(source).toContain('import("@tanstack/react-query-devtools")');
+    expect(source).toContain('{enableQueryDevtools && ReactQueryDevtools ? (');
+    expect(source).not.toContain("process.env.NODE_ENV === 'development' && <ReactQueryDevtools");
   });
 
   it('remove o aviso premium da cor de destaque e libera a personalizacao no perfil', () => {

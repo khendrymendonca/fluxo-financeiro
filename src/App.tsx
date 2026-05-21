@@ -1,5 +1,5 @@
-﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { lazy, Suspense } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -32,6 +32,17 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+const enableQueryDevtools =
+  import.meta.env.DEV && import.meta.env.VITE_ENABLE_QUERY_DEVTOOLS === "true";
+
+const ReactQueryDevtools = enableQueryDevtools
+  ? lazy(() =>
+      import("@tanstack/react-query-devtools").then((module) => ({
+        default: module.ReactQueryDevtools,
+      }))
+    )
+  : null;
 
 const AppRoutes = () => {
   const { user, loading } = useAuth();
@@ -90,7 +101,11 @@ const App = () => (
         </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>
-    {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
+    {enableQueryDevtools && ReactQueryDevtools ? (
+      <Suspense fallback={null}>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </Suspense>
+    ) : null}
   </QueryClientProvider>
 );
 
