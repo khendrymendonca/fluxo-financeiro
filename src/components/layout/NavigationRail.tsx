@@ -270,9 +270,6 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44 rounded-2xl">
-              <div className="px-3 py-2">
-                <p className="truncate text-sm font-black text-foreground">{profileName}</p>
-              </div>
               <DropdownMenuItem className="font-bold" onClick={() => onNavigate('profile')}>
                 <Settings className="mr-2 h-4 w-4" />
                 Configurações
