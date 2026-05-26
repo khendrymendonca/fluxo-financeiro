@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ export default function AuthPage() {
     const [isSendingRecovery, setIsSendingRecovery] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [nickname, setNickname] = useState('');
     const [isSignUp, setIsSignUp] = useState(false);
     const [consentAccepted, setConsentAccepted] = useState(false);
@@ -102,9 +104,9 @@ export default function AuthPage() {
                     <div className="w-fit mx-auto mb-4 text-primary">
                         <AppLogo className="h-14 w-40" />
                     </div>
-                    <h1 className="text-2xl font-bold">{isSignUp ? 'Criar Conta' : 'Bem-vindo de volta'}</h1>
+                    <h1 className="text-2xl font-bold">{isSignUp ? 'Criar Conta' : 'Fluxo'}</h1>
                     <p className="text-muted-foreground text-sm mt-2">
-                        {isSignUp ? 'Comece a controlar suas finanças hoje' : 'Entre para acessar seu dashboard'}
+                        {isSignUp ? 'Comece a controlar suas finanças hoje' : 'A parte fácil de organizar a sua vida financeira.'}
                     </p>
                 </div>
 
@@ -137,16 +139,27 @@ export default function AuthPage() {
                     )}
                     <div className="space-y-2">
                         <Label htmlFor="password">Senha</Label>
-                        <Input
-                            id="password"
-                            type="password"
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            minLength={6}
-                            className="rounded-xl"
-                        />
+                        <div className="relative">
+                            <Input
+                                id="password"
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                minLength={6}
+                                className="rounded-xl pr-10"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                                tabIndex={-1}
+                            >
+                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                        </div>
                     </div>
                     {!isSignUp && (
                         <div className="flex justify-end">
