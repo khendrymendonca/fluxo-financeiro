@@ -49,8 +49,8 @@ export function UpdatePrompt() {
     setIsVisible(false);
   };
 
-  // SW ja atualizou em background (skipWaiting: true no workbox)
-  // O botao apenas recarrega a pagina para o usuario ver a nova versao
+  // SW já atualizou em background (skipWaiting: true no workbox)
+  // O botão apenas recarrega a página para o usuário ver a nova versão
   const handleUpdate = async () => {
     await updateServiceWorker(true);
     window.location.reload();
@@ -67,9 +67,9 @@ export function UpdatePrompt() {
               <Rocket className="w-6 h-6 animate-pulse" />
             </div>
             <div className="space-y-1">
-              <h3 className="font-black text-sm tracking-tight">Nova versao disponivel!</h3>
+              <h3 className="font-black text-sm tracking-tight">Nova versão disponível!</h3>
               <p className="text-[11px] text-muted-foreground leading-relaxed font-medium">
-                Uma nova versao do Fluxo foi detectada. Atualize agora para receber as novidades e melhorias.
+                Uma nova versão do Fluxo foi detectada. Atualize agora para receber as novidades e melhorias.
               </p>
             </div>
           </div>
@@ -95,7 +95,7 @@ export function UpdatePrompt() {
         </div>
 
         <div className="text-[11px] text-center text-muted-foreground/50 uppercase font-black tracking-widest">
-          O login sera mantido apos a atualizacao
+          O login será mantido após a atualização
         </div>
       </div>
     </div>

@@ -372,24 +372,24 @@ export function buildMonthPlan({
   if (expectedIncome === 0 && totalCommitted === 0) {
     alerts.push({
       severity: 'info',
-      title: 'Ainda nao ha dados suficientes.',
-      message: 'Sem receitas e compromissos lancados, o plano do mes permanece neutro ate novos dados entrarem.',
+      title: 'Ainda não há dados suficientes.',
+      message: 'Sem receitas e compromissos lançados, o plano do mês permanece neutro até novos dados entrarem.',
     });
   }
 
   if (essentialExpenses > expectedIncome && expectedIncome > 0) {
     alerts.push({
       severity: 'danger',
-      title: 'As despesas essenciais ja superam a renda prevista.',
-      message: 'Antes de pensar em novos gastos, o mes precisa de corte, renegociacao ou reforco de receita.',
+      title: 'As despesas essenciais já superam a renda prevista.',
+      message: 'Antes de pensar em novos gastos, o mês precisa de corte, renegociação ou reforço de receita.',
     });
   }
 
   if (projectedBalance < 0) {
     alerts.push({
       severity: 'danger',
-      title: 'Ha risco de fechamento negativo.',
-      message: `A projecao do mes aponta ${currencyLabel(projectedBalance)} abaixo do necessario.`,
+      title: 'Há risco de fechamento negativo.',
+      message: `A projeção do mês aponta ${currencyLabel(projectedBalance)} abaixo do necessário.`,
     });
   }
 
@@ -404,24 +404,24 @@ export function buildMonthPlan({
   if (cardCommitments > 0) {
     alerts.push({
       severity: monthStatus === 'critical' ? 'warning' : 'info',
-      title: 'Parte do mes ja esta comprometida no cartao.',
-      message: `Ha ${currencyLabel(cardCommitments)} em compromissos no credito dentro desta leitura.`,
+      title: 'Parte do mês já está comprometida no cartão.',
+      message: `Há ${currencyLabel(cardCommitments)} em compromissos no crédito dentro desta leitura.`,
     });
   }
 
   if (debtCommitments > 0 && debtPaymentCapacity === 0) {
     alerts.push({
       severity: monthStatus === 'critical' ? 'danger' : 'warning',
-      title: 'Nao ha folga segura para acelerar dividas.',
-      message: 'Neste mes, a prioridade deve ser proteger o caixa minimo antes de antecipar pagamentos adicionais.',
+      title: 'Não há folga segura para acelerar dívidas.',
+      message: 'Neste mês, a prioridade deve ser proteger o caixa mínimo antes de antecipar pagamentos adicionais.',
     });
   }
 
   if (alerts.length === 0) {
     alerts.push({
       severity: 'info',
-      title: 'Seu mes esta respirando bem.',
-      message: 'A leitura atual indica margem para decidir com calma, mantendo disciplina no restante do periodo.',
+      title: 'Seu mês está respirando bem.',
+      message: 'A leitura atual indica margem para decidir com calma, mantendo disciplina no restante do período.',
     });
   }
 
@@ -430,7 +430,7 @@ export function buildMonthPlan({
   if (expectedIncome === 0 && totalCommitted === 0) {
     recommendedActions.push({
       type: 'review',
-      title: 'Lance a base do mes antes de decidir.',
+      title: 'Lance a base do mês antes de decidir.',
       message: 'Registre receitas e compromissos principais para que o plano consiga orientar o que cabe fazer agora.',
     });
   }
@@ -438,8 +438,8 @@ export function buildMonthPlan({
   if (upcomingMustPayTotal > 0) {
     recommendedActions.push({
       type: 'pay',
-      title: 'Proteja os proximos compromissos primeiro.',
-      message: `Separe ${currencyLabel(upcomingMustPayTotal)} para os itens mais urgentes do mes.`,
+      title: 'Proteja os próximos compromissos primeiro.',
+      message: `Separe ${currencyLabel(upcomingMustPayTotal)} para os itens mais urgentes do mês.`,
       amount: upcomingMustPayTotal,
     });
   }
@@ -448,24 +448,24 @@ export function buildMonthPlan({
     recommendedActions.push({
       type: 'avoid',
       title: 'Evite novos parcelamentos agora.',
-      message: 'O mes ja esta pressionado e novas parcelas ampliam o risco de fechamento negativo.',
+      message: 'O mês já está pressionado e novas parcelas ampliam o risco de fechamento negativo.',
     });
     recommendedActions.push({
       type: 'review',
-      title: 'Revise gastos variaveis e adiaveis.',
-      message: 'Priorize cortes nos itens nao essenciais antes de mexer em compromissos estruturais.',
+      title: 'Revise gastos variáveis e adiáveis.',
+      message: 'Priorize cortes nos itens não essenciais antes de mexer em compromissos estruturais.',
     });
   } else if (monthStatus === 'attention') {
     recommendedActions.push({
       type: 'review',
-      title: 'Revise o restante do mes antes de ampliar gastos.',
-      message: 'A folga existe, mas esta curta para decisoes impulsivas.',
+      title: 'Revise o restante do mês antes de ampliar gastos.',
+      message: 'A folga existe, mas está curta para decisões impulsivas.',
     });
   } else if (expectedIncome > 0 || totalCommitted > 0) {
     recommendedActions.push({
       type: 'save',
-      title: 'Guarde parte da folga como protecao.',
-      message: `Voce ainda pode gastar com seguranca, mas manter uma reserva de ${currencyLabel(safetyBuffer)} deixa o mes mais solido.`,
+      title: 'Guarde parte da folga como proteção.',
+      message: `Você ainda pode gastar com segurança, mas manter uma reserva de ${currencyLabel(safetyBuffer)} deixa o mês mais sólido.`,
       amount: safetyBuffer,
     });
   }
@@ -473,25 +473,25 @@ export function buildMonthPlan({
   if (debtCommitments > 0 && debtPaymentCapacity > 0) {
     recommendedActions.push({
       type: 'pay',
-      title: 'Ha espaco seguro para acelerar dividas.',
-      message: `A margem conservadora para dividas neste mes e ${currencyLabel(debtPaymentCapacity)}.`,
+      title: 'Há espaço seguro para acelerar dívidas.',
+      message: `A margem conservadora para dívidas neste mês é ${currencyLabel(debtPaymentCapacity)}.`,
       amount: debtPaymentCapacity,
     });
   } else if (debtCommitments > 0) {
     recommendedActions.push({
       type: monthStatus === 'critical' ? 'negotiate' : 'review',
-      title: monthStatus === 'critical' ? 'Negocie o peso das dividas.' : 'Mantenha as dividas no minimo planejado.',
+      title: monthStatus === 'critical' ? 'Negocie o peso das dívidas.' : 'Mantenha as dívidas no mínimo planejado.',
       message: monthStatus === 'critical'
-        ? 'Sem folga segura, a melhor defesa e renegociar prazo, parcela ou prioridade.'
-        : 'Sem folga suficiente para acelerar, preserve o fluxo principal do mes.',
+        ? 'Sem folga segura, a melhor defesa é renegociar prazo, parcela ou prioridade.'
+        : 'Sem folga suficiente para acelerar, preserve o fluxo principal do mês.',
     });
   }
 
   if (deferableItems.length > 0) {
     recommendedActions.push({
       type: 'review',
-      title: 'Ha itens que podem ser adiados sem ferir o essencial.',
-      message: `${deferableItems.length} compromisso(s) aparecem como adiaveis nesta leitura inicial do mes.`,
+      title: 'Há itens que podem ser adiados sem ferir o essencial.',
+      message: `${deferableItems.length} compromisso(s) aparecem como adiáveis nesta leitura inicial do mês.`,
     });
   }
 
@@ -499,9 +499,9 @@ export function buildMonthPlan({
   const incomeBase = Math.max(expectedIncome, 1);
   const dominantPressure = [
     { key: 'essential' as const, label: 'Essenciais', amount: essentialExpenses },
-    { key: 'variable' as const, label: 'Variaveis', amount: variableExpenses },
-    { key: 'card' as const, label: 'Cartao/Fatura', amount: cardCommitments },
-    { key: 'debt' as const, label: 'Dividas', amount: debtCommitments },
+    { key: 'variable' as const, label: 'Variáveis', amount: variableExpenses },
+    { key: 'card' as const, label: 'Cartão/Fatura', amount: cardCommitments },
+    { key: 'debt' as const, label: 'Dívidas', amount: debtCommitments },
   ].sort((a, b) => b.amount - a.amount)[0];
 
   const pressureBuckets: MonthPlanPressureBucket[] = [
@@ -521,14 +521,14 @@ export function buildMonthPlan({
     },
     {
       key: 'card',
-      label: 'Cartao/Fatura',
+      label: 'Cartão/Fatura',
       amount: cardCommitments,
       ratio: clampRatio(cardCommitments / pressureBase),
       tone: cardCommitments > expectedIncome * 0.25 ? 'attention' : 'default',
     },
     {
       key: 'debt',
-      label: 'Dividas',
+      label: 'Dívidas',
       amount: debtCommitments,
       ratio: clampRatio(debtCommitments / pressureBase),
       tone: debtCommitments > expectedIncome * 0.2 ? 'risk' : 'attention',
@@ -567,7 +567,7 @@ export function buildMonthPlan({
     },
     {
       key: 'card',
-      label: 'Cartao/Fatura',
+      label: 'Cartão/Fatura',
       amount: cardCommitments,
       ratio: clampRatio(cardCommitments / incomeBase),
       tone: 'attention',
@@ -596,7 +596,7 @@ export function buildMonthPlan({
     freeRatio: clampRatio(safeToSpend / incomeBase),
     debtRatio: clampRatio(debtCommitments / incomeBase),
     dominantPressureKey: dominantPressure?.key ?? 'none',
-    dominantPressureLabel: dominantPressure?.label ?? 'Sem pressao dominante',
+    dominantPressureLabel: dominantPressure?.label ?? 'Sem pressão dominante',
     dominantPressureAmount: dominantPressure?.amount ?? 0,
     upcomingCount: upcomingMustPay.length,
     overdueCount: upcomingMustPay.filter((item) => item.isOverdue).length,

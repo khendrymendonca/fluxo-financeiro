@@ -21,7 +21,7 @@ export default function ReauthenticationPage() {
         <AuthActionCard
             icon={<ShieldCheck className="w-8 h-8" />}
             title="Identidade confirmada"
-            description="Sua verificacao foi concluida. Agora voce pode continuar com seguranca."
+            description="Sua verificação foi concluída. Agora você pode continuar com segurança."
             actions={(
                 <Button
                     type="button"

@@ -68,8 +68,8 @@ export default function AuthPage() {
         if (!email.trim()) {
             toast({
                 variant: "destructive",
-                title: "Email obrigatorio",
-                description: "Informe seu email para receber o link de recuperacao.",
+                title: "Email obrigatório",
+                description: "Informe seu email para receber o link de recuperação.",
             });
             return;
         }
@@ -84,12 +84,12 @@ export default function AuthPage() {
 
             toast({
                 title: "Link enviado",
-                description: "Enviamos um link de recuperacao para o seu email.",
+                description: "Enviamos um link de recuperação para o seu email.",
             });
         } catch {
             toast({
                 variant: "destructive",
-                title: "Nao foi possivel enviar o link",
+                title: "Não foi possível enviar o link",
                 description: "Tente novamente em instantes.",
             });
         } finally {

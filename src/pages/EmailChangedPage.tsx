@@ -24,7 +24,7 @@ export default function EmailChangedPage() {
         <AuthActionCard
             icon={<MailCheck className="w-8 h-8" />}
             title="Email alterado com sucesso"
-            description="Seu novo email foi confirmado e ja esta vinculado a sua conta."
+            description="Seu novo email foi confirmado e já está vinculado à sua conta."
             actions={(
                 <>
                     {user ? (

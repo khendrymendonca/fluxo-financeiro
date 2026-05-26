@@ -59,7 +59,7 @@ export function evaluatePaymentDecision({
     return {
       decision: 'attention',
       title: 'Informe um valor para simular.',
-      message: 'Sem um valor valido, nao da para estimar o impacto no mes.',
+      message: 'Sem um valor válido, não dá para estimar o impacto no mês.',
       currentMonthImpact: 0,
       safeMarginAfter: safeToSpend,
       suggestedMaxAmount:
@@ -79,7 +79,7 @@ export function evaluatePaymentDecision({
     if (normalizedAmount <= safeToSpend) {
       return {
         decision: 'recommended',
-        title: 'A compra cabe no mes.',
+        title: 'A compra cabe no mês.',
         message: 'O valor cabe dentro da sua margem segura atual.',
         currentMonthImpact: normalizedAmount,
         safeMarginAfter,
@@ -90,8 +90,8 @@ export function evaluatePaymentDecision({
     if (normalizedAmount <= projectedBalance) {
       return {
         decision: 'attention',
-        title: 'A compra e possivel, mas pede atencao.',
-        message: 'Ela consome a margem segura e deixa o mes mais sensivel.',
+        title: 'A compra é possível, mas pede atenção.',
+        message: 'Ela consome a margem segura e deixa o mês mais sensível.',
         currentMonthImpact: normalizedAmount,
         safeMarginAfter,
         suggestedMaxAmount: safeToSpend,
@@ -100,8 +100,8 @@ export function evaluatePaymentDecision({
 
     return {
       decision: 'not_recommended',
-      title: 'A compra nao cabe neste mes.',
-      message: 'Ela empurra o plano alem da margem disponivel.',
+      title: 'A compra não cabe neste mês.',
+      message: 'Ela empurra o plano além da margem disponível.',
       currentMonthImpact: normalizedAmount,
       safeMarginAfter,
       suggestedMaxAmount: safeToSpend,
@@ -126,8 +126,8 @@ export function evaluatePaymentDecision({
         monthlyAmount <= safeToSpend
           ? futureTight
             ? 'A parcela cabe, mas consome uma parte relevante da sua margem.'
-            : 'A parcela cabe com seguranca dentro da leitura atual.'
-          : 'A parcela pressiona alem da margem segura deste mes.',
+            : 'A parcela cabe com segurança dentro da leitura atual.'
+          : 'A parcela pressiona além da margem segura deste mês.',
       currentMonthImpact: monthlyAmount,
       safeMarginAfter,
       futureImpact: {
@@ -154,11 +154,11 @@ export function evaluatePaymentDecision({
       message:
         monthlyAmount <= debtCapacity
           ? futureTight
-            ? 'O acordo cabe, mas consome uma parte relevante da sua margem segura para dividas.'
-            : 'O acordo cabe dentro da sua capacidade segura para dividas.'
+            ? 'O acordo cabe, mas consome uma parte relevante da sua margem segura para dívidas.'
+            : 'O acordo cabe dentro da sua capacidade segura para dívidas.'
           : projectedBalance > 0
-            ? 'O acordo pode ate caber no fechamento bruto do mes, mas fica acima da sua capacidade segura para dividas.'
-            : 'O acordo fica acima da sua capacidade segura para dividas neste mes.',
+            ? 'O acordo pode até caber no fechamento bruto do mês, mas fica acima da sua capacidade segura para dívidas.'
+            : 'O acordo fica acima da sua capacidade segura para dívidas neste mês.',
       currentMonthImpact: monthlyAmount,
       safeMarginAfter,
       futureImpact: {
@@ -177,13 +177,13 @@ export function evaluatePaymentDecision({
       normalizedAmount <= debtCapacity
         ? safeMarginAfter <= 0 ? 'attention' : 'recommended'
         : 'not_recommended',
-    title: 'Impacto do pagamento de divida.',
+    title: 'Impacto do pagamento de dívida.',
     message:
       normalizedAmount <= debtCapacity
         ? safeMarginAfter <= 0
-          ? 'O pagamento cabe, mas zera sua margem segura para dividas neste mes.'
-          : 'O pagamento cabe dentro da capacidade segura para dividas.'
-        : 'O valor esta acima da sua capacidade segura para dividas neste mes.',
+          ? 'O pagamento cabe, mas zera sua margem segura para dívidas neste mês.'
+          : 'O pagamento cabe dentro da capacidade segura para dívidas.'
+        : 'O valor está acima da sua capacidade segura para dívidas neste mês.',
     currentMonthImpact: normalizedAmount,
     safeMarginAfter,
     suggestedMaxAmount: debtCapacity,

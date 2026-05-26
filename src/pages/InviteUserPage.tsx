@@ -18,11 +18,11 @@ export default function InviteUserPage() {
 
     const validate = () => {
         if (!password) {
-            return 'A senha e obrigatoria.';
+            return 'A senha é obrigatória.';
         }
 
         if (!confirmPassword) {
-            return 'A confirmacao da senha e obrigatoria.';
+            return 'A confirmação da senha é obrigatória.';
         }
 
         if (password.length < 6) {
@@ -30,7 +30,7 @@ export default function InviteUserPage() {
         }
 
         if (password !== confirmPassword) {
-            return 'Senha e confirmacao precisam ser iguais.';
+            return 'Senha e confirmação precisam ser iguais.';
         }
 
         return null;
@@ -67,7 +67,7 @@ export default function InviteUserPage() {
         } catch {
             toast({
                 variant: 'destructive',
-                title: 'Nao foi possivel concluir o convite',
+                title: 'Não foi possível concluir o convite',
                 description: 'Este link pode estar expirado. Solicite um novo convite.',
             });
         } finally {
@@ -78,8 +78,8 @@ export default function InviteUserPage() {
     return (
         <AuthActionCard
             icon={<UserPlus className="w-8 h-8" />}
-            title="Voce foi convidado para entrar no Fluxo"
-            description="Finalize seu acesso para comecar a organizar suas contas com seguranca."
+            title="Você foi convidado para entrar no Fluxo"
+            description="Finalize seu acesso para começar a organizar suas contas com segurança."
             contentClassName="text-left"
             actions={(
                 <Button
@@ -101,7 +101,7 @@ export default function InviteUserPage() {
                         type="text"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Como voce quer ser chamado"
+                        placeholder="Como você quer ser chamado"
                         className="rounded-xl"
                     />
                 </div>

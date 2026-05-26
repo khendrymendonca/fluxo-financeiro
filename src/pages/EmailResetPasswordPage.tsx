@@ -17,11 +17,11 @@ export default function EmailResetPasswordPage() {
 
     const validate = () => {
         if (!newPassword) {
-            return 'A nova senha e obrigatoria.';
+            return 'A nova senha é obrigatória.';
         }
 
         if (!confirmPassword) {
-            return 'A confirmacao da senha e obrigatoria.';
+            return 'A confirmação da senha é obrigatória.';
         }
 
         if (newPassword.length < 6) {
@@ -29,7 +29,7 @@ export default function EmailResetPasswordPage() {
         }
 
         if (newPassword !== confirmPassword) {
-            return 'Senha e confirmacao precisam ser iguais.';
+            return 'Senha e confirmação precisam ser iguais.';
         }
 
         return null;
@@ -56,7 +56,7 @@ export default function EmailResetPasswordPage() {
 
             toast({
                 title: 'Senha redefinida com sucesso',
-                description: 'Sua senha foi atualizada. Faca login novamente para continuar.',
+                description: 'Sua senha foi atualizada. Faça login novamente para continuar.',
             });
 
             await supabase.auth.signOut();
@@ -64,8 +64,8 @@ export default function EmailResetPasswordPage() {
         } catch {
             toast({
                 variant: 'destructive',
-                title: 'Nao foi possivel redefinir sua senha',
-                description: 'Solicite um novo link de recuperacao e tente novamente.',
+                title: 'Não foi possível redefinir sua senha',
+                description: 'Solicite um novo link de recuperação e tente novamente.',
             });
         } finally {
             setIsSubmitting(false);
@@ -76,7 +76,7 @@ export default function EmailResetPasswordPage() {
         <AuthActionCard
             icon={<LockKeyhole className="w-8 h-8" />}
             title="Redefinir senha"
-            description="Digite sua nova senha para continuar usando o Fluxo com seguranca."
+            description="Digite sua nova senha para continuar usando o Fluxo com segurança."
             contentClassName="text-left"
             actions={(
                 <Button

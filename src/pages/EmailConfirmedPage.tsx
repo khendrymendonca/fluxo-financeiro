@@ -23,7 +23,7 @@ export default function EmailConfirmedPage() {
         <AuthActionCard
             icon={<CheckCircle2 className="w-8 h-8" />}
             title="Email confirmado com sucesso"
-            description="Deu tudo certo. Agora e so seguir o Fluxo e controlar suas contas com mais clareza."
+            description="Deu tudo certo. Agora é só seguir o Fluxo e controlar suas contas com mais clareza."
             actions={(
                 <Button
                     type="button"

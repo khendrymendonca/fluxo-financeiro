@@ -127,8 +127,8 @@ export default function Index() {
       toast({ title: 'Dados atualizados' });
     } catch {
       toast({
-        title: 'Nao foi possivel atualizar os dados',
-        description: 'Verifique sua conexao e tente novamente.',
+        title: 'Não foi possível atualizar os dados',
+        description: 'Verifique sua conexão e tente novamente.',
         variant: 'destructive',
       });
     }

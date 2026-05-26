@@ -899,9 +899,9 @@ export function BillsManager() {
                                                                 {projectedMetrics.limit > 0 && (
                                                                     <>
                                                                         <p className="text-[11px] text-amber-600 font-bold">Limite utilizado: {formatCurrency(projectedMetrics.usedLimit)}</p>
-                                                                        <p className="text-[11px] text-emerald-600 font-bold">Limite disponivel: {formatCurrency(projectedMetrics.availableLimit)}</p>
+                                                                        <p className="text-[11px] text-emerald-600 font-bold">Limite disponível: {formatCurrency(projectedMetrics.availableLimit)}</p>
                                                                         {projectedMetrics.overLimit > 0 && (
-                                                                            <p className="text-[11px] text-danger font-bold">Excesso alem do limite: {formatCurrency(projectedMetrics.overLimit)}</p>
+                                                                            <p className="text-[11px] text-danger font-bold">Excesso além do limite: {formatCurrency(projectedMetrics.overLimit)}</p>
                                                                         )}
                                                                     </>
                                                                 )}

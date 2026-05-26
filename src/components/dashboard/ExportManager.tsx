@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useAddTransaction } from '@/hooks/useTransactionMutations';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ export function ExportManager() {
                 return;
             }
 
-            const headers = ['Data', 'Descricao', 'Valor', 'Tipo', 'Categoria', 'Conta', 'Modo', 'Pago'];
+            const headers = ['Data', 'Descrição', 'Valor', 'Tipo', 'Categoria', 'Conta', 'Modo', 'Pago'];
             const rows = transactions.map(t => [
                 t.date,
                 t.description.replace(/,/g, ' '), // avoid CSV break

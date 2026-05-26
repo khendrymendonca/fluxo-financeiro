@@ -418,8 +418,8 @@ export function useToggleTransactionPaid() {
 
       // Baixa e estorno precisam ser simetricos: ao estornar, a fonte financeira
       // usada no pagamento precisa ser removida para que o saldo volte ao estado
-      // anterior. Para filhos materializados/parcela de acordo tambem limpamos os
-      // metadados de cartao vinculados a baixa protegida.
+      // anterior. Para filhos materializados/parcela de acordo também limpamos os
+      // metadados de cartão vinculados à baixa protegida.
       if (!isPaid) {
         const { error } = await supabase
           .from('transactions')
@@ -543,7 +543,7 @@ export function useUpdateTransaction() {
       const nextCardId = hasUpdateKey('cardId') ? updates.cardId : currentTx.card_id;
 
       if (updates.isPaid === true && !nextAccountId && !nextCardId) {
-        throw new Error('Selecione uma conta ou cartao para registrar o pagamento.');
+        throw new Error('Selecione uma conta ou cartão para registrar o pagamento.');
       }
 
       const groupId = currentTx.installment_group_id;
@@ -813,7 +813,7 @@ export function useUpdateTransaction() {
         const { data, error = null } = await supabase.from('transactions').update(dbUpdates).eq('id', realId).select();
         if (error) { logSafeError('useUpdateTransaction (single)', error); throw error; }
         if (!data || data.length === 0) {
-          throw new Error('Transacao nao atualizada. Recarregue os dados e tente novamente.');
+          throw new Error('Transação não atualizada. Recarregue os dados e tente novamente.');
         }
         return data || [];
       }

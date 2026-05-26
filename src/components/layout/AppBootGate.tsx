@@ -87,7 +87,7 @@ export function AppBootGate({ user, authLoading, children }: AppBootGateProps) {
       }
 
       setMessage('Sincronizando dados financeiros...');
-      setDetail('Buscando contas, lancamentos e configuracoes');
+      setDetail('Buscando contas, lançamentos e configurações');
 
       try {
         const refreshResult = await Promise.race([
@@ -99,16 +99,16 @@ export function AppBootGate({ user, authLoading, children }: AppBootGateProps) {
 
         if (refreshResult === 'timeout') {
           toast({
-            title: 'Sincronizacao inicial demorou mais que o esperado',
-            description: 'Voce ja pode usar o app com os dados disponiveis e tentar Atualizar novamente.',
+            title: 'Sincronização inicial demorou mais que o esperado',
+            description: 'Você já pode usar o app com os dados disponíveis e tentar Atualizar novamente.',
           });
         }
       } catch (error) {
         refreshedUserRef.current = userId;
-        console.error('Erro durante sincronizacao inicial:', error);
+        console.error('Erro durante sincronização inicial:', error);
         toast({
-          title: 'Nao foi possivel atualizar os dados agora',
-          description: 'O app sera aberto com os dados disponiveis. Use Atualizar para tentar novamente.',
+          title: 'Não foi possível atualizar os dados agora',
+          description: 'O app será aberto com os dados disponíveis. Use Atualizar para tentar novamente.',
           variant: 'destructive',
         });
       }

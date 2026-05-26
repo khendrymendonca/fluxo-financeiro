@@ -149,7 +149,7 @@ export default function MonthPlanPage({
 
   // Se estiver carregando e não tivermos contas (indicando que é o primeiro load), mostramos boot screen
   if (loading && accounts.length === 0) {
-    return <AppBootScreen message="Carregando dados financeiros..." detail="Quase pronto para voce assumir o controle" />;
+    return <AppBootScreen message="Carregando dados financeiros..." detail="Quase pronto para você assumir o controle" />;
   }
 
   const controlCards = [
