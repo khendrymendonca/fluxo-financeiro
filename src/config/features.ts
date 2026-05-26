@@ -14,9 +14,7 @@ export interface FeatureDefinition {
 }
 
 export const FORCED_DISABLED_FEATURE_KEYS = [
-  'debt_strategy',
-  'goals_manager',
-  'simulator',
+  // Todas as features estão liberadas para teste
 ] as const;
 
 export const FEATURES: FeatureDefinition[] = [
@@ -47,7 +45,7 @@ export const FEATURES: FeatureDefinition[] = [
     label: 'Metas',
     description: 'Objetivos de poupança',
     type: 'screen',
-    enabledByDefault: false,
+    enabledByDefault: true,
   },
   {
     key: 'debts_manager',
@@ -75,7 +73,7 @@ export const FEATURES: FeatureDefinition[] = [
     label: 'Simulador',
     description: 'Simulador "E Se?"',
     type: 'screen',
-    enabledByDefault: false,
+    enabledByDefault: true,
   },
 
   // ── Premium ─────────────────────────────────────────────
@@ -84,7 +82,7 @@ export const FEATURES: FeatureDefinition[] = [
     label: 'Personalização de Cores',
     description: 'Seletor de tema e cores do app',
     type: 'premium',
-    enabledByDefault: false,
+    enabledByDefault: true,
   },
 
   // ── Plano do Mês ────────────────────────────────────────
@@ -100,7 +98,7 @@ export const FEATURES: FeatureDefinition[] = [
     label: 'Posso Pagar?',
     description: 'Simulador de decisão financeira antes de assumir um gasto',
     type: 'premium',
-    enabledByDefault: false, // Pro / Família
+    enabledByDefault: true, // Pro / Família
   },
 
   // ── Dívidas ─────────────────────────────────────────────
@@ -109,7 +107,7 @@ export const FEATURES: FeatureDefinition[] = [
     label: 'Estratégia de Dívidas',
     description: 'Priorização e recomendações de pagamento de dívidas no plano do mês',
     type: 'premium',
-    enabledByDefault: false, // Pro / Família
+    enabledByDefault: true, // Pro / Família
   },
 
   // ── Relatórios e Exportação ──────────────────────────────
@@ -118,14 +116,14 @@ export const FEATURES: FeatureDefinition[] = [
     label: 'Relatórios Avançados',
     description: 'Gráficos detalhados, histórico anual e análise por categoria',
     type: 'premium',
-    enabledByDefault: false, // Pro / Família
+    enabledByDefault: true, // Pro / Família
   },
   {
     key: 'export_data',
     label: 'Exportação de Dados',
     description: 'Exportar transações e relatórios em CSV ou PDF',
     type: 'premium',
-    enabledByDefault: false, // Pro / Família
+    enabledByDefault: true, // Pro / Família
   },
 
   // ── Limites de uso ───────────────────────────────────────
@@ -134,21 +132,21 @@ export const FEATURES: FeatureDefinition[] = [
     label: 'Contas Ilimitadas',
     description: 'Sem limite de contas bancárias cadastradas',
     type: 'premium',
-    enabledByDefault: false, // Pro / Família
+    enabledByDefault: true, // Pro / Família
   },
   {
     key: 'unlimited_cards',
     label: 'Cartões Ilimitados',
     description: 'Sem limite de cartões de crédito cadastrados',
     type: 'premium',
-    enabledByDefault: false, // Pro / Família
+    enabledByDefault: true, // Pro / Família
   },
   {
     key: 'unlimited_debts',
     label: 'Dívidas Ilimitadas',
     description: 'Sem limite de acordos e dívidas cadastrados',
     type: 'premium',
-    enabledByDefault: false, // Pro / Família
+    enabledByDefault: true, // Pro / Família
   },
 
   // ── Família ──────────────────────────────────────────────
@@ -157,7 +155,7 @@ export const FEATURES: FeatureDefinition[] = [
     label: 'Recursos Familiares',
     description: 'Compartilhamento de dados e visão consolidada familiar',
     type: 'premium',
-    enabledByDefault: false, // apenas Família
+    enabledByDefault: true, // apenas Família
   },
 
   // ── Admin ────────────────────────────────────────────────
@@ -166,7 +164,7 @@ export const FEATURES: FeatureDefinition[] = [
     label: 'Central de Comando',
     description: 'Acesso ao painel administrativo do Fluxo',
     type: 'premium',
-    enabledByDefault: false, // apenas Admin
+    enabledByDefault: true, // apenas Admin
   },
 ];
 
