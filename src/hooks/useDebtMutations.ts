@@ -591,20 +591,61 @@ export function useDeleteDebt() {
     mutationFn: async (id: string) => {
       const now = new Date().toISOString();
 
-      // 1. Soft delete da dívida
-      const { error } = await supabase
-        .from('debts')
-        .update({ deleted_at: now })
-        .eq('id', id);
-      if (error) throw error;
+      const { data: impactedAccounts, error: impactedError } = await supabase
+        .from('transactions')
+        .select('account_id')
+        .eq('debt_id', id)
+        .eq('is_paid', true)
+        .is('deleted_at', null)
+        .not('account_id', 'is', null);
+      if (impactedError) throw impactedError;
 
-      // 2. 🗑️ Soft delete em cascata: transações não pagas vinculadas à dívida
+      const accountIds = Array.from(
+        new Set((impactedAccounts || []).map((row: any) => row.account_id).filter(Boolean))
+      );
+
+      // 1. 🗑️ Soft delete em cascata: transações vinculadas à dívida
       const { error: txError } = await supabase
         .from('transactions')
         .update({ deleted_at: now })
         .eq('debt_id', id)
         .is('deleted_at', null);
       if (txError) throw txError;
+
+      for (const accountId of accountIds) {
+        const { error: recalcError } = await supabase.rpc('recalculate_account_balance', {
+          target_account_id: accountId,
+        });
+
+        if (!recalcError) continue;
+
+        // Fallback: recomputa no client se a RPC não existir/estiver indisponível.
+        const { data: accountTxs, error: accountTxError } = await supabase
+          .from('transactions')
+          .select('type, amount')
+          .eq('account_id', accountId)
+          .eq('is_paid', true)
+          .is('deleted_at', null);
+        if (accountTxError) throw accountTxError;
+
+        const balance = (accountTxs || []).reduce((sum: number, tx: any) => {
+          const amount = Number(tx.amount || 0);
+          return tx.type === 'income' ? sum + amount : sum - amount;
+        }, 0);
+
+        const { error: accountUpdateError } = await supabase
+          .from('accounts')
+          .update({ balance })
+          .eq('id', accountId);
+        if (accountUpdateError) throw accountUpdateError;
+      }
+
+      // 2. Remover a dívida (tabela debts não possui deleted_at)
+      const { error } = await supabase
+        .from('debts')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
 
       return id;
     },
@@ -613,7 +654,7 @@ export function useDeleteDebt() {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['cards'] }); // Recalcular limites baseados nas transações restantes
-      toast({ title: 'Acordo removido e saldos estornados.' });
+      toast({ title: 'Acordo removido e saldos reconciliados.' });
     },
     onError: (err) => {
       logSafeError('useDeleteDebt', err);

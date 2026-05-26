@@ -21,8 +21,11 @@ export const accentColors = [
 
 const ACCENT_STORAGE_KEY = 'accent-color';
 
-function readStoredAccentColor() {
-    return localStorage.getItem(ACCENT_STORAGE_KEY);
+function readStoredAccentColor(userId?: string) {
+    if (!userId) {
+        return localStorage.getItem(ACCENT_STORAGE_KEY);
+    }
+    return localStorage.getItem(`${ACCENT_STORAGE_KEY}:${userId}`);
 }
 
 interface ThemeColorContextType {
@@ -38,25 +41,24 @@ export function ThemeColorProvider({ children }: { children: React.ReactNode }) 
     const easterEnabled = useGlobalFlag('theme_easter');
     const hasHydratedRemoteAccentRef = useRef(false);
 
-    const persistAccentLocally = useCallback((nextAccentColor: string) => {
-        if (readStoredAccentColor() !== nextAccentColor) {
-            localStorage.setItem(ACCENT_STORAGE_KEY, nextAccentColor);
+    const persistAccentLocally = useCallback((nextAccentColor: string, userId?: string) => {
+        localStorage.setItem(ACCENT_STORAGE_KEY, nextAccentColor);
+        if (userId) {
+            localStorage.setItem(`${ACCENT_STORAGE_KEY}:${userId}`, nextAccentColor);
         }
     }, []);
 
     const [accentColor, setAccentColorState] = useState(() => {
-        return readStoredAccentColor() || 'blue';
+        return 'blue';
     });
 
-    const applyAccentColorState = useCallback((nextAccentColor: string) => {
+    const applyAccentColorState = useCallback((nextAccentColor: string, userId?: string) => {
         const normalizedAccentColor = accentColors.some((color) => color.id === nextAccentColor)
             ? nextAccentColor
             : accentColors[0].id;
 
-        setAccentColorState((currentAccentColor) => (
-            currentAccentColor === normalizedAccentColor ? currentAccentColor : normalizedAccentColor
-        ));
-        persistAccentLocally(normalizedAccentColor);
+        setAccentColorState(normalizedAccentColor);
+        persistAccentLocally(normalizedAccentColor, userId);
         return normalizedAccentColor;
     }, [persistAccentLocally]);
 
@@ -69,15 +71,15 @@ export function ThemeColorProvider({ children }: { children: React.ReactNode }) 
             await supabase.auth.updateUser({
                 data: { ...user.user_metadata, accent_color: nextAccentColor }
             });
-        } catch {
-            // Mantem a preferencia local como fonte da verdade da sessao.
+        } catch (error) {
+            console.error('[syncAccentColorRemotely] Failed to update user metadata:', error);
         }
     }, [user]);
 
     const setAccentColor = useCallback((nextAccentColor: string) => {
-        const normalizedAccentColor = applyAccentColorState(nextAccentColor);
+        const normalizedAccentColor = applyAccentColorState(nextAccentColor, user?.id);
         void syncAccentColorRemotely(normalizedAccentColor);
-    }, [applyAccentColorState, syncAccentColorRemotely]);
+    }, [applyAccentColorState, syncAccentColorRemotely, user]);
 
     useEffect(() => {
         const color = accentColors.find((entry) => entry.id === accentColor) || accentColors[0];
@@ -95,13 +97,12 @@ export function ThemeColorProvider({ children }: { children: React.ReactNode }) 
     useEffect(() => {
         if (!user) {
             hasHydratedRemoteAccentRef.current = false;
-            return;
-        }
-
-        const storedAccentColor = readStoredAccentColor();
-        if (storedAccentColor) {
-            applyAccentColorState(storedAccentColor);
-            hasHydratedRemoteAccentRef.current = true;
+            const legacyStored = readStoredAccentColor();
+            if (legacyStored) {
+                setAccentColorState(legacyStored);
+            } else {
+                setAccentColorState('blue');
+            }
             return;
         }
 
@@ -109,13 +110,34 @@ export function ThemeColorProvider({ children }: { children: React.ReactNode }) 
             return;
         }
 
+        // Prioridade 1: Cor remota do perfil no Supabase
         const remoteAccentColor = user.user_metadata?.accent_color;
         if (typeof remoteAccentColor === 'string' && remoteAccentColor.length > 0) {
-            applyAccentColorState(remoteAccentColor);
+            applyAccentColorState(remoteAccentColor, user.id);
+            hasHydratedRemoteAccentRef.current = true;
+            return;
         }
 
+        // Prioridade 2: Cor local do usuário no localStorage
+        const userStoredAccent = readStoredAccentColor(user.id);
+        if (userStoredAccent) {
+            applyAccentColorState(userStoredAccent, user.id);
+            hasHydratedRemoteAccentRef.current = true;
+            return;
+        }
+
+        // Prioridade 3: Cor genérica herdada do localStorage (migração de estado anterior)
+        const legacyStored = readStoredAccentColor();
+        if (legacyStored) {
+            applyAccentColorState(legacyStored, user.id);
+            hasHydratedRemoteAccentRef.current = true;
+            return;
+        }
+
+        // Fallback padrão
+        applyAccentColorState('blue', user.id);
         hasHydratedRemoteAccentRef.current = true;
-    }, [applyAccentColorState, user]);
+    }, [applyAccentColorState, user, setAccentColor]);
 
     return (
         <ThemeColorContext.Provider value={{ accentColor, setAccentColor, accentColors }}>

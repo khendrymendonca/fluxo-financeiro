@@ -7,9 +7,8 @@ import {
     useDeleteSubcategory,
     useUpdateCategory,
 } from '@/hooks/useCategoryMutations';
-import { useBudgetGroups } from '@/hooks/useBudgetGroups';
-import { BudgetGroupManagerModal } from './BudgetGroupManagerModal';
 import { BudgetGroup, Category } from '@/types/finance';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -192,7 +191,6 @@ export function CategoriesManager() {
                 <div className="space-y-5">
                     <div className="flex items-center gap-4">
                         <PageHeader title="Gestão de Categorias" icon={LayoutGrid} />
-                        <BudgetGroupManagerModal />
                     </div>
 
                     {/* Tabs */}
@@ -273,15 +271,19 @@ export function CategoriesManager() {
                             {newCatType === 'expense' && (
                                 <div className="space-y-2">
                                     <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Grupo</Label>
-                                    <select
-                                        className="w-full h-11 rounded-xl border border-border/50 bg-muted/10 px-4 text-sm font-bold appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                                    <Select
                                         value={newCatBudgetGroup}
-                                        onChange={e => setNewCatBudgetGroup(e.target.value as BudgetGroup)}
+                                        onValueChange={val => setNewCatBudgetGroup(val as BudgetGroup)}
                                     >
-                                        <option value="essential">Essenciais</option>
-                                        <option value="lifestyle">Estilo de Vida</option>
-                                        <option value="financial">Objetivos</option>
-                                    </select>
+                                        <SelectTrigger className="w-full h-11 rounded-xl border border-border/50 bg-muted/10 px-4 text-sm font-bold focus:ring-2 focus:ring-primary/20 transition-all text-left">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl border-border/50">
+                                            <SelectItem value="essential" className="font-bold">Essenciais</SelectItem>
+                                            <SelectItem value="lifestyle" className="font-bold">Estilo de Vida</SelectItem>
+                                            <SelectItem value="financial" className="font-bold">Objetivos</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             )}
 
@@ -377,15 +379,12 @@ function EditCategoryDialog({
     const { mutate: addSubcategory } = useAddSubcategory();
     const { mutate: deleteSubcategory } = useDeleteSubcategory();
     const { data: subcategories = [] } = useSubcategories();
-    const { budgetGroups, categoryAssignments, assignCategory } = useBudgetGroups();
-
     const [name, setName] = useState(category.name);
     const [color, setColor] = useState(category.color);
     const [icon, setIcon] = useState(category.icon || 'Tag');
     const [isFixed, setIsFixed] = useState(category.isFixed);
     const [budgetGroup, setBudgetGroup] = useState<BudgetGroup>(category.budgetGroup);
     const [budgetLimit, setBudgetLimit] = useState<string>(category.budgetLimit ? String(category.budgetLimit) : '');
-    const [macroGroupId, setMacroGroupId] = useState<string>(categoryAssignments[category.id] || '');
     const [newSubName, setNewSubName] = useState('');
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -407,7 +406,6 @@ function EditCategoryDialog({
                 } 
             },
             { onSuccess: () => {
-                assignCategory(category.id, macroGroupId || null);
                 onClose();
             }}
         );
@@ -446,33 +444,22 @@ function EditCategoryDialog({
                         </div>
 
                         {category.type === 'expense' && (
-                            <>
-                                <div className="space-y-2">
-                                    <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Grupo de Relatório</Label>
-                                    <select
-                                        className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 text-sm font-bold appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                                        value={budgetGroup}
-                                        onChange={e => setBudgetGroup(e.target.value as BudgetGroup)}
-                                    >
-                                        <option value="essential">Essenciais</option>
-                                        <option value="lifestyle">Estilo de Vida</option>
-                                        <option value="financial">Objetivos</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Macrocategoria</Label>
-                                    <select
-                                        className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 text-sm font-bold appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                                        value={macroGroupId}
-                                        onChange={e => setMacroGroupId(e.target.value)}
-                                    >
-                                        <option value="">Sem Agrupamento</option>
-                                        {budgetGroups.map(bg => (
-                                            <option key={bg.id} value={bg.id}>{bg.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </>
+                            <div className="space-y-2">
+                                <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Grupo de Relatório</Label>
+                                <Select
+                                    value={budgetGroup}
+                                    onValueChange={val => setBudgetGroup(val as BudgetGroup)}
+                                >
+                                    <SelectTrigger className="w-full h-11 rounded-xl border border-border/50 bg-background px-4 text-sm font-bold focus:ring-2 focus:ring-primary/20 transition-all text-left">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl border-border/50">
+                                        <SelectItem value="essential" className="font-bold">Essenciais</SelectItem>
+                                        <SelectItem value="lifestyle" className="font-bold">Estilo de Vida</SelectItem>
+                                        <SelectItem value="financial" className="font-bold">Objetivos</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         )}
 
                         <div className="flex items-center justify-between p-3.5 rounded-xl bg-background border border-border/30">

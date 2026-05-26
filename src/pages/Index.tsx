@@ -9,6 +9,7 @@ import {
   CreditCard as CardIcon,
   Plus,
   Menu,
+  Settings,
   Settings2,
   Database,
   History,
@@ -266,7 +267,7 @@ export default function Index() {
     { id: 'categories', icon: Settings2, label: 'Categorias' },
     { id: 'simulator', icon: Calculator, label: 'Simulador', featureKey: 'simulator' },
     { id: 'export', icon: Database, label: 'Exportar', featureKey: 'export_data' },
-    { id: 'profile', icon: Settings2, label: 'Ajustes de Perfil' },
+    { id: 'profile', icon: Settings, label: 'Ajustes de Perfil' },
   ];
 
   function NavItemGuard({

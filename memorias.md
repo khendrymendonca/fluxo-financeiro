@@ -1370,3 +1370,143 @@ Regra:
 Não criar migration para adicionar `institution`.
 Não renomear `bank`.
 Não alterar contas existentes por causa disso.
+
+---
+
+# REGRA DE RELATÓRIOS — FLUXO SCORE (ADITIVO E SOMENTE LEITURA)
+
+## Diretriz crítica de segurança/arquitetura
+
+Fluxo Score é funcionalidade estritamente aditiva e de observação.
+
+Obrigatório:
+- não alterar mecânicas atuais de criação/edição/exclusão de contas;
+- não alterar mecânicas atuais de criação/edição/exclusão de acordos;
+- não alterar hooks de mutação já existentes;
+- não alterar endpoints/RPC já existentes;
+- não introduzir efeitos colaterais de escrita para calcular Score.
+
+Regra de implementação:
+- Score apenas lê `transactions`, `debts` e estado atual da aplicação;
+- cálculo isolado em utilitário dedicado;
+- arredondamento apenas na exibição da UI;
+- lógica financeira existente permanece intacta.
+
+## Escala e baseline
+
+- faixa de Score: 0 a 1000;
+- baseline inicial/neutro: 500.
+
+## Motor de cálculo — contas de consumo/pagamentos padrão
+
+Para cada conta/obrigação paga, calcular diferença em dias:
+- `dias = paymentDate - dueDate`.
+
+Regras:
+- pagamento no dia do vencimento (`dias = 0`): `+5`;
+- pagamento antecipado (`dias < 0`): `+10`;
+- atraso leve (`dias = 1..3`): `-10`;
+- atraso médio (`dias = 4..10`): `-25`;
+- atraso grave (`dias > 10`): `-50`;
+- penalidade contínua para atraso grave:
+  - `-2` por dia extra após o 10º dia;
+  - fórmula: `-50 - ((dias - 10) * 2)`;
+  - teto de penalidade por conta: `-100`.
+
+### Bônus mensal
+
+Adicionar `+10` para contas em dia.
+
+Regra de cálculo:
+- **A partir de 01/06/2026**: O bônus é verificado e definido com base no primeiro dia útil do mês de referência. No primeiro dia útil de cada mês, é verificada a existência de despesas em atraso (vencidas antes do primeiro dia útil e não pagas até o primeiro dia útil). Se houver, a bonificação de `+10` não é concedida para o mês corrente. Caso contrário, o bônus de `+10` é ganho e mantido para o restante do mês. Para datas anteriores ao primeiro dia útil do mês, a elegibilidade é verificada dinamicamente com base nas contas vencidas até o dia atual.
+- **Antes de 01/06/2026**: O bônus mensal é fixado em `0` (desativado antes da data de implantação da feature).
+
+## Motor de cálculo — acordos e dívidas
+
+Acordos ativos têm peso próprio no Score:
+
+- penalidade de criação: `-100` por acordo ativo;
+- recuperação proporcional por pagamento de parcelas:
+  - `recuperação = (parcelasPagas / totalParcelas) * 100`.
+
+Regra de precisão:
+- usar ponto flutuante internamente para evitar erro acumulado;
+- aplicar `Math.round` somente na camada de apresentação;
+- ao quitar a última parcela, a recuperação total do acordo deve atingir exatamente `100`.
+
+## Fórmula consolidada
+
+Score final:
+- `score = clamp(500 + somaRegrasContas + somaRegrasAcordos + bonusMensal, 0, 1000)`.
+
+Onde:
+- `somaRegrasContas` aplica variações por pontualidade/atraso das contas pagas;
+- `somaRegrasAcordos` soma `-100 + recuperaçãoProporcional` por acordo ativo;
+- `bonusMensal` é `0` ou `+50`.
+
+## Requisito de UI — tela e posicionamento
+
+Renderização exclusiva:
+- componente Fluxo Score deve existir somente na tela de Relatórios.
+
+Layout:
+- posicionar ao lado do card de Saldo na faixa superior da tela;
+- manter destaque simétrico e responsivo com grid/flex ajustado.
+
+## Requisito visual — gráfico circular, cor e glow
+
+Componente:
+- usar anel circular (donut/gauge) em SVG ou biblioteca padrão.
+
+Centro:
+- mostrar número inteiro do Score com tipografia forte.
+
+Cores:
+- não usar gradiente semáforo (vermelho/amarelo/verde);
+- usar variações da cor de destaque ativa (`--primary`/accent da aplicação).
+
+Glow:
+- aplicar brilho externo (drop-shadow/radial glow) na cor de destaque;
+- intensidade pode crescer conforme o Score.
+
+## Requisito de animação
+
+Na carga inicial:
+- anel deve animar de `0` até Score atual;
+- transição suave em `1.0s` a `1.5s`, `ease-out` ou `cubic-bezier`.
+
+Em recálculo:
+- número e barra devem interpolar suavemente;
+- evitar saltos bruscos na atualização.
+
+---
+
+# HISTÓRICO DE VALIDAÇÕES DE ALTERAÇÕES
+
+## [2026-05-26] Alteração de UI - Remoção do Tooltip de Informação do Saldo Projetado no Mobile
+- **Resumo**: O botão de informação (Tooltip) ao lado do texto "Saldo Projetado" na tela inicial do mobile (`src/pages/LegacyDashboardHome.tsx`) foi removido.
+- **Motivação**: Atender ao design minimalista e executivo, de modo a evitar textos explicativos repetitivos/desnecessários no corpo principal da UI móvel. Limpeza executada dos imports não utilizados do Tooltip e do ícone Info.
+
+## [2026-05-26] Alteração de UI / Funcionalidade - Remoção de Macrocategorias e Melhoria de Selects no Cadastro de Categorias
+- **Resumo**: Toda e qualquer referência à funcionalidade de macrocategorias foi removida do cadastro de categorias (`src/components/settings/CategoriesManager.tsx`), incluindo o botão do cabeçalho para gerenciar macrocategorias (`BudgetGroupManagerModal`) e o dropdown/seletor de macrocategoria nos diálogos de nova categoria e de edição de categoria. Adicionalmente, os seletores de grupos de despesas (`BudgetGroup`), que antes eram componentes de `<select>` nativos do navegador e apresentavam visualização fora do padrão do app, foram substituídos pelo componente premium `<Select>` da biblioteca do Shadcn UI.
+- **Motivação**: Atender à solicitação direta do usuário para remover macrocategorias do fluxo de cadastro e corrigir o design visual dos seletores de grupo no cadastro de categorias, alinhando-o com o estilo visual dark do restante da aplicação.
+
+## [2026-05-26] Alteração Arquitetural / Regra de Negócio - Atualização Diária do Score, Bônus no Primeiro Dia Útil e Consideração Total de Dados
+- **Resumo**: A verificação da bonificação mensal no cálculo do Fluxo Score foi reduzida de `+50` para `+10` e configurada para ocorrer com base no estado do primeiro dia útil do mês de referência (`src/utils/fluxoScore.ts`), com data de início em `01/06/2026`. Para datas de referência anteriores a `01/06/2026` (como maio de 2026), o bônus mensal é fixado em `0` (desativado). Adicionamos a lógica para detectar o primeiro dia útil do mês (ajustando para segunda-feira caso caia em fins de semana) e congelar a verificação de atrasos a partir dessa data. Adicionalmente, para garantir que as parcelas de acordos cadastrados e contas pendentes de meses/anos passados sejam sempre computadas no cálculo do score e no saldo projetado do app, expandimos a query global do Supabase (`src/hooks/useFinanceQueries.ts`) para retornar todas as transações não pagas (`is_paid = false`) e transações vinculadas a acordos (`debt_id`) de todos os tempos.
+- **Motivação**: Atender à nova dinâmica de lançamentos diários, reduzindo o peso do bônus mensal de acordo com as preferências do usuário, aplicando a nova lógica do primeiro dia útil a partir de 1º de junho e fixando o bônus de maio como 0 para refletir os atrasos anteriores ao acordo criado hoje.
+
+## [2026-05-26] Alteração Arquitetural / Regra de Segurança - Garantia de Isolamento de Usuários e Correção de Queries
+- **Resumo**: Foi realizada uma revisão e correção estrutural no arquivo `src/hooks/useFinanceQueries.ts` para garantir o isolamento estrito de dados entre diferentes usuários. Todos os hooks de leitura (`useAccounts`, `useTransactions`, `useCreditCards`, `useDebts` e `useSavingsGoals`) foram updated para aplicar explicitamente o filtro `.eq('user_id', user.id)` baseando-se no ID do usuário autenticado no Supabase Auth. Adicionalmente, as importações duplicadas no topo do arquivo foram limpas e a query de metas de economia (`useSavingsGoals`), que havia sido corrompida por um erro de merge anterior, foi completamente restaurada e isolada por usuário.
+- **Motivação**: Atender à garantia solicitada pelo usuário de que os dados de diferentes usuários não se misturem e corrigir o score do usuário (Khendry) que estava zerado na conta oficial devido ao vazamento de acordos/transações de teste de outro usuário no cálculo global do score.
+
+## [2026-05-26] Alteração Arquitetural / Funcionalidade - Cor de Destaque Salva e Sincronizada por Usuário
+- **Resumo**: Refatoramos o hook de cores [useThemeColor.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useThemeColor.tsx) para salvar a cor de destaque (accent color) de maneira individual por usuário, em vez de salvar de forma genérica e compartilhada no navegador. O estado local agora é persistido sob a chave `accent-color:${userId}` no localStorage (e de forma retrocompatível na chave `accent-color` para os testes e legado). O processo de hidratação no carregamento agora prioriza em primeiro nível o metadado do usuário autenticado retornado do Supabase (`user.user_metadata?.accent_color`), seguido pela chave específica do usuário e, por último, o fallback legado, garantindo que a preferência do usuário o acompanhe em qualquer máquina ou navegador.
+- **Motivação**: Atender à solicitação direta do usuário para salvar as preferências de cores no perfil do usuário (na nuvem) e isolar o armazenamento de layout no mesmo navegador de acordo com a conta logada.
+
+## [2026-05-26] Alteração Arquitetural / Regra de Negócio - Ajuste no Período de Penalidades e Inclusão de Contas Pendentes no Score
+- **Resumo**: Atualizamos a lógica do Fluxo Score ([fluxoScore.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/utils/fluxoScore.ts)) para se alinhar ao conceito de "diagnóstico de saúde financeira atual". Agora, contas pendentes (não pagas) que estão vencidas ativamente geram penalidades de atraso no Score de acordo com a quantidade de dias em atraso, incentivando o usuário a quitá-las ou consolidá-las em acordos. Por outro lado, para evitar que um usuário histórico (com base de dados antiga ou importada via CSV) seja penalizado perpetuamente por contas quitadas com atraso há muito tempo, as penalidades de despesas pagas com atraso passam a expirar após 30 dias do pagamento. Adicionalmente, as compras individuais realizadas no cartão de crédito (`tx.cardId` preenchido e não sendo o pagamento da fatura em si) foram **desconsideradas** do cálculo de pontualidade de contas (`accountsDelta`), visto que a única obrigação financeira direta vinculada a prazos no cartão é o pagamento da fatura consolidada. A regra de acordos ativos com penalidades de `-100` e recuperação proporcional por parcelas pagas foi mantida e integrada a essa lógica.
+- **Motivação**: Resolver o bug que travava o Score de usuários antigos em 0 devido a contas quitadas em atraso do passado distante (ex. importação histórica de extratos via CSV), evitar a penalização artificial por compras rotineiras no cartão de crédito cujas datas de pagamento/conciliação divergem da data da compra e incentivar a quitação de contas ativamente vencidas e não pagas.
+
+## [2026-05-26] Alteração Arquitetural / Regra de Negócio - Calibração de Diagnóstico do Score e Correção de Acordos Ativos
+- **Resumo**: Corrigimos a função de avaliação do Fluxo Score (`src/utils/fluxoScore.ts`) e o arquivo de testes unitários correspondente (`src/test/utils/fluxoScore.test.ts`). Alteramos o cálculo das contas para remover completamente a bonificação cumulativa por contas pagas em dia ou adiantadas (as quais agora geram `0` ponto de variação em vez de acumular créditos positivos, evitando ocultar contas atualmente em atraso). Adicionalmente, corrigimos a lógica do `isDebtActive` para permitir que acordos criados pelo app (que por padrão são salvos com o status `'renegotiated'` no banco de dados) sejam contabilizados como acordos ativos na avaliação do score, aplicando corretamente o impacto negativo de `-100` pontos e a recuperação proporcional correspondente ao pagamento de parcelas do acordo.
+- **Motivação**: Resolver os dois problemas identificados na conta antiga do usuário Khendry: primeiro, as bonificações acumuladas de contas em dia mascaravam as contas em atraso (mantendo o score em 1000); segundo, todos os seus acordos criados hoje no app eram incorretamente ignorados por serem de status `'renegotiated'`, impedindo o score de cair para o patamar real correto e impossibilitando o diagnóstico financeiro adequado.

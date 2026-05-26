@@ -45,12 +45,15 @@ export function ProfileSettings() {
     const { shortcuts, saveShortcuts } = useMobileShortcuts();
     const isMobile = useIsMobile();
 
-    // Lógica de Versão Dinâmica
-    const lastUpdateDate = new Date('2026-04-10');
-    const dayVersion = String(lastUpdateDate.getUTCDate()).padStart(2, '0');
-    const monthVersion = String(lastUpdateDate.getUTCMonth() + 1).padStart(2, '0');
-    const yearVersion = String(lastUpdateDate.getUTCFullYear()).slice(-2);
-    const appVersion = `${dayVersion}07${monthVersion}08${yearVersion}12Z`;
+    const buildDate = useState(() => {
+        try {
+            return __BUILD_DATE__ ? new Date(__BUILD_DATE__) : null;
+        } catch {
+            return null;
+        }
+    })[0];
+
+    const appVersion = `${__APP_VERSION__}${__GIT_SHA__ ? ` (${__GIT_SHA__})` : ''}`;
 
     // Feature Flags & Profile
     const hasThemeCustomizationAccess = useFeatureFlag('theme_customization');
@@ -63,6 +66,15 @@ export function ProfileSettings() {
     const [email, setEmail] = useState(user?.email || '');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [fluxoScoreEnabled, setFluxoScoreEnabled] = useState(() => {
+        try {
+            if (!user?.id) return true;
+            const raw = localStorage.getItem(`fluxo_score_enabled:${user.id}`);
+            return raw === null ? true : raw === 'true';
+        } catch {
+            return true;
+        }
+    });
 
     // LGPD — Estados de exclusão de conta
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -118,6 +130,17 @@ export function ProfileSettings() {
             toast.error(error.message || 'Erro ao atualizar perfil');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const toggleFluxoScore = (enabled: boolean) => {
+        setFluxoScoreEnabled(enabled);
+        try {
+            if (user?.id) {
+                localStorage.setItem(`fluxo_score_enabled:${user.id}`, String(enabled));
+            }
+        } catch {
+            // Preferência local não é crítica.
         }
     };
 
@@ -286,6 +309,18 @@ export function ProfileSettings() {
                         <h2 className="text-xl font-bold">Aparência</h2>
                     </div>
 
+                    <div className="rounded-3xl border border-gray-100 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-950/40 p-5">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0">
+                                <p className="text-sm font-bold text-foreground">Fluxo Score</p>
+                                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                    Exibe o card de Score na tela de Relatórios.
+                                </p>
+                            </div>
+                            <Switch checked={fluxoScoreEnabled} onCheckedChange={toggleFluxoScore} />
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-3">
                         {[
                             { id: 'light', icon: Sun, label: 'Claro' },
@@ -371,13 +406,15 @@ export function ProfileSettings() {
 
                     <div className="mt-8 pt-6 border-t border-gray-100 dark:border-zinc-800 space-y-3">
                         <div className="flex flex-col gap-1">
-                            <div className="flex justify-between items-center text-xs font-black uppercase tracking-widest">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-xs font-black uppercase tracking-widest">
                                 <span className="text-zinc-400 dark:text-zinc-600">Versão</span>
                                 <span className="text-zinc-600 dark:text-zinc-400">{appVersion} | Estável</span>
                             </div>
-                            <div className="flex justify-between items-center text-xs font-black uppercase tracking-widest">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-xs font-black uppercase tracking-widest">
                                 <span className="text-zinc-400 dark:text-zinc-600">Última Atualização</span>
-                                <span className="text-zinc-600 dark:text-zinc-400">{lastUpdateDate.toLocaleDateString('pt-BR')}</span>
+                                <span className="text-zinc-600 dark:text-zinc-400">
+                                    {buildDate ? buildDate.toLocaleDateString('pt-BR') : '—'}
+                                </span>
                             </div>
                         </div>
                     </div>

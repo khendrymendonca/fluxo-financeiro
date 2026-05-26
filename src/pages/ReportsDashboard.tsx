@@ -42,8 +42,10 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { useTheme } from '@/hooks/useTheme';
+import { accentColors, useThemeColor } from '@/hooks/useThemeColor';
 import { formatCurrency } from '@/utils/formatters';
 import { parseLocalDate } from '@/utils/dateUtils';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   getTransactionCategoryBucket,
   getTransactionCategoryLabel,
@@ -56,6 +58,8 @@ import { buildIncomeConsumption, buildPeriodComparison, PeriodComparison } from 
 import { Category, CreditCard, Transaction } from '@/types/finance';
 import { BudgetOverview } from '@/components/budgets/BudgetOverview';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { calculateFluxoScore } from '@/utils/fluxoScore';
+import { FluxoScoreCard } from '@/components/dashboard/FluxoScoreCard';
 
 type Period = 'month' | 'semester' | 'year';
 type ReportMode = 'projected' | 'realized';
@@ -660,11 +664,14 @@ function getFinancialPeriodLabel(period: Period, date: Date) {
 }
 
 export default function ReportsDashboard() {
+  const { user } = useAuth();
   const { theme } = useTheme();
+  const { accentColor } = useThemeColor();
   const {
     transactions,
     categories,
     accounts,
+    debts,
     creditCards = [],
     viewDate,
     setViewDate
@@ -676,6 +683,15 @@ export default function ReportsDashboard() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const canUseAdvancedReports = useFeatureFlag('advanced_reports');
   const isMobile = useIsMobile();
+  const fluxoScoreEnabled = useMemo(() => {
+    try {
+      if (!user?.id) return true;
+      const raw = localStorage.getItem(`fluxo_score_enabled:${user.id}`);
+      return raw === null ? true : raw === 'true';
+    } catch {
+      return true;
+    }
+  }, [user?.id]);
   const isDarkTheme = useMemo(() => {
     if (theme === 'dark' || theme === 'amoled') return true;
     if (theme === 'system') {
@@ -683,7 +699,10 @@ export default function ReportsDashboard() {
     }
     return false;
   }, [theme]);
-  const incomeTrendColor = isDarkTheme ? '#FFFFFF' : 'hsl(var(--primary))';
+  const activeAccentColor = useMemo(() => (
+    accentColors.find((color) => color.id === accentColor) ?? accentColors[0]
+  ), [accentColor]);
+  const incomeTrendColor = isDarkTheme ? '#FFFFFF' : `hsl(${activeAccentColor.hsl})`;
   const expenseTrendColor = '#F43F5E';
   const analysisSectionRef = useRef<HTMLDivElement | null>(null);
   const toggleSelectedCategory = useCallback((categoryId: string) => {
@@ -1083,13 +1102,18 @@ export default function ReportsDashboard() {
     };
   }, [accounts, categories, creditCards, period, periodMonths, reportMode, selectedAccountId, transactions, viewDate, yearMonths]);
 
+  const fluxoScore = useMemo(
+    () => calculateFluxoScore(transactions, debts, new Date()),
+    [transactions, debts]
+  );
+
   return (
     <div className="space-y-8 animate-fade-in max-w-[1600px] mx-auto pb-10 px-4 xl:px-6">
       <PageHeader title="Relatórios Analíticos" icon={PieIcon}>
         {isMobile ? (
           <div className="w-full space-y-3 no-print">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
+            <div className="space-y-2">
+              <div className="flex w-full bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
                 {(['projected', 'realized'] as ReportMode[]).map((mode) => (
                   <button
                     key={mode}
@@ -1104,7 +1128,7 @@ export default function ReportsDashboard() {
                 ))}
               </div>
 
-              <div className="flex bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
+              <div className="flex w-full bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
                 {(['month', 'semester', 'year'] as Period[]).map((p) => (
                   <button
                     key={p}
@@ -1117,19 +1141,8 @@ export default function ReportsDashboard() {
                     {p === 'month' ? 'Mês' : p === 'semester' ? 'Semestre' : 'Ano'}
                   </button>
                 ))}
-	      </div>
-
-      {isMobile && selectedAccountId === 'all' && (
-        <BudgetOverview
-          categories={categories}
-          transactions={transactions}
-          viewDate={viewDate}
-          period={period}
-          reportMode={reportMode}
-          periodIncome={metrics.income}
-        />
-      )}
-	    </div>
+              </div>
+            </div>
 
             <div className="rounded-[1.75rem] border border-gray-100 bg-white/90 p-2 dark:border-zinc-800 dark:bg-zinc-900/90">
               <div className="flex items-center gap-2">
@@ -1217,6 +1230,17 @@ export default function ReportsDashboard() {
                 ))}
               </SelectContent>
             </Select>
+
+            {selectedAccountId === 'all' && (
+              <BudgetOverview
+                categories={categories}
+                transactions={transactions}
+                viewDate={viewDate}
+                period={period}
+                reportMode={reportMode}
+                periodIncome={metrics.income}
+              />
+            )}
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-3 no-print">
@@ -1326,7 +1350,10 @@ export default function ReportsDashboard() {
         )}
       </PageHeader>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-6">
+      <div className={cn(
+        "grid grid-cols-2 gap-3 md:gap-6",
+        isMobile ? "md:grid-cols-3" : (fluxoScoreEnabled ? "md:grid-cols-4" : "md:grid-cols-3")
+      )}>
         <StatCard
           label={reportMode === 'projected' ? 'Receitas previstas' : 'Receitas efetivas'}
           value={metrics.income}
@@ -1354,18 +1381,9 @@ export default function ReportsDashboard() {
           isNeutral
           compact={isMobile}
         />
-        {isMobile && (
-          <StatCard
-            label="Consumo vs receita"
-            value={metrics.consumption.percent ?? 0}
-            icon={<TrendingUp className="text-primary" />}
-            comparison={metrics.comparisons.consumption}
-            periodLabel={periodLabel}
-            invertColors
-            compact
-            isPercentValue
-          />
-        )}
+        {fluxoScoreEnabled ? (
+          <FluxoScoreCard score={fluxoScore.score} className="col-span-2 md:col-span-1" />
+        ) : null}
       </div>
 
       {!isMobile && selectedAccountId === 'all' && (

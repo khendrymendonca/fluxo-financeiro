@@ -21,9 +21,9 @@ import {
 
 interface DebtsManagerProps {
   debts: Debt[];
-  onAddDebt: (debt: Omit<Debt, 'id' | 'userId'>) => void;
-  onUpdateDebt: (id: string, updates: Partial<Debt>) => void;
-  onDeleteDebt: (id: string) => void;
+  onAddDebt: (debt: Omit<Debt, 'id' | 'userId'>) => Promise<unknown> | unknown;
+  onUpdateDebt: (id: string, updates: Partial<Debt>) => Promise<unknown> | unknown;
+  onDeleteDebt: (id: string) => Promise<unknown> | unknown;
 }
 
 export function DebtsManager({
@@ -57,6 +57,7 @@ export function DebtsManager({
   const [entryAccountId, setEntryAccountId] = useState(createEmptyAgreementForm().entryAccountId);
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
   const [firstInstallmentDate, setFirstInstallmentDate] = useState(createEmptyAgreementForm().firstInstallmentDate);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { mutateAsync: renegotiateDebt } = useRenegotiateDebt();
   const { transactions, accounts } = useFinanceStore();
@@ -86,8 +87,9 @@ export function DebtsManager({
     setEditingDebt(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!name || !installmentAmount || !totalInstallments) return;
 
     const parsedInstallmentAmount = parseFloat(installmentAmount);
@@ -146,21 +148,26 @@ export function DebtsManager({
       entryAccountId: hasEntry && entryIsPaid ? entryAccountId : undefined,
     };
 
-    if (editingDebt) {
-      onUpdateDebt(editingDebt.id, debtData);
-    } else {
-      if (hasReachedDebtsLimit) {
-        toast({
-          title: 'Limite do plano Free atingido',
-          description: 'Você pode cadastrar até 3 dívidas/acordos no plano Free. Para adicionar mais, libere dívidas ilimitadas.',
-        });
-        return;
+    try {
+      setIsSubmitting(true);
+      if (editingDebt) {
+        await onUpdateDebt(editingDebt.id, debtData);
+      } else {
+        if (hasReachedDebtsLimit) {
+          toast({
+            title: 'Limite do plano Free atingido',
+            description: 'Você pode cadastrar até 3 dívidas/acordos no plano Free. Para adicionar mais, libere dívidas ilimitadas.',
+          });
+          return;
+        }
+
+        await onAddDebt(debtData);
       }
 
-      onAddDebt(debtData);
+      handleCloseForm();
+    } finally {
+      setIsSubmitting(false);
     }
-
-    handleCloseForm();
   };
 
   const handleEdit = (debt: Debt) => {
@@ -288,16 +295,16 @@ export function DebtsManager({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div className="p-4 rounded-2xl bg-danger-light">
-            <p className="text-sm text-muted-foreground">Total em Acordos</p>
-            <p className="text-2xl font-bold text-danger">
+            <p className="text-[11px] sm:text-sm font-bold text-muted-foreground uppercase tracking-widest">Total em Acordos</p>
+            <p className="mt-1 text-xl sm:text-2xl font-black tabular-nums text-danger whitespace-nowrap">
               {formatCurrency(totalDebt)}
             </p>
           </div>
           <div className="p-4 rounded-2xl bg-warning-light">
-            <p className="text-sm text-muted-foreground">Parcelas Mensais</p>
-            <p className="text-2xl font-bold text-warning">
+            <p className="text-[11px] sm:text-sm font-bold text-muted-foreground uppercase tracking-widest">Parcelas Mensais</p>
+            <p className="mt-1 text-xl sm:text-2xl font-black tabular-nums text-warning whitespace-nowrap">
               {formatCurrency(totalMonthly)}
             </p>
           </div>
@@ -344,7 +351,7 @@ export function DebtsManager({
                             ~{monthsRemaining} parcelas estimadas
                           </p>
                         </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                        <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all">
                           <button onClick={() => handleEdit(debt)} className="p-2 rounded-lg hover:bg-info/10 text-info" title="Editar">
                             <Edit2 className="w-4 h-4" />
                           </button>
@@ -393,13 +400,13 @@ export function DebtsManager({
                       <div className="flex items-start justify-between">
                         <div>
                           <h3 className="font-semibold text-lg text-gray-900 dark:text-zinc-50">{debt.name}</h3>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
                             {debt.debtType === 'invoice_installment' ? (
                               <span className="px-1.5 py-0.5 rounded bg-info/10 text-info text-[11px] font-black uppercase">Fatura Parcelada</span>
                             ) : (
                               <span className="px-1.5 py-0.5 rounded bg-success/10 text-success text-[11px] font-black uppercase">Acordo Ativo</span>
                             )}
-                            <p className="text-xs text-gray-500 dark:text-zinc-500 font-bold">
+                            <p className="text-[11px] sm:text-xs text-gray-500 dark:text-zinc-500 font-bold">
                               {summary?.hasDerivedInstallments
                                 ? `${summary.paidInstallments}/${summary.totalInstallments} pagas · Parcela ${summary.currentInstallment}/${summary.totalInstallments}`
                                 : `${debt.totalInstallments} parcelas`}
@@ -407,7 +414,7 @@ export function DebtsManager({
                             </p>
                           </div>
                         </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                        <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all">
                           <button onClick={() => handleEdit(debt)} className="p-2 rounded-lg hover:bg-info/10 text-info" title="Editar">
                             <Edit2 className="w-4 h-4" />
                           </button>
@@ -418,9 +425,9 @@ export function DebtsManager({
                       </div>
 
                       <div className="space-y-2">
-                        <div className="flex justify-between text-xs font-black uppercase">
-                          <span className="text-muted-foreground">Pago: {formatCurrency(summary?.paidAmount ?? Math.max(0, (Number(debt.totalAmount) || 0) - (Number(debt.remainingAmount) || 0)))}</span>
-                          <span className="text-danger">Restante: {formatCurrency(remAmt)}</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-[11px] sm:text-xs font-black uppercase">
+                          <span className="text-muted-foreground whitespace-nowrap">Pago: {formatCurrency(summary?.paidAmount ?? Math.max(0, (Number(debt.totalAmount) || 0) - (Number(debt.remainingAmount) || 0)))}</span>
+                          <span className="text-danger whitespace-nowrap">Restante: {formatCurrency(remAmt)}</span>
                         </div>
                         <div className="h-2 rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden">
                           <div className="h-full rounded-full bg-success transition-all duration-500" style={{ width: `${progress}%` }} />
@@ -451,6 +458,7 @@ export function DebtsManager({
               <button
                 onClick={handleCloseForm}
                 className="p-2 rounded-xl hover:bg-muted transition-colors"
+                disabled={isSubmitting}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -648,10 +656,10 @@ export function DebtsManager({
 
               <div className="border-t border-border px-6 py-4 bg-card/95 backdrop-blur-sm">
                 <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
-                  <Button type="button" variant="outline" className="rounded-xl" onClick={handleCloseForm}>
+                  <Button type="button" variant="outline" className="rounded-xl" onClick={handleCloseForm} disabled={isSubmitting}>
                     Cancelar
                   </Button>
-                  <Button type="submit" className={cn(
+                  <Button type="submit" disabled={isSubmitting} className={cn(
                     'w-full rounded-xl sm:w-auto sm:min-w-[220px]',
                     editingDebt?.status === 'renegotiated' ? 'bg-success hover:bg-success/90' : 'bg-danger hover:bg-danger/90'
                   )}>

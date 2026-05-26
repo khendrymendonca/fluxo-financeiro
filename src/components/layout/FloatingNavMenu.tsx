@@ -7,7 +7,7 @@ import { FORCED_DISABLED_FEATURE_KEYS } from '@/config/features';
 import {
   LayoutDashboard, ArrowUpDown, Receipt, CreditCard,
   Wallet, Rocket, TrendingDown, LineChart,
-  Settings2, Database, Calculator, User, Shield,
+  Settings, Settings2, Database, Calculator, User, Shield,
   TrendingUp
 } from 'lucide-react';
 import { format } from 'date-fns';

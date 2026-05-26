@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import {
   Calculator,
   ArrowRightLeft,
-  Info,
   Plus,
   Receipt,
   RefreshCw,
@@ -12,7 +11,7 @@ import {
   Rabbit,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -188,20 +187,8 @@ export function LegacyDashboardHome({
       <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
         <div className="grid grid-cols-1 gap-3">
           <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-900 p-5 rounded-[2rem] shadow-sm">
-            <div className="flex items-center justify-between mb-1">
+            <div className="mb-1">
               <p className="text-xs font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest">Saldo Projetado</p>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 p-0 hover:bg-transparent">
-                      <Info className="w-4 h-4 text-gray-400 dark:text-zinc-600" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className="bg-zinc-800 text-white border-none p-3 rounded-lg max-w-[200px] text-xs leading-relaxed z-[100]">
-                    O saldo projetado soma seu saldo atual com todas as receitas e despesas previstas para este mês.
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
             </div>
             <h3
               className={cn('text-2xl font-bold tracking-tight truncate block w-full max-w-full', projectedBalance < 0 ? 'text-danger' : 'text-gray-900 dark:text-white')}

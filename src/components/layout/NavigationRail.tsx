@@ -8,6 +8,7 @@ import {
   Moon,
   Receipt,
   Settings2,
+  Settings,
   Sun,
   Shield,
   User,
@@ -273,7 +274,7 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
                 <p className="truncate text-sm font-black text-foreground">{profileName}</p>
               </div>
               <DropdownMenuItem className="font-bold" onClick={() => onNavigate('profile')}>
-                <Settings2 className="mr-2 h-4 w-4" />
+                <Settings className="mr-2 h-4 w-4" />
                 Configurações
               </DropdownMenuItem>
               <DropdownMenuItem className="font-bold text-rose-600 focus:text-rose-600" onClick={() => void signOut()}>

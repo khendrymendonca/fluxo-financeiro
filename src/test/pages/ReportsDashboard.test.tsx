@@ -1,4 +1,4 @@
-﻿import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ReportsDashboard, { buildCategoryExpenseRanking, buildProjectedReportPeriodData, buildReportPeriodData } from '@/pages/ReportsDashboard';
 import { buildIncomeConsumption, buildPeriodComparison } from '@/utils/reportComparisons';
@@ -20,10 +20,25 @@ const themeMock = vi.hoisted(() => ({
   useTheme: vi.fn(),
 }));
 
+const authMock = vi.hoisted(() => ({
+  useAuth: vi.fn(),
+}));
+
+const themeColorMock = vi.hoisted(() => ({
+  useThemeColor: vi.fn(),
+  accentColors: [
+    { id: 'blue', name: 'Azul Real', hsl: '221.2 83.2% 53.3%' },
+    { id: 'emerald', name: 'Esmeralda', hsl: '142.1 76.2% 36.3%' },
+    { id: 'teal', name: 'Turquesa', hsl: '173.4 80.4% 40%' },
+  ],
+}));
+
 vi.mock('@/hooks/useFinanceStore', () => financeStoreMock);
 vi.mock('@/hooks/useFeatureFlags', () => featureFlagsMock);
 vi.mock('@/hooks/useIsMobile', () => mobileMock);
 vi.mock('@/hooks/useTheme', () => themeMock);
+vi.mock('@/contexts/AuthContext', () => authMock);
+vi.mock('@/hooks/useThemeColor', () => themeColorMock);
 
 const makeCategory = (id: string, name: string): Category => ({
   id,
@@ -58,6 +73,17 @@ describe('ReportsDashboard - categoria de acordo', () => {
       theme: 'dark',
       setTheme: vi.fn(),
       cycleTheme: vi.fn(),
+    });
+    authMock.useAuth.mockReturnValue({
+      user: { id: 'user-1', email: 'test@example.com' },
+      session: null,
+      loading: false,
+      signOut: vi.fn(),
+    });
+    themeColorMock.useThemeColor.mockReturnValue({
+      accentColor: 'blue',
+      setAccentColor: vi.fn(),
+      accentColors: themeColorMock.accentColors,
     });
     vi.stubGlobal('ResizeObserver', class {
       observe() {}
@@ -1103,7 +1129,7 @@ describe('ReportsDashboard - categoria de acordo', () => {
 
     render(<ReportsDashboard />);
 
-    expect(screen.getByText('Consumo vs receita')).toBeInTheDocument();
+    expect(screen.getByText(/Consumo vs Receita/i)).toBeInTheDocument();
     expect(screen.getByLabelText('Período anterior')).toBeInTheDocument();
     expect(screen.getByLabelText('Próximo período')).toBeInTheDocument();
     expect(screen.queryByText('dom')).not.toBeInTheDocument();

@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { LogOut, Menu, Settings2 } from 'lucide-react';
+import { LogOut, Menu, Settings } from 'lucide-react';
 
 interface MobileTopHeaderProps {
   greeting: string;
@@ -79,7 +79,7 @@ export function MobileTopHeader({
               <p className="truncate text-sm font-black text-foreground">{userName}</p>
             </div>
             <DropdownMenuItem className="font-bold" onClick={onOpenProfile}>
-              <Settings2 className="mr-2 h-4 w-4" />
+              <Settings className="mr-2 h-4 w-4" />
               Configurações
             </DropdownMenuItem>
             <DropdownMenuItem className="font-bold text-rose-600 focus:text-rose-600" onClick={() => void onSignOut()}>

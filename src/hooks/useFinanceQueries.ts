@@ -1,4 +1,4 @@
-﻿import { useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { format, startOfYear, endOfYear } from 'date-fns';
 import { Transaction, Account, CreditCard, Debt, SavingsGoal, Category, Subcategory, CategoryGroup } from '@/types/finance';
@@ -10,7 +10,9 @@ export function useAccounts() {
   return useQuery({
     queryKey: ['accounts'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('accounts').select('*').is('deleted_at', null);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data, error } = await supabase.from('accounts').select('*').eq('user_id', user.id).is('deleted_at', null);
       if (error) throw error;
       return (data || []).map((acc: any) => ({
         ...acc,
@@ -28,6 +30,8 @@ export function useTransactions(viewDate: Date) {
   return useQuery({
     queryKey: ['transactions', viewDate.getFullYear(), viewDate.getMonth()],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
       // Janela anual: garante relatórios completos e comparativos por meses no mesmo ano
       const windowStart = format(startOfYear(viewDate), 'yyyy-MM-dd');
       const windowEnd = format(endOfYear(viewDate), 'yyyy-MM-dd');
@@ -36,19 +40,19 @@ export function useTransactions(viewDate: Date) {
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
+        .eq('user_id', user.id)
         .or(
           `and(deleted_at.is.null,date.gte.${windowStart},date.lte.${windowEnd}),` + 
           `and(deleted_at.is.null,is_recurring.eq.true),` +
           `and(deleted_at.is.null,installment_group_id.not.is.null),` +
           `and(deleted_at.is.null,invoice_month_year.eq.${viewDateStr}),` +
           `and(deleted_at.is.null,card_id.not.is.null,is_invoice_payment.eq.true),` +
-          `and(deleted_at.is.null,card_id.not.is.null,is_paid.eq.false),` +
+          `and(deleted_at.is.null,is_paid.eq.false),` +
+          `and(deleted_at.is.null,debt_id.not.is.null),` +
           `and(deleted_at.is.null,original_id.not.is.null),` +
           `and(deleted_at.not.is.null,original_id.not.is.null,is_recurring.eq.false)`
         );
-
       if (error) throw error;
-
       return (data || []).map((t: any) => ({
         ...t,
         userId: t.user_id,
@@ -82,7 +86,9 @@ export function useCreditCards() {
   return useQuery({
     queryKey: ['credit-cards'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('credit_cards').select('*');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data, error } = await supabase.from('credit_cards').select('*').eq('user_id', user.id);
       if (error) throw error;
       return (data || []).map((c: any) => ({
         ...c,
@@ -147,9 +153,12 @@ export function useDebts() {
   return useQuery({
     queryKey: ['debts'],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
       const { data, error } = await supabase
         .from('debts')
         .select('*')
+        .eq('user_id', user.id)
         .order('strategy_priority', { ascending: true });
       if (error) throw error;
       return (data || []).map((d: any) => ({
@@ -176,13 +185,21 @@ export function useSavingsGoals() {
   return useQuery({
     queryKey: ['savings-goals'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('savings_goals').select('*');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('savings_goals')
+        .select('*')
+        .eq('user_id', user.id);
       if (error) throw error;
       return (data || []).map((g: any) => ({
         ...g,
         userId: g.user_id,
-        targetAmount: g.target_amount,
-        currentAmount: g.current_amount
+        targetAmount: Number(g.target_amount) || 0,
+        currentAmount: Number(g.current_amount) || 0,
+        accountId: g.account_id,
+        projectType: g.project_type,
+        dreamStartDate: g.dream_start_date
       })) as SavingsGoal[];
     },
     staleTime: 1000 * 60 * 5, // 5 minutos
