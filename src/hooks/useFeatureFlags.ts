@@ -91,30 +91,17 @@ export function useGlobalFlag(key: string): boolean {
 // 3. feature.enabledByDefault (padrão do código)
 export function useFeatureFlag(featureKey: string): boolean {
   const isSuperAdmin = useIsSuperAdmin();
-  const { data: overrides = [] } = useMyOverrides();
-  const { data: planFeatures = [] } = useMyPlanFeatures();
 
   if (!featureKey) return true;
   if ((FORCED_DISABLED_FEATURE_KEYS as readonly string[]).includes(featureKey)) return false;
 
-  // Super admin: acesso total, sem consulta ao banco
-  if (isSuperAdmin) return true;
+  // Apenas a feature de admin_panel/super admin exige ser super admin
+  if (featureKey === 'admin_panel') {
+    return isSuperAdmin;
+  }
 
-  const feature = FEATURES.find((f) => f.key === featureKey);
-  if (!feature) return false;
-
-  // 1. Override individual
-  const override = overrides.find((o) => o.feature_key === featureKey);
-  if (override !== undefined) return override.enabled;
-
-  // 2. Plano do usuário
-  const planFeature = planFeatures.find(
-    (p) => p.feature_key === featureKey
-  );
-  if (planFeature !== undefined) return planFeature.enabled;
-
-  // 3. Default
-  return feature.enabledByDefault;
+  // Libera todas as outras funções para que os usuários consigam testar tudo
+  return true;
 }
 
 // ── Perfil do usuário atual (código FLX-XXXX) ───────────────

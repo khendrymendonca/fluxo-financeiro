@@ -225,7 +225,7 @@ describe('TransactionList - fluxo interno de pagamento', () => {
     expect(scoped.getByText('Saldo atual')).toBeInTheDocument();
     expect(scoped.getByText('Após pagamento: -R$ 110,00')).toBeInTheDocument();
     expect(scoped.getByText('Limite utilizado: R$ 110,00')).toBeInTheDocument();
-    expect(scoped.getByText('Limite disponivel: R$ 0,00')).toBeInTheDocument();
+    expect(scoped.getByText('Limite disponível: R$ 0,00')).toBeInTheDocument();
 
     fireEvent.click(accountButton);
 
@@ -254,8 +254,8 @@ describe('TransactionList - fluxo interno de pagamento', () => {
     expect(scoped.getByText('Saldo atual')).toBeInTheDocument();
     expect(scoped.getByText('Após pagamento: -R$ 130,00')).toBeInTheDocument();
     expect(scoped.getByText('Limite utilizado: R$ 110,00')).toBeInTheDocument();
-    expect(scoped.getByText('Limite disponivel: R$ 0,00')).toBeInTheDocument();
-    expect(scoped.getByText('Excesso alem do limite: R$ 20,00')).toBeInTheDocument();
+    expect(scoped.getByText('Limite disponível: R$ 0,00')).toBeInTheDocument();
+    expect(scoped.getByText('Excesso além do limite: R$ 20,00')).toBeInTheDocument();
 
     fireEvent.click(accountButton);
 

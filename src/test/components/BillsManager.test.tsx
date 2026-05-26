@@ -583,7 +583,7 @@ describe('BillsManager - contas pendentes', () => {
     expect(screen.getByText('R$ 0,00')).toBeInTheDocument();
     expect(screen.getByText('Após pagamento: -R$ 110,00')).toBeInTheDocument();
     expect(screen.getByText('Limite utilizado: R$ 110,00')).toBeInTheDocument();
-    expect(screen.getByText('Limite disponivel: R$ 0,00')).toBeInTheDocument();
+    expect(screen.getByText('Limite disponível: R$ 0,00')).toBeInTheDocument();
 
     fireEvent.click(accountButton);
 
@@ -636,8 +636,8 @@ describe('BillsManager - contas pendentes', () => {
     expect(screen.getByText('R$ 0,00')).toBeInTheDocument();
     expect(screen.getByText('Após pagamento: -R$ 130,00')).toBeInTheDocument();
     expect(screen.getByText('Limite utilizado: R$ 110,00')).toBeInTheDocument();
-    expect(screen.getByText('Limite disponivel: R$ 0,00')).toBeInTheDocument();
-    expect(screen.getByText('Excesso alem do limite: R$ 20,00')).toBeInTheDocument();
+    expect(screen.getByText('Limite disponível: R$ 0,00')).toBeInTheDocument();
+    expect(screen.getByText('Excesso além do limite: R$ 20,00')).toBeInTheDocument();
 
     fireEvent.click(accountButton);
 

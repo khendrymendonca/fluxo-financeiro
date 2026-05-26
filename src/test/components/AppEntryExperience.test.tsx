@@ -116,7 +116,7 @@ describe('Entrada do app e intro', () => {
 
     expect(await screen.findByText('Home autenticada')).toBeInTheDocument();
     expect(toastMock.toast).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'Nao foi possivel atualizar os dados agora',
+      title: 'Não foi possível atualizar os dados agora',
       variant: 'destructive',
     }));
   });

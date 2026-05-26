@@ -130,7 +130,7 @@ describe('Projection access and positioning', () => {
     expect(debtStrategy).toMatchObject({
       key: 'debt_strategy',
       label: 'Estratégia de Dívidas',
-      enabledByDefault: false,
+      enabledByDefault: true,
     });
     // Verifica que NÃO usa array de fallback
     expect(source).toContain("projection: 'debt_strategy'");

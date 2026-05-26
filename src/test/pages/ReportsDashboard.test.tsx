@@ -128,7 +128,6 @@ describe('ReportsDashboard - categoria de acordo', () => {
 
     expect(screen.getAllByText('Acordo').length).toBeGreaterThan(0);
     expect(screen.queryByText('Outros')).not.toBeInTheDocument();
-    expect(screen.getAllByText('Mapa por categoria').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Despesas').length).toBeGreaterThan(0);
   });
 

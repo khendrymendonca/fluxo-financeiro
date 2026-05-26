@@ -1107,7 +1107,7 @@ describe('useTransactionMutations - useUpdateTransaction scopes', () => {
         isPaid: true,
         paymentDate: '2026-04-10',
       },
-    })).rejects.toThrow('Selecione uma conta ou cartao para registrar o pagamento.');
+    })).rejects.toThrow('Selecione uma conta ou cartão para registrar o pagamento.');
 
     expect(supabaseMock.from).toHaveBeenCalledTimes(1);
     expect(selectTransaction.update).not.toHaveBeenCalled();
@@ -1147,7 +1147,7 @@ describe('useTransactionMutations - useUpdateTransaction scopes', () => {
         cardId: null,
         invoiceMonthYear: null,
       },
-    })).rejects.toThrow('Transacao nao atualizada. Recarregue os dados e tente novamente.');
+    })).rejects.toThrow('Transação não atualizada. Recarregue os dados e tente novamente.');
 
     expect(updateInstallment.update).toHaveBeenCalledWith(expect.objectContaining({
       is_paid: true,
