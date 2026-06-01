@@ -50,7 +50,6 @@ import { AccountsManager } from '@/components/accounts/AccountsManager';
 import { DebtsManager } from '@/components/debts/DebtsManager';
 import ReportsDashboard from './ReportsDashboard';
 import CardsDashboard from './CardsDashboard';
-import ProjectionPage from './ProjectionPage';
 import MonthPlanPage from './MonthPlanPage';
 import { Button } from '@/components/ui/button';
 import { Transaction, SavingsGoal } from '@/types/finance';
@@ -77,7 +76,7 @@ import { MobileTopHeader } from '@/components/layout/MobileTopHeader';
 import { getGreetingForHour, getUserFirstName, getUserInitial } from '@/utils/userIdentity';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
-type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export' | 'emergency' | 'menu' | 'profile' | 'projection';
+type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export' | 'emergency' | 'menu' | 'profile';
 
 // Mapa de views que requerem feature flag
 const PROTECTED_VIEWS: Record<string, string> = {
@@ -90,7 +89,6 @@ const PROTECTED_VIEWS: Record<string, string> = {
   emergency: 'emergency_fund',
   reports: 'reports_dashboard',
   simulator: 'simulator',
-  projection: 'debt_strategy',
   export: 'export_data',
 };
 
@@ -259,9 +257,8 @@ export default function Index() {
     { id: 'cards', icon: CardIcon, label: 'Cartões', featureKey: 'cards_dashboard' },
     { id: 'bills', icon: Receipt, label: 'Gestão de Contas', featureKey: 'accounts' },
     { id: 'accounts', icon: Wallet, label: 'Minhas Contas (Carteira)', featureKey: 'accounts' },
-    { id: 'projection', icon: TrendingUp, label: 'Projeção', featureKey: 'debt_strategy' },
     { id: 'emergency', icon: Shield, label: 'Reserva de Emergência', featureKey: 'emergency_fund' },
-    { id: 'goals', icon: Rocket, label: 'Sonhos & Projetos', featureKey: 'goals_manager' },
+
     { id: 'debts', icon: History, label: 'Acordos', featureKey: 'debts_manager' },
     { id: 'reports', icon: BarChart3, label: 'Relatórios', featureKey: 'reports_dashboard' },
     { id: 'categories', icon: Settings2, label: 'Categorias' },
@@ -473,12 +470,6 @@ export default function Index() {
         );
       case 'profile':
         return <ProfileSettings />;
-      case 'projection':
-        return (
-          <ViewGuard view="projection">
-            <ProjectionPage />
-          </ViewGuard>
-        );
       default:
         return <div className="text-center py-20 text-zinc-500 italic">Em breve...</div>;
     }

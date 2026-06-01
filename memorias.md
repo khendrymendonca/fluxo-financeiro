@@ -1515,3 +1515,14 @@ Em rec√°lculo:
 - **Resumo**: Removemos as limita√ß√µes de planos na aplica√ß√£o, alterando o hook central `useFeatureFlag` (`src/hooks/useFeatureFlags.ts`) para retornar `true` para todas as funcionalidades e planos, com exce√ß√£o da feature `admin_panel` que continua restrita ao super admin. Al√©m disso, removemos completamente a se√ß√£o "Mapa por categoria" da tela de Relat√≥rios (`src/pages/ReportsDashboard.tsx`), incluindo o cont√™iner condicional e a tabela anual detalhada por categoria, e atualizamos os testes correspondentes (`ReportsDashboard.test.tsx`, `ProjectionAccess.test.tsx` e `sprintAccessMobileTheme.test.tsx`).
 - **Motiva√ß√£o**: Atender √† solicita√ß√£o direta do usu√°rio para permitir testes completos de todas as funcionalidades para os usu√°rios sem restri√ß√µes de planos (com exce√ß√£o do painel super admin), e simplificar a tela de relat√≥rios removendo o mapa anual por categoria.
 
+
+## 01/06/2026
+- RemoÁ„o da tela de ProjeÁ„o e EstratÈgia.
+- Ajuste no visual do filtro de categorias da Gest„o de Contas.
+- RemoÁ„o da mensagem motivacional da Reserva de EmergÍncia.
+- DesativaÁ„o do tema de P·scoa.
+
+- Faturas de cart„o de crÈdito classificadas logicamente como 'Cart„o de CrÈdito' em vez de 'N„o identificadas'.
+- Ajuste no visual do filtro de categorias da tela de LanÁamentos para usar o componente Select do design system.
+- Agrupamento de categorias (Receitas, Despesas, Outros) nos filtros das telas de Lan√ßamentos e Gest√£o de Contas.
+- Oculta√ß√£o da aba Sonhos & Projetos do menu principal.

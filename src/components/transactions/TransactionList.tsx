@@ -13,6 +13,7 @@ import { toast } from '@/components/ui/use-toast';
 import { Portal } from '@/components/ui/Portal';
 import { BulkDeleteDialog } from './BulkDeleteDialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { getAccountOverdraftMetrics } from '@/utils/accountOverdraft';
 import { getTransactionCategoryLabel } from '@/utils/transactionCategory';
 import { buildCanonicalCategoryFilterOptions, matchesCanonicalCategoryFilter } from '@/utils/categoryFilter';
@@ -310,21 +311,49 @@ export function TransactionList({
               ))}
             </div>
 
-            <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800">
+            <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-800">
               <Filter className="h-4 w-4 text-muted-foreground" />
-              <select
-                aria-label="Categoria"
-                value={selectedCategoryKey}
-                onChange={(event) => setSelectedCategoryKey(event.target.value)}
-                className="bg-transparent text-sm font-bold text-foreground outline-none"
-              >
-                <option value="all">Todas as categorias</option>
-                {categoryFilterOptions.map((option) => (
-                  <option key={option.key} value={option.key}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedCategoryKey} onValueChange={setSelectedCategoryKey}>
+                <SelectTrigger className="w-auto h-auto bg-transparent border-0 shadow-none focus:ring-0 text-sm font-bold text-foreground p-0 gap-2">
+                  <SelectValue placeholder="Todas as categorias" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as categorias</SelectItem>
+                  
+                  {categoryFilterOptions.filter(o => o.type === 'income').length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel className="text-xs font-black text-muted-foreground uppercase tracking-widest pl-2">Receitas</SelectLabel>
+                      {categoryFilterOptions.filter(o => o.type === 'income').map(option => (
+                        <SelectItem key={option.key} value={option.key} className="pl-6">
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+
+                  {categoryFilterOptions.filter(o => o.type === 'expense').length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel className="text-xs font-black text-muted-foreground uppercase tracking-widest pl-2">Despesas</SelectLabel>
+                      {categoryFilterOptions.filter(o => o.type === 'expense').map(option => (
+                        <SelectItem key={option.key} value={option.key} className="pl-6">
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+
+                  {categoryFilterOptions.filter(o => o.type === 'logical' || !o.type).length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel className="text-xs font-black text-muted-foreground uppercase tracking-widest pl-2">Outros</SelectLabel>
+                      {categoryFilterOptions.filter(o => o.type === 'logical' || !o.type).map(option => (
+                        <SelectItem key={option.key} value={option.key} className="pl-6">
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

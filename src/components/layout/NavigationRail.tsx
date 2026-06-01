@@ -54,7 +54,6 @@ const navGroups = [
   {
     label: 'Planejamento',
     items: [
-      { id: 'projection', icon: TrendingUp, label: 'Projeção', featureKey: 'debt_strategy' },
       { id: 'emergency', icon: Shield, label: 'Reserva de Emergência', featureKey: 'emergency_fund' },
       { id: 'goals', icon: Rocket, label: 'Sonhos & Projetos', featureKey: 'goals_manager' },
       { id: 'debts', icon: History, label: 'Acordos', featureKey: 'debts_manager' },

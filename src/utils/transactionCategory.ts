@@ -4,6 +4,7 @@ export const LOGICAL_AGREEMENT_CATEGORY_KEY = 'logical:agreement';
 export const LOGICAL_RENEGOTIATION_CATEGORY_KEY = 'logical:renegotiation';
 export const LOGICAL_UNCATEGORIZED_CATEGORY_KEY = 'logical:uncategorized';
 export const LOGICAL_MISSING_CATEGORY_KEY_PREFIX = 'logical:missing-category:';
+export const LOGICAL_INVOICE_CATEGORY_KEY = 'logical:invoice-payment';
 
 type CategoryBucket = {
   key: string;
@@ -73,6 +74,13 @@ export function getTransactionCategoryBucket(
     return {
       key: LOGICAL_RENEGOTIATION_CATEGORY_KEY,
       label: 'Renegociação',
+    };
+  }
+
+  if (transaction.isInvoicePayment) {
+    return {
+      key: LOGICAL_INVOICE_CATEGORY_KEY,
+      label: 'Cartão de Crédito',
     };
   }
 

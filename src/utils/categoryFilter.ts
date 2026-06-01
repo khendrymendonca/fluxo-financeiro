@@ -4,6 +4,7 @@ import { getTransactionCategoryBucket } from '@/utils/transactionCategory';
 export type CategoryFilterOption = {
   key: string;
   label: string;
+  type?: 'income' | 'expense' | 'logical';
 };
 
 export function buildCanonicalCategoryFilterOptions(
@@ -19,15 +20,19 @@ export function buildCanonicalCategoryFilterOptions(
       optionMap.set(`category:${category.id}`, {
         key: `category:${category.id}`,
         label: category.name,
+        type: category.type as 'income' | 'expense',
       });
     });
 
   transactions.forEach((transaction) => {
     const bucket = getTransactionCategoryBucket(transaction, categories, fallback);
-    optionMap.set(bucket.key, {
-      key: bucket.key,
-      label: bucket.label,
-    });
+    if (!optionMap.has(bucket.key)) {
+      optionMap.set(bucket.key, {
+        key: bucket.key,
+        label: bucket.label,
+        type: 'logical',
+      });
+    }
   });
 
   return Array.from(optionMap.values()).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));

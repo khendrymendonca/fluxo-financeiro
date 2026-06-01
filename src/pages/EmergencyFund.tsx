@@ -64,18 +64,7 @@ export default function EmergencyFund() {
                 />
             </div>
 
-            {currentAmount < targetAmount && (
-                <div className="p-6 rounded-3xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 flex gap-4">
-                    <AlertCircle className="w-6 h-6 text-amber-500 shrink-0" />
-                    <div>
-                        <p className="font-bold text-amber-900 dark:text-amber-200">Continue focado!</p>
-                        <p className="text-sm text-amber-700 dark:text-amber-400">
-                            Sua reserva cobre aproximadamente {(currentAmount / (monthlyFixed || 1)).toFixed(1)} meses de custos básicos.
-                            Faltam {formatCurrency(Math.max(0, targetAmount - currentAmount))} para sua meta.
-                        </p>
-                    </div>
-                </div>
-            )}
+
         </div>
     );
 }

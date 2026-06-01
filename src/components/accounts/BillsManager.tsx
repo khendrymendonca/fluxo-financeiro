@@ -11,6 +11,7 @@ import {
     ShieldAlert, CreditCard as CardIcon, RotateCcw, Pencil, X
 } from 'lucide-react';
 import { Portal } from '@/components/ui/Portal';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { addMonths, format, isBefore, isSameDay, startOfMonth, startOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -450,21 +451,49 @@ export function BillsManager() {
                 </div>
 
                 <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                    <div className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900">
+                    <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-800">
                         <Filter className="h-4 w-4 text-muted-foreground" />
-                        <select
-                            aria-label="Categoria"
-                            value={selectedCategoryKey}
-                            onChange={(event) => setSelectedCategoryKey(event.target.value)}
-                            className="bg-transparent text-sm font-bold text-foreground outline-none"
-                        >
-                            <option value="all">Todas as categorias</option>
-                            {categoryFilterOptions.map((option) => (
-                                <option key={option.key} value={option.key}>
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
+                        <Select value={selectedCategoryKey} onValueChange={setSelectedCategoryKey}>
+                            <SelectTrigger className="w-auto h-auto bg-transparent border-0 shadow-none focus:ring-0 text-sm font-bold text-foreground p-0 gap-2">
+                                <SelectValue placeholder="Todas as categorias" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas as categorias</SelectItem>
+                                
+                                {categoryFilterOptions.filter(o => o.type === 'income').length > 0 && (
+                                  <SelectGroup>
+                                    <SelectLabel className="text-xs font-black text-muted-foreground uppercase tracking-widest pl-2">Receitas</SelectLabel>
+                                    {categoryFilterOptions.filter(o => o.type === 'income').map(option => (
+                                      <SelectItem key={option.key} value={option.key} className="pl-6">
+                                        {option.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectGroup>
+                                )}
+
+                                {categoryFilterOptions.filter(o => o.type === 'expense').length > 0 && (
+                                  <SelectGroup>
+                                    <SelectLabel className="text-xs font-black text-muted-foreground uppercase tracking-widest pl-2">Despesas</SelectLabel>
+                                    {categoryFilterOptions.filter(o => o.type === 'expense').map(option => (
+                                      <SelectItem key={option.key} value={option.key} className="pl-6">
+                                        {option.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectGroup>
+                                )}
+
+                                {categoryFilterOptions.filter(o => o.type === 'logical' || !o.type).length > 0 && (
+                                  <SelectGroup>
+                                    <SelectLabel className="text-xs font-black text-muted-foreground uppercase tracking-widest pl-2">Outros</SelectLabel>
+                                    {categoryFilterOptions.filter(o => o.type === 'logical' || !o.type).map(option => (
+                                      <SelectItem key={option.key} value={option.key} className="pl-6">
+                                        {option.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectGroup>
+                                )}
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     <div className="flex items-center gap-2 p-1 bg-muted rounded-2xl w-full overflow-x-auto no-scrollbar md:w-fit">

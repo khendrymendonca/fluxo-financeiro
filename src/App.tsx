@@ -17,7 +17,6 @@ import MagicLinkAccessPage from "./pages/MagicLinkAccessPage";
 import EmailChangedPage from "./pages/EmailChangedPage";
 import ReauthenticationPage from "./pages/ReauthenticationPage";
 import SuperPage from "./pages/SuperPage";
-import ProjectionPage from "./pages/ProjectionPage";
 import NotFound from "./pages/NotFound";
 import { UpdatePrompt } from "./components/layout/UpdatePrompt";
 import { ProtectedRoute } from "./components/layout/ProtectedRoute";
@@ -58,18 +57,6 @@ const AppRoutes = () => {
           <Route path="/auth/acesso" element={<MagicLinkAccessPage />} />
           <Route path="/auth/email-alterado" element={<EmailChangedPage />} />
           <Route path="/auth/reautenticacao" element={<ReauthenticationPage />} />
-          <Route
-            path="/projection"
-            element={
-              user ? (
-                <ProtectedRoute featureKey="debt_strategy" redirectTo="/?view=dashboard">
-                  <ProjectionPage />
-                </ProtectedRoute>
-              ) : (
-                <AuthPage />
-              )
-            }
-          />
           <Route path="/super" element={user ? <SuperPage /> : <AuthPage />} />
           <Route path="*" element={user ? <NotFound /> : <AuthPage />} />
         </Routes>

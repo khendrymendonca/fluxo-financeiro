@@ -52,6 +52,7 @@ import {
   LOGICAL_AGREEMENT_CATEGORY_KEY,
   LOGICAL_RENEGOTIATION_CATEGORY_KEY,
   LOGICAL_UNCATEGORIZED_CATEGORY_KEY,
+  LOGICAL_INVOICE_CATEGORY_KEY
 } from '@/utils/transactionCategory';
 import { buildCardInvoiceObligations } from '@/utils/invoiceObligations';
 import { buildIncomeConsumption, buildPeriodComparison, PeriodComparison } from '@/utils/reportComparisons';
@@ -879,6 +880,7 @@ export default function ReportsDashboard() {
       { id: LOGICAL_AGREEMENT_CATEGORY_KEY, name: 'Acordo' },
       { id: LOGICAL_RENEGOTIATION_CATEGORY_KEY, name: 'Renegociação' },
       { id: LOGICAL_UNCATEGORIZED_CATEGORY_KEY, name: 'Não identificados' },
+      { id: LOGICAL_INVOICE_CATEGORY_KEY, name: 'Cartão de Crédito' },
     ].forEach((option) => optionMap.set(option.id, option));
 
     expenseCategories.forEach((category) => {
