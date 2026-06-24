@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/hooks/useTheme';
@@ -6,7 +7,8 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useMobileShortcuts, ShortcutId } from '@/hooks/useMobileShortcuts';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useDeleteUserAccount } from '@/hooks/useAccountMutations';
-import { useFeatureFlag, useUserProfile } from '@/hooks/useFeatureFlags';
+import { useFeatureFlag, useUserProfile, useGlobalFlag } from '@/hooks/useFeatureFlags';
+import { BandeiraBrasil } from '@/components/branding/BandeiraBrasil';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,13 +39,21 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { AppLogo } from '@/components/branding/AppLogo';
+import { VisualColorPicker } from '@/components/ui/VisualColorPicker';
+
+// BandeiraBrasil importada de @/components/branding/BandeiraBrasil
 
 export function ProfileSettings() {
     const { user } = useAuth();
     const { theme, setTheme } = useTheme();
-    const { accentColor, setAccentColor, accentColors } = useThemeColor();
+    const { accentColor, setAccentColor, accentColors, modoTorcida, setModoTorcida, customPalette, setCustomPalette } = useThemeColor();
+    const copaInternalEnabled = useGlobalFlag('theme_copa_internal');
+    const easterInternalEnabled = useGlobalFlag('theme_easter_internal');
+    const christmasInternalEnabled = useGlobalFlag('theme_christmas_internal');
+    const halloweenInternalEnabled = useGlobalFlag('theme_halloween_internal');
     const { shortcuts, saveShortcuts } = useMobileShortcuts();
     const isMobile = useIsMobile();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const buildDate = useState(() => {
         try {
@@ -301,7 +311,7 @@ export function ProfileSettings() {
                 </div>
 
                 {/* Card 2: Aparência */}
-                <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm space-y-6">
+                <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm space-y-6 md:col-span-2">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
                             <Palette className="w-5 h-5" />
@@ -321,54 +331,226 @@ export function ProfileSettings() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                        {[
+                    {(() => {
+                        const themeOptions = [
                             { id: 'light', icon: Sun, label: 'Claro' },
                             { id: 'dark', icon: Moon, label: 'Escuro' },
                             { id: 'amoled', icon: Zap, label: 'AMOLED' },
                             { id: 'system', icon: Monitor, label: 'Sistema' },
-                        ].filter(t => isMobile || t.id !== 'amoled').map((t) => (
-                            <button
-                                key={t.id}
-                                onClick={() => setTheme(t.id as any)}
-                                className={cn(
-                                    "flex flex-col items-center justify-center gap-2 p-4 rounded-3xl border-2 transition-all duration-300",
-                                    theme === t.id
-                                        ? "bg-primary/10 border-primary text-primary shadow-inner"
-                                        : "bg-gray-50 dark:bg-zinc-950/50 border-transparent text-zinc-500 dark:text-zinc-400 hover:border-gray-200 dark:hover:border-zinc-800"
-                                )}
-                            >
-                                <t.icon className={cn("w-6 h-6", theme === t.id ? "scale-110" : "")} />
-                                <span className="text-xs font-black uppercase tracking-widest">{t.label}</span>
-                            </button>
-                        ))}
-                    </div>
+                        ].filter(t => isMobile || t.id !== 'amoled');
+                        
+                        return (
+                            <div className={cn(
+                                "grid gap-3",
+                                themeOptions.length === 4 ? "grid-cols-2" : "grid-cols-3"
+                            )}>
+                                {themeOptions.map((t) => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => setTheme(t.id as any)}
+                                        className={cn(
+                                            "flex flex-col items-center justify-center gap-2 p-4 rounded-3xl border-2 transition-all duration-300",
+                                            theme === t.id
+                                                ? "bg-primary/10 border-primary text-primary shadow-inner"
+                                                : "bg-gray-50 dark:bg-zinc-950/50 border-transparent text-zinc-500 dark:text-zinc-400 hover:border-gray-200 dark:hover:border-zinc-800"
+                                        )}
+                                    >
+                                        <t.icon className={cn("w-6 h-6", theme === t.id ? "scale-110" : "")} />
+                                        <span className="text-xs font-black uppercase tracking-widest">{t.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        );
+                    })()}
+
+                    {/* Modo Torcida Copa do Mundo */}
+                    {copaInternalEnabled && (
+                        <div className="relative overflow-hidden rounded-3xl border-2 border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-amber-500/10 to-blue-500/10 p-6 shadow-sm group">
+                            {/* Efeitos de fundo sutis */}
+                            <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-amber-400/20 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-500" />
+                            <div className="absolute -left-10 -top-10 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-500" />
+                            
+                            <div className="relative flex items-center justify-between gap-4">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <BandeiraBrasil />
+                                        <h3 className="font-black text-sm uppercase tracking-widest text-foreground">
+                                            Modo Torcida Copa
+                                        </h3>
+                                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-emerald-500 text-white animate-pulse">
+                                            Copa 2026
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground leading-relaxed max-w-[260px]">
+                                        Deixe o app verde, amarelo e azul em clima de Copa! Mantém o fundo chumbo, preto ou branco.
+                                    </p>
+                                </div>
+                                <Switch 
+                                    id="modo-torcida-switch"
+                                    checked={modoTorcida} 
+                                    onCheckedChange={setModoTorcida}
+                                    className="data-[state=checked]:bg-emerald-500"
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-zinc-800">
                         <Label className="text-xs font-black uppercase tracking-widest text-zinc-500 ml-1">Cor de Destaque</Label>
                         
                         {canCustomizeTheme ? (
-                            <div className="grid grid-cols-6 gap-3">
-                                {accentColors.map((color) => (
-                                    <button
-                                        key={color.id}
-                                        onClick={() => setAccentColor(color.id)}
-                                        className={cn(
-                                            "relative w-full aspect-square rounded-full transition-all duration-300 flex items-center justify-center overflow-hidden border-4",
-                                            accentColor === color.id
-                                                ? "scale-110 shadow-lg border-white dark:border-zinc-800"
-                                                : "hover:scale-105 border-transparent opacity-80 hover:opacity-100"
-                                        )}
-                                        style={{ backgroundColor: `hsl(${color.hsl})` }}
-                                        title={color.name}
-                                    >
-                                        {accentColor === color.id && (
-                                            <div className="bg-white/30 backdrop-blur-sm w-full h-full flex items-center justify-center">
-                                                <CheckCircle2 className="w-5 h-5 text-white drop-shadow-md" />
-                                            </div>
-                                        )}
-                                    </button>
-                                ))}
+                            <div className="space-y-3">
+                                {modoTorcida && (
+                                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider animate-fade-in flex items-center gap-1.5">
+                                        <BandeiraBrasil />
+                                        Cores pré-definidas suspensas no Modo Torcida
+                                    </p>
+                                )}
+                                <div className={cn("flex flex-wrap gap-2 transition-opacity duration-300", (modoTorcida || customPalette.active) ? "opacity-40 pointer-events-none" : "")}>
+                                    {accentColors.map((color) => (
+                                        <button
+                                            key={color.id}
+                                            disabled={modoTorcida || customPalette.active}
+                                            onClick={() => setAccentColor(color.id)}
+                                            className={cn(
+                                                "relative w-6 h-6 rounded-full transition-all duration-300 flex items-center justify-center overflow-hidden border-2",
+                                                accentColor === color.id
+                                                    ? "scale-105 shadow-md border-white dark:border-zinc-800 ring-2 ring-primary/40"
+                                                    : "hover:scale-105 border-transparent opacity-80 hover:opacity-100"
+                                            )}
+                                            style={{ backgroundColor: `hsl(${color.hsl})` }}
+                                            title={color.name}
+                                        >
+                                            {accentColor === color.id && (
+                                                <div className="bg-white/30 backdrop-blur-sm w-full h-full flex items-center justify-center">
+                                                    <CheckCircle2 className="w-3 h-3 text-white drop-shadow-md" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
+
+                                    {/* Botões sazonais se ativados internamente */}
+                                    {easterInternalEnabled && (
+                                        <button
+                                            disabled={modoTorcida || customPalette.active}
+                                            onClick={() => setAccentColor('pascoa')}
+                                            className={cn(
+                                                "relative w-6 h-6 rounded-full transition-all duration-300 flex items-center justify-center overflow-hidden border-2",
+                                                accentColor === 'pascoa'
+                                                    ? "scale-105 shadow-md border-white dark:border-zinc-800 ring-2 ring-primary/40"
+                                                    : "hover:scale-105 border-transparent opacity-80 hover:opacity-100"
+                                            )}
+                                            style={{ backgroundColor: 'hsl(20 90% 55%)' }}
+                                            title="Modo Páscoa"
+                                        >
+                                            {accentColor === 'pascoa' && (
+                                                <div className="bg-white/30 backdrop-blur-sm w-full h-full flex items-center justify-center">
+                                                    <CheckCircle2 className="w-3 h-3 text-white drop-shadow-md" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    )}
+                                    {christmasInternalEnabled && (
+                                        <button
+                                            disabled={modoTorcida || customPalette.active}
+                                            onClick={() => setAccentColor('christmas')}
+                                            className={cn(
+                                                "relative w-6 h-6 rounded-full transition-all duration-300 flex items-center justify-center overflow-hidden border-2",
+                                                accentColor === 'christmas'
+                                                    ? "scale-105 shadow-md border-white dark:border-zinc-800 ring-2 ring-primary/40"
+                                                    : "hover:scale-105 border-transparent opacity-80 hover:opacity-100"
+                                            )}
+                                            style={{ backgroundColor: 'hsl(0 72% 35%)' }}
+                                            title="Modo Natal"
+                                        >
+                                            {accentColor === 'christmas' && (
+                                                <div className="bg-white/30 backdrop-blur-sm w-full h-full flex items-center justify-center">
+                                                    <CheckCircle2 className="w-3 h-3 text-white drop-shadow-md" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    )}
+                                    {halloweenInternalEnabled && (
+                                        <button
+                                            disabled={modoTorcida || customPalette.active}
+                                            onClick={() => setAccentColor('halloween')}
+                                            className={cn(
+                                                "relative w-6 h-6 rounded-full transition-all duration-300 flex items-center justify-center overflow-hidden border-2",
+                                                accentColor === 'halloween'
+                                                    ? "scale-105 shadow-md border-white dark:border-zinc-800 ring-2 ring-primary/40"
+                                                    : "hover:scale-105 border-transparent opacity-80 hover:opacity-100"
+                                            )}
+                                            style={{ backgroundColor: 'hsl(24 100% 50%)' }}
+                                            title="Modo Halloween"
+                                        >
+                                            {accentColor === 'halloween' && (
+                                                <div className="bg-white/30 backdrop-blur-sm w-full h-full flex items-center justify-center">
+                                                    <CheckCircle2 className="w-3 h-3 text-white drop-shadow-md" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Seção: Paleta Customizada (RGB Picker) */}
+                                <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-zinc-800">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <Label htmlFor="custom-palette-switch" className="text-xs font-black uppercase tracking-widest text-zinc-500">
+                                                Criar Minha Paleta
+                                            </Label>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                                                Defina suas próprias cores RGB para o aplicativo
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            id="custom-palette-switch"
+                                            disabled={modoTorcida}
+                                            checked={customPalette.active}
+                                            onCheckedChange={(checked) => {
+                                                setCustomPalette({
+                                                    ...customPalette,
+                                                    active: checked
+                                                });
+                                            }}
+                                        />
+                                    </div>
+
+                                    {customPalette.active && !modoTorcida && (
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <VisualColorPicker
+                                                label="Destaque"
+                                                value={customPalette.primary}
+                                                onChange={(val) => {
+                                                    setCustomPalette({
+                                                        ...customPalette,
+                                                        primary: val
+                                                    });
+                                                }}
+                                            />
+                                            <VisualColorPicker
+                                                label="Contornos"
+                                                value={customPalette.border}
+                                                onChange={(val) => {
+                                                    setCustomPalette({
+                                                        ...customPalette,
+                                                        border: val
+                                                    });
+                                                }}
+                                            />
+                                            <VisualColorPicker
+                                                label="Ícones"
+                                                value={customPalette.icon}
+                                                onChange={(val) => {
+                                                    setCustomPalette({
+                                                        ...customPalette,
+                                                        icon: val
+                                                    });
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         ) : (
                             <div className="p-4 rounded-2xl bg-gray-50/50 dark:bg-zinc-950/50 border border-gray-100 dark:border-zinc-800 flex items-center gap-4 animate-in fade-in duration-300">
@@ -397,8 +579,16 @@ export function ProfileSettings() {
                         </div>
 
                         <div className="flex flex-col items-center py-4 bg-gray-50/50 dark:bg-zinc-950/50 rounded-3xl border border-gray-100 dark:border-zinc-800">
-                            <div className="text-primary mb-4">
+                            <div className="text-primary mb-4 flex items-center justify-center gap-4">
                                 <AppLogo className="h-16 w-48" />
+                                <Button 
+                                    type="button"
+                                    variant="outline" 
+                                    className="border-[#00FF5F] text-foreground hover:bg-[#00FF5F] hover:text-black font-bold shadow-[0_0_15px_rgba(0,255,95,0.1)] rounded-xl transition-all uppercase tracking-widest text-xs"
+                                    onClick={() => setSearchParams({ view: 'start_manager' })}
+                                >
+                                    Start
+                                </Button>
                             </div>
                             <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Gestão Inteligente</p>
                         </div>

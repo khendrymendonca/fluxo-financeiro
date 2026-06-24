@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { TrendingDown, Plus, Trash2, X, AlertTriangle, Edit2 } from 'lucide-react';
 import { useRenegotiateDebt } from '@/hooks/useDebtMutations';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { useFeatureFlag } from '@/hooks/useFeatureFlags';
+import { useFeatureFlag, usePlanLimits } from '@/hooks/useFeatureFlags';
 import { Debt } from '@/types/finance';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,9 +61,9 @@ export function DebtsManager({
 
   const { mutateAsync: renegotiateDebt } = useRenegotiateDebt();
   const { transactions, accounts } = useFinanceStore();
-  const canUseUnlimitedDebts = useFeatureFlag('unlimited_debts');
-  const freeDebtsLimit = 3;
-  const hasReachedDebtsLimit = !canUseUnlimitedDebts && debts.length >= freeDebtsLimit;
+  const { data: planLimits } = usePlanLimits();
+  const debtsLimit = planLimits?.debts_limit ?? -1;
+  const hasReachedDebtsLimit = debtsLimit !== -1 && debts.length >= debtsLimit;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -155,8 +155,9 @@ export function DebtsManager({
       } else {
         if (hasReachedDebtsLimit) {
           toast({
-            title: 'Limite do plano Free atingido',
-            description: 'Você pode cadastrar até 3 dívidas/acordos no plano Free. Para adicionar mais, libere dívidas ilimitadas.',
+            title: 'Limite de dívidas atingido',
+            description: `Seu plano atual permite cadastrar até ${debtsLimit} dívidas/acordos. Faça o upgrade para adicionar mais.`,
+            variant: 'destructive',
           });
           return;
         }
@@ -201,8 +202,9 @@ export function DebtsManager({
   const openAddDebtForm = () => {
     if (hasReachedDebtsLimit) {
       toast({
-        title: 'Limite do plano Free atingido',
-        description: 'Você pode cadastrar até 3 dívidas/acordos no plano Free. Para adicionar mais, libere dívidas ilimitadas.',
+        title: 'Limite de dívidas atingido',
+        description: `Seu plano atual permite cadastrar até ${debtsLimit} dívidas/acordos. Faça o upgrade para adicionar mais.`,
+        variant: 'destructive',
       });
       return;
     }

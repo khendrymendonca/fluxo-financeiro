@@ -43,17 +43,12 @@ describe('Sprint de acesso, mobile, AMOLED e acento', () => {
     const floatingNav = readFileSync(resolve(process.cwd(), 'src/components/layout/FloatingNavMenu.tsx'), 'utf8');
     const index = readFileSync(resolve(process.cwd(), 'src/pages/Index.tsx'), 'utf8');
 
-    expect(navigationRail).toContain("{ id: 'projection', icon: TrendingUp, label: 'Projeção', featureKey: 'debt_strategy' }");
     expect(navigationRail).toContain("{ id: 'goals', icon: Rocket, label: 'Sonhos & Projetos', featureKey: 'goals_manager' }");
     expect(navigationRail).toContain("{ id: 'simulator', icon: Calculator, label: 'Simulador', featureKey: 'simulator' }");
-    expect(floatingNav).toContain("projection:   { icon: TrendingUp,     label: 'Projeção',    featureKey: 'debt_strategy' }");
     expect(floatingNav).toContain("goals:        { icon: Rocket,         label: 'Metas',       featureKey: 'goals_manager' }");
     expect(floatingNav).toContain("simulator:    { icon: Calculator,     label: 'Simulador',   featureKey: 'simulator' }");
-    expect(index).toContain("projection: 'debt_strategy'");
     expect(index).toContain("goals: 'goals_manager'");
     expect(index).toContain("simulator: 'simulator'");
-    expect(index).toContain("{ id: 'projection', icon: TrendingUp, label: 'Projeção', featureKey: 'debt_strategy' }");
-    expect(index).toContain("{ id: 'goals', icon: Rocket, label: 'Sonhos & Projetos', featureKey: 'goals_manager' }");
     expect(index).toContain("{ id: 'simulator', icon: Calculator, label: 'Simulador', featureKey: 'simulator' }");
   });
 

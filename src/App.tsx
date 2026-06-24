@@ -1,13 +1,14 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { ThemeProvider } from "./hooks/useTheme";
 import { ThemeColorProvider } from "./hooks/useThemeColor";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { FinanceProvider } from "./hooks/useFinanceStore";
+import { supabase } from "@/lib/supabase";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import EmailConfirmedPage from "./pages/EmailConfirmedPage";
@@ -45,6 +46,24 @@ const ReactQueryDevtools = enableQueryDevtools
 
 const AppRoutes = () => {
   const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Escuta o evento PASSWORD_RECOVERY do Supabase para redirecionar para a tela de redefinição
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        navigate('/auth/redefinir-senha', { replace: true });
+      }
+    });
+
+    // Fallback: se o usuário já cair com o hash na URL
+    const hash = window.location.hash;
+    if (hash.includes('type=recovery') || hash.includes('type%3Drecovery')) {
+      navigate('/auth/redefinir-senha', { replace: true });
+    }
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   return (
     <AppBootGate user={user} authLoading={loading}>

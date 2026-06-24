@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useGlobalFlag } from '@/hooks/useFeatureFlags';
+import { useThemeColor } from '@/hooks/useThemeColor';
 import { EasterWelcome } from '@/components/layout/EasterWelcome';
 
 interface AppLayoutProps {
@@ -12,10 +13,50 @@ interface AppLayoutProps {
   fab?: React.ReactNode;
 }
 
+function BandeirinhasVaral() {
+  return (
+    <div className="absolute top-0 left-0 right-0 h-4 flex justify-around overflow-hidden pointer-events-none z-50 select-none animate-in fade-in slide-in-from-top duration-500">
+      {/* 16 bandeirinhas distribuídas igualmente pelo topo da tela */}
+      {Array.from({ length: 16 }).map((_, i) => {
+        const colors = [
+          'bg-[#009B3A] border-t border-[#FEDF00]/30', // Verde
+          'bg-[#FEDF00] border-t border-[#002776]/30', // Amarelo
+          'bg-[#002776] border-t border-[#009B3A]/30', // Azul
+        ];
+        const colorClass = colors[i % colors.length];
+        
+        return (
+          <div 
+            key={i} 
+            className={cn(
+              "w-3.5 h-4.5 origin-top transition-transform shadow-[0_1px_2px_rgba(0,0,0,0.1)]",
+              colorClass
+            )}
+            style={{
+              clipPath: 'polygon(0% 0%, 100% 0%, 50% 100%)',
+              animation: `sway ${1.5 + (i % 3) * 0.4}s ease-in-out infinite alternate`,
+              transformOrigin: 'top center',
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 export function AppLayout({ children, sidebar, headerMobile, bottomNav, fab }: AppLayoutProps) {
   const isMobile = useIsMobile();
-  const easterEnabled = useGlobalFlag('theme:easter');
+  const easterEnabled = useGlobalFlag('theme_easter');
+  const copaGloballyEnabled = useGlobalFlag('theme_copa');
   const [showEaster, setShowEaster] = useState(false);
+  
+  let modoTorcida = false;
+  try {
+    const context = useThemeColor();
+    modoTorcida = context?.modoTorcida || false;
+  } catch {
+    // Fallback caso renderizado fora do provider
+  }
 
   useEffect(() => {
     if (easterEnabled) {
@@ -25,7 +66,8 @@ export function AppLayout({ children, sidebar, headerMobile, bottomNav, fab }: A
   }, [easterEnabled]);
 
   return (
-    <div className="flex flex-col h-[100dvh] overflow-hidden bg-background transition-colors font-sans selection:bg-primary/30 text-gray-900 dark:text-zinc-50">
+    <div className="flex flex-col h-[100dvh] overflow-hidden bg-background transition-colors font-sans relative selection:bg-primary/30 text-gray-900 dark:text-zinc-50">
+      {modoTorcida && <BandeirinhasVaral />}
 
       {/* ── TOP NAV — apenas Desktop ── */}
       {sidebar && (

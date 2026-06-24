@@ -5,6 +5,27 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Transaction } from '@/types/finance';
 import { todayLocalString } from '@/utils/dateUtils';
 
+vi.mock('@/components/ui/select', () => {
+  return {
+    Select: ({ children, value, onValueChange }: any) => (
+      <select 
+        aria-label="Categoria" 
+        value={value} 
+        onChange={(e) => onValueChange(e.target.value)}
+      >
+        {children}
+      </select>
+    ),
+    SelectTrigger: ({ children }: any) => children,
+    SelectValue: ({ placeholder }: any) => <option value="">{placeholder}</option>,
+    SelectContent: ({ children }: any) => children,
+    SelectItem: ({ children, value }: any) => <option value={value}>{children}</option>,
+    SelectGroup: ({ children }: any) => children,
+    SelectLabel: ({ children }: any) => <option disabled>{children}</option>,
+    SelectSeparator: () => null,
+  };
+});
+
 const financeStoreState = {
   categories: [{ id: 'cat-1', name: 'Moradia' }],
   subcategories: [{ id: 'sub-1', categoryId: 'cat-1', name: 'Energia' }],

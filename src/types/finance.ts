@@ -1,4 +1,4 @@
-﻿export type TransactionType = 'income' | 'expense';
+export type TransactionType = 'income' | 'expense';
 export type TransactionStatus = 'punctual' | 'installment' | 'recurring' | 'adjustment';
 export type AccountType = 'corrente' | 'poupanca' | 'caixinha' | 'investment' | 'benefit_vr' | 'benefit_va' | 'benefit_flex' | 'metas';
 export type BillStatus = 'pending' | 'paid' | 'late' | 'cancelled';
@@ -13,7 +13,7 @@ export interface CategoryGroup {
 export interface Category {
   id: string;
   userId: string;
-  groupId: string;
+  groupId?: string | null;
   name: string;
   type: TransactionType;
   budgetGroup: BudgetGroup;

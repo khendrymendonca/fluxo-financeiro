@@ -27,6 +27,27 @@ vi.mock('@/components/ui/use-toast', () => ({
   toast: toastMock,
 }));
 
+vi.mock('@/components/ui/select', () => {
+  return {
+    Select: ({ children, value, onValueChange }: any) => (
+      <select 
+        aria-label="Categoria" 
+        value={value} 
+        onChange={(e) => onValueChange(e.target.value)}
+      >
+        {children}
+      </select>
+    ),
+    SelectTrigger: ({ children }: any) => children,
+    SelectValue: ({ placeholder }: any) => <option value="">{placeholder}</option>,
+    SelectContent: ({ children }: any) => children,
+    SelectItem: ({ children, value }: any) => <option value={value}>{children}</option>,
+    SelectGroup: ({ children }: any) => children,
+    SelectLabel: ({ children }: any) => <option disabled>{children}</option>,
+    SelectSeparator: () => null,
+  };
+});
+
 function wrapper({ children }: PropsWithChildren) {
   const queryClient = new QueryClient({
     defaultOptions: {

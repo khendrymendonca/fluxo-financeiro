@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 // formatCurrency local from '@/utils/formatters';
 import { Building2, Plus, Trash2, X, Wallet, Pencil, ShieldCheck, ArrowRightLeft, TrendingUp } from 'lucide-react';
 import { Account, AccountType } from '@/types/finance';
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
 import { Portal } from '@/components/ui/Portal';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { useFeatureFlag } from '@/hooks/useFeatureFlags';
+import { useFeatureFlag, usePlanLimits } from '@/hooks/useFeatureFlags';
 import { useTransferBetweenAccounts } from '@/hooks/useAccountMutations';
 import { useAddTransaction } from '@/hooks/useTransactionMutations';
 import { toast } from '@/components/ui/use-toast';
@@ -40,11 +40,11 @@ export function AccountsManager({
   onDeleteAccount,
 }: AccountsManagerProps) {
   const { viewDate, currentMonthTransactions, categories } = useFinanceStore();
-  const canUseUnlimitedAccounts = useFeatureFlag('unlimited_accounts');
+  const { data: planLimits } = usePlanLimits();
+  const accountsLimit = planLimits?.accounts_limit ?? -1;
   const { mutateAsync: transferBetweenAccounts } = useTransferBetweenAccounts();
   const { mutateAsync: addTransaction } = useAddTransaction();
-  const freeAccountsLimit = 2;
-  const hasReachedAccountsLimit = !canUseUnlimitedAccounts && accounts.length >= freeAccountsLimit;
+  const hasReachedAccountsLimit = accountsLimit !== -1 && accounts.length >= accountsLimit;
 
   const [showAccountForm, setShowAccountForm] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
@@ -104,8 +104,9 @@ export function AccountsManager({
   const openAddForm = () => {
     if (hasReachedAccountsLimit) {
       toast({
-        title: 'Limite do plano Free atingido',
-        description: 'Você pode cadastrar até 2 contas/carteiras no plano Free. Para adicionar mais, libere contas ilimitadas.',
+        title: 'Limite de contas atingido',
+        description: `Seu plano atual permite cadastrar até ${accountsLimit} contas/carteiras. Faça o upgrade para adicionar mais.`,
+        variant: 'destructive',
       });
       return;
     }
@@ -211,8 +212,9 @@ export function AccountsManager({
     } else {
       if (hasReachedAccountsLimit) {
         toast({
-          title: 'Limite do plano Free atingido',
-          description: 'Você pode cadastrar até 2 contas/carteiras no plano Free. Para adicionar mais, libere contas ilimitadas.',
+          title: 'Limite de contas atingido',
+          description: `Seu plano atual permite cadastrar até ${accountsLimit} contas/carteiras. Faça o upgrade para adicionar mais.`,
+          variant: 'destructive',
         });
         return;
       }

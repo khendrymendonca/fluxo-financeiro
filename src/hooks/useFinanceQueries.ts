@@ -2,16 +2,16 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { format, startOfYear, endOfYear } from 'date-fns';
 import { Transaction, Account, CreditCard, Debt, SavingsGoal, Category, Subcategory, CategoryGroup } from '@/types/finance';
-import { toast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 // --- Queries ---
 
 export function useAccounts() {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ['accounts'],
+    queryKey: ['accounts', user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user) throw new Error("Usuário não autenticado");
       const { data, error } = await supabase.from('accounts').select('*').eq('user_id', user.id).is('deleted_at', null);
       if (error) throw error;
       return (data || []).map((acc: any) => ({
@@ -22,16 +22,17 @@ export function useAccounts() {
         overdraftLimit: acc.overdraft_limit || 0
       })) as Account[];
     },
+    enabled: !!user,
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
 
 export function useTransactions(viewDate: Date) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ['transactions', viewDate.getFullYear(), viewDate.getMonth()],
+    queryKey: ['transactions', viewDate.getFullYear(), viewDate.getMonth(), user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user) throw new Error("Usuário não autenticado");
       // Janela anual: garante relatórios completos e comparativos por meses no mesmo ano
       const windowStart = format(startOfYear(viewDate), 'yyyy-MM-dd');
       const windowEnd = format(endOfYear(viewDate), 'yyyy-MM-dd');
@@ -77,17 +78,17 @@ export function useTransactions(viewDate: Date) {
         isInvoicePayment: t.is_invoice_payment || false
       })) as Transaction[];
     },
+    enabled: !!user,
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
 
-
 export function useCreditCards() {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ['credit-cards'],
+    queryKey: ['credit-cards', user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user) throw new Error("Usuário não autenticado");
       const { data, error } = await supabase.from('credit_cards').select('*').eq('user_id', user.id);
       if (error) throw error;
       return (data || []).map((c: any) => ({
@@ -102,16 +103,17 @@ export function useCreditCards() {
         limit: Number(c.limit || 0)
       })) as CreditCard[];
     },
+    enabled: !!user,
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
 
 export function useCategories() {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ['categories'],
+    queryKey: ['categories', user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user) throw new Error("Usuário não autenticado");
 
       const { data, error } = await supabase
         .from('categories')
@@ -129,14 +131,17 @@ export function useCategories() {
         budgetLimit: c.budget_limit
       })) as Category[];
     },
+    enabled: !!user,
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
 
 export function useSubcategories() {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ['subcategories'],
+    queryKey: ['subcategories', user?.id],
     queryFn: async () => {
+      if (!user) throw new Error("Usuário não autenticado");
       const { data, error } = await supabase.from('subcategories').select('*');
       if (error) throw error;
       return (data || []).map((s: any) => ({
@@ -145,16 +150,17 @@ export function useSubcategories() {
         isActive: s.is_active
       })) as Subcategory[];
     },
+    enabled: !!user,
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
 
 export function useDebts() {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ['debts'],
+    queryKey: ['debts', user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user) throw new Error("Usuário não autenticado");
       const { data, error } = await supabase
         .from('debts')
         .select('*')
@@ -177,16 +183,17 @@ export function useDebts() {
         debtType: d.debt_type
       })) as Debt[];
     },
+    enabled: !!user,
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
 
 export function useSavingsGoals() {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ['savings-goals'],
+    queryKey: ['savings-goals', user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user) throw new Error("Usuário não autenticado");
       const { data, error } = await supabase
         .from('savings_goals')
         .select('*')
@@ -202,23 +209,23 @@ export function useSavingsGoals() {
         dreamStartDate: g.dream_start_date
       })) as SavingsGoal[];
     },
+    enabled: !!user,
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
 
 export function useCategoryGroups() {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ['category-groups'],
+    queryKey: ['category-groups', user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user) throw new Error("Usuário não autenticado");
 
       const { data, error } = await supabase.from('category_groups').select('*');
       if (error) throw error;
       return data as CategoryGroup[];
     },
+    enabled: !!user,
     staleTime: 1000 * 60 * 60 * 24, // 24 horas
   });
 }
-
-

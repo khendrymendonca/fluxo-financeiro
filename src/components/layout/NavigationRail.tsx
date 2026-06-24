@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
+import { useThemeColor } from '@/hooks/useThemeColor';
 import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { ReactNode, useMemo, useState, useRef } from 'react';
 import { Portal } from '@/components/ui/Portal';
@@ -39,6 +40,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useNavigate } from 'react-router-dom';
+import { useIsSuperAdmin } from '@/hooks/useFeatureFlags';
 
 // Grupos de navegação para cabeçalho compacto
 const navGroups = [
@@ -191,7 +194,10 @@ function ThemeButton({ theme, setTheme }: { theme: string; setTheme: (t: string)
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1 rounded-2xl border border-border bg-muted/55 p-1 shadow-sm backdrop-blur-sm"
+        "inline-flex items-center gap-1 rounded-2xl border border-border p-1 shadow-sm",
+        activeTheme === 'dark'
+          ? "bg-muted/55 backdrop-blur-sm"
+          : "bg-muted"
       )}
       role="tablist"
       aria-label="Selecionar tema"
@@ -223,13 +229,34 @@ function ThemeButton({ theme, setTheme }: { theme: string; setTheme: (t: string)
   );
 }
 
+const BandeiraBrasilSvg = ({ className = "w-5 h-3.5" }: { className?: string }) => (
+  <svg 
+    viewBox="0 0 20 14" 
+    className={cn("rounded-sm shadow-sm shrink-0", className)}
+  >
+    <rect width="20" height="14" fill="#009B3A" />
+    <polygon points="10,2 18,7 10,12 2,7" fill="#FEDF00" />
+    <circle cx="10" cy="7" r="3.2" fill="#002776" />
+    <path d="M 6.8,7.3 Q 10,6 13.2,7.3" stroke="#FFFFFF" strokeWidth="0.5" fill="none" />
+  </svg>
+);
+
 interface NavigationRailProps {
   currentView: string;
   onNavigate: (view: string) => void;
 }
 
 export function NavigationRail({ currentView, onNavigate }: NavigationRailProps) {
+  const navigate = useNavigate();
+  const isSuperAdmin = useIsSuperAdmin();
   const { theme, setTheme } = useTheme();
+  let modoTorcida = false;
+  try {
+    const context = useThemeColor();
+    modoTorcida = context?.modoTorcida || false;
+  } catch {
+    // Fallback para testes unitários sem provider
+  }
   const { user, signOut } = useAuth();
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const greeting = useMemo(() => getGreetingForHour(new Date().getHours()), []);
@@ -237,60 +264,32 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
   const profileInitials = useMemo(() => getUserInitials(user), [user]);
 
   return (
-    <nav className="flex flex-col w-full">
-
-      {/* ── LINHA 1: Logo (clicável) + Tema ── */}
-      <div className="flex items-center justify-between gap-4 px-6 pt-3 pb-1.5">
-
+    <nav className="flex items-center justify-between w-full h-16 px-6 bg-card">
+      
+      {/* Lado Esquerdo: Logo + Início + Separador + Abas */}
+      <div className="flex items-center gap-4 min-w-0 flex-1">
         {/* Logo clicável */}
-        <button
-          onClick={() => onNavigate('dashboard')}
-          className="flex items-center gap-3 shrink-0 group text-primary"
-        >
-          <AppLogo className="h-9 w-28 group-hover:opacity-80 transition-opacity duration-200" />
-        </button>
-
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
-          <div className="min-w-0 text-right">
-            <p className="truncate text-sm font-black text-foreground">{greeting}, {profileName}</p>
-          </div>
-          <ThemeButton theme={theme} setTheme={setTheme} />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-2.5 py-2 text-sm font-bold text-foreground transition-all hover:border-primary/30 hover:bg-primary/5"
-                aria-label="Abrir menu de perfil"
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary/10 text-xs font-black text-primary">
-                    {profileInitials}
-                  </AvatarFallback>
-                </Avatar>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44 rounded-2xl">
-              <DropdownMenuItem className="font-bold" onClick={() => onNavigate('profile')}>
-                <Settings className="mr-2 h-4 w-4" />
-                Configurações
-              </DropdownMenuItem>
-              <DropdownMenuItem className="font-bold text-rose-600 focus:text-rose-600" onClick={() => void signOut()}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Sair
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div className="flex items-center shrink-0">
+          <button
+            onClick={() => onNavigate('dashboard')}
+            className="flex items-center text-primary group"
+          >
+            <AppLogo className={cn(
+              "group-hover:opacity-80 transition-opacity duration-200",
+              modoTorcida ? "h-12 w-32" : "h-12 w-36"
+            )} />
+          </button>
         </div>
-      </div>
 
-      {/* LINHA 2: Home + Grupos de nav */}
-      <div className="flex flex-row items-center px-4 pb-2.5">
+        {/* Separador visual */}
+        <div className="w-px h-6 bg-border shrink-0" />
 
         {/* Botão casinha — fixo no início */}
         <button
           onClick={() => onNavigate('dashboard')}
           title="Início"
           className={cn(
-            "flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200 shrink-0 mr-1",
+            "flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200 shrink-0",
             currentView === 'dashboard'
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -300,9 +299,9 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
         </button>
 
         {/* Separador visual */}
-        <div className="w-px h-5 bg-border shrink-0 mr-1" />
+        <div className="w-px h-6 bg-border shrink-0" />
 
-        {/* Grupos — overflow SOMENTE aqui, no eixo X */}
+        {/* Grupos — overflow horizontal */}
         <div className="flex flex-row items-center gap-0.5 overflow-x-auto no-scrollbar min-w-0">
           {navGroups.map((group) => (
             <NavGroupDropdown
@@ -316,6 +315,51 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
             />
           ))}
         </div>
+      </div>
+
+      {/* Lado Direito: Saudação + Tema + Perfil */}
+      <div className="flex items-center gap-4 shrink-0">
+        <div className="hidden lg:block min-w-0 text-right">
+          <p className="truncate text-[10px] font-black text-muted-foreground leading-none mb-1">
+            {greeting}
+          </p>
+          <p className="truncate text-sm font-black text-foreground leading-none">
+            {profileName}
+          </p>
+        </div>
+        
+        <ThemeButton theme={theme} setTheme={setTheme} />
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-2.5 py-2 text-sm font-bold text-foreground transition-all hover:border-primary/30 hover:bg-primary/5"
+              aria-label="Abrir menu de perfil"
+            >
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-primary/10 text-xs font-black text-primary">
+                  {profileInitials}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48 rounded-2xl">
+            {isSuperAdmin && (
+              <DropdownMenuItem className="font-bold text-white focus:text-white focus:bg-primary/10 cursor-pointer" onClick={() => navigate('/super')}>
+                <Shield className="mr-2 h-4 w-4" />
+                Painel Super
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem className="font-bold cursor-pointer" onClick={() => onNavigate('profile')}>
+              <Settings className="mr-2 h-4 w-4" />
+              Configurações
+            </DropdownMenuItem>
+            <DropdownMenuItem className="font-bold text-rose-600 focus:text-rose-600 cursor-pointer" onClick={() => void signOut()}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
     </nav>

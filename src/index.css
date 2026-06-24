@@ -160,6 +160,195 @@
     --primary-foreground: 0 0% 100%;
     --primary: 174 84% 25%;
   }
+
+  /* Tema da Copa do Mundo / Modo Torcida 🇧🇷 */
+  .theme-copa {
+    --primary: 142.6 100% 28%;         /* Verde Bandeira Oficial */
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 142.6 60% 90%;
+    --primary-muted: 142.6 40% 65%;
+    --secondary: 52 100% 90%;          /* Amarelo Ouro Suave para fundo */
+    --secondary-foreground: 220 100% 23%;/* Azul Anil para texto */
+    --success: 142.6 100% 28%;          /* Verde Bandeira */
+    --success-light: 142.6 60% 93%;
+    --success-foreground: 0 0% 100%;
+    --warning: 52 100% 42%;            /* Amarelo Ouro escurecido para contraste */
+    --warning-light: 52 100% 92%;
+    --warning-foreground: 52 100% 12%;
+    --info: 220 100% 30%;              /* Azul Anil */
+    --info-light: 220 100% 94%;
+    --info-foreground: 0 0% 100%;
+    --accent: 52 100% 90%;             /* Amarelo Ouro Suave */
+    --accent-foreground: 220 100% 23%;
+    --ring: 142.6 100% 28%;
+    --sidebar-primary: 142.6 100% 28%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 52 100% 92%;
+    --sidebar-accent-foreground: 220 100% 23%;
+    --sidebar-border: 220 15% 92%;
+    --sidebar-ring: 142.6 100% 28%;
+  }
+
+  .dark.theme-copa {
+    --primary: 142.6 100% 35%;         /* Verde Bandeira Vibrante no Escuro */
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 142.6 100% 8%;
+    --primary-muted: 142.6 40% 25%;
+    --secondary: 220 100% 12%;          /* Azul Anil Escuro de fundo */
+    --secondary-foreground: 52 100% 65%;/* Amarelo Ouro Brilhante */
+    --success: 142.6 100% 35%;
+    --success-light: 142.6 100% 8%;
+    --success-foreground: 0 0% 100%;
+    --warning: 52 100% 50%;             /* Amarelo Ouro Brilhante */
+    --warning-light: 52 100% 10%;
+    --warning-foreground: 52 100% 90%;
+    --info: 212 100% 55%;              /* Azul Anil Vibrante no Escuro */
+    --info-light: 212 100% 10%;
+    --info-foreground: 0 0% 100%;
+    --accent: 52 100% 12%;             /* Amarelo Ouro Escuro de fundo */
+    --accent-foreground: 52 100% 75%;
+    --ring: 142.6 100% 35%;
+    --sidebar-primary: 142.6 100% 35%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 142.6 100% 10%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 240 10% 12%;
+    --sidebar-ring: 142.6 100% 35%;
+  }
+
+  /* Tema de Páscoa 🐰 */
+  .theme-easter {
+    --primary: 20 90% 55%;            /* Laranja Cenoura */
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 20 90% 92%;
+    --primary-muted: 20 60% 75%;
+    --secondary: 100 50% 90%;           /* Verde Pastel */
+    --secondary-foreground: 20 90% 25%;
+    --success: 142.6 70% 40%;
+    --success-light: 142.6 70% 92%;
+    --success-foreground: 0 0% 100%;
+    --accent: 100 50% 90%;
+    --accent-foreground: 20 90% 25%;
+    --ring: 20 90% 55%;
+    --sidebar-primary: 20 90% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 100 50% 94%;
+    --sidebar-accent-foreground: 20 90% 25%;
+    --sidebar-border: 220 15% 92%;
+    --sidebar-ring: 20 90% 55%;
+  }
+
+  .dark.theme-easter {
+    --primary: 20 90% 60%;            /* Laranja Cenoura Brilhante */
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 20 90% 12%;
+    --primary-muted: 20 40% 30%;
+    --secondary: 100 30% 15%;           /* Verde Escuro */
+    --secondary-foreground: 20 90% 75%;
+    --success: 142.6 70% 45%;
+    --success-light: 142.6 70% 10%;
+    --success-foreground: 0 0% 100%;
+    --accent: 100 30% 15%;
+    --accent-foreground: 20 90% 75%;
+    --ring: 20 90% 60%;
+    --sidebar-primary: 20 90% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 100 30% 12%;
+    --sidebar-accent-foreground: 20 90% 75%;
+    --sidebar-border: 240 10% 12%;
+    --sidebar-ring: 20 90% 60%;
+  }
+
+  /* Tema de Natal 🎄 */
+  .theme-christmas {
+    --primary: 0 72% 35%;              /* Vermelho Natalino */
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 0 72% 92%;
+    --primary-muted: 0 50% 70%;
+    --secondary: 120 45% 90%;           /* Verde Árvore Pastel */
+    --secondary-foreground: 0 72% 20%;
+    --success: 120 60% 35%;
+    --success-light: 120 60% 92%;
+    --success-foreground: 0 0% 100%;
+    --accent: 120 45% 90%;
+    --accent-foreground: 0 72% 20%;
+    --ring: 0 72% 35%;
+    --sidebar-primary: 0 72% 35%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 120 45% 92%;
+    --sidebar-accent-foreground: 0 72% 20%;
+    --sidebar-border: 220 15% 92%;
+    --sidebar-ring: 0 72% 35%;
+  }
+
+  .dark.theme-christmas {
+    --primary: 0 72% 45%;              /* Vermelho Natalino Vibrante */
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 0 72% 12%;
+    --primary-muted: 0 40% 28%;
+    --secondary: 120 30% 12%;           /* Verde Escuro */
+    --secondary-foreground: 0 72% 75%;
+    --success: 120 50% 40%;
+    --success-light: 120 50% 10%;
+    --success-foreground: 0 0% 100%;
+    --accent: 120 30% 12%;
+    --accent-foreground: 0 72% 75%;
+    --ring: 0 72% 45%;
+    --sidebar-primary: 0 72% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 120 30% 10%;
+    --sidebar-accent-foreground: 0 72% 75%;
+    --sidebar-border: 240 10% 12%;
+    --sidebar-ring: 0 72% 45%;
+  }
+
+  /* Tema de Halloween 🎃 */
+  .theme-halloween {
+    --primary: 24 100% 50%;            /* Laranja Abóbora */
+    --primary-foreground: 240 10% 4%;
+    --primary-light: 24 100% 92%;
+    --primary-muted: 24 80% 75%;
+    --secondary: 270 50% 90%;           /* Roxo Bruxa Pastel */
+    --secondary-foreground: 24 100% 25%;
+    --success: 142.6 70% 35%;
+    --success-light: 142.6 70% 92%;
+    --success-foreground: 0 0% 100%;
+    --accent: 270 50% 90%;
+    --accent-foreground: 24 100% 25%;
+    --ring: 24 100% 50%;
+    --sidebar-primary: 24 100% 50%;
+    --sidebar-primary-foreground: 240 10% 4%;
+    --sidebar-accent: 270 50% 92%;
+    --sidebar-accent-foreground: 24 100% 25%;
+    --sidebar-border: 220 15% 92%;
+    --sidebar-ring: 24 100% 50%;
+  }
+
+  .dark.theme-halloween {
+    --primary: 24 100% 55%;            /* Laranja Abóbora Brilhante */
+    --primary-foreground: 240 10% 4%;
+    --primary-light: 24 100% 12%;
+    --primary-muted: 24 60% 30%;
+    --secondary: 270 40% 15%;           /* Roxo Escuro */
+    --secondary-foreground: 24 100% 75%;
+    --success: 142.6 60% 40%;
+    --success-light: 142.6 60% 10%;
+    --success-foreground: 0 0% 100%;
+    --accent: 270 40% 15%;
+    --accent-foreground: 24 100% 75%;
+    --ring: 24 100% 55%;
+    --sidebar-primary: 24 100% 55%;
+    --sidebar-primary-foreground: 240 10% 4%;
+    --sidebar-accent: 270 40% 12%;
+    --sidebar-accent-foreground: 24 100% 75%;
+    --sidebar-border: 240 10% 12%;
+    --sidebar-ring: 24 100% 55%;
+  }
+
+  /* Gradiente especial para as barras de progresso do app na Copa 🇧🇷 */
+  .theme-copa .progress-gradient-fill {
+    background: linear-gradient(90deg, #009B3A 0%, #FEDF00 50%, #002776 100%) !important;
+  }
 }
 
 @layer base {
@@ -382,6 +571,11 @@
     50%  { opacity: 1; }
     100% { transform: translateX(220%); opacity: 0.6; }
   }
+
+  @keyframes sway {
+    0% { transform: rotate(-8deg); }
+    100% { transform: rotate(8deg); }
+  }
 }
 
 @media print {
@@ -399,4 +593,9 @@
     box-shadow: none !important;
     border: 1px solid #eee !important;
   }
+}
+
+/* Quando a paleta customizada está ativa, pinta ícones inativos nos menus e cards */
+html.theme-custom-palette .text-muted-foreground svg {
+  color: hsl(var(--icon-custom)) !important;
 }

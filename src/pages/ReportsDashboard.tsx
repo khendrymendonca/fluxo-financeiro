@@ -704,7 +704,7 @@ export default function ReportsDashboard() {
     accentColors.find((color) => color.id === accentColor) ?? accentColors[0]
   ), [accentColor]);
   const incomeTrendColor = isDarkTheme ? '#FFFFFF' : `hsl(${activeAccentColor.hsl})`;
-  const expenseTrendColor = '#F43F5E';
+  const expenseTrendColor = isDarkTheme ? '#F43F5E' : '#4B5563';
   const analysisSectionRef = useRef<HTMLDivElement | null>(null);
   const toggleSelectedCategory = useCallback((categoryId: string) => {
     setSelectedCategoryId((current) => {
@@ -1404,7 +1404,7 @@ export default function ReportsDashboard() {
           <div className="bg-white dark:bg-zinc-900 rounded-[1.75rem] lg:rounded-[2rem] p-4 lg:p-6 border border-gray-100 dark:border-zinc-800 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
             <div>
-              <h3 className="text-lg font-black tracking-tight">Total de Consumo vs Receita</h3>
+              <h3 className="text-lg font-black tracking-tight">Total de Despesas vs Receitas</h3>
               <p className="text-sm text-muted-foreground mt-1 tabular-nums">
                 {formatCurrency(metrics.totalExpenses)} de {formatCurrency(metrics.income)}
               </p>
@@ -1419,11 +1419,17 @@ export default function ReportsDashboard() {
 
           <div className="mb-3 flex flex-wrap items-center gap-3 text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
             <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-white ring-1 ring-white/30" />
+              <span 
+                className="h-2.5 w-2.5 rounded-full ring-1 ring-zinc-300/30"
+                style={{ backgroundColor: incomeTrendColor }}
+              />
               <span>Receitas</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-rose-500 ring-1 ring-rose-300/30" />
+              <span 
+                className="h-2.5 w-2.5 rounded-full ring-1 ring-zinc-300/30"
+                style={{ backgroundColor: expenseTrendColor }}
+              />
               <span>Despesas</span>
             </div>
           </div>

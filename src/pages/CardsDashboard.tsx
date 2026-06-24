@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useFinanceStore } from "@/hooks/useFinanceStore";
 import { CreditCardVisual } from "@/components/cards/CreditCardVisual";
 import { AddCardDialog } from "@/components/cards/AddCardDialog";
@@ -21,7 +21,7 @@ import { Transaction, CreditCard as CreditCardType } from "@/types/finance";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { toast } from "@/components/ui/use-toast";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { useFeatureFlag } from "@/hooks/useFeatureFlags";
+import { useFeatureFlag, usePlanLimits } from "@/hooks/useFeatureFlags";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer,
@@ -64,7 +64,8 @@ function StatusBadge({ status }: { status: ReturnType<typeof getInvoiceStatusDis
 
 export default function CardsDashboard() {
   const isMobile = useIsMobile();
-  const canUseUnlimitedCards = useFeatureFlag('unlimited_cards');
+  const { data: planLimits } = usePlanLimits();
+  const cardsLimit = planLimits?.cards_limit ?? -1;
   const {
     creditCards, transactions, categories,
     updateCreditCard, addCreditCard, getCardUsedLimit,
@@ -84,8 +85,7 @@ export default function CardsDashboard() {
   const [chartPeriod, setChartPeriod] = useState<"mensal" | "anual">("mensal");
   const [transactionToAnticipate, setTransactionToAnticipate] = useState<Transaction | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
-  const freeCardsLimit = 1;
-  const hasReachedCardsLimit = !canUseUnlimitedCards && creditCards.length >= freeCardsLimit;
+  const hasReachedCardsLimit = cardsLimit !== -1 && creditCards.length >= cardsLimit;
 
   useEffect(() => {
     if (sortedCards.length > 0 && !selectedCardId) {
@@ -180,26 +180,28 @@ export default function CardsDashboard() {
   const openAddCardModal = useCallback(() => {
     if (hasReachedCardsLimit) {
       toast({
-        title: 'Limite do plano Free atingido',
-        description: 'Você pode cadastrar 1 cartão no plano Free. Para adicionar mais, libere cartões ilimitados.',
+        title: 'Limite de cartões atingido',
+        description: `Seu plano atual permite cadastrar até ${cardsLimit} cartões de crédito. Faça o upgrade para adicionar mais.`,
+        variant: 'destructive',
       });
       return;
     }
 
     setShowAddCard(true);
-  }, [hasReachedCardsLimit, setShowAddCard]);
+  }, [hasReachedCardsLimit, cardsLimit, setShowAddCard]);
 
   const handleAddCard = useCallback((card: Omit<CreditCardType, 'id' | 'userId'>) => {
     if (hasReachedCardsLimit) {
       toast({
-        title: 'Limite do plano Free atingido',
-        description: 'Você pode cadastrar 1 cartão no plano Free. Para adicionar mais, libere cartões ilimitados.',
+        title: 'Limite de cartões atingido',
+        description: `Seu plano atual permite cadastrar até ${cardsLimit} cartões de crédito. Faça o upgrade para adicionar mais.`,
+        variant: 'destructive',
       });
       return;
     }
 
     return addCreditCard(card);
-  }, [addCreditCard, hasReachedCardsLimit]);
+  }, [addCreditCard, hasReachedCardsLimit, cardsLimit]);
 
   const openAccountsManagement = useCallback(() => {
     window.history.pushState({}, '', '/?view=bills');

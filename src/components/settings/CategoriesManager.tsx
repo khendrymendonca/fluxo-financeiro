@@ -156,11 +156,7 @@ export function CategoriesManager() {
             toast({ title: 'Digite o nome da categoria', variant: 'destructive' });
             return;
         }
-        const groupId = categoryGroups[0]?.id;
-        if (!groupId) {
-            toast({ title: 'Nenhum grupo encontrado', variant: 'destructive' });
-            return;
-        }
+        const groupId = categoryGroups[0]?.id || null;
         addCategory({
             name: newCatName.trim(),
             type: newCatType,

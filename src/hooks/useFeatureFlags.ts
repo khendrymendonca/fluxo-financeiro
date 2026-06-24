@@ -74,7 +74,7 @@ export function useGlobalFlags() {
       if (error) throw error;
       return data ?? [];
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
   });
 }
 
@@ -91,6 +91,8 @@ export function useGlobalFlag(key: string): boolean {
 // 3. feature.enabledByDefault (padrão do código)
 export function useFeatureFlag(featureKey: string): boolean {
   const isSuperAdmin = useIsSuperAdmin();
+  const { data: overrides = [] } = useMyOverrides();
+  const { data: planFeatures = [] } = useMyPlanFeatures();
 
   if (!featureKey) return true;
   if ((FORCED_DISABLED_FEATURE_KEYS as readonly string[]).includes(featureKey)) return false;
@@ -100,8 +102,26 @@ export function useFeatureFlag(featureKey: string): boolean {
     return isSuperAdmin;
   }
 
-  // Libera todas as outras funções para que os usuários consigam testar tudo
-  return true;
+  // Super Admin tem acesso a todas as features do aplicativo
+  if (isSuperAdmin) {
+    return true;
+  }
+
+  // 1. Prioridade: overrides individuais do usuário
+  const userOverride = overrides.find((o) => o.feature_key === featureKey);
+  if (userOverride !== undefined) {
+    return userOverride.enabled;
+  }
+
+  // 2. Prioridade: permissões do plano atribuído ao usuário
+  const planFeature = planFeatures.find((f) => f.feature_key === featureKey);
+  if (planFeature !== undefined) {
+    return planFeature.enabled;
+  }
+
+  // 3. Fallback: Configuração padrão do sistema
+  const defaultFeature = FEATURES.find((f) => f.key === featureKey);
+  return defaultFeature?.enabledByDefault ?? false;
 }
 
 // ── Perfil do usuário atual (código FLX-XXXX) ───────────────
@@ -238,7 +258,7 @@ export function usePlans() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('plans')
-        .select('id, name, description, created_at')
+        .select('id, name, description, accounts_limit, cards_limit, debts_limit, created_at')
         .order('created_at', { ascending: true });
       if (error) throw error;
       return data ?? [];
@@ -268,10 +288,22 @@ export function usePlanFeatures(planId: string | null) {
 export function useCreatePlan() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { name: string; description?: string }) => {
+    mutationFn: async (data: {
+      name: string;
+      description?: string;
+      accounts_limit?: number;
+      cards_limit?: number;
+      debts_limit?: number;
+    }) => {
       const { data: plan, error } = await supabase
         .from('plans')
-        .insert({ name: data.name.trim(), description: data.description?.trim() })
+        .insert({
+          name: data.name.trim(),
+          description: data.description?.trim(),
+          accounts_limit: data.accounts_limit ?? -1,
+          cards_limit: data.cards_limit ?? -1,
+          debts_limit: data.debts_limit ?? -1,
+        })
         .select()
         .single();
       if (error) throw error;
@@ -290,12 +322,18 @@ export function useUpdatePlan() {
       id: string;
       name: string;
       description?: string;
+      accounts_limit?: number;
+      cards_limit?: number;
+      debts_limit?: number;
     }) => {
       const { error } = await supabase
         .from('plans')
         .update({
           name: data.name.trim(),
           description: data.description?.trim(),
+          accounts_limit: data.accounts_limit ?? -1,
+          cards_limit: data.cards_limit ?? -1,
+          debts_limit: data.debts_limit ?? -1,
           updated_at: new Date().toISOString(),
         })
         .eq('id', data.id);
@@ -409,5 +447,63 @@ export function useToggleGlobalFlag() {
       queryClient.invalidateQueries({ queryKey: ['global_feature_flags'] });
     },
     onError: (err) => logSafeError('useToggleGlobalFlag', err),
+  });
+}
+
+// ── CONSULTAR LIMITES DO PLANO DO USUÁRIO ────────────────────
+export function usePlanLimits() {
+  const { user } = useAuth();
+  const isSuperAdmin = useIsSuperAdmin();
+
+  return useQuery({
+    queryKey: ['my_plan_limits', user?.id],
+    queryFn: async () => {
+      if (isSuperAdmin) {
+        return {
+          accounts_limit: -1,
+          cards_limit: -1,
+          debts_limit: -1,
+        };
+      }
+
+      // Buscar plan_id do perfil
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('plan_id')
+        .eq('id', user!.id)
+        .single();
+
+      if (!profile?.plan_id) {
+        return {
+          accounts_limit: -1,
+          cards_limit: -1,
+          debts_limit: -1,
+        };
+      }
+
+      // Buscar limites do plano
+      const { data: plan, error } = await supabase
+        .from('plans')
+        .select('accounts_limit, cards_limit, debts_limit')
+        .eq('id', profile.plan_id)
+        .single();
+
+      if (error) {
+        // Fallback caso a migração ainda não tenha sido aplicada no banco de dados
+        return {
+          accounts_limit: -1,
+          cards_limit: -1,
+          debts_limit: -1,
+        };
+      }
+
+      return {
+        accounts_limit: plan?.accounts_limit ?? -1,
+        cards_limit: plan?.cards_limit ?? -1,
+        debts_limit: plan?.debts_limit ?? -1,
+      };
+    },
+    enabled: !!user,
+    staleTime: 1000 * 60 * 5,
   });
 }
