@@ -31,6 +31,7 @@ interface AccountsManagerProps {
   onAddAccount: (account: Omit<Account, 'id' | 'userId'>) => void;
   onUpdateAccount: (id: string, updates: Partial<Account>) => void;
   onDeleteAccount: (id: string) => void;
+  onOpenTransferForm?: () => void;
 }
 
 export function AccountsManager({
@@ -38,6 +39,7 @@ export function AccountsManager({
   onAddAccount,
   onUpdateAccount,
   onDeleteAccount,
+  onOpenTransferForm,
 }: AccountsManagerProps) {
   const { viewDate, currentMonthTransactions, categories } = useFinanceStore();
   const { data: planLimits } = usePlanLimits();
@@ -320,7 +322,7 @@ export function AccountsManager({
           <div className="flex gap-3 flex-wrap">
             {accounts.length >= 2 && (
               <Button
-                onClick={() => setShowTransferModal(true)}
+                onClick={onOpenTransferForm || (() => setShowTransferModal(true))}
                 size="lg"
                 variant="outline"
                 className="rounded-2xl h-14 px-8 gap-2 border-primary/30 text-primary shadow-xl shadow-primary/5 font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95"

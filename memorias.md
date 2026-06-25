@@ -1672,6 +1672,13 @@ Em recÃ¡lculo:
   2. **Estilização de Acessibilidade no Firefox**: Estendemos o suporte de barra de rolagem sutil no arquivo CSS global ([index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css)), injetando as propriedades `scrollbar-width: thin` e `scrollbar-color` sob o seletor universal `*` na base do CSS, tornando a rolagem igualmente fina e discreta (sem track opaco) em navegadores baseados em Gecko/Firefox.
 - **Motivação**: Atender ao requisito de usabilidade onde listas muito longas (especialmente na tela de lançamentos e na gestão de contas) exigem uma barra de rolagem física arrastável no desktop para navegar com maior velocidade do que fazendo apenas o scroll convencional com scrollwheel.
 
+## [2026-06-25] Alteração Arquitetural / UI - Unificação de Fluxo de Transferência (Minha Carteira & Lançamentos)
+- **Resumo**: Unificamos os fluxos de transferência de saldos do aplicativo para que a tela "Minha Carteira" compartilhe o mesmo formulário e regras da tela de lançamentos (referência do projeto):
+  1. **Callback de Integração**: Adicionamos a propriedade `onOpenTransferForm` na interface de propriedades de [AccountsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/accounts/AccountsManager.tsx) e a associamos ao clique do botão "Transferir" na barra superior de Patrimônio.
+  2. **Orquestração de Modais no Index**: No componente [Index.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/Index.tsx), passamos um manipulador que redefine os estados de edição de lançamentos, configura a aba inicial como `'transfer'` e abre o formulário global `TransactionForm`.
+  3. **Preservação de Retrocompatibilidade**: Mantivemos o modal de transferência simplificada local em `AccountsManager.tsx` como fallback caso o callback não seja fornecido, assegurando que não ocorra quebra de fluxos em ambientes isolados de teste.
+- **Motivação**: Atender à solicitação direta do usuário de que as transferências de saldo em ambas as telas sejam idênticas e centralizadas no formulário de lançamentos, evitando duplicações, inconsistências em datas de lançamentos ou falhas de campos específicos de cartões de crédito.
+
 
 
 

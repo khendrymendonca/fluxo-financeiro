@@ -446,6 +446,11 @@ export default function Index() {
                   updateAccount({ id, updates });
                 }}
                 onDeleteAccount={deleteAccount}
+                onOpenTransferForm={() => {
+                  setEditingTransaction(undefined);
+                  setInitialFormTab('transfer');
+                  setShowTransactionForm(true);
+                }}
               />
             </div>
           </ViewGuard>
