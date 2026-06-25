@@ -61,11 +61,12 @@ export default function EmailResetPasswordPage() {
 
             await supabase.auth.signOut();
             navigate('/', { replace: true });
-        } catch {
+        } catch (error: any) {
+            const message = error?.message || 'Solicite um novo link de recuperação e tente novamente.';
             toast({
                 variant: 'destructive',
                 title: 'Não foi possível redefinir sua senha',
-                description: 'Solicite um novo link de recuperação e tente novamente.',
+                description: message,
             });
         } finally {
             setIsSubmitting(false);
