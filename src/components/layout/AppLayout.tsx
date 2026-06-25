@@ -89,7 +89,7 @@ export function AppLayout({ children, sidebar, headerMobile, bottomNav, fab }: A
 
       {/* ── CONTEÚDO PRINCIPAL ── */}
       <main className="flex-1 flex flex-col overflow-hidden relative bg-inherit">
-        <div className={cn("flex-1 overflow-y-auto no-scrollbar", "p-4 md:p-8 pb-24 md:pb-8")}>
+        <div className={cn("flex-1 overflow-y-auto", "p-4 md:p-8 pb-24 md:pb-8")}>
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

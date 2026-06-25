@@ -1666,6 +1666,12 @@ Em recÃ¡lculo:
   3. **Reset de Estados de Filtro**: Garantimos que, ao mudar o filtro principal de Origem (entre 'Todas', 'Débito' e 'Cartão'), o estado do banco selecionado (`selectedBank`) e de conta específica (`specificSourceId`) sejam redefinidos para `'all'`. A declaração de estados no componente foi devidamente reordenada para preservar a integridade do teste unitário legado que intercepta os estados pelo índice de chamada.
 - **Motivação**: Atender à solicitação direta do usuário de que os filtros de débito exibam primeiro o banco e depois a conta (organizando cenários com muitas contas e bancos cadastrados), e que o filtro de cartão de crédito exiba o nome do banco e uma miniatura do cartão correspondente de forma moderna e premium.
 
+## [2026-06-25] Alteração de UI - Reexibição de Barra de Rolagem Sutil no Layout Principal do App
+- **Resumo**: Reativamos a exibição da barra de rolagem vertical personalizada e sutil no contêiner de conteúdo principal do aplicativo ([AppLayout.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/AppLayout.tsx)):
+  1. **Remoção de Ocultação de Scroll**: A classe `.no-scrollbar` foi removida do elemento `div` principal que envolve o conteúdo das páginas do aplicativo (`children`).
+  2. **Estilização de Acessibilidade no Firefox**: Estendemos o suporte de barra de rolagem sutil no arquivo CSS global ([index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css)), injetando as propriedades `scrollbar-width: thin` e `scrollbar-color` sob o seletor universal `*` na base do CSS, tornando a rolagem igualmente fina e discreta (sem track opaco) em navegadores baseados em Gecko/Firefox.
+- **Motivação**: Atender ao requisito de usabilidade onde listas muito longas (especialmente na tela de lançamentos e na gestão de contas) exigem uma barra de rolagem física arrastável no desktop para navegar com maior velocidade do que fazendo apenas o scroll convencional com scrollwheel.
+
 
 
 
