@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { formatCurrency } from '@/utils/formatters';
 import { ArrowUpRight, ArrowDownRight, Trash2, Pencil, FastForward, ChevronDown, ChevronUp, Plus, RotateCcw, ArrowRight, Filter } from 'lucide-react';
 import { Transaction } from '@/types/finance';
@@ -30,6 +30,33 @@ export interface TransactionListProps {
 import { parseLocalDate, todayLocalString, toLocalDateString } from '@/utils/dateUtils';
 import { Copy, RotateCcw as UndoIcon } from 'lucide-react';
 
+function CreditCardMiniature({ color, texture }: { color: string; texture?: string }) {
+  let bgStyle: React.CSSProperties = { backgroundColor: color || '#3b82f6' };
+
+  if (texture === 'black') {
+    bgStyle = { background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' };
+  } else if (texture === 'holographic') {
+    bgStyle = { 
+      background: `linear-gradient(135deg, ${color || '#3b82f6'} 0%, #8b5cf6 50%, #ec4899 100%)`
+    };
+  }
+
+  return (
+    <div 
+      className="relative w-8 h-5 rounded-[4px] flex-shrink-0 border border-white/10 overflow-hidden shadow-sm"
+      style={bgStyle}
+    >
+      {/* Detalhe do Chip do Cartão */}
+      <div className="absolute top-1 left-1.5 w-2 h-1.5 bg-amber-300/80 rounded-[0.5px] border-[0.5px] border-amber-500/20" />
+      {/* Detalhe da bandeira */}
+      <div className="absolute bottom-1 right-1 flex -space-x-[3px] opacity-75">
+        <div className="w-1.5 h-1.5 rounded-full bg-red-500/90" />
+        <div className="w-1.5 h-1.5 rounded-full bg-yellow-500/90" />
+      </div>
+    </div>
+  );
+}
+
 export function TransactionList({
   transactions,
   onEdit,
@@ -43,6 +70,7 @@ export function TransactionList({
   const [typeFilter, setTypeFilter] = useState<'all' | 'punctual' | 'installment' | 'fixed'>('all');
   const [specificSourceId, setSpecificSourceId] = useState<string>('all');
   const [payingItem, setPayingItem] = useState<Transaction | null>(null);
+  const [selectedBank, setSelectedBank] = useState<string>('all');
   const [paymentDate, setPaymentDate] = useState<string>(todayLocalString());
   const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
@@ -95,6 +123,10 @@ export function TransactionList({
     () => buildCanonicalCategoryFilterOptions(displayItems, categories, 'Não identificados'),
     [displayItems, categories]
   );
+
+  const availableBanks = useMemo(() => {
+    return Array.from(new Set(accounts.map(a => a.bank).filter(Boolean)));
+  }, [accounts]);
 
   const getGroupDate = (item: any): string => {
     if (item.isRecurring) {
@@ -151,7 +183,16 @@ export function TransactionList({
       // Filtro de Origem (Conta vs Cartão)
       if (sourceFilter === 'account') {
         if (t.cardId) return false;
-        if (specificSourceId !== 'all' && t.accountId !== specificSourceId) return false;
+        if (selectedBank !== 'all') {
+          const bankAccountIds = accounts.filter(a => a.bank === selectedBank).map(a => a.id);
+          if (specificSourceId !== 'all') {
+            if (t.accountId !== specificSourceId) return false;
+          } else {
+            if (!t.accountId || !bankAccountIds.includes(t.accountId)) return false;
+          }
+        } else {
+          if (specificSourceId !== 'all' && t.accountId !== specificSourceId) return false;
+        }
       } else if (sourceFilter === 'card') {
         if (!t.cardId) return false;
         if (specificSourceId !== 'all' && t.cardId !== specificSourceId) return false;
@@ -283,17 +324,17 @@ export function TransactionList({
 
             {/* Origem */}
             <div className="flex gap-1 p-1 bg-gray-50 dark:bg-zinc-800 rounded-xl">
-              <button onClick={() => { setSourceFilter('all'); setSpecificSourceId('all'); }}
+              <button onClick={() => { setSourceFilter('all'); setSpecificSourceId('all'); setSelectedBank('all'); }}
                 className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
                   sourceFilter === 'all' ? "bg-white dark:bg-zinc-700 shadow-sm text-gray-900 dark:text-zinc-50" : "text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200")}>
                 Todas Origens
               </button>
-              <button onClick={() => { setSourceFilter('account'); setSpecificSourceId('all'); }}
+              <button onClick={() => { setSourceFilter('account'); setSpecificSourceId('all'); setSelectedBank('all'); }}
                 className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
                   sourceFilter === 'account' ? "bg-white dark:bg-zinc-700 shadow-sm text-gray-900 dark:text-zinc-50" : "text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200")}>
                 Débito
               </button>
-              <button onClick={() => { setSourceFilter('card'); setSpecificSourceId('all'); }}
+              <button onClick={() => { setSourceFilter('card'); setSpecificSourceId('all'); setSelectedBank('all'); }}
                 className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
                   sourceFilter === 'card' ? "bg-white dark:bg-zinc-700 shadow-sm text-gray-900 dark:text-zinc-50" : "text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200")}>
                 Cartão
@@ -369,24 +410,98 @@ export function TransactionList({
           </Button>
         </div>
 
-        {/* Filtro Específico (Conta ou Cartão) */}
-        {sourceFilter !== 'all' && (
-          <div className="flex items-center gap-3 pt-2 border-t border-border animate-in slide-in-from-top-1">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              {sourceFilter === 'account' ? 'Selecionar Conta:' : 'Selecionar Cartão:'}
+        {/* Filtro Específico de Contas (Débito) */}
+        {sourceFilter === 'account' && (
+          <div className="space-y-3 pt-2 border-t border-border animate-in slide-in-from-top-1">
+            {/* Linha 1: Selecionar Banco */}
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest min-w-[120px]">
+                Selecionar Banco:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <button 
+                  onClick={() => { setSelectedBank('all'); setSpecificSourceId('all'); }}
+                  className={cn("px-3 py-1 rounded-full text-xs font-black uppercase transition-all border",
+                    selectedBank === 'all' ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}
+                >
+                  Todos os Bancos
+                </button>
+                {availableBanks.map((bank) => (
+                  <button 
+                    key={bank} 
+                    onClick={() => { setSelectedBank(bank); setSpecificSourceId('all'); }}
+                    className={cn("px-3 py-1 rounded-full text-xs font-black uppercase transition-all border",
+                      selectedBank === bank ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}
+                  >
+                    {bank}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Linha 2: Selecionar Conta (Somente se o banco selecionado não for 'all') */}
+            {selectedBank !== 'all' && (
+              <div className="flex items-center gap-3 animate-in slide-in-from-top-1">
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest min-w-[120px]">
+                  Selecionar Conta:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  <button 
+                    onClick={() => setSpecificSourceId('all')}
+                    className={cn("px-3 py-1 rounded-full text-xs font-black uppercase transition-all border",
+                      specificSourceId === 'all' ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}
+                  >
+                    Todas deste Banco
+                  </button>
+                  {accounts
+                    .filter(acc => acc.bank === selectedBank)
+                    .map((acc) => (
+                      <button 
+                        key={acc.id} 
+                        onClick={() => setSpecificSourceId(acc.id)}
+                        className={cn("px-3 py-1 rounded-full text-xs font-black uppercase transition-all border flex items-center gap-2",
+                          specificSourceId === acc.id ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}
+                      >
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: acc.color }} />
+                        {acc.name}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Filtro Específico de Cartões */}
+        {sourceFilter === 'card' && (
+          <div className="flex items-start gap-3 pt-2 border-t border-border animate-in slide-in-from-top-1 flex-col sm:flex-row sm:items-center">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest pt-1.5 sm:pt-0">
+              Selecionar Cartão:
             </span>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => setSpecificSourceId('all')}
-                className={cn("px-3 py-1 rounded-full text-xs font-black uppercase transition-all border",
-                  specificSourceId === 'all' ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}>
+              <button 
+                onClick={() => setSpecificSourceId('all')}
+                className={cn("h-10 px-4 rounded-xl text-xs font-black uppercase transition-all border flex items-center justify-center",
+                  specificSourceId === 'all' ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}
+              >
                 Todos
               </button>
-              {(sourceFilter === 'account' ? accounts : creditCards).map((item: any) => (
-                <button key={item.id} onClick={() => setSpecificSourceId(item.id)}
-                  className={cn("px-3 py-1 rounded-full text-xs font-black uppercase transition-all border flex items-center gap-2",
-                    specificSourceId === item.id ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}>
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                  {item.name}
+              {creditCards.map((card) => (
+                <button 
+                  key={card.id} 
+                  onClick={() => setSpecificSourceId(card.id)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-3 text-left",
+                    specificSourceId === card.id 
+                      ? "bg-primary/5 text-primary border-primary shadow-sm" 
+                      : "bg-transparent text-muted-foreground border-border hover:border-primary/50"
+                  )}
+                >
+                  <CreditCardMiniature color={card.color} texture={card.texture} />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-gray-900 dark:text-white leading-none">{card.name}</span>
+                    <span className="text-[10px] text-muted-foreground font-semibold leading-none mt-1 uppercase">{card.bank}</span>
+                  </div>
                 </button>
               ))}
             </div>
