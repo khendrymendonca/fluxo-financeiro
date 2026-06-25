@@ -15,6 +15,7 @@ const debtProjectionMock = vi.hoisted(() => ({
 
 const featureFlagsMock = vi.hoisted(() => ({
   useFeatureFlag: vi.fn(),
+  usePlanLimits: vi.fn(() => ({ data: { accounts_limit: -1, cards_limit: -1, debts_limit: -1 } })),
 }));
 
 const mobileMock = vi.hoisted(() => ({

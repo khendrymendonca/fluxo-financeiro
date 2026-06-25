@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { MobileTopHeader } from '@/components/layout/MobileTopHeader';
+import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('@/components/ui/dropdown-menu', () => ({
   DropdownMenu: ({ children }: any) => <div>{children}</div>,
@@ -9,18 +10,31 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
   DropdownMenuItem: ({ children, onClick }: any) => <button type="button" onClick={onClick}>{children}</button>,
 }));
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({ user: null }),
+}));
+
+vi.mock('@/hooks/useFeatureFlags', () => ({
+  useIsSuperAdmin: () => false,
+  useFeatureFlag: () => true,
+  useGlobalFlag: () => false,
+  useGlobalFlags: () => ({ data: [], isSuccess: true }),
+}));
+
 describe('MobileTopHeader', () => {
   it('renderiza saudacao, nome, menu e avatar com inicial', () => {
     render(
-      <MobileTopHeader
-        greeting="Bom dia"
-        userName="Khendry"
-        userInitial="K"
-        onGoHome={vi.fn()}
-        onOpenNavigation={vi.fn()}
-        onOpenProfile={vi.fn()}
-        onSignOut={vi.fn()}
-      />
+      <MemoryRouter>
+        <MobileTopHeader
+          greeting="Bom dia"
+          userName="Khendry"
+          userInitial="K"
+          onGoHome={vi.fn()}
+          onOpenNavigation={vi.fn()}
+          onOpenProfile={vi.fn()}
+          onSignOut={vi.fn()}
+        />
+      </MemoryRouter>
     );
 
     expect(screen.getByText('Bom dia')).toBeInTheDocument();
@@ -35,15 +49,17 @@ describe('MobileTopHeader', () => {
     const onSignOut = vi.fn();
 
     render(
-      <MobileTopHeader
-        greeting="Boa tarde"
-        userName="Mendonça"
-        userInitial="M"
-        onGoHome={vi.fn()}
-        onOpenNavigation={vi.fn()}
-        onOpenProfile={onOpenProfile}
-        onSignOut={onSignOut}
-      />
+      <MemoryRouter>
+        <MobileTopHeader
+          greeting="Boa tarde"
+          userName="Mendonça"
+          userInitial="M"
+          onGoHome={vi.fn()}
+          onOpenNavigation={vi.fn()}
+          onOpenProfile={onOpenProfile}
+          onSignOut={onSignOut}
+        />
+      </MemoryRouter>
     );
 
     fireEvent.click(screen.getByText('Configurações'));
@@ -57,15 +73,17 @@ describe('MobileTopHeader', () => {
     const onOpenNavigation = vi.fn();
 
     render(
-      <MobileTopHeader
-        greeting="Boa noite"
-        userName="Usuário"
-        userInitial="U"
-        onGoHome={vi.fn()}
-        onOpenNavigation={onOpenNavigation}
-        onOpenProfile={vi.fn()}
-        onSignOut={vi.fn()}
-      />
+      <MemoryRouter>
+        <MobileTopHeader
+          greeting="Boa noite"
+          userName="Usuário"
+          userInitial="U"
+          onGoHome={vi.fn()}
+          onOpenNavigation={onOpenNavigation}
+          onOpenProfile={vi.fn()}
+          onSignOut={vi.fn()}
+        />
+      </MemoryRouter>
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Abrir menu de navegação' }));

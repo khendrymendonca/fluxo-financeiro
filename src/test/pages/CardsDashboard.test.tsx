@@ -1,4 +1,4 @@
-﻿import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CardsDashboard from '@/pages/CardsDashboard';
 
@@ -8,6 +8,7 @@ const financeStoreMock = vi.hoisted(() => ({
 
 const featureFlagsMock = vi.hoisted(() => ({
   useFeatureFlag: vi.fn(),
+  usePlanLimits: vi.fn(() => ({ data: { accounts_limit: -1, cards_limit: -1, debts_limit: -1 } })),
 }));
 
 const toastMock = vi.hoisted(() => ({
@@ -69,13 +70,16 @@ describe('CardsDashboard - limite Free', () => {
   });
 
   it('bloqueia a abertura do modal ao atingir 1 cartão sem unlimited_cards', () => {
+    featureFlagsMock.usePlanLimits.mockReturnValue({ data: { accounts_limit: 2, cards_limit: 1, debts_limit: 3 } });
     render(<CardsDashboard />);
 
     fireEvent.click(screen.getAllByRole('button', { name: /novo cart/i })[0]);
 
     expect(screen.queryByText(/adicionar cart/i)).not.toBeInTheDocument();
     expect(toastMock.toast).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'Limite do plano Free atingido',
+      title: 'Limite de cartões atingido',
+      description: 'Seu plano atual permite cadastrar até 1 cartões de crédito. Faça o upgrade para adicionar mais.',
+      variant: 'destructive',
     }));
   });
 

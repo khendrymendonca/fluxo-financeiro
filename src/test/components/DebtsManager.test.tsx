@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DebtsManager } from '@/components/debts/DebtsManager';
@@ -9,6 +9,7 @@ const financeStoreMock = vi.hoisted(() => ({
 
 const featureFlagsMock = vi.hoisted(() => ({
   useFeatureFlag: vi.fn(),
+  usePlanLimits: vi.fn(() => ({ data: { accounts_limit: -1, cards_limit: -1, debts_limit: -1 } })),
 }));
 
 const toastMock = vi.hoisted(() => ({
@@ -400,6 +401,7 @@ describe('DebtsManager - acordos em pagamento', () => {
 
   it('bloqueia a abertura do formulário ao atingir o limite Free sem unlimited_debts', () => {
     featureFlagsMock.useFeatureFlag.mockReturnValue(false);
+    featureFlagsMock.usePlanLimits.mockReturnValue({ data: { accounts_limit: 2, cards_limit: 1, debts_limit: 3 } });
     financeStoreMock.useFinanceStore.mockReturnValue(buildStore());
 
     render(
@@ -419,8 +421,9 @@ describe('DebtsManager - acordos em pagamento', () => {
 
     expect(screen.queryByText('Novo Acordo')).not.toBeInTheDocument();
     expect(toastMock.toast).toHaveBeenCalledWith({
-      title: 'Limite do plano Free atingido',
-      description: 'Você pode cadastrar até 3 dívidas/acordos no plano Free. Para adicionar mais, libere dívidas ilimitadas.',
+      title: 'Limite de dívidas atingido',
+      description: 'Seu plano atual permite cadastrar até 3 dívidas/acordos. Faça o upgrade para adicionar mais.',
+      variant: 'destructive',
     });
   });
 });

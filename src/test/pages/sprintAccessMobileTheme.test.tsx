@@ -130,7 +130,7 @@ describe('Sprint de acesso, mobile, AMOLED e acento', () => {
     expect(source).toContain('const { accentColor } = useThemeColor();');
     expect(source).toContain('const activeAccentColor = useMemo(() => (');
     expect(source).toContain("const incomeTrendColor = isDarkTheme ? '#FFFFFF' : `hsl(${activeAccentColor.hsl})`;");
-    expect(source).toContain("const expenseTrendColor = '#F43F5E';");
+    expect(source).toContain("const expenseTrendColor = isDarkTheme ? '#F43F5E' : '#4B5563';");
     expect(source).toContain('stroke={incomeTrendColor}');
     expect(source).toContain('stroke={expenseTrendColor}');
   });

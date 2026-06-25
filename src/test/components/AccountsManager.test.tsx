@@ -8,6 +8,7 @@ const financeStoreMock = vi.hoisted(() => ({
 
 const featureFlagsMock = vi.hoisted(() => ({
   useFeatureFlag: vi.fn(),
+  usePlanLimits: vi.fn(() => ({ data: { accounts_limit: -1, cards_limit: -1, debts_limit: -1 } })),
 }));
 
 const toastMock = vi.hoisted(() => ({
@@ -36,6 +37,7 @@ describe('AccountsManager - limite Free', () => {
   });
 
   it('bloqueia a abertura do formulario ao atingir 2 contas sem unlimited_accounts', () => {
+    featureFlagsMock.usePlanLimits.mockReturnValue({ data: { accounts_limit: 2, cards_limit: 1, debts_limit: 3 } });
     render(
       <AccountsManager
         accounts={[
@@ -74,8 +76,9 @@ describe('AccountsManager - limite Free', () => {
 
     expect(screen.queryByText('Nova Conta')).not.toBeInTheDocument();
     expect(toastMock.toast).toHaveBeenCalledWith({
-      title: 'Limite do plano Free atingido',
-      description: 'Você pode cadastrar até 2 contas/carteiras no plano Free. Para adicionar mais, libere contas ilimitadas.',
+      title: 'Limite de contas atingido',
+      description: 'Seu plano atual permite cadastrar até 2 contas/carteiras. Faça o upgrade para adicionar mais.',
+      variant: 'destructive',
     });
   });
 });

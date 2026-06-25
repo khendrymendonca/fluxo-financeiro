@@ -148,21 +148,7 @@ export default function AuthPage() {
             easterEnabled ? "theme-easter" : "")}>
             
             <div className="absolute top-6 left-6 z-10">
-                <button
-                    type="button"
-                    onClick={() => {
-                        setIsStartMode(!isStartMode);
-                        setIsSignUp(false);
-                    }}
-                    className={cn(
-                        "px-4 py-2 rounded-full font-black text-xs md:text-sm uppercase tracking-widest transition-all",
-                        isStartMode 
-                            ? "bg-[#00FF5F] text-black hover:bg-[#00CC4C] shadow-[0_0_15px_rgba(0,255,95,0.4)]" 
-                            : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary"
-                    )}
-                >
-                    {isStartMode ? 'Voltar ao Fluxo' : 'Fluxo Start'}
-                </button>
+                {/* O botão do Fluxo Start foi temporariamente ocultado conforme solicitado */}
             </div>
 
             <div className={cn(

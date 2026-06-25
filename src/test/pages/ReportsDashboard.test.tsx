@@ -10,6 +10,7 @@ const financeStoreMock = vi.hoisted(() => ({
 
 const featureFlagsMock = vi.hoisted(() => ({
   useFeatureFlag: vi.fn(),
+  usePlanLimits: vi.fn(() => ({ data: { accounts_limit: -1, cards_limit: -1, debts_limit: -1 } })),
 }));
 
 const mobileMock = vi.hoisted(() => ({
@@ -950,7 +951,7 @@ describe('ReportsDashboard - categoria de acordo', () => {
     render(<ReportsDashboard />);
 
     expect(screen.queryByText('Mapa por categoria')).not.toBeInTheDocument();
-    expect(screen.getByText('Total de Consumo vs Receita')).toBeInTheDocument();
+    expect(screen.getByText('Total de Despesas vs Receitas')).toBeInTheDocument();
     expect(screen.getByText('Ranking de Despesas')).toBeInTheDocument();
     expect(screen.queryByText('Composição das Despesas')).not.toBeInTheDocument();
   });
@@ -1128,7 +1129,7 @@ describe('ReportsDashboard - categoria de acordo', () => {
 
     render(<ReportsDashboard />);
 
-    expect(screen.getByText(/Consumo vs Receita/i)).toBeInTheDocument();
+    expect(screen.getByText(/Despesas vs Receitas/i)).toBeInTheDocument();
     expect(screen.getByLabelText('Período anterior')).toBeInTheDocument();
     expect(screen.getByLabelText('Próximo período')).toBeInTheDocument();
     expect(screen.queryByText('dom')).not.toBeInTheDocument();

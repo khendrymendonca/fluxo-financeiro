@@ -19,7 +19,17 @@ vi.mock('@/contexts/AuthContext', () => ({
 }));
 
 vi.mock('@/hooks/useFeatureFlags', () => ({
-  useGlobalFlag: () => featureFlagState.easterEnabled,
+  useGlobalFlags: () => ({
+    data: [
+      { key: 'theme_easter_internal', enabled: featureFlagState.easterEnabled, label: 'Easter' }
+    ],
+    isSuccess: true
+  }),
+  useGlobalFlag: (key: string) => {
+    if (key === 'theme_easter_internal') return featureFlagState.easterEnabled;
+    return false;
+  },
+  usePlanLimits: () => ({ data: { accounts_limit: -1, cards_limit: -1, debts_limit: -1 } }),
 }));
 
 vi.mock('@/lib/supabase', () => ({
@@ -141,9 +151,9 @@ describe('preferencias visuais', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.accentColor).toBe('teal');
+      expect(result.current.accentColor).toBe('blue');
     });
 
-    expect(localStorage.getItem('accent-color')).toBe('teal');
+    expect(localStorage.getItem('accent-color')).toBe('blue');
   });
 });

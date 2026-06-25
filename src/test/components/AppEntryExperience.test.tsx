@@ -45,7 +45,7 @@ describe('Entrada do app e intro', () => {
   });
 
   it('renderiza a intro com a nova logo e mensagem de boot', () => {
-    render(<AppBootScreen message="Abrindo o Fluxo..." />);
+    renderWithQueryClient(<AppBootScreen message="Abrindo o Fluxo..." />);
 
     expect(screen.getByRole('img', { name: 'Fluxo' })).toBeInTheDocument();
     expect(screen.getByText('Abrindo o Fluxo...')).toBeInTheDocument();

@@ -29,7 +29,6 @@ import {
   Users
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import StartManager from './StartManager';
 import { useFeatureFlag, useIsSuperAdmin, useGlobalFlag } from '@/hooks/useFeatureFlags';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { useTheme } from '@/hooks/useTheme';
@@ -92,7 +91,6 @@ const PROTECTED_VIEWS: Record<string, string> = {
   reports: 'reports_dashboard',
   simulator: 'simulator',
   export: 'export_data',
-  start_manager: 'start_manager',
 };
 
 function ViewGuard({
@@ -462,12 +460,6 @@ export default function Index() {
         return (
           <ViewGuard view="emergency">
             <EmergencyFund />
-          </ViewGuard>
-        );
-      case 'start_manager':
-        return (
-          <ViewGuard view="start_manager">
-            <StartManager />
           </ViewGuard>
         );
       case 'export':

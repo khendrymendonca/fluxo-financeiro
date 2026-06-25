@@ -579,16 +579,8 @@ export function ProfileSettings() {
                         </div>
 
                         <div className="flex flex-col items-center py-4 bg-gray-50/50 dark:bg-zinc-950/50 rounded-3xl border border-gray-100 dark:border-zinc-800">
-                            <div className="text-primary mb-4 flex items-center justify-center gap-4">
+                            <div className="text-primary mb-4 flex items-center justify-center">
                                 <AppLogo className="h-16 w-48" />
-                                <Button 
-                                    type="button"
-                                    variant="outline" 
-                                    className="border-[#00FF5F] text-foreground hover:bg-[#00FF5F] hover:text-black font-bold shadow-[0_0_15px_rgba(0,255,95,0.1)] rounded-xl transition-all uppercase tracking-widest text-xs"
-                                    onClick={() => setSearchParams({ view: 'start_manager' })}
-                                >
-                                    Start
-                                </Button>
                             </div>
                             <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Gestão Inteligente</p>
                         </div>
