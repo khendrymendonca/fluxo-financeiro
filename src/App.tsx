@@ -56,10 +56,10 @@ const AppRoutes = () => {
       }
     });
 
-    // Fallback: se o usuário já cair com o hash na URL
+    // Fallback: se o usuário já cair com o hash na URL, leva o hash junto no redirecionamento para o Supabase processá-lo na página correta
     const hash = window.location.hash;
     if (hash.includes('type=recovery') || hash.includes('type%3Drecovery')) {
-      navigate('/auth/redefinir-senha', { replace: true });
+      navigate('/auth/redefinir-senha' + hash, { replace: true });
     }
 
     return () => subscription.unsubscribe();
