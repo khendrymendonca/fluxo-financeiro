@@ -34,7 +34,9 @@ import {
     Rocket,
     Smartphone,
     AlertCircle,
-    Loader2
+    Loader2,
+    HelpCircle,
+    Plus
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
@@ -90,6 +92,9 @@ export function ProfileSettings() {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
     const { mutate: deleteUserAccount, isPending: isDeletingAccount } = useDeleteUserAccount();
+
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [helpTab, setHelpTab] = useState<'lancamentos' | 'transferencias' | 'score'>('lancamentos');
 
     const toggleShortcut = async (id: ShortcutId) => {
         let newShortcuts: ShortcutId[];
@@ -568,8 +573,32 @@ export function ProfileSettings() {
                     </div>
                 </div>
 
-                {/* Card 4: Sobre */}
-                <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm flex flex-col justify-between md:col-span-2">
+                {/* Card 4: Central de Ajuda */}
+                <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                                <HelpCircle className="w-5 h-5" />
+                            </div>
+                            <h2 className="text-xl font-bold">Central de Ajuda</h2>
+                        </div>
+
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
+                            Aprenda a lançar estornos, abatimentos de fatura, realizar Pix no crédito e descubra como o Score é calculado.
+                        </p>
+
+                        <Button 
+                            type="button"
+                            onClick={() => setIsHelpOpen(true)}
+                            className="w-full h-12 rounded-2xl bg-primary/10 hover:bg-primary/20 text-primary font-bold text-sm transition-all"
+                        >
+                            Ver Tutoriais & FAQ
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Card 5: Sobre */}
+                <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
                     <div className="space-y-6">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
@@ -578,22 +607,22 @@ export function ProfileSettings() {
                             <h2 className="text-xl font-bold">Sobre o Fluxo</h2>
                         </div>
 
-                        <div className="flex flex-col items-center py-4 bg-gray-50/50 dark:bg-zinc-950/50 rounded-3xl border border-gray-100 dark:border-zinc-800">
+                        <div className="flex flex-col items-center py-4 bg-gray-50/50 dark:bg-zinc-950/50 rounded-3xl border border-gray-100 dark:border-zinc-800 w-full">
                             <div className="text-primary mb-4 flex items-center justify-center">
-                                <AppLogo className="h-16 w-48" />
+                                <AppLogo className="h-12 w-36" />
                             </div>
                             <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Gestão Inteligente</p>
                         </div>
                     </div>
 
-                    <div className="mt-8 pt-6 border-t border-gray-100 dark:border-zinc-800 space-y-3">
+                    <div className="mt-6 pt-4 border-t border-gray-100 dark:border-zinc-800 space-y-3">
                         <div className="flex flex-col gap-1">
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-xs font-black uppercase tracking-widest">
+                            <div className="flex justify-between items-center text-xs font-black uppercase tracking-widest">
                                 <span className="text-zinc-400 dark:text-zinc-600">Versão</span>
-                                <span className="text-zinc-600 dark:text-zinc-400">{appVersion} | Estável</span>
+                                <span className="text-zinc-600 dark:text-zinc-400">{appVersion}</span>
                             </div>
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-xs font-black uppercase tracking-widest">
-                                <span className="text-zinc-400 dark:text-zinc-600">Última Atualização</span>
+                            <div className="flex justify-between items-center text-xs font-black uppercase tracking-widest">
+                                <span className="text-zinc-400 dark:text-zinc-600">Atualização</span>
                                 <span className="text-zinc-600 dark:text-zinc-400">
                                     {buildDate ? buildDate.toLocaleDateString('pt-BR') : '—'}
                                 </span>
@@ -603,7 +632,7 @@ export function ProfileSettings() {
                 </div>
 
                 {/* ZONA DE PERIGO — LGPD Art. 18 VI */}
-                <div className="mt-8 pt-8 border-t border-danger/20">
+                <div className="mt-8 pt-8 border-t border-danger/20 md:col-span-2">
                     <div className="space-y-4">
                         <div>
                             <h3 className="text-sm font-black uppercase tracking-widest text-danger">
@@ -694,6 +723,158 @@ export function ProfileSettings() {
                     </div>
                 </div>
             </div>
+
+            {/* Modal Central de Ajuda */}
+            {isHelpOpen && (
+                <Portal>
+                    <div 
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+                        onClick={() => setIsHelpOpen(false)}
+                    >
+                        <div 
+                            className="bg-card rounded-[2rem] shadow-2xl w-full max-w-xl animate-in zoom-in-95 duration-200 border border-border/50 max-h-[85vh] flex flex-col overflow-hidden"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="px-6 py-5 border-b border-border bg-muted/5 flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-xl font-extrabold tracking-tight">Central de Ajuda</h2>
+                                    <p className="text-xs text-muted-foreground font-medium">Entenda as regras e aprenda a usar o app.</p>
+                                </div>
+                                <Button 
+                                    variant="ghost" 
+                                    onClick={() => setIsHelpOpen(false)} 
+                                    className="p-2.5 rounded-2xl hover:bg-muted text-muted-foreground"
+                                >
+                                    <Plus className="w-5 h-5 rotate-45" />
+                                </Button>
+                            </div>
+
+                            {/* Tabs Navigation */}
+                            <div className="flex p-2 bg-muted/30 border-b border-border gap-1">
+                                {(['lancamentos', 'transferencias', 'score'] as const).map(tab => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setHelpTab(tab)}
+                                        className={cn(
+                                            "flex-1 py-2 text-xs font-bold rounded-xl transition-all uppercase tracking-wider",
+                                            helpTab === tab 
+                                                ? "bg-background text-foreground shadow-sm font-black" 
+                                                : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        {tab === 'lancamentos' ? 'Lançamentos' : tab === 'transferencias' ? 'Transferências' : 'Fluxo Score'}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Tab Content */}
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                                {helpTab === 'lancamentos' && (
+                                    <div className="space-y-5 animate-in fade-in duration-300">
+                                        <div className="space-y-2">
+                                            <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-primary" /> Como lançar Estorno no Cartão
+                                            </h3>
+                                            <p className="text-xs text-muted-foreground leading-relaxed pl-4">
+                                                Ao receber o reembolso de uma compra cancelada no cartão de crédito, você deve registrar uma <strong>Receita</strong>. No formulário:
+                                            </p>
+                                            <ul className="list-disc text-xs text-muted-foreground pl-8 space-y-1">
+                                                <li>Escolha a categoria <strong className="text-foreground">Estorno</strong> (ou Reembolso).</li>
+                                                <li>Defina o destino como o <strong className="text-foreground">Cartão de Crédito</strong> de origem.</li>
+                                                <li>Isso abaterá o valor diretamente na fatura do mês correspondente, liberando o limite.</li>
+                                            </ul>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-primary" /> Como lançar Abatimento de Fatura
+                                            </h3>
+                                            <p className="text-xs text-muted-foreground leading-relaxed pl-4">
+                                                Se você recebeu créditos de cashback ou ajustes manuais do banco na fatura do cartão:
+                                            </p>
+                                            <ul className="list-disc text-xs text-muted-foreground pl-8 space-y-1">
+                                                <li>Registre uma <strong className="text-foreground">Receita</strong> no app.</li>
+                                                <li>Selecione a categoria <strong className="text-foreground">Abatimento Fatura</strong>.</li>
+                                                <li>Defina o destino como o <strong className="text-foreground">Cartão de Crédito</strong>.</li>
+                                                <li>Esse crédito reduzirá o valor final bruto cobrado no vencimento da fatura.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {helpTab === 'transferencias' && (
+                                    <div className="space-y-5 animate-in fade-in duration-300">
+                                        <div className="space-y-2">
+                                            <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-primary" /> Transferências entre Contas
+                                            </h3>
+                                            <p className="text-xs text-muted-foreground leading-relaxed pl-4">
+                                                Para mover saldo de uma conta corrente para outra conta poupança ou carteira, use a aba <strong className="text-foreground">Transferência</strong> no formulário principal de lançamentos. Ambas as contas são atualizadas ao mesmo tempo.
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-primary" /> Transferências via Cartão de Crédito
+                                            </h3>
+                                            <p className="text-xs text-muted-foreground leading-relaxed pl-4">
+                                                Se você realizou um <strong className="text-foreground">Pix no crédito</strong> ou pagou um boleto usando o limite do cartão:
+                                            </p>
+                                            <ul className="list-disc text-xs text-muted-foreground pl-8 space-y-1">
+                                                <li>Acesse a aba de <strong className="text-foreground">Transferência</strong>.</li>
+                                                <li>No campo "Origem", selecione a opção <strong className="text-foreground">Cartão</strong>.</li>
+                                                <li>Selecione o cartão de crédito e a conta de destino.</li>
+                                                <li>O sistema lançará automaticamente uma despesa na fatura do cartão (com vencimento futuro) e uma receita imediata na conta de destino, ambas vinculadas à categoria automática de <strong className="text-foreground">Transferência</strong>.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {helpTab === 'score' && (
+                                    <div className="space-y-5 animate-in fade-in duration-300">
+                                        <div className="space-y-2">
+                                            <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-primary" /> O que é o Fluxo Score?
+                                            </h3>
+                                            <p className="text-xs text-muted-foreground leading-relaxed pl-4">
+                                                O Fluxo Score é uma pontuação de <strong className="text-foreground">0 a 1000</strong> baseada no seu comportamento financeiro no aplicativo. Ele mede sua pontualidade e o progresso na quitação de dívidas para incentivar hábitos saudáveis.
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider pl-4">Como aumentar seu Score</h3>
+                                            <ul className="list-disc text-xs text-muted-foreground pl-8 space-y-1">
+                                                <li><strong className="text-foreground">Quitação de Acordos</strong>: Acordos de renegociação concluídos (com todas as parcelas pagas) eliminam por completo as penalidades, elevando o seu score.</li>
+                                                <li><strong className="text-foreground">Bônus Mensal (+10)</strong>: No primeiro dia útil de cada mês, se você não tiver nenhuma despesa atrasada pendente, receberá uma bonificação especial no Score.</li>
+                                                <li><strong className="text-foreground">Contas em Dia</strong>: Pagar despesas fixas e faturas até a data de vencimento preserva seu Score em 1000 pontos.</li>
+                                            </ul>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider pl-4">O que penaliza seu Score</h3>
+                                            <ul className="list-disc text-xs text-muted-foreground pl-8 space-y-1">
+                                                <li><strong className="text-foreground">Atrasos</strong>: Contas vencidas e não pagas deduzem pontos progressivamente conforme a quantidade de dias em atraso.</li>
+                                                <li><strong className="text-foreground">Acordos Ativos</strong>: Renegociações ativas geram uma penalidade temporária de -100 pontos, que diminui proporcionalmente à medida que você paga as parcelas do acordo.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer */}
+                            <div className="px-6 py-4 border-t border-border bg-muted/10 sticky bottom-0 rounded-b-[2rem]">
+                                <Button 
+                                    onClick={() => setIsHelpOpen(false)} 
+                                    className="w-full h-11 rounded-xl bg-foreground text-background font-bold text-xs uppercase tracking-wider"
+                                >
+                                    Fechar Ajuda
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </Portal>
+            )}
         </div>
     );
 }

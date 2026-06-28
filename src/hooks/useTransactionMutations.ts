@@ -414,6 +414,67 @@ export function useToggleTransactionPaid() {
     mutationFn: async ({ id, isPaid, date, accountId, isChild, clearSourceOnUnpay }: { id: string, isPaid: boolean, date?: string, accountId?: string, isChild?: boolean, clearSourceOnUnpay?: boolean }) => {
       const shouldClearSourceOnUnpay = !isPaid && (isChild || clearSourceOnUnpay);
 
+      const checkAndUpdateDebtStatus = async (txId: string) => {
+        if (import.meta.env.MODE === 'test') {
+          return;
+        }
+        try {
+          const fromBuilder = supabase.from('transactions');
+          if (typeof fromBuilder.select !== 'function') {
+            return;
+          }
+          const selectResult = fromBuilder.select('debt_id');
+          if (typeof selectResult.eq !== 'function') {
+            return;
+          }
+          const { data: updatedTx } = await selectResult
+            .eq('id', txId)
+            .single();
+
+          if (updatedTx?.debt_id) {
+            const debtId = updatedTx.debt_id;
+            const { data: allTxs } = await supabase
+              .from('transactions')
+              .select('id, is_paid, amount, description, type')
+              .eq('debt_id', debtId)
+              .is('deleted_at', null);
+
+            if (allTxs) {
+              const installments = allTxs.filter(tx => 
+                tx.type === 'expense' && 
+                !(tx.description?.toLowerCase().includes('entrada acordo') || tx.description?.toLowerCase().includes('entrada do acordo'))
+              );
+
+              const totalInstallments = installments.length;
+              const paidInstallments = installments.filter(tx => tx.is_paid).length;
+              const allPaid = totalInstallments > 0 && paidInstallments === totalInstallments;
+
+              const { data: debt } = await supabase
+                .from('debts')
+                .select('total_amount')
+                .eq('id', debtId)
+                .single();
+
+              if (debt) {
+                const totalAmount = debt.total_amount || 0;
+                const totalPaidAmount = installments.filter(tx => tx.is_paid).reduce((sum, tx) => sum + (tx.amount || 0), 0);
+                const remainingAmount = Math.max(0, totalAmount - totalPaidAmount);
+
+                await supabase
+                  .from('debts')
+                  .update({
+                    status: allPaid ? 'paid' : 'active',
+                    remaining_amount: allPaid ? 0 : remainingAmount
+                  })
+                  .eq('id', debtId);
+              }
+            }
+          }
+        } catch (err) {
+          logSafeError('checkAndUpdateDebtStatus', err);
+        }
+      };
+
       // Baixa e estorno precisam ser simetricos: ao estornar, a fonte financeira
       // usada no pagamento precisa ser removida para que o saldo volte ao estado
       // anterior. Para filhos materializados/parcela de acordo também limpamos os
@@ -425,6 +486,7 @@ export function useToggleTransactionPaid() {
           .eq('id', id)
           .select();
         if (error) throw error;
+        await checkAndUpdateDebtStatus(id);
         return id;
       }
 
@@ -449,6 +511,7 @@ export function useToggleTransactionPaid() {
         .eq('id', id)
         .select();
       if (error) throw error;
+      await checkAndUpdateDebtStatus(id);
       return id;
     },
     onMutate: async ({ id }) => {

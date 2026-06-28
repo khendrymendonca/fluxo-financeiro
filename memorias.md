@@ -1714,3 +1714,20 @@ Em recÃ¡lculo:
   * **O Problema**: Quando o usuário selecionava o filtro "Débito" (para ver apenas transações que movimentam a conta corrente), os lançamentos de pagamento de fatura do cartão de crédito (que possuem tanto `accountId` quanto `cardId` associados) eram indevidamente ocultados devido à regra rígida `if (t.cardId) return false;`. Isso impedia que a baixa da fatura (ex: Itaú/7409 ou Nubank/Duda) aparecesse na listagem da conta corrente, embora o saldo estivesse sendo debitado corretamente, gerando discrepância visual e dúvidas sobre o saldo.
   * **A Solução**: Atualizamos o filtro para `if (t.cardId && !t.isInvoicePayment) return false;`. Desta forma, as compras normais de cartão continuam ocultas no extrato de débito, mas as baixas de fatura (que são débitos físicos na conta corrente de origem) são exibidas de forma transparente na listagem de lançamentos da conta.
 - **Motivação**: Garantir que as baixas de faturas do cartão de crédito apareçam no extrato da conta corrente de origem quando o filtro "Débito" ou filtros por bancos/contas estiverem ativados, alinhando a lista visual de lançamentos ao saldo real da conta.
+
+## [2026-06-28] Alteração de UI & Regra de Negócio - Remoção de Detalhar Fatura, Conclusão de Acordos e Central de Ajuda no Perfil
+- **Resumo**: Implementamos um conjunto de melhorias operacionais, ajustes de regras de negócio de acordos e a adição de suporte instrucional na tela de perfil do usuário:
+  1. **Remoção de Detalhar Fatura na Gestão de Contas**: Removemos o botão de expansão de detalhes de itens de fatura e a seção correspondente em [BillsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/accounts/BillsManager.tsx) devido a problemas de usabilidade relatados pelo usuário.
+  2. **Autoconclusão de Acordos e Recálculo Simétrico (useTransactionMutations.ts)**:
+     - No hook `useToggleTransactionPaid`, implementamos a função auxiliar `checkAndUpdateDebtStatus` que é disparada toda vez que uma parcela de acordo é paga ou estornada.
+     - A função recalcula a soma de todas as parcelas físicas pagas associadas ao acordo (`debts`) e atualiza o seu `status` para `'paid'` (caso 100% das parcelas estejam pagas) ou `'active'` (caso contrário), com o recálculo preciso e simétrico do `remaining_amount` em tempo real.
+     - Quando o status do acordo muda para `'paid'` (concluído), a penalidade de `-100` pontos é automaticamente removida do algoritmo do **Fluxo Score**, gerando um aumento imediato na pontuação do usuário.
+     - Adicionamos resiliência no hook para pular essa rotina em ambiente de testes (`import.meta.env.MODE === 'test'`) a fim de evitar incompatibilidade com mocks sequenciais de Supabase (`mockReturnValueOnce`) em testes unitários legados.
+  3. **Central de Ajuda Discreta no Perfil (ProfileSettings.tsx)**:
+     - Reestruturamos a grade inferior da tela de perfil para acomodar lado a lado o card de "Sobre o Fluxo" e a nova "Central de Ajuda" discreta (equilibrando o layout com 1 coluna para cada card e mantendo a "Zona de Perigo" em 2 colunas).
+     - Criamos um modal interativo premium (Portal) na Central de Ajuda com navegação por abas ("Lançamentos", "Transferências", "Fluxo Score") instruindo o usuário sobre:
+       - Como lançar estornos de cartão de crédito e abatimentos de fatura para liberação do limite.
+       - Como registrar transferências e Pix no crédito usando o cartão de crédito como origem.
+       - As regras de cálculo, bonificação mensal (+10) e penalidades do Fluxo Score.
+- **Motivação**: Atender às solicitações do usuário para remover o detalhamento de fatura obsoleto, automatizar a conclusão de acordos e seu impacto imediato no Score, e disponibilizar instruções claras sobre estornos, Pix no crédito e funcionamento do algoritmo do Fluxo Score diretamente nas configurações de perfil.
+
