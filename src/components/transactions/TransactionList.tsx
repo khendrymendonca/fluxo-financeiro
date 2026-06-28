@@ -201,9 +201,9 @@ export function TransactionList({
       // Filtro de Tipo (Pontual, Parcelado, Fixo)
       if (typeFilter !== 'all') {
         if (typeFilter === 'punctual') {
-          if (t.installmentTotal || t.isRecurring || t.transactionType === 'recurring') return false;
+          if (t.installmentGroupId || t.installmentTotal || t.isRecurring || t.transactionType === 'recurring') return false;
         } else if (typeFilter === 'installment') {
-          if (!t.installmentTotal || t.installmentTotal <= 1) return false;
+          if ((!t.installmentGroupId && !t.installmentTotal) || (t.installmentTotal && t.installmentTotal <= 1)) return false;
         } else if (typeFilter === 'fixed') {
           if (!t.isRecurring && t.transactionType !== 'recurring') return false;
         }
@@ -233,7 +233,7 @@ export function TransactionList({
       isPaid: true,
       paymentDate: paymentDate,
       accountId: isCard ? undefined : targetId,
-      cardId: isCard ? targetId : payingItem.cardId
+      cardId: isCard ? targetId : undefined
     };
 
     await onPayBill({ ...payingItem, ...updates });
@@ -569,7 +569,7 @@ export function TransactionList({
                     item.debtId ? 'Acordo' : null,
                     isFixedManagedItem ? 'Fixo' : null,
                     isManagedByBills ? 'Gestão de Contas' : null,
-                    item.installmentTotal && item.installmentTotal > 1 ? 'Parcelado' : null,
+                    item.installmentGroupId || (item.installmentTotal && item.installmentTotal > 1) ? 'Parcelado' : null,
                     item.installmentNumber && item.installmentTotal ? `${item.installmentNumber}/${item.installmentTotal}` : null,
                   ].filter((badge): badge is string => Boolean(badge));
 
