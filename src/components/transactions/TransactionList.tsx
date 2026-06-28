@@ -182,7 +182,7 @@ export function TransactionList({
 
       // Filtro de Origem (Conta vs Cartão)
       if (sourceFilter === 'account') {
-        if (t.cardId) return false;
+        if (t.cardId && !t.isInvoicePayment) return false;
         if (selectedBank !== 'all') {
           const bankAccountIds = accounts.filter(a => a.bank === selectedBank).map(a => a.id);
           if (specificSourceId !== 'all') {
