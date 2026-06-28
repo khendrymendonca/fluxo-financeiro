@@ -23,16 +23,7 @@ export function buildCardInvoiceObligations({
 
       if (settledTransactionIds.has(invoiceId)) return null;
 
-      const physicalPaymentExists = transactions.some((transaction) =>
-        transaction.cardId === card.id &&
-        transaction.isInvoicePayment &&
-        transaction.invoiceMonthYear === viewDateStr &&
-        !transaction.deleted_at
-      );
-
-      if (physicalPaymentExists) return null;
-
-      const totalAmount = transactions
+      const invoicePurchasesTotal = transactions
         .filter((transaction) =>
           transaction.cardId === card.id &&
           !transaction.isVirtual &&
@@ -42,7 +33,18 @@ export function buildCardInvoiceObligations({
         )
         .reduce((sum, transaction) => sum + (transaction.type === 'expense' ? transaction.amount : -transaction.amount), 0);
 
-      if (totalAmount <= 0) return null;
+      const invoicePaymentsTotal = transactions
+        .filter((transaction) =>
+          transaction.cardId === card.id &&
+          !transaction.isVirtual &&
+          transaction.isInvoicePayment &&
+          !transaction.deleted_at &&
+          transaction.invoiceMonthYear === viewDateStr
+        )
+        .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
+
+      const remainingAmount = Number((invoicePurchasesTotal - invoicePaymentsTotal).toFixed(2));
+      if (remainingAmount <= 0) return null;
 
       const { dueDay } = getCardSettingsForDate(card, viewDate);
       const cardDueDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), dueDay);
@@ -50,7 +52,7 @@ export function buildCardInvoiceObligations({
       return {
         id: invoiceId,
         description: `Fatura ${card.name}`,
-        amount: totalAmount,
+        amount: remainingAmount,
         date: cardDueDate.toISOString(),
         type: 'expense',
         transactionType: 'recurring',

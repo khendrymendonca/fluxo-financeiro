@@ -53,7 +53,6 @@ async function getSafeTransferDeleteIds(transaction: any, targetId: string): Pro
       .from('transactions')
       .select('id')
       .eq('transfer_group_id', transferGroupId)
-      .eq('is_transfer', true)
       .is('deleted_at', null);
 
     if (error) throw error;
@@ -116,7 +115,6 @@ async function getSafeTransferEditPair(transaction: any, targetId: string): Prom
       .from('transactions')
       .select('id,type,amount,date,account_id,card_id,description,transfer_group_id,is_transfer,deleted_at')
       .eq('transfer_group_id', transferGroupId)
-      .eq('is_transfer', true)
       .is('deleted_at', null);
 
     if (error) throw error;
@@ -324,7 +322,7 @@ export function useDeleteTransaction() {
       }
 
       // --- FLUXO NORMAL: Transação real ou exclusão em massa ---
-      if (applyScope === 'this' && transaction.isTransfer && !isVirtual) {
+      if (applyScope === 'this' && (transaction.isTransfer || getTransferGroupId(transaction)) && !isVirtual) {
         const idsToDelete = await getSafeTransferDeleteIds(transaction, targetId);
         const { error } = await supabase
           .from('transactions')
@@ -869,6 +867,7 @@ export function useUpdateTransaction() {
 
 export function useUpdateTransferTransaction() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async ({
@@ -880,10 +879,12 @@ export function useUpdateTransferTransaction() {
     }) => {
       const targetId = transaction?.id;
       if (!targetId) throw new Error('Transferência não encontrada');
+      if (!user) throw new Error('Utilizador não autenticado');
 
       const amount = Number(updates?.amount || 0);
       const normalizedDate = updates?.date ? String(updates.date).slice(0, 10) : '';
       const fromAccountId = updates?.transferFrom || updates?.fromAccountId || updates?.accountId;
+      const transferFromType = updates?.transferFromType || (transaction?.cardId || transaction?.card_id || updates?.cardId ? 'card' : 'account');
       const transferToType = updates?.transferToType || (updates?.cardId ? 'card' : 'account');
       const toTargetId = updates?.transferTo || updates?.toAccountId || updates?.cardId;
       const description = stripTransferDirection(updates?.transferDescription || updates?.description || transaction?.description);
@@ -892,8 +893,91 @@ export function useUpdateTransferTransaction() {
         throw new Error('Dados obrigatórios da transferência não preenchidos');
       }
 
-      if (transferToType === 'account' && fromAccountId === toTargetId) {
+      if (transferToType === 'account' && transferFromType === 'account' && fromAccountId === toTargetId) {
         throw new Error('Origem e destino não podem ser iguais');
+      }
+
+      // Garantir categoria "Transferência" para Despesa
+      let expenseCategoryId = null;
+      const { data: expCatData } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('name', 'Transferência')
+        .eq('type', 'expense')
+        .is('deleted_at', null)
+        .maybeSingle();
+      
+      if (expCatData) {
+        expenseCategoryId = expCatData.id;
+      } else {
+        const { data: grpData } = await supabase.from('category_groups').select('id').limit(1).maybeSingle();
+        const { data: newCat, error: newCatErr } = await supabase
+          .from('categories')
+          .insert({
+            user_id: user.id,
+            name: 'Transferência',
+            type: 'expense',
+            color: '#0d9488',
+            icon: 'ArrowRightLeft',
+            group_id: grpData?.id
+          })
+          .select('id')
+          .single();
+        if (!newCatErr && newCat) {
+          expenseCategoryId = newCat.id;
+        }
+      }
+
+      // Garantir categoria "Transferência" para Receita
+      let incomeCategoryId = null;
+      const { data: incCatData } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('name', 'Transferência')
+        .eq('type', 'income')
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (incCatData) {
+        incomeCategoryId = incCatData.id;
+      } else {
+        const { data: grpData } = await supabase.from('category_groups').select('id').limit(1).maybeSingle();
+        const { data: newCat, error: newCatErr } = await supabase
+          .from('categories')
+          .insert({
+            user_id: user.id,
+            name: 'Transferência',
+            type: 'income',
+            color: '#10b981',
+            icon: 'ArrowRightLeft',
+            group_id: grpData?.id
+          })
+          .select('id')
+          .single();
+        if (!newCatErr && newCat) {
+          incomeCategoryId = newCat.id;
+        }
+      }
+
+      const creditCards = queryClient.getQueryData<CreditCard[]>(['credit-cards']) ?? [];
+      const isCardOrigin = transferFromType === 'card';
+
+      let fromInvoiceMonthYear = updates?.fromInvoiceMonthYear;
+      if (isCardOrigin && !fromInvoiceMonthYear && fromAccountId) {
+        const card = creditCards.find(c => c.id === fromAccountId);
+        if (card) {
+          fromInvoiceMonthYear = calcInvoiceMonthYearForCard(parseLocalDate(normalizedDate), card);
+        }
+      }
+
+      let toInvoiceMonthYear = updates?.invoiceMonthYear;
+      if (transferToType === 'card' && !toInvoiceMonthYear && toTargetId) {
+        const card = creditCards.find(c => c.id === toTargetId);
+        if (card) {
+          toInvoiceMonthYear = calcInvoiceMonthYearForCard(parseLocalDate(normalizedDate), card);
+        }
       }
 
       const { expense, income, transferGroupId } = await getSafeTransferEditPair(transaction, targetId);
@@ -903,16 +987,17 @@ export function useUpdateTransferTransaction() {
       const expenseUpdate = {
         amount,
         date: normalizedDate,
-        payment_date: normalizedDate,
-        account_id: fromAccountId,
-        card_id: null,
+        payment_date: isCardOrigin ? null : normalizedDate,
+        account_id: isCardOrigin ? null : fromAccountId,
+        card_id: isCardOrigin ? fromAccountId : null,
         type: 'expense',
         transaction_type: 'punctual',
-        is_paid: true,
-        is_transfer: true,
+        is_paid: !isCardOrigin,
+        is_transfer: !isCardOrigin,
         is_invoice_payment: false,
-        invoice_month_year: null,
+        invoice_month_year: isCardOrigin ? (fromInvoiceMonthYear || null) : null,
         description: getTransferEditDescription('Saída', description, shouldUsePrefix),
+        category_id: expenseCategoryId,
         ...groupUpdate,
       };
 
@@ -925,10 +1010,11 @@ export function useUpdateTransferTransaction() {
         type: 'income',
         transaction_type: 'punctual',
         is_paid: true,
-        is_transfer: true,
+        is_transfer: !isCardOrigin,
         is_invoice_payment: transferToType === 'card',
-        invoice_month_year: transferToType === 'card' ? (updates?.invoiceMonthYear || null) : null,
+        invoice_month_year: transferToType === 'card' ? (toInvoiceMonthYear || null) : null,
         description: getTransferEditDescription('Entrada', description, shouldUsePrefix),
+        category_id: incomeCategoryId,
         ...groupUpdate,
       };
 

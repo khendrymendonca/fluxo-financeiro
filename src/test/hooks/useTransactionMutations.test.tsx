@@ -43,6 +43,7 @@ function chain(overrides: Record<string, unknown> = {}) {
   builder.neq = vi.fn(() => builder);
   builder.order = vi.fn(() => builder);
   builder.single = vi.fn(async () => ({ data: null, error: null }));
+  builder.maybeSingle = vi.fn(async () => ({ data: null, error: null }));
   builder.insert = vi.fn(async () => ({ error: null }));
   builder.update = vi.fn(() => builder);
   Object.assign(builder, overrides);
@@ -75,6 +76,7 @@ function createWrapper(queryClient: QueryClient) {
 describe('useTransactionMutations - soft delete and payment status', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    supabaseMock.from.mockReset();
   });
 
   it('remove uma transacao real com soft delete no escopo this', async () => {
@@ -164,7 +166,6 @@ describe('useTransactionMutations - soft delete and payment status', () => {
 
     expect(selectGroup.select).toHaveBeenCalledWith('id');
     expect(selectGroup.eq).toHaveBeenCalledWith('transfer_group_id', 'group-1');
-    expect(selectGroup.eq).toHaveBeenCalledWith('is_transfer', true);
     expect(selectGroup.is).toHaveBeenCalledWith('deleted_at', null);
     expect(updatePair.update).toHaveBeenCalledWith({ deleted_at: expect.any(String) });
     expect(updatePair.in).toHaveBeenCalledWith('id', ['tx-out', 'tx-in']);
@@ -372,7 +373,15 @@ describe('useTransactionMutations - soft delete and payment status', () => {
     const updateIncome = chain({
       select: vi.fn(async () => ({ data: [{ id: 'tx-in' }], error: null })),
     });
+    const selectExpCat = chain({
+      maybeSingle: vi.fn(async () => ({ data: { id: 'cat-expense-id' }, error: null })),
+    });
+    const selectIncCat = chain({
+      maybeSingle: vi.fn(async () => ({ data: { id: 'cat-income-id' }, error: null })),
+    });
     supabaseMock.from
+      .mockReturnValueOnce(selectExpCat)
+      .mockReturnValueOnce(selectIncCat)
       .mockReturnValueOnce(selectGroup)
       .mockReturnValueOnce(updateExpense)
       .mockReturnValueOnce(updateIncome);
@@ -400,7 +409,6 @@ describe('useTransactionMutations - soft delete and payment status', () => {
 
     expect(selectGroup.select).toHaveBeenCalledWith('id,type,amount,date,account_id,card_id,description,transfer_group_id,is_transfer,deleted_at');
     expect(selectGroup.eq).toHaveBeenCalledWith('transfer_group_id', 'group-1');
-    expect(selectGroup.eq).toHaveBeenCalledWith('is_transfer', true);
     expect(selectGroup.is).toHaveBeenCalledWith('deleted_at', null);
     expect(updateExpense.update).toHaveBeenCalledWith(expect.objectContaining({
       amount: 750,
@@ -438,7 +446,16 @@ describe('useTransactionMutations - soft delete and payment status', () => {
         error: null,
       })),
     });
-    supabaseMock.from.mockReturnValueOnce(selectCounterpart);
+    const selectExpCat = chain({
+      maybeSingle: vi.fn(async () => ({ data: { id: 'cat-expense-id' }, error: null })),
+    });
+    const selectIncCat = chain({
+      maybeSingle: vi.fn(async () => ({ data: { id: 'cat-income-id' }, error: null })),
+    });
+    supabaseMock.from
+      .mockReturnValueOnce(selectExpCat)
+      .mockReturnValueOnce(selectIncCat)
+      .mockReturnValueOnce(selectCounterpart);
 
     const { result } = renderHook(() => useUpdateTransferTransaction(), { wrapper });
 
@@ -458,7 +475,7 @@ describe('useTransactionMutations - soft delete and payment status', () => {
       },
     })).rejects.toThrow(LEGACY_TRANSFER_EDIT_ERROR);
 
-    expect(supabaseMock.from).toHaveBeenCalledTimes(1);
+    expect(supabaseMock.from).toHaveBeenCalledTimes(3);
     expect(selectCounterpart.update).not.toHaveBeenCalled();
     expect(selectCounterpart.or).not.toHaveBeenCalled();
   });

@@ -36,7 +36,13 @@ export function useProjectedTransactions(transactions: Transaction[], viewDate: 
       const txDate = parseLocalDate(tx.date.slice(0, 10));
 
       if (isRecurring) {
-        if (isBefore(txDate, startOfMonth(viewDate)) || isSameMonth(txDate, viewDate)) {
+        // Encontra todos os filhos reais desta transação mãe para determinar a data de início original
+        const children = transactions.filter(other => other.originalId === tx.id);
+        const dates = [txDate, ...children.map(c => parseLocalDate(c.date.slice(0, 10)))];
+        const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+
+        // Projeta se o mês visualizado for igual ou posterior ao mês de início original
+        if (isBefore(minDate, startOfMonth(viewDate)) || isSameMonth(minDate, viewDate)) {
           const originalDay = txDate.getDate();
           const daysInTarget = getDaysInMonth(new Date(targetYear, targetMonth));
           const safeDay = Math.min(originalDay, daysInTarget);

@@ -142,22 +142,110 @@ export function useTransferBetweenAccounts() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ from, to, amount, description, date, type = 'account', invoiceMonthYear }: { from: string, to: string, amount: number, description: string, date: string, type?: 'account' | 'card', invoiceMonthYear?: string }) => {
+    mutationFn: async ({
+      from,
+      to,
+      amount,
+      description,
+      date,
+      type = 'account',
+      invoiceMonthYear,
+      fromType = 'account',
+      fromInvoiceMonthYear
+    }: {
+      from: string,
+      to: string,
+      amount: number,
+      description: string,
+      date: string,
+      type?: 'account' | 'card',
+      invoiceMonthYear?: string,
+      fromType?: 'account' | 'card',
+      fromInvoiceMonthYear?: string
+    }) => {
       if (!user) throw new Error('Utilizador não autenticado');
 
       const transferGroupId = crypto.randomUUID();
+      const isCardOrigin = fromType === 'card';
+
+      // Garantir categoria "Transferência" para Despesa
+      let expenseCategoryId = null;
+      const { data: expCatData } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('name', 'Transferência')
+        .eq('type', 'expense')
+        .is('deleted_at', null)
+        .maybeSingle();
+      
+      if (expCatData) {
+        expenseCategoryId = expCatData.id;
+      } else {
+        const { data: grpData } = await supabase.from('category_groups').select('id').limit(1).maybeSingle();
+        const { data: newCat, error: newCatErr } = await supabase
+          .from('categories')
+          .insert({
+            user_id: user.id,
+            name: 'Transferência',
+            type: 'expense',
+            color: '#0d9488',
+            icon: 'ArrowRightLeft',
+            group_id: grpData?.id
+          })
+          .select('id')
+          .single();
+        if (!newCatErr && newCat) {
+          expenseCategoryId = newCat.id;
+        }
+      }
+
+      // Garantir categoria "Transferência" para Receita
+      let incomeCategoryId = null;
+      const { data: incCatData } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('name', 'Transferência')
+        .eq('type', 'income')
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (incCatData) {
+        incomeCategoryId = incCatData.id;
+      } else {
+        const { data: grpData } = await supabase.from('category_groups').select('id').limit(1).maybeSingle();
+        const { data: newCat, error: newCatErr } = await supabase
+          .from('categories')
+          .insert({
+            user_id: user.id,
+            name: 'Transferência',
+            type: 'income',
+            color: '#10b981',
+            icon: 'ArrowRightLeft',
+            group_id: grpData?.id
+          })
+          .select('id')
+          .single();
+        if (!newCatErr && newCat) {
+          incomeCategoryId = newCat.id;
+        }
+      }
 
       const expenseBody = {
         user_id: user.id,
         description: `[Saída] ${description}`,
         amount: amount,
         type: 'expense',
-        account_id: from,
+        account_id: isCardOrigin ? null : from,
+        card_id: isCardOrigin ? from : null,
         date: date,
-        is_paid: true,
-        payment_date: date,
-        is_transfer: true,
-        transfer_group_id: transferGroupId
+        is_paid: !isCardOrigin,
+        payment_date: isCardOrigin ? null : date,
+        is_transfer: !isCardOrigin,
+        invoice_month_year: isCardOrigin ? fromInvoiceMonthYear : null,
+        transfer_group_id: transferGroupId,
+        category_id: expenseCategoryId
       };
 
       const incomeBody = {
@@ -172,8 +260,9 @@ export function useTransferBetweenAccounts() {
         payment_date: date,
         is_invoice_payment: type === 'card',
         invoice_month_year: invoiceMonthYear,
-        is_transfer: true,
-        transfer_group_id: transferGroupId
+        is_transfer: !isCardOrigin,
+        transfer_group_id: transferGroupId,
+        category_id: incomeCategoryId
       };
 
       // 1. INSERT 1 (Saída)
@@ -202,6 +291,7 @@ export function useTransferBetweenAccounts() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
       toast({ title: 'Transferência realizada!' });
     },
     onError: (err) => {

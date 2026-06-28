@@ -1,6 +1,7 @@
-﻿import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X, Calendar, CreditCard, Loader2, Coins, Check, ChevronsUpDown, Trash2, ArrowRightLeft, TrendingUp, TrendingDown, Wallet, ArrowUpCircle, ArrowDownCircle, Info, Percent, RotateCw } from 'lucide-react';
 import { format, addMonths } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,11 +43,18 @@ const isDateTodayOrPast = (dateStr: string): boolean => {
 const stripTransferDirection = (description?: string) =>
   String(description || '').replace(/^\[(Saída|Saida|Entrada)\]\s*/i, '').trim();
 
+const addMonthsToInvoiceMonthYear = (invoiceMonthYear: string, monthsToAdd: number): string => {
+  if (!invoiceMonthYear) return '';
+  const parts = invoiceMonthYear.split('-');
+  const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1 + monthsToAdd, 1);
+  return format(date, 'yyyy-MM');
+};
+
 export function TransactionForm({ accounts, creditCards, initialData, onSubmit, onDelete, onClose, initialTab }: TransactionFormProps) {
-  const isTransferEdit = Boolean(initialData?.isTransfer);
+  const isTransferEdit = Boolean(initialData?.isTransfer || (initialData as any)?.transferGroupId || (initialData as any)?.transfer_group_id);
   const transferCounterpart = (initialData as any)?.transferCounterpart as Transaction | undefined;
   const initialTransferFrom = isTransferEdit
-    ? (initialData?.type === 'expense' ? initialData.accountId : transferCounterpart?.accountId) || ''
+    ? (initialData?.type === 'expense' ? (initialData.accountId || initialData.cardId) : (transferCounterpart?.accountId || transferCounterpart?.cardId)) || ''
     : '';
   const initialTransferTarget = isTransferEdit
     ? (initialData?.type === 'income'
@@ -56,6 +64,10 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const initialTransferToType = isTransferEdit && (
     (initialData?.type === 'income' && initialData.cardId) ||
     (initialData?.type === 'expense' && transferCounterpart?.cardId)
+  ) ? 'card' : 'account';
+  const initialTransferFromType = isTransferEdit && (
+    (initialData?.type === 'expense' && initialData.cardId) ||
+    (initialData?.type === 'income' && transferCounterpart?.cardId)
   ) ? 'card' : 'account';
 
   // Wizard State
@@ -90,6 +102,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
   // Transfer Specific
   const [transferFrom, setTransferFrom] = useState(initialTransferFrom);
+  const [transferFromType, setTransferFromType] = useState<'account' | 'card'>(initialTransferFromType);
   const [transferTo, setTransferTo] = useState(initialTransferTarget);
   const [transferToType, setTransferToType] = useState<'account' | 'card'>(initialTransferToType);
   const [transferDescription, setTransferDescription] = useState(
@@ -102,6 +115,88 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     if (initialData?.date) return initialData.date.slice(0, 7);
     return format(new Date(), 'yyyy-MM');
   });
+
+  // Custom Invoice Selection
+  const [invoiceMode, setInvoiceMode] = useState<'auto' | 'custom'>(
+    initialData?.invoiceMonthYear ? 'custom' : 'auto'
+  );
+  const [selectedInvoiceMonthYear, setSelectedInvoiceMonthYear] = useState<string>(
+    initialData?.invoiceMonthYear || ''
+  );
+
+  // Custom Invoice for Transfers (From / To)
+  const hasInitialFromInvoice = isTransferEdit && (
+    (initialData?.type === 'expense' && initialData.invoiceMonthYear) ||
+    (initialData?.type === 'income' && transferCounterpart?.invoiceMonthYear)
+  );
+  const initialFromInvoiceVal = isTransferEdit
+    ? (initialData?.type === 'expense' ? initialData.invoiceMonthYear : transferCounterpart?.invoiceMonthYear)
+    : '';
+  const [transferFromInvoiceMode, setTransferFromInvoiceMode] = useState<'auto' | 'custom'>(
+    hasInitialFromInvoice ? 'custom' : 'auto'
+  );
+  const [transferFromInvoiceMonthYear, setTransferFromInvoiceMonthYear] = useState<string>(
+    initialFromInvoiceVal || ''
+  );
+
+  const hasInitialToInvoice = isTransferEdit && (
+    (initialData?.type === 'income' && initialData.invoiceMonthYear) ||
+    (initialData?.type === 'expense' && transferCounterpart?.invoiceMonthYear)
+  );
+  const initialToInvoiceVal = isTransferEdit
+    ? (initialData?.type === 'income' ? initialData.invoiceMonthYear : transferCounterpart?.invoiceMonthYear)
+    : '';
+  const [transferToInvoiceMode, setTransferToInvoiceMode] = useState<'auto' | 'custom'>(
+    hasInitialToInvoice ? 'custom' : 'auto'
+  );
+  const [transferToInvoiceMonthYear, setTransferToInvoiceMonthYear] = useState<string>(
+    initialToInvoiceVal || ''
+  );
+
+  const invoiceOptions = useMemo(() => {
+    const baseDate = date ? parseLocalDate(date) : new Date();
+    const options = [];
+    for (let i = -2; i <= 6; i++) {
+      const d = addMonths(baseDate, i);
+      const val = format(d, 'yyyy-MM');
+      const label = format(d, 'MMMM yyyy', { locale: ptBR }).replace(/^\w/, (c) => c.toUpperCase());
+      options.push({ value: val, label });
+    }
+    return options;
+  }, [date]);
+
+  useEffect(() => {
+    if (date && creditCards.length > 0 && cardId) {
+      if (invoiceMode === 'auto') {
+        const card = creditCards.find(c => c.id === cardId);
+        if (card) {
+          setSelectedInvoiceMonthYear(calcInvoiceMonthYearForCard(parseLocalDate(date), card));
+        }
+      }
+    }
+  }, [date, cardId, creditCards, invoiceMode]);
+
+  useEffect(() => {
+    if (date && creditCards.length > 0 && transferFrom && transferFromType === 'card') {
+      if (transferFromInvoiceMode === 'auto') {
+        const card = creditCards.find(c => c.id === transferFrom);
+        if (card) {
+          setTransferFromInvoiceMonthYear(calcInvoiceMonthYearForCard(parseLocalDate(date), card));
+        }
+      }
+    }
+  }, [date, transferFrom, transferFromType, creditCards, transferFromInvoiceMode]);
+
+  useEffect(() => {
+    if (date && creditCards.length > 0 && transferTo && transferToType === 'card') {
+      if (transferToInvoiceMode === 'auto') {
+        const card = creditCards.find(c => c.id === transferTo);
+        if (card) {
+          setTransferToInvoiceMonthYear(calcInvoiceMonthYearForCard(parseLocalDate(date), card));
+        }
+      }
+    }
+  }, [date, transferTo, transferToType, creditCards, transferToInvoiceMode]);
 
   const isCardInstallmentEdit = Boolean(
     initialData?.cardId &&
@@ -192,8 +287,8 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
     if (activeTab === 'transfer') {
       const errors: string[] = [];
-      if (!transferFrom) errors.push('Conta de Origem');
-      if (!transferTo) errors.push('Conta de Destino');
+      if (!transferFrom) errors.push('Conta/Cartão de Origem');
+      if (!transferTo) errors.push('Conta/Cartão de Destino');
       if (!transferDescription) errors.push('Descrição');
       if (!amount || parseFloat(String(amount)) <= 0) {
         toast({
@@ -209,20 +304,38 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         return;
       }
 
-      if (transferFrom === transferTo && transferToType === 'account') {
+      if (transferFrom === transferTo && transferFromType === transferToType) {
         toast({ title: 'Origem e destino não podem ser iguais', variant: 'destructive' });
         return;
       }
 
       let invoiceMonthYear;
       if (transferToType === 'card') {
-        const selectedCard = creditCards.find(c => c.id === transferTo);
-        if (selectedCard) {
-          invoiceMonthYear = calcInvoiceMonthYearForCard(parseLocalDate(date), selectedCard);
+        if (transferToInvoiceMode === 'custom' && transferToInvoiceMonthYear) {
+          invoiceMonthYear = transferToInvoiceMonthYear;
+        } else {
+          const selectedCard = creditCards.find(c => c.id === transferTo);
+          if (selectedCard) {
+            invoiceMonthYear = calcInvoiceMonthYearForCard(parseLocalDate(date), selectedCard);
+          }
         }
       }
 
-      if (initialData?.isTransfer) {
+      let fromInvoiceMonthYear;
+      if (transferFromType === 'card') {
+        if (transferFromInvoiceMode === 'custom' && transferFromInvoiceMonthYear) {
+          fromInvoiceMonthYear = transferFromInvoiceMonthYear;
+        } else {
+          const selectedCard = creditCards.find(c => c.id === transferFrom);
+          if (selectedCard) {
+            fromInvoiceMonthYear = calcInvoiceMonthYearForCard(parseLocalDate(date), selectedCard);
+          }
+        }
+      }
+
+      const isTransferFromAccount = transferFromType === 'account';
+
+      if (isTransferEdit) {
         await onSubmit({
           type: 'expense',
           transactionType: 'punctual',
@@ -230,21 +343,34 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
           transferDescription,
           amount: parseFloat(amount),
           date,
-          accountId: transferFrom,
+          accountId: isTransferFromAccount ? transferFrom : null,
+          cardId: !isTransferFromAccount ? transferFrom : null,
           transferFrom,
+          transferFromType,
           transferTo,
           transferToType,
-          invoiceMonthYear,
-          isPaid: true,
-          paymentDate: date,
-          isTransfer: true,
+          invoiceMonthYear: transferToType === 'card' ? invoiceMonthYear : null,
+          fromInvoiceMonthYear: !isTransferFromAccount ? fromInvoiceMonthYear : null,
+          isPaid: isTransferFromAccount,
+          paymentDate: isTransferFromAccount ? date : null,
+          isTransfer: isTransferFromAccount,
           transferGroupId: initialData.transferGroupId || (initialData as any).transfer_group_id || null,
         } as any, undefined, 'this');
         onClose();
         return;
       }
 
-      await transferBetweenAccounts(transferFrom, transferTo, parseFloat(amount), transferDescription, date, transferToType, invoiceMonthYear);
+      await transferBetweenAccounts(
+        transferFrom,
+        transferTo,
+        parseFloat(amount),
+        transferDescription,
+        date,
+        transferToType,
+        invoiceMonthYear,
+        transferFromType,
+        fromInvoiceMonthYear
+      );
       onClose();
       return;
     }
@@ -327,7 +453,9 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     }
     const selectedCard = creditCards.find(c => c.id === (paymentMethod === 'card' ? cardId : ''));
     const finalInvoiceMonthYear = (paymentMethod === 'card' && selectedCard)
-      ? calcInvoiceMonthYearForCard(parseLocalDate(date), selectedCard)
+      ? (invoiceMode === 'custom' && selectedInvoiceMonthYear
+          ? selectedInvoiceMonthYear
+          : calcInvoiceMonthYearForCard(parseLocalDate(date), selectedCard))
       : undefined;
 
     // --- LÓGICA DE PARCELAMENTO (BULK) ---
@@ -356,7 +484,9 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         const instIsPaid = paymentMethod === 'card' ? true : isDateTodayOrPast(dateStr);
 
         const invoiceMonthYear = (paymentMethod === 'card' && selectedCard)
-          ? calcInvoiceMonthYearForCard(currentInstDate, selectedCard)
+          ? (invoiceMode === 'custom' && selectedInvoiceMonthYear
+              ? addMonthsToInvoiceMonthYear(selectedInvoiceMonthYear, i)
+              : calcInvoiceMonthYearForCard(currentInstDate, selectedCard))
           : undefined;
 
         installmentList.push({
@@ -574,24 +704,85 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                 <div className="space-y-6">
                   {/* Conta Origem */}
                   <div className="space-y-3">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Sair da Conta</Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Sair da Origem</Label>
+                      <div className="flex bg-muted rounded-lg p-0.5">
+                        <button type="button" onClick={() => { setTransferFromType('account'); setTransferFrom(''); }}
+                          className={cn("px-3 py-1 text-xs font-bold rounded-md transition-all", transferFromType === 'account' ? "bg-card shadow-sm" : "text-muted-foreground")}>Conta</button>
+                        <button type="button" onClick={() => { setTransferFromType('card'); setTransferFrom(''); }}
+                          className={cn("px-3 py-1 text-xs font-bold rounded-md transition-all", transferFromType === 'card' ? "bg-card shadow-sm" : "text-muted-foreground")}>Cartão</button>
+                      </div>
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
-                      {accounts.map(a => {
-                        const balance = getAccountViewBalance(a.id);
-                        return (
-                          <button key={a.id} type="button" onClick={() => setTransferFrom(a.id)}
+                      {transferFromType === 'account' ? (
+                        accounts.map(a => {
+                          const balance = getAccountViewBalance(a.id);
+                          return (
+                            <button key={a.id} type="button" onClick={() => setTransferFrom(a.id)}
+                              className={cn("flex flex-col items-start p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden",
+                                transferFrom === a.id ? "border-primary bg-primary/5 shadow-md" : "border-transparent bg-muted/30 hover:bg-muted/50")}>
+                              <div className="w-1.5 h-full absolute left-0 top-0" style={{ backgroundColor: a.color }} />
+                              <span className="text-xs font-bold truncate block w-full ml-1">{a.bank} - {a.name}</span>
+                              <span className={cn("text-xs font-black mt-1 ml-1", balance < 0 ? "text-danger" : "text-foreground")}>
+                                {formatCurrency(balance)}
+                              </span>
+                            </button>
+                          );
+                        })
+                      ) : (
+                        creditCards.map(c => (
+                          <button key={c.id} type="button" onClick={() => setTransferFrom(c.id)}
                             className={cn("flex flex-col items-start p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden",
-                              transferFrom === a.id ? "border-primary bg-primary/5 shadow-md" : "border-transparent bg-muted/30 hover:bg-muted/50")}>
-                            <div className="w-1.5 h-full absolute left-0 top-0" style={{ backgroundColor: a.color }} />
-                            <span className="text-xs font-bold truncate block w-full ml-1">{a.bank} - {a.name}</span>
-                            <span className={cn("text-xs font-black mt-1 ml-1", balance < 0 ? "text-danger" : "text-foreground")}>
-                              {formatCurrency(balance)}
-                            </span>
+                              transferFrom === c.id ? "border-primary bg-primary/5 shadow-md" : "border-transparent bg-muted/30 hover:bg-muted/50")}>
+                            <div className="w-1.5 h-full absolute left-0 top-0 bg-primary" />
+                            <span className="text-xs font-bold truncate block w-full ml-1">{c.bank} - {c.name}</span>
+                            <span className="text-xs text-muted-foreground ml-1">Fatura: {formatCurrency(getCardExpenses(c.id))}</span>
                           </button>
-                        );
-                      })}
+                        ))
+                      )}
                     </div>
                   </div>
+
+                  {/* Fatura da Origem (se cartão) */}
+                  {transferFromType === 'card' && transferFrom && (
+                    <div className="space-y-2 p-4 rounded-2xl bg-muted/20 border border-border">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-bold uppercase text-muted-foreground">Fatura de Origem</Label>
+                        <div className="flex bg-muted rounded-lg p-0.5">
+                          <button type="button" onClick={() => setTransferFromInvoiceMode('auto')}
+                            className={cn("px-2.5 py-1 text-[11px] font-bold rounded-md transition-all", transferFromInvoiceMode === 'auto' ? "bg-card shadow-sm" : "text-muted-foreground")}>Automática</button>
+                          <button type="button" onClick={() => setTransferFromInvoiceMode('custom')}
+                            className={cn("px-2.5 py-1 text-[11px] font-bold rounded-md transition-all", transferFromInvoiceMode === 'custom' ? "bg-card shadow-sm" : "text-muted-foreground")}>Escolher Fatura</button>
+                        </div>
+                      </div>
+
+                      {transferFromInvoiceMode === 'custom' ? (
+                        <select
+                          value={transferFromInvoiceMonthYear}
+                          onChange={e => setTransferFromInvoiceMonthYear(e.target.value)}
+                          className="w-full h-10 px-3 rounded-xl border-2 bg-card font-bold text-xs focus:border-primary focus:outline-none"
+                        >
+                          <option value="">Selecione a fatura...</option>
+                          {invoiceOptions.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic font-medium">
+                          Fatura de origem estimada: {(() => {
+                            const card = creditCards.find(c => c.id === transferFrom);
+                            if (card) {
+                              const computed = calcInvoiceMonthYearForCard(parseLocalDate(date), card);
+                              const parts = computed.split('-');
+                              const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+                              return format(d, 'MMMM yyyy', { locale: ptBR }).replace(/^\w/, (c) => c.toUpperCase());
+                            }
+                            return 'Nenhum cartão selecionado';
+                          })()}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex justify-center -my-3 relative z-10">
                     <div className="bg-card rounded-full p-2.5 shadow-lg border border-border">
@@ -634,6 +825,47 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                       )}
                     </div>
                   </div>
+
+                  {/* Fatura do Destino (se cartão) */}
+                  {transferToType === 'card' && transferTo && (
+                    <div className="space-y-2 p-4 rounded-2xl bg-muted/20 border border-border">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-bold uppercase text-muted-foreground">Fatura de Destino</Label>
+                        <div className="flex bg-muted rounded-lg p-0.5">
+                          <button type="button" onClick={() => setTransferToInvoiceMode('auto')}
+                            className={cn("px-2.5 py-1 text-[11px] font-bold rounded-md transition-all", transferToInvoiceMode === 'auto' ? "bg-card shadow-sm" : "text-muted-foreground")}>Automática</button>
+                          <button type="button" onClick={() => setTransferToInvoiceMode('custom')}
+                            className={cn("px-2.5 py-1 text-[11px] font-bold rounded-md transition-all", transferToInvoiceMode === 'custom' ? "bg-card shadow-sm" : "text-muted-foreground")}>Escolher Fatura</button>
+                        </div>
+                      </div>
+
+                      {transferToInvoiceMode === 'custom' ? (
+                        <select
+                          value={transferToInvoiceMonthYear}
+                          onChange={e => setTransferToInvoiceMonthYear(e.target.value)}
+                          className="w-full h-10 px-3 rounded-xl border-2 bg-card font-bold text-xs focus:border-primary focus:outline-none"
+                        >
+                          <option value="">Selecione a fatura...</option>
+                          {invoiceOptions.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic font-medium">
+                          Fatura de destino estimada: {(() => {
+                            const card = creditCards.find(c => c.id === transferTo);
+                            if (card) {
+                              const computed = calcInvoiceMonthYearForCard(parseLocalDate(date), card);
+                              const parts = computed.split('-');
+                              const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+                              return format(d, 'MMMM yyyy', { locale: ptBR }).replace(/^\w/, (c) => c.toUpperCase());
+                            }
+                            return 'Nenhum cartão selecionado';
+                          })()}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -775,15 +1007,57 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                       )}
 
                       {paymentMethod === 'card' && (
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                          {creditCards.map(card => (
-                            <button key={card.id} type="button" onClick={() => setCardId(card.id)}
-                              className={cn("py-3 px-3 rounded-xl text-xs font-bold transition-all border-2",
-                                cardId === card.id ? "border-primary bg-primary/5 text-primary" : "bg-muted/30 border-transparent hover:bg-muted/50")}>
-                              {card.name}
-                            </button>
-                          ))}
-                        </div>
+                        <>
+                          <div className="grid grid-cols-2 gap-2 mt-2">
+                            {creditCards.map(card => (
+                              <button key={card.id} type="button" onClick={() => setCardId(card.id)}
+                                className={cn("py-3 px-3 rounded-xl text-xs font-bold transition-all border-2",
+                                  cardId === card.id ? "border-primary bg-primary/5 text-primary" : "bg-muted/30 border-transparent hover:bg-muted/50")}>
+                                {card.name}
+                              </button>
+                            ))}
+                          </div>
+
+                          {cardId && (
+                            <div className="space-y-2 mt-4 p-4 rounded-2xl bg-muted/20 border border-border">
+                              <div className="flex items-center justify-between">
+                                <Label className="text-xs font-bold uppercase text-muted-foreground">Fatura do Cartão</Label>
+                                <div className="flex bg-muted rounded-lg p-0.5">
+                                  <button type="button" onClick={() => setInvoiceMode('auto')}
+                                    className={cn("px-2.5 py-1 text-[11px] font-bold rounded-md transition-all", invoiceMode === 'auto' ? "bg-card shadow-sm" : "text-muted-foreground")}>Automática</button>
+                                  <button type="button" onClick={() => setInvoiceMode('custom')}
+                                    className={cn("px-2.5 py-1 text-[11px] font-bold rounded-md transition-all", invoiceMode === 'custom' ? "bg-card shadow-sm" : "text-muted-foreground")}>Escolher Fatura</button>
+                                </div>
+                              </div>
+
+                              {invoiceMode === 'custom' ? (
+                                <select
+                                  value={selectedInvoiceMonthYear}
+                                  onChange={e => setSelectedInvoiceMonthYear(e.target.value)}
+                                  className="w-full h-10 px-3 rounded-xl border-2 bg-card font-bold text-xs focus:border-primary focus:outline-none"
+                                >
+                                  <option value="">Selecione a fatura...</option>
+                                  {invoiceOptions.map(opt => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <p className="text-xs text-muted-foreground italic font-medium">
+                                  Fatura estimada: {(() => {
+                                    const card = creditCards.find(c => c.id === cardId);
+                                    if (card) {
+                                      const computed = calcInvoiceMonthYearForCard(parseLocalDate(date), card);
+                                      const parts = computed.split('-');
+                                      const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+                                      return format(d, 'MMMM yyyy', { locale: ptBR }).replace(/^\w/, (c) => c.toUpperCase());
+                                    }
+                                    return 'Nenhum cartão selecionado';
+                                  })()}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   )}

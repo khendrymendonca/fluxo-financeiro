@@ -201,7 +201,10 @@ export default function Index() {
   const projectedBalance = useMemo(() => totalNetWorth - totalPendingOutflows, [totalNetWorth, totalPendingOutflows]);
 
   const handleEditTransaction = useCallback((item: Transaction) => {
-    if (item.isTransfer) {
+    const transferGroupId = item.transferGroupId || (item as any).transfer_group_id;
+    const isTransfer = item.isTransfer || !!transferGroupId;
+
+    if (isTransfer) {
       const legacyCandidates = transactions.filter(tx =>
         tx.isTransfer &&
         tx.id !== item.id &&
@@ -209,8 +212,8 @@ export default function Index() {
         Number(tx.amount) === Number(item.amount) &&
         String(tx.date).slice(0, 10) === String(item.date).slice(0, 10)
       );
-      const counterpart = item.transferGroupId
-        ? transactions.find(tx => tx.transferGroupId === item.transferGroupId && tx.id !== item.id && tx.isTransfer)
+      const counterpart = transferGroupId
+        ? transactions.find(tx => (tx.transferGroupId === transferGroupId || (tx as any).transfer_group_id === transferGroupId) && tx.id !== item.id)
         : legacyCandidates.length === 1 ? legacyCandidates[0] : undefined;
 
       setEditingTransaction({
@@ -226,7 +229,8 @@ export default function Index() {
   }, [transactions]);
 
   const handleCopyTransaction = useCallback((item: Transaction) => {
-    if (item.isTransfer) {
+    const isTransfer = item.isTransfer || item.transferGroupId || (item as any).transfer_group_id;
+    if (isTransfer) {
       toast({
         title: 'Cópia bloqueada',
         description: 'Transferências devem ser corrigidas como grupo, não copiadas como lançamento comum.',
@@ -683,7 +687,8 @@ export default function Index() {
                 originalId: editingTransaction.originalId || editingTransaction.id.split('-virtual')[0]
               } as any);
             } else if (editingTransaction && editingTransaction.id) {
-              if (editingTransaction.isTransfer) {
+              const isTransfer = editingTransaction.isTransfer || editingTransaction.transferGroupId || (editingTransaction as any).transfer_group_id;
+              if (isTransfer) {
                 await updateTransferTransaction.mutateAsync({
                   transaction: editingTransaction,
                   updates: tx,
