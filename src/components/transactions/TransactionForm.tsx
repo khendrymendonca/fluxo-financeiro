@@ -84,6 +84,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [accountId, setAccountId] = useState<string>(initialData?.accountId || '');
   const [cardId, setCardId] = useState<string>(initialData?.cardId || '');
   const [paymentMethod, setPaymentMethod] = useState<'account' | 'card'>(initialData?.cardId ? 'card' : 'account');
+  const [sourceAccountId, setSourceAccountId] = useState<string>('');
   const [selectedDebtId, setSelectedDebtId] = useState<string>(initialData?.debtId || '');
   const [isAutomatic, setIsAutomatic] = useState<boolean>((initialData as any)?.isAutomatic || false);
 
