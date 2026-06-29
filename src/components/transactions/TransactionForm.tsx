@@ -221,6 +221,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     categories,
     subcategories,
     transferBetweenAccounts,
+    deleteTransaction,
     getAccountViewBalance,
     getCardExpenses,
     isAddingTransaction,
@@ -398,6 +399,34 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         description: `Preencha: ${errors.join(', ')}`,
         variant: 'destructive'
       });
+      return;
+    }
+
+    if (type === 'income' && paymentMethod === 'card' && sourceAccountId) {
+      if (initialData?.id && !initialData.isTransfer && !(initialData as any).transfer_group_id) {
+        await deleteTransaction(initialData, 'this');
+      }
+
+      const selectedCard = creditCards.find(c => c.id === cardId);
+      const invoiceMonthYear = selectedCard
+        ? (invoiceMode === 'custom' && selectedInvoiceMonthYear
+          ? selectedInvoiceMonthYear
+          : calcInvoiceMonthYearForCard(parseLocalDate(date), selectedCard))
+        : '';
+
+      await transferBetweenAccounts(
+        sourceAccountId,
+        cardId,
+        parseFloat(amount),
+        description,
+        date,
+        'card',
+        invoiceMonthYear || undefined,
+        'account',
+        undefined,
+        categoryId
+      );
+      onClose();
       return;
     }
 
