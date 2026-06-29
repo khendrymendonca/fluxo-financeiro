@@ -1057,6 +1057,30 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                               )}
                             </div>
                           )}
+
+                          {cardId && type === 'income' && (
+                            <div className="space-y-3 mt-4 p-4 rounded-2xl bg-muted/20 border border-border animate-in fade-in duration-200">
+                              <div>
+                                <Label className="text-xs font-bold uppercase text-muted-foreground block">Pagar usando saldo de uma conta? (Opcional)</Label>
+                                <span className="text-[10px] text-muted-foreground">Selecione de onde saiu o dinheiro se você mesmo pagou para abater a fatura.</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 mt-1">
+                                <button type="button" onClick={() => setSourceAccountId('')}
+                                  className={cn("py-3 px-3 rounded-xl text-xs font-bold transition-all border-2 text-center",
+                                    sourceAccountId === '' ? "border-primary bg-primary/5 text-primary" : "bg-muted/30 border-transparent hover:bg-muted/50")}>
+                                  Nenhuma (Estorno/Cashback)
+                                </button>
+                                {accounts.map(acc => (
+                                  <button key={acc.id} type="button" onClick={() => setSourceAccountId(acc.id)}
+                                    className={cn("py-3 px-3 rounded-xl text-xs font-bold transition-all border-2 flex items-center gap-2 text-left",
+                                      sourceAccountId === acc.id ? "border-primary bg-primary/5 text-primary" : "bg-muted/30 border-transparent hover:bg-muted/50")}>
+                                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: acc.color }} />
+                                    <span className="truncate">{acc.bank} - {acc.name}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </>
                       )}
                     </div>

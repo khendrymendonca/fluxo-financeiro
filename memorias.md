@@ -1731,3 +1731,12 @@ Em recÃ¡lculo:
        - As regras de cálculo, bonificação mensal (+10) e penalidades do Fluxo Score.
 - **Motivação**: Atender às solicitações do usuário para remover o detalhamento de fatura obsoleto, automatizar a conclusão de acordos e seu impacto imediato no Score, e disponibilizar instruções claras sobre estornos, Pix no crédito e funcionamento do algoritmo do Fluxo Score diretamente nas configurações de perfil.
 
+## [2026-06-29] Alteração Arquitetural / UI - Conta de Origem Opcional no Lançamento de Abatimento de Faturas
+- **Resumo**: Implementamos a possibilidade de especificar a conta corrente de origem ao lançar abatimentos manuais de fatura de cartão de crédito diretamente pela tela de lançamentos:
+  1. **Seletor na UI (TransactionForm.tsx)**: Quando o usuário cria uma **Receita** (`type === 'income'`), escolhe o destino como **Cartão de Crédito** (`paymentMethod === 'card'`) e seleciona um cartão específico, exibe-se um seletor visual discreto ("Pagar usando saldo de uma conta? (Opcional)"). O usuário pode escolher "Nenhuma (Estorno/Cashback)" ou selecionar qualquer uma de suas contas bancárias ativas.
+  2. **Intercepção e Fluxo de Transferência**: Se uma conta de origem for selecionada, o formulário intercepta o fluxo de submissão da Receita no `handleSubmit` e dispara a criação de uma **Transferência** (`transferBetweenAccounts`) em vez de uma receita isolada. Isso debita automaticamente o valor da conta corrente de origem (como despesa de saída) e credita no cartão de crédito de destino (como receita de abatimento).
+  3. **Preservação de Categorias (useAccountMutations.ts & useFinanceStore.tsx)**:
+     - Estendemos a mutation `useTransferBetweenAccounts` e a chamada da store para aceitar parâmetros opcionais de categoria (`customCategoryId` e `customExpenseCategoryId`).
+     - A transação de receita (entrada no cartão de crédito) é gravada preservando a categoria original selecionada no formulário (ex: "Abatimento Fatura" ou "Estorno") e com a flag `is_invoice_payment: true`, garantindo o abatimento correto na fatura do respectivo mês sem forçar o uso da categoria genérica "Transferência" na entrada.
+- **Motivação**: Atender ao pedido do usuário de poder registrar a conta de origem de onde saiu o dinheiro ao lançar um abatimento manual avulso no cartão de crédito diretamente pelo formulário de lançamentos, garantindo que o saldo da conta corrente seja devidamente reduzido em pagamentos parciais informados.
+

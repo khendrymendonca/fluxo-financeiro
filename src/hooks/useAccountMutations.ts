@@ -151,7 +151,9 @@ export function useTransferBetweenAccounts() {
       type = 'account',
       invoiceMonthYear,
       fromType = 'account',
-      fromInvoiceMonthYear
+      fromInvoiceMonthYear,
+      customCategoryId,
+      customExpenseCategoryId
     }: {
       from: string,
       to: string,
@@ -161,7 +163,9 @@ export function useTransferBetweenAccounts() {
       type?: 'account' | 'card',
       invoiceMonthYear?: string,
       fromType?: 'account' | 'card',
-      fromInvoiceMonthYear?: string
+      fromInvoiceMonthYear?: string,
+      customCategoryId?: string,
+      customExpenseCategoryId?: string
     }) => {
       if (!user) throw new Error('Utilizador não autenticado');
 
@@ -245,7 +249,7 @@ export function useTransferBetweenAccounts() {
         is_transfer: !isCardOrigin,
         invoice_month_year: isCardOrigin ? fromInvoiceMonthYear : null,
         transfer_group_id: transferGroupId,
-        category_id: expenseCategoryId
+        category_id: customExpenseCategoryId || expenseCategoryId
       };
 
       const incomeBody = {
@@ -262,7 +266,7 @@ export function useTransferBetweenAccounts() {
         invoice_month_year: invoiceMonthYear,
         is_transfer: !isCardOrigin,
         transfer_group_id: transferGroupId,
-        category_id: incomeCategoryId
+        category_id: customCategoryId || incomeCategoryId
       };
 
       // 1. INSERT 1 (Saída)
