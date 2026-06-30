@@ -734,7 +734,7 @@ export default function ReportsDashboard() {
         if (!txErr) {
           await supabase
             .from('categories')
-            .update({ deleted_at: new Date().toISOString() })
+            .delete()
             .in('id', dupIds);
           changed = true;
         }
@@ -750,7 +750,7 @@ export default function ReportsDashboard() {
         if (!txErr) {
           await supabase
             .from('categories')
-            .update({ deleted_at: new Date().toISOString() })
+            .delete()
             .in('id', dupIds);
           changed = true;
         }
