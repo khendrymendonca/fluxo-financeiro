@@ -9,7 +9,13 @@ import {
   PieChart as PieIcon,
   ChevronLeft,
   ChevronRight,
-  Wallet
+  Wallet,
+  Printer,
+  FileText,
+  X,
+  Award,
+  Lightbulb,
+  ShieldAlert
 } from 'lucide-react';
 import {
   Select,
@@ -707,6 +713,18 @@ export default function ReportsDashboard() {
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>('all');
+  const [showPrintReport, setShowPrintReport] = useState(false);
+
+  useEffect(() => {
+    if (showPrintReport) {
+      document.body.classList.add('has-print-report');
+    } else {
+      document.body.classList.remove('has-print-report');
+    }
+    return () => {
+      document.body.classList.remove('has-print-report');
+    };
+  }, [showPrintReport]);
 
   // Reset da subcategoria ao mudar de categoria
   useEffect(() => {
@@ -1213,7 +1231,8 @@ export default function ReportsDashboard() {
   );
 
   return (
-    <div className="space-y-8 animate-fade-in max-w-[1600px] mx-auto pb-10 px-4 xl:px-6">
+    <>
+      <div className="space-y-8 animate-fade-in max-w-[1600px] mx-auto pb-10 px-4 xl:px-6 no-print-report-view">
       <PageHeader title="Relatórios Analíticos" icon={PieIcon}>
         {isMobile ? (
           <div className="w-full space-y-3 no-print">
@@ -1451,6 +1470,14 @@ export default function ReportsDashboard() {
                 </button>
               ))}
             </div>
+
+            <button
+              onClick={() => setShowPrintReport(true)}
+              className="h-11 px-4 text-[10px] font-black uppercase tracking-widest rounded-2xl bg-primary text-white hover:bg-teal-700 transition-all flex items-center gap-2 shadow-sm border-2 border-primary"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Extrair Relatório</span>
+            </button>
           </div>
         )}
       </PageHeader>
@@ -1767,7 +1794,22 @@ export default function ReportsDashboard() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+
+      {showPrintReport && (
+        <PrintReportModal 
+          metrics={metrics}
+          period={period}
+          periodLabel={periodLabel}
+          currentPeriodLabel={currentPeriodLabel}
+          expenseCategories={expenseCategories}
+          selectedAccountId={selectedAccountId}
+          accounts={accounts}
+          userName={user?.email ? getUserFirstName(user.email) : 'Usuário'}
+          onClose={() => setShowPrintReport(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -1912,6 +1954,248 @@ function StatCard({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+interface PrintReportModalProps {
+  metrics: any;
+  period: Period;
+  periodLabel: string;
+  currentPeriodLabel: string;
+  expenseCategories: any[];
+  selectedAccountId: string;
+  accounts: any[];
+  userName: string;
+  onClose: () => void;
+}
+
+function PrintReportModal({
+  metrics,
+  period,
+  periodLabel,
+  currentPeriodLabel,
+  expenseCategories,
+  selectedAccountId,
+  accounts,
+  userName,
+  onClose
+}: PrintReportModalProps) {
+  const totalIncome = metrics.income;
+  const totalExpenses = metrics.totalExpenses;
+  const balance = metrics.balance;
+
+  const consumoPercent = totalIncome > 0 ? (totalExpenses / totalIncome) * 100 : 0;
+  const top5 = expenseCategories.slice(0, 5);
+  const maiorCategoria = expenseCategories.length > 0 ? expenseCategories[0] : null;
+  const maiorCategoriaPercent = maiorCategoria && totalExpenses > 0 ? (maiorCategoria.value / totalExpenses) * 100 : 0;
+
+  const projectedExp = metrics.projectedExpenses;
+  const realizedExp = metrics.realizedExpenses;
+  const desvio = projectedExp > 0 ? ((realizedExp - projectedExp) / projectedExp) * 100 : 0;
+
+  // Gerar textos de insights ricos
+  let healthInsight = "";
+  if (consumoPercent > 90) {
+    healthInsight = `Sua margem de segurança financeira está em zona crítica neste período, com as despesas consumindo ${consumoPercent.toFixed(1)}% das suas receitas. É recomendável rastrear imediatamente compras supérfluas e restabelecer uma reserva líquida mínima para evitar o uso de limites de crédito rotativo.`;
+  } else if (consumoPercent > 70) {
+    healthInsight = `Seu orçamento está equilibrado, com despesas consumindo ${consumoPercent.toFixed(1)}% da receita. No entanto, sua margem para novos investimentos ou poupança está reduzida. Tente otimizar contratos de despesas recorrentes (contas fixas) para liberar mais fluxo de caixa.`;
+  } else {
+    healthInsight = `Excelente eficiência de caixa! Suas despesas consumiram apenas ${consumoPercent.toFixed(1)}% da receita, deixando uma folga saudável de ${(100 - consumoPercent).toFixed(1)}% para investimentos, projetos ou construção de patrimônio.`;
+  }
+
+  let concentrationInsight = "";
+  if (maiorCategoria) {
+    concentrationInsight = `A categoria '${maiorCategoria.name}' foi o seu maior centro de custos no período, somando R$ ${maiorCategoria.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (${maiorCategoriaPercent.toFixed(1)}% de todas as despesas). Ajustar pequenas despesas vinculadas a essa categoria pode gerar economias imediatas sem afetar seu estilo de vida.`;
+  } else {
+    concentrationInsight = `Nenhuma despesa expressiva foi registrada. Mantenha os lançamentos em dia para gerar análises consolidadas completas.`;
+  }
+
+  let budgetInsight = "";
+  if (desvio > 10) {
+    budgetInsight = `Suas despesas efetivas superaram o planejado em ${desvio.toFixed(1)}% (uma diferença de R$ ${Math.abs(realizedExp - projectedExp).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}). Esse desvio acende um alerta sobre a importância de seguir mais fielmente o planejamento financeiro inicial.`;
+  } else if (desvio < -10) {
+    budgetInsight = `Suas despesas reais ficaram ${Math.abs(desvio).toFixed(1)}% abaixo do planejado (uma folga de R$ ${Math.abs(projectedExp - realizedExp).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}). Parabéns pelo controle rígido dos gastos frente ao planejamento inicial!`;
+  } else {
+    budgetInsight = `Sua execução orçamentária foi exemplar, com as despesas reais apresentando desvio mínimo de apenas ${Math.abs(desvio).toFixed(1)}% frente ao previsto. Isso representa previsibilidade excelente e alta disciplina financeira.`;
+  }
+
+  // Lista de Recomendações
+  const recommendations: string[] = [];
+  if (consumoPercent > 80) {
+    recommendations.push("Priorize a redução temporária de custos variáveis não-essenciais.");
+  }
+  if (balance < 0) {
+    recommendations.push("Evite contrair novas parcelas de cartão de crédito e use as contas apenas para o essencial.");
+  }
+  if (maiorCategoriaPercent > 30 && maiorCategoria) {
+    recommendations.push(`Crie uma meta informal de reduzir em 15% os custos na categoria de '${maiorCategoria.name}' no próximo ciclo.`);
+  }
+  if (consumoPercent <= 70 && balance > 0) {
+    recommendations.push(`Direcione o superávit de R$ ${balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} para os seus projetos ativos ou fundo de reserva.`);
+  }
+  if (recommendations.length < 3) {
+    recommendations.push("Mantenha uma rotina semanal de lançamentos para manter a saúde do seu Fluxo Score sempre alta.");
+    recommendations.push("Acompanhe suas contas fixas adiantadas para aproveitar descontos e evitar juros.");
+  }
+
+  const accountName = selectedAccountId === 'all'
+    ? 'Consolidado (Todas as Contas)'
+    : accounts.find(a => a.id === selectedAccountId)?.name || 'Conta Específica';
+
+  return (
+    <div className="print-modal-container no-scrollbar flex flex-col p-4 md:p-6">
+      {/* Barra de Ferramentas superior - OCULTADA NA IMPRESSÃO */}
+      <div className="max-w-[800px] w-full mx-auto bg-white dark:bg-zinc-900 rounded-3xl p-4 mb-4 border border-gray-150 dark:border-zinc-800 flex items-center justify-between no-print shadow-xl animate-fade-in">
+        <div className="flex items-center gap-2">
+          <FileText className="w-5 h-5 text-primary" />
+          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-zinc-50">Visualizar Relatório Gerencial</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => window.print()}
+            className="h-10 px-4 text-xs font-bold rounded-2xl bg-primary text-white hover:bg-teal-700 transition-all flex items-center gap-1.5 shadow-md shadow-primary/20 border-2 border-primary print-button-include"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Salvar em PDF</span>
+          </button>
+          <button
+            onClick={onClose}
+            className="h-10 w-10 flex items-center justify-center rounded-2xl bg-gray-50 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-all border-2 border-transparent"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Página do Relatório A4 */}
+      <div className="max-w-[800px] w-full mx-auto bg-white text-zinc-900 p-10 md:p-14 rounded-3xl border border-gray-200 shadow-2xl flex flex-col justify-between min-h-[1050px] print-report-view relative animate-scale-up font-sans">
+        
+        {/* Cabecalho Principal */}
+        <div className="space-y-6">
+          <div className="flex items-start justify-between border-b-2 border-gray-150 pb-6">
+            <div>
+              <div className="flex items-center gap-2 text-primary font-black text-lg uppercase tracking-wider">
+                <span className="bg-primary text-white p-1 rounded-lg">FF</span>
+                <span>Fluxo Financeiro</span>
+              </div>
+              <h1 className="mt-4 text-2xl md:text-3xl font-black tracking-tight text-gray-900">Relatório Gerencial de Performance</h1>
+              <p className="text-xs uppercase font-black tracking-widest text-zinc-400 mt-1">Análise de saúde & insights de caixa</p>
+            </div>
+            <div className="text-right text-xs text-zinc-400 font-bold space-y-1">
+              <p>Período: <span className="text-zinc-800 uppercase font-black tracking-wider">{currentPeriodLabel}</span></p>
+              <p>Conta: <span className="text-zinc-800 font-black">{accountName}</span></p>
+              <p>Emissão: <span className="text-zinc-800">{new Date().toLocaleDateString('pt-BR')}</span></p>
+            </div>
+          </div>
+
+          {/* Grid de Metricas do Periodo */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="rounded-2xl bg-gray-50 p-4 border border-gray-100">
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Receitas Totais</p>
+              <p className="mt-1.5 text-xl font-black text-emerald-600 tabular-nums">{formatCurrency(totalIncome)}</p>
+              <div className="mt-3 flex items-center justify-between text-[9px] font-bold text-zinc-400 border-t border-gray-200/60 pt-1.5">
+                <span>Previsto: {formatCurrency(metrics.projectedIncome)}</span>
+              </div>
+            </div>
+            <div className="rounded-2xl bg-gray-50 p-4 border border-gray-100">
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Despesas Totais</p>
+              <p className="mt-1.5 text-xl font-black text-rose-600 tabular-nums">{formatCurrency(totalExpenses)}</p>
+              <div className="mt-3 flex items-center justify-between text-[9px] font-bold text-zinc-400 border-t border-gray-200/60 pt-1.5">
+                <span>Previsto: {formatCurrency(metrics.projectedExpenses)}</span>
+              </div>
+            </div>
+            <div className="rounded-2xl bg-gray-50 p-4 border border-gray-100">
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Resultado Líquido</p>
+              <p className={cn("mt-1.5 text-xl font-black tabular-nums", balance >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                {formatCurrency(balance)}
+              </p>
+              <div className="mt-3 flex items-center justify-between text-[9px] font-bold text-zinc-400 border-t border-gray-200/60 pt-1.5">
+                <span>Variação: {metrics.comparisons.balance.direction === 'up' ? '↑' : '↓'} {Math.abs(metrics.comparisons.balance.percent ?? 0).toFixed(1)}%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bloco de insights */}
+          <div className="space-y-4 pt-4">
+            <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400 border-b pb-1.5">Diagnósticos & Insights Gerenciais</h2>
+            
+            <div className="space-y-3">
+              <div className="flex gap-3 items-start p-3 bg-zinc-50 rounded-2xl border border-zinc-100">
+                <Award className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-gray-900">1. Saúde de Caixa & Poupança</h3>
+                  <p className="text-xs text-zinc-600 leading-relaxed mt-1">{healthInsight}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 items-start p-3 bg-zinc-50 rounded-2xl border border-zinc-100">
+                <ShieldAlert className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-gray-900">2. Concentração de Custos</h3>
+                  <p className="text-xs text-zinc-600 leading-relaxed mt-1">{concentrationInsight}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 items-start p-3 bg-zinc-50 rounded-2xl border border-zinc-100">
+                <Lightbulb className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-gray-900">3. Aderência ao Planejamento</h3>
+                  <p className="text-xs text-zinc-600 leading-relaxed mt-1">{budgetInsight}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Ranking e Recomendações */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+            <div>
+              <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400 border-b pb-1.5 mb-3">Maiores Centros de Custo</h2>
+              <div className="space-y-2.5">
+                {top5.map((cat, idx) => (
+                  <div key={cat.id} className="flex items-center justify-between text-xs border-b border-gray-50 pb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-zinc-300 w-4">{idx + 1}.</span>
+                      <span className="font-bold text-zinc-700">{cat.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-black text-zinc-900">{formatCurrency(cat.value)}</span>
+                      <span className="text-[10px] text-zinc-400 font-bold ml-1.5">({((cat.value / (totalExpenses || 1)) * 100).toFixed(1)}%)</span>
+                    </div>
+                  </div>
+                ))}
+                {top5.length === 0 && (
+                  <p className="text-xs text-zinc-400 italic py-4">Nenhuma despesa registrada.</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400 border-b pb-1.5 mb-3">Recomendações Práticas</h2>
+              <ul className="space-y-2">
+                {recommendations.map((rec, i) => (
+                  <li key={i} className="text-xs text-zinc-600 flex items-start gap-2">
+                    <span className="text-primary font-black mt-0.5">•</span>
+                    <span>{rec}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Rodapé do Relatório */}
+        <div className="border-t border-gray-100 pt-6 mt-8 flex justify-between items-center text-[10px] text-zinc-400 font-bold">
+          <div>
+            <p>Relatório gerado em benefício de {userName}.</p>
+            <p>© {new Date().getFullYear()} Fluxo Financeiro - Todos os direitos reservados.</p>
+          </div>
+          <div className="text-right">
+            <p>Classificação: <span className="text-zinc-600 font-black uppercase">Privado</span></p>
+            <p>Assinatura Digital: <span className="text-primary font-mono select-all">FLUXO-IA-SIG-{metrics.balance >= 0 ? 'SUP' : 'DEF'}</span></p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

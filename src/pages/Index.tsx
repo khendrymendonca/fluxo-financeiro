@@ -26,7 +26,8 @@ import {
   TrendingUp,
   Eye,
   EyeOff,
-  Users
+  Users,
+  Printer
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFeatureFlag, useIsSuperAdmin, useGlobalFlag } from '@/hooks/useFeatureFlags';
@@ -737,6 +738,17 @@ export default function Index() {
             setEditingGoal(undefined);
           }}
         />
+      )}
+
+      {isSuperAdmin && (
+        <button
+          onClick={() => window.print()}
+          className="fixed bottom-4 left-4 z-[9999] no-print bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-black text-xs uppercase tracking-widest px-4 py-3 rounded-2xl shadow-2xl hover:scale-105 transition-all flex items-center gap-2 border border-zinc-200 dark:border-zinc-800"
+          title="Imprimir Tela para UX/UI"
+        >
+          <Printer className="w-4 h-4" />
+          <span>Imprimir Tela (UX/UI)</span>
+        </button>
       )}
 
     </AppLayout>

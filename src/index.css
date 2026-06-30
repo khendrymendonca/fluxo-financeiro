@@ -581,19 +581,112 @@
 }
 
 @media print {
-  .no-print {
+  .no-print,
+  header,
+  nav,
+  aside,
+  footer,
+  button:not(.print-button-include),
+  input[type="button"],
+  input[type="submit"],
+  .fixed,
+  .sticky,
+  [role="tablist"],
+  .bottom-nav,
+  #fab-mobile,
+  .copa-mascote {
     display: none !important;
   }
 
-  body {
-    background: white !important;
-    color: black !important;
+  html, body, #root, .flex-col, main, .overflow-hidden, .overflow-y-auto, .flex-1 {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    overflow-y: visible !important;
+    position: relative !important;
+    display: block !important;
   }
 
+  body {
+    background: transparent !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  @page {
+    margin: 12mm;
+    size: A4 portrait;
+  }
+
+  .bg-white,
+  .bg-zinc-900,
+  .rounded-2xl,
+  .rounded-[1.75rem],
+  .rounded-[2rem],
+  .rounded-[2.5rem],
+  section,
+  tr,
   .card-elevated,
   .card-elevated-lg {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
     box-shadow: none !important;
-    border: 1px solid #eee !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  .max-w-7xl {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}
+
+/* Estilos de Isolamento para Modal de Relatório de Impressão */
+.print-modal-container {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background-color: rgba(9, 9, 11, 0.6);
+  backdrop-filter: blur(4px);
+  overflow-y: auto;
+}
+
+body.has-print-report .no-print-report-view,
+body.has-print-report header,
+body.has-print-report nav,
+body.has-print-report footer,
+body.has-print-report aside,
+body.has-print-report .bottom-nav,
+body.has-print-report #fab-mobile {
+  display: none !important;
+}
+
+@media print {
+  body.has-print-report .print-modal-container {
+    position: static !important;
+    display: block !important;
+    background: transparent !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  
+  body.has-print-report .print-report-view {
+    display: block !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 }
 

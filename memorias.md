@@ -1797,3 +1797,16 @@ Em recÃ¡lculo:
        - Linha de rodapé elegante dividida por `border-t` mostrando os valores de **Previsto** e **Realizado** lado a lado.
 - **Motivação**: Atender ao pedido de padronização total dos cards financeiros pelo usuário, mantendo a consistência na exibição dos percentuais ao lado dos valores principais, e removendo elementos como a taxa de poupança para evitar complexidade ou confusão.
 
+## [2026-06-29] Relatório Gerencial em PDF com Insights Financeiros & Impressão de Alta Fidelidade de Todas as Telas para UX/UI
+- **Resumo**: Implementamos dois novos recursos avançados de extração e documentação visual:
+  1. **Extração de Relatório com Insights Dinâmicos (PDF)**:
+     - Adicionamos o botão de ação **"Extrair Relatório"** no cabeçalho de [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx).
+     - Criamos o modal `PrintReportModal` com design estilo folha de papel A4 contendo logomarca, período e conta.
+     - Implementamos a geração dinâmica de 3 insights analíticos profundos de inteligência financeira: **Saúde de Caixa & Poupança**, **Concentração de Custos** (categoria mais cara), e **Aderência Orçamentária** (percentual de desvio entre previsto e realizado), além de um painel de recomendações práticas.
+     - Configuramos isolamento completo por CSS na impressão para renderizar puramente a folha A4 e ignorar o resto da interface.
+  2. **Impressão de Telas de UX/UI para Administradores**:
+     - Refatoramos e expandimos consideravelmente o bloco `@media print` de [index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css) para que qualquer tela do sistema seja impressa em PDF nativo sem cortes, com grids flexíveis, cores habilitadas, e ocultando menus laterais, bottom navs ou masquetes.
+     - Adicionamos um botão de atalho flutuante e fixo **"Imprimir Tela (UX/UI)"** em [Index.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/Index.tsx) visível exclusivamente para super administradores (`isSuperAdmin`) para capturar o layout a qualquer momento.
+- **Motivação**: Munir o administrador com ferramentas práticas para enviar wireframes fieis do app para especialistas em design de interface, e agregar valor gerencial imediato aos usuários finais.
+
+
