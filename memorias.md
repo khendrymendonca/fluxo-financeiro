@@ -1769,3 +1769,16 @@ Em recÃ¡lculo:
      - *ComparisonBadge*: Desenvolvemos um visual baseado em caixas coloridas suaves (fundo sutil e borda fina com texto em contraste: verde para progresso positivo, vermelho para negativo), aplicando um espaçamento físico (`gap-2` e `shrink-0`) para nunca grudar nos ícones ou quebrar linhas.
 - **Motivação**: Atender ao desejo de organização do usuário por meio de filtros mais profundos por subcategorias, garantir o fim de categorias duplicadas no app limpando o banco retroativamente de forma silenciosa, e elevar drasticamente os cartões de métrica e indicadores para um visual de nível corporativo SaaS e extremamente premium.
 
+## [2026-06-29] Ajuste de UI / Lógica de Relatórios - Exibição Lado a Lado de Previsto vs Realizado e Nova Disposição do Indicador Comparativo
+- **Resumo**: Implementamos refinamentos visuais no painel superior de estatísticas em [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx):
+  1. **Remoção da Barra de Progresso de Receitas**:
+     - Removemos a barra de percentual de atingimento/consumo do card de Receitas por ser conceitualmente irrelevante para o usuário (barras fazem mais sentido para despesas/limites de orçamento ou metas de poupança de saldo).
+  2. **Exibição Explícita de Previsto vs Realizado**:
+     - Adaptamos o `metrics` useMemo e introduzimos a função `getPeriodDataForMode` para calcular e expor simultaneamente os valores previstos (Projetado) e efetivos (Realizado) de receitas, despesas e saldo.
+     - Passamos os valores `projectedValue` e `realizedValue` para os `StatCard`s.
+     - No rodapé dos cartões, adicionamos um bloco horizontal separado por uma linha fina (`border-t`) exibindo de forma direta, clara e tabular os valores de **Previsto** e **Realizado** lado a lado.
+  3. **Nova Disposição e Reestilização do ComparisonBadge**:
+     - Removemos a comparação do topo do card (que ficava comprimida ao lado do ícone).
+     - Movemos o `ComparisonBadge` (com `compact={true}`) para ficar posicionado **imediatamente à direita do valor principal do card** na mesma linha, mantendo um alinhamento natural e despoluindo o topo do card.
+- **Motivação**: Melhorar a usabilidade e legibilidade do painel, permitindo que o usuário visualize Previsto e Realizado simultaneamente sem esforço cognitivo, além de harmonizar o visual dos cartões ao mover a variação percentual para o lado do valor principal.
+

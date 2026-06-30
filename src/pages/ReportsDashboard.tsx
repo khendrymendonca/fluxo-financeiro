@@ -853,8 +853,8 @@ export default function ReportsDashboard() {
   const periodLabel = period === 'month' ? 'mês anterior' : period === 'semester' ? 'semestre anterior' : 'ano anterior';
   const currentPeriodLabel = useMemo(() => getFinancialPeriodLabel(period, viewDate), [period, viewDate]);
 
-  const getPeriodData = useCallback((start: Date, end: Date) => {
-    if (reportMode === 'realized') {
+  const getPeriodDataForMode = useCallback((start: Date, end: Date, mode: ReportMode) => {
+    if (mode === 'realized') {
       return buildReportPeriodData({
         transactions,
         categories,
@@ -872,11 +872,15 @@ export default function ReportsDashboard() {
       end,
       selectedAccountId,
     });
-  }, [transactions, creditCards, categories, selectedAccountId, reportMode]);
+  }, [transactions, creditCards, categories, selectedAccountId]);
 
   const metrics = useMemo(() => {
-    const current = getPeriodData(intervals.start, intervals.end);
-    const previous = getPeriodData(intervals.prevStart, intervals.prevEnd);
+    const current = getPeriodDataForMode(intervals.start, intervals.end, reportMode);
+    const previous = getPeriodDataForMode(intervals.prevStart, intervals.prevEnd, reportMode);
+    
+    const projected = getPeriodDataForMode(intervals.start, intervals.end, 'projected');
+    const realized = getPeriodDataForMode(intervals.start, intervals.end, 'realized');
+
     const currentBalance = current.income - current.total;
     const previousBalance = previous.income - previous.total;
 
@@ -890,6 +894,12 @@ export default function ReportsDashboard() {
       income: current.income,
       balance: currentBalance,
       consumption: currentConsumption,
+      projectedIncome: projected.income,
+      realizedIncome: realized.income,
+      projectedExpenses: projected.total,
+      realizedExpenses: realized.total,
+      projectedBalance: projected.income - projected.total,
+      realizedBalance: realized.income - realized.total,
       comparisons: {
         income: buildPeriodComparison(current.income, previous.income),
         expenses: buildPeriodComparison(current.total, previous.total),
@@ -897,7 +907,7 @@ export default function ReportsDashboard() {
         consumption: buildPeriodComparison(currentConsumption.percent ?? 0, previousConsumption.percent ?? 0),
       },
     };
-  }, [intervals, getPeriodData]);
+  }, [intervals, getPeriodDataForMode, reportMode]);
 
   const cardProgressions = useMemo(() => {
     // 1. Receitas
@@ -947,7 +957,7 @@ export default function ReportsDashboard() {
     const points = buildTrendPeriodPoints(period, viewDate);
 
     return points.map((point) => {
-      const data = getPeriodData(point.start, point.end);
+      const data = getPeriodDataForMode(point.start, point.end, reportMode);
       const consumption = buildIncomeConsumption(data.income, data.total);
       return {
         name: point.name,
@@ -957,7 +967,7 @@ export default function ReportsDashboard() {
         isCurrent: point.isCurrent,
       };
     });
-  }, [period, viewDate, getPeriodData]);
+  }, [period, viewDate, getPeriodDataForMode, reportMode]);
 
   const yearOptions = useMemo(() => {
     const years = new Set<number>([new Date().getFullYear(), viewDate.getFullYear()]);
@@ -1495,9 +1505,8 @@ export default function ReportsDashboard() {
           comparison={metrics.comparisons.income}
           periodLabel={periodLabel}
           compact={isMobile}
-          progress={cardProgressions.income.progress}
-          progressLabel={cardProgressions.income.label}
-          progressType="income"
+          projectedValue={metrics.projectedIncome}
+          realizedValue={metrics.realizedIncome}
         />
         <StatCard
           label={reportMode === 'projected' ? 'Despesas previstas' : 'Despesas efetivas'}
@@ -1511,6 +1520,8 @@ export default function ReportsDashboard() {
           progress={cardProgressions.expenses.progress}
           progressLabel={cardProgressions.expenses.label}
           progressType="expense"
+          projectedValue={metrics.projectedExpenses}
+          realizedValue={metrics.realizedExpenses}
         />
         <StatCard
           label={reportMode === 'projected' ? 'Saldo previsto' : 'Saldo efetivo do período'}
@@ -1524,6 +1535,8 @@ export default function ReportsDashboard() {
           progress={cardProgressions.balance.progress}
           progressLabel={cardProgressions.balance.label}
           progressType="balance"
+          projectedValue={metrics.projectedBalance}
+          realizedValue={metrics.realizedBalance}
         />
         {fluxoScoreEnabled ? (
           <FluxoScoreCard score={fluxoScore.score} className="col-span-2 md:col-span-1" />
@@ -1889,6 +1902,8 @@ function StatCard({
   progress,
   progressLabel,
   progressType,
+  projectedValue,
+  realizedValue,
 }: { 
   label: string, 
   value: number, 
@@ -1903,6 +1918,8 @@ function StatCard({
   progress?: number,
   progressLabel?: string,
   progressType?: 'income' | 'expense' | 'balance',
+  projectedValue?: number,
+  realizedValue?: number,
 }) {
   let progressBgClass = "bg-primary";
   let progressColorClass = "text-primary";
@@ -1947,27 +1964,42 @@ function StatCard({
         <div className={cn("rounded-2xl bg-zinc-50 dark:bg-zinc-800 group-hover:bg-primary/10 transition-colors flex items-center justify-center shrink-0", compact ? "p-2.5 h-10 w-10" : "p-3.5 h-12 w-12")}>
           {icon}
         </div>
-        {comparison && periodLabel && (
-          <ComparisonBadge 
-            comparison={comparison} 
-            periodLabel={periodLabel} 
-            invertColors={invertColors} 
-            compact={compact}
-          />
-        )}
       </div>
 
       <div className="space-y-1">
         <p className={cn("font-bold text-muted-foreground uppercase tracking-widest", compact ? "text-[10px]" : "text-xs")}>{label}</p>
-        <p className={cn(
-          "whitespace-nowrap font-black tracking-tighter tabular-nums leading-none",
-          compact ? "text-xl" : "text-3xl",
-          forceRed ? "text-rose-500" : (!isNeutral && (value >= 0 ? "text-emerald-500" : "text-rose-500")),
-          isNeutral && "text-gray-900 dark:text-zinc-50"
-        )}>
-          {isPercentValue ? `${value.toFixed(1)}%` : formatCurrency(value)}
-        </p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className={cn(
+            "whitespace-nowrap font-black tracking-tighter tabular-nums leading-none",
+            compact ? "text-xl" : "text-2xl lg:text-3xl",
+            forceRed ? "text-rose-500" : (!isNeutral && (value >= 0 ? "text-emerald-500" : "text-rose-500")),
+            isNeutral && "text-gray-900 dark:text-zinc-50"
+          )}>
+            {isPercentValue ? `${value.toFixed(1)}%` : formatCurrency(value)}
+          </p>
+          {comparison && periodLabel && (
+            <ComparisonBadge 
+              comparison={comparison} 
+              periodLabel={periodLabel} 
+              invertColors={invertColors} 
+              compact={true}
+            />
+          )}
+        </div>
       </div>
+
+      {projectedValue !== undefined && realizedValue !== undefined && (
+        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-zinc-800/80 flex items-center justify-between text-[11px] font-bold text-muted-foreground w-full gap-2 shrink-0">
+          <div className="flex items-center gap-1">
+            <span className="opacity-60">Previsto:</span>
+            <span className="font-black text-gray-800 dark:text-zinc-100 tabular-nums">{formatCurrency(projectedValue)}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="opacity-60">Realizado:</span>
+            <span className="font-black text-gray-800 dark:text-zinc-100 tabular-nums">{formatCurrency(realizedValue)}</span>
+          </div>
+        </div>
+      )}
 
       {progress !== undefined && progressLabel && !compact && (
         <div className="mt-4 pt-3 border-t border-gray-50 dark:border-zinc-800/30 space-y-1.5 w-full">
