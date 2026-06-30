@@ -174,19 +174,18 @@ export function useTransferBetweenAccounts() {
 
       // Garantir categoria "Transferência" para Despesa
       let expenseCategoryId = null;
-      const { data: expCatData } = await supabase
+      const { data: expCatList } = await supabase
         .from('categories')
         .select('id')
         .eq('user_id', user.id)
         .eq('name', 'Transferência')
         .eq('type', 'expense')
-        .is('deleted_at', null)
-        .maybeSingle();
+        .is('deleted_at', null);
       
-      if (expCatData) {
-        expenseCategoryId = expCatData.id;
+      if (expCatList && expCatList.length > 0) {
+        expenseCategoryId = expCatList[0].id;
       } else {
-        const { data: grpData } = await supabase.from('category_groups').select('id').limit(1).maybeSingle();
+        const { data: grpData } = await supabase.from('category_groups').select('id').maybeSingle();
         const { data: newCat, error: newCatErr } = await supabase
           .from('categories')
           .insert({
@@ -206,19 +205,18 @@ export function useTransferBetweenAccounts() {
 
       // Garantir categoria "Transferência" para Receita
       let incomeCategoryId = null;
-      const { data: incCatData } = await supabase
+      const { data: incCatList } = await supabase
         .from('categories')
         .select('id')
         .eq('user_id', user.id)
         .eq('name', 'Transferência')
         .eq('type', 'income')
-        .is('deleted_at', null)
-        .maybeSingle();
+        .is('deleted_at', null);
 
-      if (incCatData) {
-        incomeCategoryId = incCatData.id;
+      if (incCatList && incCatList.length > 0) {
+        incomeCategoryId = incCatList[0].id;
       } else {
-        const { data: grpData } = await supabase.from('category_groups').select('id').limit(1).maybeSingle();
+        const { data: grpData } = await supabase.from('category_groups').select('id').maybeSingle();
         const { data: newCat, error: newCatErr } = await supabase
           .from('categories')
           .insert({

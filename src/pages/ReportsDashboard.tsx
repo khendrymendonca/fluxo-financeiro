@@ -1,5 +1,6 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { supabase } from '@/lib/supabase';
 import { PageHeader } from '@/components/ui/PageHeader';
 import {
   TrendingUp,
@@ -568,6 +569,7 @@ function buildCategoryPeriodValue({
   selectedAccountId,
   reportMode,
   bucketId,
+  subcategoryId,
 }: {
   transactions: Transaction[];
   creditCards: CreditCard[];
@@ -577,6 +579,7 @@ function buildCategoryPeriodValue({
   selectedAccountId: string;
   reportMode: ReportMode;
   bucketId: string;
+  subcategoryId?: string;
 }) {
   return getCategoryTransactionsForPeriod({
     transactions,
@@ -587,6 +590,7 @@ function buildCategoryPeriodValue({
     selectedAccountId,
     reportMode,
     bucketId,
+    subcategoryId,
   }).reduce((total, transaction) => total + Number(transaction.amount), 0);
 }
 
@@ -599,6 +603,7 @@ function getCategoryTransactionsForPeriod({
   selectedAccountId,
   reportMode,
   bucketId,
+  subcategoryId,
 }: {
   transactions: Transaction[];
   creditCards: CreditCard[];
@@ -608,6 +613,7 @@ function getCategoryTransactionsForPeriod({
   selectedAccountId: string;
   reportMode: ReportMode;
   bucketId: string;
+  subcategoryId?: string;
 }): Transaction[] {
   const periodKeys = new Set(
     eachMonthOfInterval({ start, end }).map((month) => format(month, 'yyyy-MM'))
@@ -632,6 +638,11 @@ function getCategoryTransactionsForPeriod({
 
       if (!isAllowed) return false;
 
+      if (subcategoryId && subcategoryId !== 'all') {
+        const txSubId = transaction.subcategoryId || (transaction as any).subcategory_id;
+        if (txSubId !== subcategoryId) return false;
+      }
+
       if (reportMode === 'realized') {
         if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return false;
         if (!periodKeys.has(getCategoryConsumptionPeriodKey(transaction))) return false;
@@ -651,6 +662,7 @@ function buildCategoryPeriodItems(params: {
   selectedAccountId: string;
   reportMode: ReportMode;
   bucketId: string;
+  subcategoryId?: string;
 }): CategoryAnalysisItem[] {
   return getCategoryTransactionsForPeriod(params)
     .map((transaction) => ({
@@ -686,13 +698,71 @@ export default function ReportsDashboard() {
     debts,
     creditCards = [],
     viewDate,
-    setViewDate
+    setViewDate,
+    subcategories = []
   } = useFinanceStore();
 
   const [period, setPeriod] = useState<Period>('month');
   const [reportMode, setReportMode] = useState<ReportMode>('projected');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>('all');
+
+  // Reset da subcategoria ao mudar de categoria
+  useEffect(() => {
+    setSelectedSubcategoryId('all');
+  }, [selectedCategoryId]);
+
+  // Consolidação automática de categorias de transferência duplicadas
+  useEffect(() => {
+    if (!categories || categories.length === 0) return;
+    
+    const consolidateDuplicates = async () => {
+      const activeTransfers = categories.filter(c => c.name === 'Transferência' && !c.deleted_at);
+      const expenseCats = activeTransfers.filter(c => c.type === 'expense').sort((a, b) => a.id.localeCompare(b.id));
+      const incomeCats = activeTransfers.filter(c => c.type === 'income').sort((a, b) => a.id.localeCompare(b.id));
+      
+      let changed = false;
+      
+      if (expenseCats.length > 1) {
+        const master = expenseCats[0];
+        const dupIds = expenseCats.slice(1).map(d => d.id);
+        const { error: txErr } = await supabase
+          .from('transactions')
+          .update({ category_id: master.id })
+          .in('category_id', dupIds);
+        if (!txErr) {
+          await supabase
+            .from('categories')
+            .update({ deleted_at: new Date().toISOString() })
+            .in('id', dupIds);
+          changed = true;
+        }
+      }
+      
+      if (incomeCats.length > 1) {
+        const master = incomeCats[0];
+        const dupIds = incomeCats.slice(1).map(d => d.id);
+        const { error: txErr } = await supabase
+          .from('transactions')
+          .update({ category_id: master.id })
+          .in('category_id', dupIds);
+        if (!txErr) {
+          await supabase
+            .from('categories')
+            .update({ deleted_at: new Date().toISOString() })
+            .in('id', dupIds);
+          changed = true;
+        }
+      }
+      
+      if (changed) {
+        window.location.reload();
+      }
+    };
+    
+    consolidateDuplicates();
+  }, [categories]);
   const canUseAdvancedReports = useFeatureFlag('advanced_reports');
   const isMobile = useIsMobile();
   const fluxoScoreEnabled = useMemo(() => {
@@ -829,6 +899,50 @@ export default function ReportsDashboard() {
     };
   }, [intervals, getPeriodData]);
 
+  const cardProgressions = useMemo(() => {
+    // 1. Receitas
+    let incomeProgress = 0;
+    let incomeProgressLabel = "Atingimento da Meta";
+
+    if (reportMode === 'realized') {
+      const projected = buildProjectedReportPeriodData({
+        transactions,
+        creditCards,
+        categories,
+        start: intervals.start,
+        end: intervals.end,
+        selectedAccountId,
+      });
+      incomeProgress = projected.income > 0 ? (metrics.income / projected.income) * 100 : 100;
+      incomeProgressLabel = "Meta de Receitas";
+    } else {
+      const realized = buildReportPeriodData({
+        transactions,
+        categories,
+        start: intervals.start,
+        end: intervals.end,
+        selectedAccountId,
+      });
+      incomeProgress = metrics.income > 0 ? (realized.income / metrics.income) * 100 : 0;
+      incomeProgressLabel = "Realizado de fato";
+    }
+
+    // 2. Despesas
+    const expensesProgress = metrics.income > 0 ? (metrics.totalExpenses / metrics.income) * 100 : 0;
+    const expensesProgressLabel = "Consumo da Receita";
+
+    // 3. Saldo
+    const savingsRate = metrics.income > 0 ? (metrics.balance / metrics.income) * 100 : 0;
+    const balanceProgress = savingsRate;
+    const balanceProgressLabel = metrics.balance >= 0 ? "Taxa de Poupança" : "Déficit do Orçamento";
+
+    return {
+      income: { progress: incomeProgress, label: incomeProgressLabel },
+      expenses: { progress: expensesProgress, label: expensesProgressLabel },
+      balance: { progress: balanceProgress, label: balanceProgressLabel }
+    };
+  }, [transactions, creditCards, categories, intervals, metrics, reportMode, selectedAccountId]);
+
   const consumptionTrendData = useMemo<ConsumptionTrendPoint[]>(() => {
     const points = buildTrendPeriodPoints(period, viewDate);
 
@@ -912,6 +1026,12 @@ export default function ReportsDashboard() {
     ? null
     : categoryAnalysisOptions.find((category) => category.id === selectedCategoryId) ?? null;
 
+  const currentSubcategories = useMemo(() => {
+    if (!selectedCategory) return [];
+    const realCatId = selectedCategory.id.replace('category:', '');
+    return subcategories.filter(s => s.categoryId === realCatId && s.isActive !== false);
+  }, [selectedCategory, subcategories]);
+
   const selectedCategoryAnalysis = useMemo(() => {
     if (!selectedCategory) return null;
 
@@ -924,6 +1044,7 @@ export default function ReportsDashboard() {
       selectedAccountId,
       reportMode,
       bucketId: selectedCategory.id,
+      subcategoryId: selectedSubcategoryId,
     });
     const previous = buildCategoryPeriodValue({
       transactions,
@@ -934,6 +1055,7 @@ export default function ReportsDashboard() {
       selectedAccountId,
       reportMode,
       bucketId: selectedCategory.id,
+      subcategoryId: selectedSubcategoryId,
     });
     const trend = buildTrendPeriodPoints(period, viewDate).map((point) => ({
       name: point.name,
@@ -946,6 +1068,7 @@ export default function ReportsDashboard() {
         selectedAccountId,
         reportMode,
         bucketId: selectedCategory.id,
+        subcategoryId: selectedSubcategoryId,
       }),
       isCurrent: point.isCurrent,
     }));
@@ -964,9 +1087,10 @@ export default function ReportsDashboard() {
         selectedAccountId,
         reportMode,
         bucketId: selectedCategory.id,
+        subcategoryId: selectedSubcategoryId,
       }),
     };
-  }, [categories, creditCards, intervals, period, reportMode, selectedAccountId, selectedCategory, transactions, viewDate]);
+  }, [categories, creditCards, intervals, period, reportMode, selectedAccountId, selectedCategory, selectedSubcategoryId, transactions, viewDate]);
 
   const annualVision = useMemo(() => {
     const tableMonths = period === 'year' ? yearMonths : periodMonths;
@@ -1363,10 +1487,7 @@ export default function ReportsDashboard() {
         )}
       </PageHeader>
 
-      <div className={cn(
-        "grid grid-cols-2 gap-3 md:gap-6",
-        isMobile ? "md:grid-cols-3" : (fluxoScoreEnabled ? "md:grid-cols-4" : "md:grid-cols-3")
-      )}>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
         <StatCard
           label={reportMode === 'projected' ? 'Receitas previstas' : 'Receitas efetivas'}
           value={metrics.income}
@@ -1374,6 +1495,9 @@ export default function ReportsDashboard() {
           comparison={metrics.comparisons.income}
           periodLabel={periodLabel}
           compact={isMobile}
+          progress={cardProgressions.income.progress}
+          progressLabel={cardProgressions.income.label}
+          progressType="income"
         />
         <StatCard
           label={reportMode === 'projected' ? 'Despesas previstas' : 'Despesas efetivas'}
@@ -1384,6 +1508,9 @@ export default function ReportsDashboard() {
           forceRed
           invertColors
           compact={isMobile}
+          progress={cardProgressions.expenses.progress}
+          progressLabel={cardProgressions.expenses.label}
+          progressType="expense"
         />
         <StatCard
           label={reportMode === 'projected' ? 'Saldo previsto' : 'Saldo efetivo do período'}
@@ -1392,10 +1519,14 @@ export default function ReportsDashboard() {
           comparison={metrics.comparisons.balance}
           periodLabel={periodLabel}
           isNeutral
-          compact={isMobile}
+          className="col-span-2 md:col-span-1"
+          compact={false}
+          progress={cardProgressions.balance.progress}
+          progressLabel={cardProgressions.balance.label}
+          progressType="balance"
         />
         {fluxoScoreEnabled ? (
-          <FluxoScoreCard score={fluxoScore.score} className="col-span-1" />
+          <FluxoScoreCard score={fluxoScore.score} className="col-span-2 md:col-span-1" />
         ) : null}
       </div>
 
@@ -1509,19 +1640,35 @@ export default function ReportsDashboard() {
         </div>
 
         <div ref={analysisSectionRef} className="bg-white dark:bg-zinc-900 rounded-[1.75rem] lg:rounded-[2rem] p-4 lg:p-6 border border-gray-100 dark:border-zinc-800 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <h3 className="text-lg font-black tracking-tight">Análise de Categoria</h3>
-            <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-              <SelectTrigger className="h-11 w-full md:w-[240px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 font-bold">
-                <SelectValue placeholder="Categoria" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl border-2">
-                <SelectItem value="all" className="font-bold">Selecionar categoria</SelectItem>
-                {categoryAnalysisOptions.map((category) => (
-                  <SelectItem key={category.id} value={category.id} className="font-bold">{category.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+              <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+                <SelectTrigger className="h-11 w-full md:w-[180px] lg:w-[200px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 font-bold">
+                  <SelectValue placeholder="Categoria" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl border-2">
+                  <SelectItem value="all" className="font-bold">Selecionar categoria</SelectItem>
+                  {categoryAnalysisOptions.map((category) => (
+                    <SelectItem key={category.id} value={category.id} className="font-bold">{category.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {selectedCategory && currentSubcategories.length > 0 && (
+                <Select value={selectedSubcategoryId} onValueChange={setSelectedSubcategoryId}>
+                  <SelectTrigger className="h-11 w-full md:w-[180px] lg:w-[200px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 font-bold animate-fade-in">
+                    <SelectValue placeholder="Subcategoria" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl border-2">
+                    <SelectItem value="all" className="font-bold">Todas as subcategorias</SelectItem>
+                    {currentSubcategories.map((sub) => (
+                      <SelectItem key={sub.id} value={sub.id} className="font-bold">{sub.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           {selectedCategory && selectedCategoryAnalysis ? (
@@ -1541,7 +1688,15 @@ export default function ReportsDashboard() {
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
                       <YAxis hide domain={[0, 'auto']} />
                       <Tooltip cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }} formatter={(value) => formatCurrency(Number(value))} />
-                      <Line type="monotone" name={selectedCategory.name} dataKey="valor" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                      <Line 
+                        type="monotone" 
+                        name={selectedSubcategoryId !== 'all' ? currentSubcategories.find(s => s.id === selectedSubcategoryId)?.name || selectedCategory.name : selectedCategory.name} 
+                        dataKey="valor" 
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={3} 
+                        dot={{ r: 4 }} 
+                        activeDot={{ r: 6 }} 
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -1668,7 +1823,10 @@ function ComparisonBadge({
 }) {
   if (!comparison.hasBase) {
     return (
-      <div className={cn("text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1", className)}>
+      <div className={cn(
+        "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-lg bg-gray-50 text-gray-500 dark:bg-zinc-800 dark:text-zinc-400 flex items-center justify-center shrink-0 border border-gray-100 dark:border-zinc-700/50",
+        className
+      )}>
         <span>{compact ? '→ 0%' : `sem base no ${periodLabel}`}</span>
       </div>
     );
@@ -1677,13 +1835,16 @@ function ComparisonBadge({
   const isPositive = comparison.direction === 'up';
   const isNeutral = comparison.direction === 'flat';
   
-  // For expenses, UP is BAD (red), DOWN is GOOD (green)
-  // For revenue/balance, UP is GOOD (green), DOWN is BAD (red)
-  // invertColors=true means UP is BAD.
-  const colorClass = isNeutral 
-    ? "text-muted-foreground" 
-    : (isPositive !== invertColors ? "text-emerald-500" : "text-rose-500");
-    
+  let badgeColorClass = "bg-gray-50 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400 border border-gray-100 dark:border-zinc-750";
+  if (!isNeutral) {
+    const isGood = isPositive !== invertColors;
+    if (isGood) {
+      badgeColorClass = "bg-emerald-50/70 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400 border border-emerald-500/10";
+    } else {
+      badgeColorClass = "bg-rose-50/70 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400 border border-rose-500/10";
+    }
+  }
+  
   const arrow = isNeutral ? "→" : (isPositive ? "↑" : "↓");
   const compactPercent = isPercentPoints
     ? Math.abs(comparison.diff)
@@ -1696,18 +1857,20 @@ function ComparisonBadge({
     ? ` (${Math.abs(comparison.percent).toFixed(1)}%)` 
     : "";
 
-  if (compact) {
-    return (
-      <div className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1", colorClass, className)}>
-        <span>{arrow} {compactPercent.toFixed(1)}%</span>
-      </div>
-    );
-  }
-
   return (
-    <div className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1", colorClass, className)}>
-      <span>{arrow} {value}{percentText}</span>
-      <span className="opacity-60">vs {periodLabel}</span>
+    <div className={cn(
+      "text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 px-2 py-0.5 rounded-lg shrink-0 transition-colors",
+      badgeColorClass,
+      className
+    )}>
+      {compact ? (
+        <span>{arrow} {compactPercent.toFixed(1)}%</span>
+      ) : (
+        <>
+          <span>{arrow} {value}{percentText}</span>
+          <span className="opacity-60 font-medium">vs {periodLabel}</span>
+        </>
+      )}
     </div>
   );
 }
@@ -1723,6 +1886,9 @@ function StatCard({
   invertColors,
   compact = false,
   isPercentValue = false,
+  progress,
+  progressLabel,
+  progressType,
 }: { 
   label: string, 
   value: number, 
@@ -1734,14 +1900,51 @@ function StatCard({
   invertColors?: boolean,
   compact?: boolean,
   isPercentValue?: boolean,
+  progress?: number,
+  progressLabel?: string,
+  progressType?: 'income' | 'expense' | 'balance',
 }) {
+  let progressBgClass = "bg-primary";
+  let progressColorClass = "text-primary";
+
+  if (progress !== undefined) {
+    if (progressType === 'income') {
+      progressBgClass = "bg-emerald-500";
+      progressColorClass = "text-emerald-600 dark:text-emerald-400";
+    } else if (progressType === 'expense') {
+      if (progress > 100) {
+        progressBgClass = "bg-rose-500 animate-pulse";
+        progressColorClass = "text-rose-600 dark:text-rose-400 font-black";
+      } else if (progress > 80) {
+        progressBgClass = "bg-amber-500";
+        progressColorClass = "text-amber-600 dark:text-amber-400";
+      } else {
+        progressBgClass = "bg-emerald-500";
+        progressColorClass = "text-emerald-600 dark:text-emerald-400";
+      }
+    } else if (progressType === 'balance') {
+      if (progress < 0) {
+        progressBgClass = "bg-rose-500 animate-pulse";
+        progressColorClass = "text-rose-600 dark:text-rose-400 font-black";
+      } else if (progress < 15) {
+        progressBgClass = "bg-amber-500";
+        progressColorClass = "text-amber-600 dark:text-amber-400";
+      } else {
+        progressBgClass = "bg-primary";
+        progressColorClass = "text-primary";
+      }
+    }
+  }
+
+  const barWidth = progress !== undefined ? Math.min(100, Math.max(0, Math.abs(progress))) : 0;
+
   return (
     <div className={cn(
-      "bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 shadow-sm group transition-all",
-      compact ? "rounded-[1.5rem] p-4" : "rounded-[2rem] p-6 hover:scale-[1.02]"
+      "bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 shadow-sm group transition-all relative overflow-hidden flex flex-col justify-between",
+      compact ? "rounded-[1.5rem] p-4" : "rounded-[2.5rem] p-6 hover:scale-[1.02] min-h-[175px] md:min-h-[190px]"
     )}>
-      <div className={cn("flex justify-between items-start", compact ? "mb-3" : "mb-4")}>
-        <div className={cn("rounded-2xl bg-zinc-50 dark:bg-zinc-800 group-hover:bg-primary/10 transition-colors", compact ? "p-2.5" : "p-3")}>
+      <div className={cn("flex justify-between items-center w-full gap-2", compact ? "mb-2" : "mb-3")}>
+        <div className={cn("rounded-2xl bg-zinc-50 dark:bg-zinc-800 group-hover:bg-primary/10 transition-colors flex items-center justify-center shrink-0", compact ? "p-2.5 h-10 w-10" : "p-3.5 h-12 w-12")}>
           {icon}
         </div>
         {comparison && periodLabel && (
@@ -1750,19 +1953,36 @@ function StatCard({
             periodLabel={periodLabel} 
             invertColors={invertColors} 
             compact={compact}
-            className="bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-lg"
           />
         )}
       </div>
-      <p className={cn("font-bold text-muted-foreground uppercase tracking-widest", compact ? "text-[10px]" : "text-xs")}>{label}</p>
-      <p className={cn(
-        "mt-1 whitespace-nowrap font-black tracking-tighter tabular-nums leading-none",
-        compact ? "text-lg" : "text-2xl",
-        forceRed ? "text-rose-500" : (!isNeutral && (value >= 0 ? "text-emerald-500" : "text-rose-500")),
-        isNeutral && "text-gray-900 dark:text-zinc-50"
-      )}>
-        {isPercentValue ? `${value.toFixed(1)}%` : formatCurrency(value)}
-      </p>
+
+      <div className="space-y-1">
+        <p className={cn("font-bold text-muted-foreground uppercase tracking-widest", compact ? "text-[10px]" : "text-xs")}>{label}</p>
+        <p className={cn(
+          "whitespace-nowrap font-black tracking-tighter tabular-nums leading-none",
+          compact ? "text-xl" : "text-3xl",
+          forceRed ? "text-rose-500" : (!isNeutral && (value >= 0 ? "text-emerald-500" : "text-rose-500")),
+          isNeutral && "text-gray-900 dark:text-zinc-50"
+        )}>
+          {isPercentValue ? `${value.toFixed(1)}%` : formatCurrency(value)}
+        </p>
+      </div>
+
+      {progress !== undefined && progressLabel && !compact && (
+        <div className="mt-4 pt-3 border-t border-gray-50 dark:border-zinc-800/30 space-y-1.5 w-full">
+          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            <span>{progressLabel}</span>
+            <span className={cn("tabular-nums", progressColorClass)}>{progress.toFixed(1)} %</span>
+          </div>
+          <div className="w-full h-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+            <div 
+              className={cn("h-full rounded-full transition-all duration-500", progressBgClass)}
+              style={{ width: `${barWidth}%` }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
