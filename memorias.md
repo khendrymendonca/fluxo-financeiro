@@ -1740,3 +1740,17 @@ Em recÃ¡lculo:
      - A transação de receita (entrada no cartão de crédito) é gravada preservando a categoria original selecionada no formulário (ex: "Abatimento Fatura" ou "Estorno") e com a flag `is_invoice_payment: true`, garantindo o abatimento correto na fatura do respectivo mês sem forçar o uso da categoria genérica "Transferência" na entrada.
 - **Motivação**: Atender ao pedido do usuário de poder registrar a conta de origem de onde saiu o dinheiro ao lançar um abatimento manual avulso no cartão de crédito diretamente pelo formulário de lançamentos, garantindo que o saldo da conta corrente seja devidamente reduzido em pagamentos parciais informados.
 
+## [2026-06-29] Ajuste de UI / Lógica de Relatórios - Exibição de Faturas no Ranking de Categorias por Conta e Alinhamento do Grid Mobile
+- **Resumo**: Realizamos melhorias na precisão do ranking de categorias de despesa e na simetria do painel de métricas no celular na tela de relatórios ([ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx)):
+  1. **Inclusão de Pagamento de Faturas no Ranking por Conta**:
+     - Previamente, o ranking de despesas por categoria e o filtro de detalhe filtravam de fora qualquer transação com `isInvoicePayment === true` (pagamentos de faturas). Isso causava um "buraco" nos dados quando o usuário selecionava uma conta corrente específica (ex: Itaú), ocultando a fatura de cartão paga por ela.
+     - Ajustamos `buildCategoryExpenseRanking`, `buildProjectedCategoryExpenseRanking` e `getCategoryTransactionsForPeriod` para que, **quando o filtro de conta for específico** (`selectedAccountId !== 'all'`), as transações de pagamento de fatura da respectiva conta bancária sejam incluídas no ranking de despesas e detalhes sob a categoria canônica "Cartão de Crédito" (`LOGICAL_INVOICE_CATEGORY_KEY`).
+     - Caso o filtro seja "Todas as Contas", o comportamento original é mantido (compras individuais do cartão são exibidas e faturas pagas são ocultadas para evitar dupla contagem).
+  2. **Ajuste de Simetria no Grid Mobile do Painel de Estatísticas**:
+     - No layout de celular (mobile), as métricas superiores formam um grid de duas colunas. O card `FluxoScoreCard` possuía a classe `col-span-2 md:col-span-1`, o que fazia com que ele ficasse esticado na segunda linha inteira, deixando um quadrado vazio à direita do card de "Saldo".
+     - Alteramos a classe CSS do `FluxoScoreCard` para `className="col-span-1"`.
+     - Desta forma, o painel de métricas monta um layout 2x2 perfeitamente simétrico no celular:
+       - Linha 1: Receitas (esquerda), Despesas (direita)
+       - Linha 2: Saldo (esquerda), Fluxo Score (direita)
+- **Motivação**: Garantir a precisão dos relatórios de categoria ao filtrar por conta corrente individual e melhorar o design de grade no mobile para fechar o grid simetricamente, proporcionando uma experiência de uso excelente.
+

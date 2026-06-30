@@ -308,7 +308,11 @@ export function buildCategoryExpenseRanking({
   }>();
 
   transactions.forEach((transaction) => {
-    if (!isRealizedCategoryConsumptionExpense(transaction)) return;
+    const isAllowed = selectedAccountId !== 'all'
+      ? (transaction.type === 'expense' && transaction.isPaid && !transaction.isTransfer && !transaction.deleted_at && (transaction.isInvoicePayment || !transaction.cardId))
+      : isRealizedCategoryConsumptionExpense(transaction);
+
+    if (!isAllowed) return;
     if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return;
     if (!periodKeys.has(getCategoryConsumptionPeriodKey(transaction))) return;
 
@@ -464,7 +468,11 @@ function buildProjectedCategoryExpenseRanking({
       month,
       selectedAccountId,
     }).forEach((transaction) => {
-      if (!isProjectedCategoryConsumptionExpense(transaction)) return;
+      const isAllowed = selectedAccountId !== 'all'
+        ? (transaction.type === 'expense' && !transaction.isTransfer && !transaction.deleted_at && (transaction.isInvoicePayment || !transaction.cardId))
+        : isProjectedCategoryConsumptionExpense(transaction);
+
+      if (!isAllowed) return;
 
       const bucket = getTransactionCategoryBucket(transaction, categories, 'Não identificados');
       const current = distMap.get(bucket.key) ?? {
@@ -618,10 +626,13 @@ function getCategoryTransactionsForPeriod({
 
   return scopedTransactions
     .filter((transaction) => {
-      if (reportMode === 'projected') {
-        if (!isProjectedCategoryConsumptionExpense(transaction)) return false;
-      } else {
-        if (!isRealizedCategoryConsumptionExpense(transaction)) return false;
+      const isAllowed = selectedAccountId !== 'all'
+        ? (transaction.type === 'expense' && !transaction.isTransfer && !transaction.deleted_at && (transaction.isInvoicePayment || !transaction.cardId))
+        : (reportMode === 'projected' ? isProjectedCategoryConsumptionExpense(transaction) : isRealizedCategoryConsumptionExpense(transaction));
+
+      if (!isAllowed) return false;
+
+      if (reportMode === 'realized') {
         if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return false;
         if (!periodKeys.has(getCategoryConsumptionPeriodKey(transaction))) return false;
       }
@@ -1384,7 +1395,7 @@ export default function ReportsDashboard() {
           compact={isMobile}
         />
         {fluxoScoreEnabled ? (
-          <FluxoScoreCard score={fluxoScore.score} className="col-span-2 md:col-span-1" />
+          <FluxoScoreCard score={fluxoScore.score} className="col-span-1" />
         ) : null}
       </div>
 
