@@ -6,11 +6,11 @@ function hsvToHex(h: number, s: number, v: number): string {
     s = s / 100;
     v = v / 100;
     let r = 0, g = 0, b = 0;
-    let i = Math.floor(h * 6);
-    let f = h * 6 - i;
-    let p = v * (1 - s);
-    let q = v * (1 - f * s);
-    let t = v * (1 - (1 - f) * s);
+    const i = Math.floor(h * 6);
+    const f = h * 6 - i;
+    const p = v * (1 - s);
+    const q = v * (1 - f * s);
+    const t = v * (1 - (1 - f) * s);
     switch (i % 6) {
         case 0: r = v; g = t; b = p; break;
         case 1: r = q; g = v; b = p; break;
@@ -31,17 +31,17 @@ function hexToHsv(hex: string): { h: number, s: number, v: number } {
     if (hex.length === 3) {
         hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
     }
-    let r = parseInt(hex.substring(0, 2), 16) / 255 || 0;
-    let g = parseInt(hex.substring(2, 4), 16) / 255 || 0;
-    let b = parseInt(hex.substring(4, 6), 16) / 255 || 0;
+    const r = parseInt(hex.substring(0, 2), 16) / 255 || 0;
+    const g = parseInt(hex.substring(2, 4), 16) / 255 || 0;
+    const b = parseInt(hex.substring(4, 6), 16) / 255 || 0;
 
-    let max = Math.max(r, g, b);
-    let min = Math.min(r, g, b);
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
     let h = 0;
     let s = 0;
-    let v = max;
+    const v = max;
 
-    let d = max - min;
+    const d = max - min;
     s = max === 0 ? 0 : d / max;
 
     if (max !== min) {
@@ -201,7 +201,7 @@ export function VisualColorPicker({ value, onChange, label }: VisualColorPickerP
     };
 
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let val = e.target.value;
+        const val = e.target.value;
         setTextValue(val);
         
         // Se for um hex válido de 7 caracteres (com o #), atualiza as cores

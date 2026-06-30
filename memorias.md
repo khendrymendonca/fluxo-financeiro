@@ -1809,4 +1809,10 @@ Em recÃ¡lculo:
      - Adicionamos um botão de atalho flutuante e fixo **"Imprimir Tela (UX/UI)"** em [Index.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/Index.tsx) visível exclusivamente para super administradores (`isSuperAdmin`) para capturar o layout a qualquer momento.
 - **Motivação**: Munir o administrador com ferramentas práticas para enviar wireframes fieis do app para especialistas em design de interface, e agregar valor gerencial imediato aos usuários finais.
 
+## [2026-06-30] Ajuste Arquitetural / UI - Correção de Build de Produção, ESLint e Warnings de CSS no Print Layout
+- **Resumo**: Corrigimos problemas remanescentes de qualidade e sintaxe que impediam o pipeline de validação (`npm run validate` e `npm run build`) de completar com sucesso:
+  1. **ESLint (prefer-const)**: Atualizamos 19 ocorrências em [VisualColorPicker.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/ui/VisualColorPicker.tsx) e [useThemeColor.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useThemeColor.tsx) de variáveis declaradas com `let` que não sofriam reatribuição para `const`, satisfazendo as regras de conformidade de código do linter.
+  2. **Minificação CSS no Vite**: Corrigimos os seletores de classes com colchetes e pontos gerados pelo Tailwind dentro do bloco `@media print` no arquivo [index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css) escapando-os adequadamente (`.rounded-\[1\.75rem\\]`, `.rounded-\[2rem\\]`, `.rounded-\[2\.5rem\\]`). Isso eliminou o aviso `Expected identifier` que ocorria durante a etapa de minificação de CSS no empacotamento de produção.
+- **Motivação**: Garantir a conformidade total do linter do projeto e a compilação limpa sem avisos ou erros de pipeline na build de produção.
+
 
