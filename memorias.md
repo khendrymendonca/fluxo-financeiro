@@ -1782,3 +1782,18 @@ Em recÃ¡lculo:
      - Movemos o `ComparisonBadge` (com `compact={true}`) para ficar posicionado **imediatamente à direita do valor principal do card** na mesma linha, mantendo um alinhamento natural e despoluindo o topo do card.
 - **Motivação**: Melhorar a usabilidade e legibilidade do painel, permitindo que o usuário visualize Previsto e Realizado simultaneamente sem esforço cognitivo, além de harmonizar o visual dos cartões ao mover a variação percentual para o lado do valor principal.
 
+## [2026-06-29] Ajuste de UI / Lógica de Relatórios - Padronização Completa dos Cartões Financeiros e Remoção de Barras de Progresso
+- **Resumo**: Realizamos a padronização e simplificação visual absoluta dos cartões de métrica principais em [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx):
+  1. **Remoção de Barras de Progresso e Métricas Ad-Hoc**:
+     - Removemos completamente o conceito de "Taxa de Poupança" do card de Saldo, pois não existe esse conceito ou recurso correspondente em outras áreas do app.
+     - Eliminamos as barras de progresso horizontais e suas respectivas labels dos cards de **Despesas** (consumo da receita) e **Saldo** (atingimento da meta/poupança).
+     - Deletamos o hook `cardProgressions` do código do componente, reduzindo o processamento e limpando código inútil.
+  2. **Padronização Absoluta do Layout**:
+     - O componente `StatCard` foi simplificado e teve as props `progress`, `progressLabel` e `progressType` removidas.
+     - Agora, todos os 3 cartões financeiros principais (Receitas, Despesas e Saldo) possuem exatamente a mesma estrutura visual simétrica:
+       - Cabeçalho minimalista contendo apenas o ícone.
+       - Título superior (previsto vs realizado).
+       - Valor principal alinhado horizontalmente com o `ComparisonBadge` compacto (setinha e percentual de variação) à sua direita.
+       - Linha de rodapé elegante dividida por `border-t` mostrando os valores de **Previsto** e **Realizado** lado a lado.
+- **Motivação**: Atender ao pedido de padronização total dos cards financeiros pelo usuário, mantendo a consistência na exibição dos percentuais ao lado dos valores principais, e removendo elementos como a taxa de poupança para evitar complexidade ou confusão.
+

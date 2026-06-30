@@ -909,49 +909,7 @@ export default function ReportsDashboard() {
     };
   }, [intervals, getPeriodDataForMode, reportMode]);
 
-  const cardProgressions = useMemo(() => {
-    // 1. Receitas
-    let incomeProgress = 0;
-    let incomeProgressLabel = "Atingimento da Meta";
 
-    if (reportMode === 'realized') {
-      const projected = buildProjectedReportPeriodData({
-        transactions,
-        creditCards,
-        categories,
-        start: intervals.start,
-        end: intervals.end,
-        selectedAccountId,
-      });
-      incomeProgress = projected.income > 0 ? (metrics.income / projected.income) * 100 : 100;
-      incomeProgressLabel = "Meta de Receitas";
-    } else {
-      const realized = buildReportPeriodData({
-        transactions,
-        categories,
-        start: intervals.start,
-        end: intervals.end,
-        selectedAccountId,
-      });
-      incomeProgress = metrics.income > 0 ? (realized.income / metrics.income) * 100 : 0;
-      incomeProgressLabel = "Realizado de fato";
-    }
-
-    // 2. Despesas
-    const expensesProgress = metrics.income > 0 ? (metrics.totalExpenses / metrics.income) * 100 : 0;
-    const expensesProgressLabel = "Consumo da Receita";
-
-    // 3. Saldo
-    const savingsRate = metrics.income > 0 ? (metrics.balance / metrics.income) * 100 : 0;
-    const balanceProgress = savingsRate;
-    const balanceProgressLabel = metrics.balance >= 0 ? "Taxa de Poupança" : "Déficit do Orçamento";
-
-    return {
-      income: { progress: incomeProgress, label: incomeProgressLabel },
-      expenses: { progress: expensesProgress, label: expensesProgressLabel },
-      balance: { progress: balanceProgress, label: balanceProgressLabel }
-    };
-  }, [transactions, creditCards, categories, intervals, metrics, reportMode, selectedAccountId]);
 
   const consumptionTrendData = useMemo<ConsumptionTrendPoint[]>(() => {
     const points = buildTrendPeriodPoints(period, viewDate);
@@ -1517,9 +1475,6 @@ export default function ReportsDashboard() {
           forceRed
           invertColors
           compact={isMobile}
-          progress={cardProgressions.expenses.progress}
-          progressLabel={cardProgressions.expenses.label}
-          progressType="expense"
           projectedValue={metrics.projectedExpenses}
           realizedValue={metrics.realizedExpenses}
         />
@@ -1532,9 +1487,6 @@ export default function ReportsDashboard() {
           isNeutral
           className="col-span-2 md:col-span-1"
           compact={false}
-          progress={cardProgressions.balance.progress}
-          progressLabel={cardProgressions.balance.label}
-          progressType="balance"
           projectedValue={metrics.projectedBalance}
           realizedValue={metrics.realizedBalance}
         />
@@ -1899,9 +1851,6 @@ function StatCard({
   invertColors,
   compact = false,
   isPercentValue = false,
-  progress,
-  progressLabel,
-  progressType,
   projectedValue,
   realizedValue,
 }: { 
@@ -1915,46 +1864,9 @@ function StatCard({
   invertColors?: boolean,
   compact?: boolean,
   isPercentValue?: boolean,
-  progress?: number,
-  progressLabel?: string,
-  progressType?: 'income' | 'expense' | 'balance',
   projectedValue?: number,
   realizedValue?: number,
 }) {
-  let progressBgClass = "bg-primary";
-  let progressColorClass = "text-primary";
-
-  if (progress !== undefined) {
-    if (progressType === 'income') {
-      progressBgClass = "bg-emerald-500";
-      progressColorClass = "text-emerald-600 dark:text-emerald-400";
-    } else if (progressType === 'expense') {
-      if (progress > 100) {
-        progressBgClass = "bg-rose-500 animate-pulse";
-        progressColorClass = "text-rose-600 dark:text-rose-400 font-black";
-      } else if (progress > 80) {
-        progressBgClass = "bg-amber-500";
-        progressColorClass = "text-amber-600 dark:text-amber-400";
-      } else {
-        progressBgClass = "bg-emerald-500";
-        progressColorClass = "text-emerald-600 dark:text-emerald-400";
-      }
-    } else if (progressType === 'balance') {
-      if (progress < 0) {
-        progressBgClass = "bg-rose-500 animate-pulse";
-        progressColorClass = "text-rose-600 dark:text-rose-400 font-black";
-      } else if (progress < 15) {
-        progressBgClass = "bg-amber-500";
-        progressColorClass = "text-amber-600 dark:text-amber-400";
-      } else {
-        progressBgClass = "bg-primary";
-        progressColorClass = "text-primary";
-      }
-    }
-  }
-
-  const barWidth = progress !== undefined ? Math.min(100, Math.max(0, Math.abs(progress))) : 0;
-
   return (
     <div className={cn(
       "bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 shadow-sm group transition-all relative overflow-hidden flex flex-col justify-between",
@@ -1997,21 +1909,6 @@ function StatCard({
           <div className="flex items-center gap-1">
             <span className="opacity-60">Realizado:</span>
             <span className="font-black text-gray-800 dark:text-zinc-100 tabular-nums">{formatCurrency(realizedValue)}</span>
-          </div>
-        </div>
-      )}
-
-      {progress !== undefined && progressLabel && !compact && (
-        <div className="mt-4 pt-3 border-t border-gray-50 dark:border-zinc-800/30 space-y-1.5 w-full">
-          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-            <span>{progressLabel}</span>
-            <span className={cn("tabular-nums", progressColorClass)}>{progress.toFixed(1)} %</span>
-          </div>
-          <div className="w-full h-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-            <div 
-              className={cn("h-full rounded-full transition-all duration-500", progressBgClass)}
-              style={{ width: `${barWidth}%` }}
-            />
           </div>
         </div>
       )}
