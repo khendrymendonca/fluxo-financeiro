@@ -1815,4 +1815,15 @@ Em recÃ¡lculo:
   2. **Minificação CSS no Vite**: Corrigimos os seletores de classes com colchetes e pontos gerados pelo Tailwind dentro do bloco `@media print` no arquivo [index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css) escapando-os adequadamente (`.rounded-\[1\.75rem\\]`, `.rounded-\[2rem\\]`, `.rounded-\[2\.5rem\\]`). Isso eliminou o aviso `Expected identifier` que ocorria durante a etapa de minificação de CSS no empacotamento de produção.
 - **Motivação**: Garantir a conformidade total do linter do projeto e a compilação limpa sem avisos ou erros de pipeline na build de produção.
 
+## [2026-06-30] Ajuste de UI / Lógica de Relatórios - Adaptação Mobile para Cartões Financeiros e Correção do PrintReportModal
+- **Resumo**: Implementamos melhorias de layout responsivo no celular e corrigimos um travamento crítico nos relatórios:
+  1. **Adaptação Mobile dos Cartões Financeiros (StatCard)**:
+     - No layout mobile (`md:hidden`), ocultamos a exibição simultânea de Previsto e Realizado lado a lado no rodapé dos cartões devido à limitação de espaço.
+     - Em vez disso, no mobile exibimos dinamicamente apenas a métrica complementar à visualização ativa: se o usuário estiver na visualização Projetada (`reportMode === 'projected'`), exibimos o valor **Realizado** no rodapé; se estiver na visualização Realizada (`reportMode === 'realized'`), exibimos o valor **Previsto** no rodapé.
+     - Mantivemos a exibição lado a lado completa em telas maiores (desktop).
+     - Alteramos o card de Saldo para usar `compact={isMobile}` no mobile para garantir coerência visual de espaçamento e padding.
+  2. **Correção de Crash no PrintReportModal**:
+     - Corrigimos o erro `Cannot read properties of undefined (reading 'toLocaleString')` ao tentar abrir o modal de impressão de relatórios. O problema ocorria porque passávamos a lista crua de categorias (`expenseCategories`), que não continha a propriedade `value` computada. Substituímos por `topCategories`, que contém os dados corretos de ranking e valores consolidados.
+- **Motivação**: Tornar a interface móvel limpa, legível e livre de quebras de linha em telas pequenas, e restabelecer a funcionalidade de extração de relatórios gerenciais sem erros de runtime.
+
 

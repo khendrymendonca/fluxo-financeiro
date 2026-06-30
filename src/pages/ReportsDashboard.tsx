@@ -53,6 +53,7 @@ import { accentColors, useThemeColor } from '@/hooks/useThemeColor';
 import { formatCurrency } from '@/utils/formatters';
 import { parseLocalDate } from '@/utils/dateUtils';
 import { useAuth } from '@/contexts/AuthContext';
+import { getUserFirstName } from '@/utils/userIdentity';
 import {
   getTransactionCategoryBucket,
   getTransactionCategoryLabel,
@@ -1492,6 +1493,7 @@ export default function ReportsDashboard() {
           compact={isMobile}
           projectedValue={metrics.projectedIncome}
           realizedValue={metrics.realizedIncome}
+          reportMode={reportMode}
         />
         <StatCard
           label={reportMode === 'projected' ? 'Despesas previstas' : 'Despesas efetivas'}
@@ -1504,6 +1506,7 @@ export default function ReportsDashboard() {
           compact={isMobile}
           projectedValue={metrics.projectedExpenses}
           realizedValue={metrics.realizedExpenses}
+          reportMode={reportMode}
         />
         <StatCard
           label={reportMode === 'projected' ? 'Saldo previsto' : 'Saldo efetivo do período'}
@@ -1513,9 +1516,10 @@ export default function ReportsDashboard() {
           periodLabel={periodLabel}
           isNeutral
           className="col-span-2 md:col-span-1"
-          compact={false}
+          compact={isMobile}
           projectedValue={metrics.projectedBalance}
           realizedValue={metrics.realizedBalance}
+          reportMode={reportMode}
         />
         {fluxoScoreEnabled ? (
           <FluxoScoreCard score={fluxoScore.score} className="col-span-2 md:col-span-1" />
@@ -1802,10 +1806,10 @@ export default function ReportsDashboard() {
           period={period}
           periodLabel={periodLabel}
           currentPeriodLabel={currentPeriodLabel}
-          expenseCategories={expenseCategories}
+          expenseCategories={topCategories}
           selectedAccountId={selectedAccountId}
           accounts={accounts}
-          userName={user?.email ? getUserFirstName(user.email) : 'Usuário'}
+          userName={getUserFirstName(user)}
           onClose={() => setShowPrintReport(false)}
         />
       )}
@@ -1895,6 +1899,7 @@ function StatCard({
   isPercentValue = false,
   projectedValue,
   realizedValue,
+  reportMode,
 }: { 
   label: string, 
   value: number, 
@@ -1908,6 +1913,7 @@ function StatCard({
   isPercentValue?: boolean,
   projectedValue?: number,
   realizedValue?: number,
+  reportMode?: 'projected' | 'realized',
 }) {
   return (
     <div className={cn(
@@ -1944,13 +1950,31 @@ function StatCard({
 
       {projectedValue !== undefined && realizedValue !== undefined && (
         <div className="mt-4 pt-3 border-t border-gray-100 dark:border-zinc-800/80 flex items-center justify-between text-[11px] font-bold text-muted-foreground w-full gap-2 shrink-0">
-          <div className="flex items-center gap-1">
-            <span className="opacity-60">Previsto:</span>
-            <span className="font-black text-gray-800 dark:text-zinc-100 tabular-nums">{formatCurrency(projectedValue)}</span>
+          {/* Desktop view: show both values side-by-side */}
+          <div className="hidden md:flex items-center justify-between w-full">
+            <div className="flex items-center gap-1">
+              <span className="opacity-60">Previsto:</span>
+              <span className="font-black text-gray-800 dark:text-zinc-100 tabular-nums">{formatCurrency(projectedValue)}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="opacity-60">Realizado:</span>
+              <span className="font-black text-gray-800 dark:text-zinc-100 tabular-nums">{formatCurrency(realizedValue)}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <span className="opacity-60">Realizado:</span>
-            <span className="font-black text-gray-800 dark:text-zinc-100 tabular-nums">{formatCurrency(realizedValue)}</span>
+          
+          {/* Mobile view: show only the other value (alternative to current reportMode) */}
+          <div className="flex md:hidden items-center justify-center w-full">
+            {reportMode === 'realized' ? (
+              <div className="flex items-center gap-1">
+                <span className="opacity-60">Previsto:</span>
+                <span className="font-black text-gray-800 dark:text-zinc-100 tabular-nums">{formatCurrency(projectedValue)}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1">
+                <span className="opacity-60">Realizado:</span>
+                <span className="font-black text-gray-800 dark:text-zinc-100 tabular-nums">{formatCurrency(realizedValue)}</span>
+              </div>
+            )}
           </div>
         </div>
       )}
