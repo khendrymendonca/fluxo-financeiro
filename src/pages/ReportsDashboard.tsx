@@ -1234,237 +1234,37 @@ export default function ReportsDashboard() {
   return (
     <>
       <div className="space-y-8 animate-fade-in max-w-[1600px] mx-auto pb-10 px-4 xl:px-6 no-print-report-view">
-      <PageHeader title="Relatórios Analíticos" icon={PieIcon}>
-        {isMobile ? (
-          <div className="w-full space-y-3 no-print">
-            <div className="space-y-2">
-              <div className="flex w-full bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
-                {(['projected', 'realized'] as ReportMode[]).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setReportMode(mode)}
-                    className={cn(
-                      "flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
-                      reportMode === mode ? "bg-primary text-white shadow-lg" : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {mode === 'projected' ? 'Projetado' : 'Realizado'}
-                  </button>
-                ))}
-              </div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <PageHeader title="Relatórios Analíticos" icon={PieIcon} />
+      </div>
 
-              <div className="flex w-full bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
-                {(['month', 'semester', 'year'] as Period[]).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPeriod(p)}
-                    className={cn(
-                      "flex-1 px-2 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
-                      period === p ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-lg" : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {p === 'month' ? 'Mês' : p === 'semester' ? 'Semestre' : 'Ano'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[1.75rem] border border-gray-100 bg-white/90 p-2 dark:border-zinc-800 dark:bg-zinc-900/90">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handlePrevPeriod}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-gray-100 bg-gray-50 transition-colors hover:bg-gray-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700"
-                  aria-label="Período anterior"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-
-                <div className="min-w-0 flex-1 rounded-2xl bg-gray-50/70 px-3 py-2 text-center dark:bg-zinc-800/60">
-                  <p className="truncate text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
-                    {period === 'month' ? 'Mês' : period === 'semester' ? 'Semestre' : 'Ano'}
-                  </p>
-                  <p className="truncate text-sm font-black text-foreground">{currentPeriodLabel}</p>
-                </div>
-
-                <button
-                  onClick={handleNextPeriod}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-gray-100 bg-gray-50 transition-colors hover:bg-gray-100 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700"
-                  aria-label="Próximo período"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <Select
-                  value={String(viewDate.getFullYear())}
-                  onValueChange={(val) => setViewDate(new Date(Number(val), period === 'semester' ? (viewDate.getMonth() < 6 ? 0 : 6) : 0, 1))}
-                >
-                  <SelectTrigger className="h-10 rounded-2xl border-0 bg-gray-50 font-black text-xs uppercase tracking-widest dark:bg-zinc-800/80">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-2xl border-2">
-                    {yearOptions.map((year) => (
-                      <SelectItem key={year} value={String(year)} className="font-bold">{year}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {period === 'semester' ? (
-                  <Select
-                    value={viewDate.getMonth() < 6 ? '1' : '2'}
-                    onValueChange={(val) => setViewDate(new Date(viewDate.getFullYear(), val === '1' ? 0 : 6, 1))}
-                  >
-                    <SelectTrigger className="h-10 rounded-2xl border-0 bg-gray-50 font-black text-xs uppercase tracking-widest dark:bg-zinc-800/80">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl border-2">
-                      <SelectItem value="1" className="font-bold">1º Semestre</SelectItem>
-                      <SelectItem value="2" className="font-bold">2º Semestre</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : period === 'month' ? (
-                  <Select
-                    value={String(viewDate.getMonth())}
-                    onValueChange={(val) => setViewDate(new Date(viewDate.getFullYear(), Number(val), 1))}
-                  >
-                    <SelectTrigger className="h-10 rounded-2xl border-0 bg-gray-50 font-black text-xs uppercase tracking-widest dark:bg-zinc-800/80">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl border-2">
-                      {Array.from({ length: 12 }).map((_, monthIndex) => (
-                        <SelectItem key={monthIndex} value={String(monthIndex)} className="font-bold">
-                          {format(new Date(2026, monthIndex, 1), 'MMMM', { locale: ptBR })}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : null}
-              </div>
-            </div>
-
-            <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-              <SelectTrigger className="h-11 w-full rounded-2xl bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 font-bold text-gray-900 dark:text-zinc-50 outline-none">
-                <Wallet className="w-4 h-4 mr-2 text-primary" />
-                <SelectValue placeholder="Conta" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl border-2">
-                <SelectItem value="all" className="font-bold">Todas as Contas</SelectItem>
-                {accounts.map((acc) => (
-                  <SelectItem key={acc.id} value={acc.id} className="font-bold">{acc.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {selectedAccountId === 'all' && (
-              <BudgetOverview
-                categories={categories}
-                transactions={transactions}
-                viewDate={viewDate}
-                period={period}
-                reportMode={reportMode}
-                periodIncome={metrics.income}
+      {/* Painel de Controle de Filtros (Apple-style structured card) */}
+      <div className="bg-card border border-border/50 rounded-[2rem] p-5 shadow-md no-print grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+        
+        {/* SEÇÃO 1: PERÍODO E NAVEGAÇÃO */}
+        <div className="space-y-2">
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground block">
+            Período e Visualização
+          </span>
+          <div className="flex flex-col gap-2">
+            {/* Tabs para Mês/Semestre/Ano */}
+            <div className="relative flex p-0.5 bg-gray-100 dark:bg-zinc-800 rounded-xl h-9 items-center w-full">
+              <div 
+                className="absolute top-0.5 bottom-0.5 bg-white dark:bg-zinc-700 rounded-lg shadow-sm transition-all duration-200 ease-out" 
+                style={{
+                  width: 'calc(33.333% - 2px)',
+                  transform: `translateX(${
+                    period === 'month' ? '0%' : period === 'semester' ? '100%' : '200%'
+                  })`
+                }}
               />
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-wrap items-center gap-3 no-print">
-            <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl p-1">
-              {period === 'month' ? (
-                <>
-                  <button onClick={handlePrevPeriod} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <div className="px-2 min-w-[120px] text-center">
-                    <span className="text-xs font-black uppercase tracking-widest truncate">
-                      {format(viewDate, 'MMMM yyyy', { locale: ptBR })}
-                    </span>
-                  </div>
-                  <button onClick={handleNextPeriod} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </>
-              ) : period === 'semester' ? (
-                <div className="flex items-center">
-                  <Select
-                    value={String(viewDate.getFullYear())}
-                    onValueChange={(val) => setViewDate(new Date(Number(val), viewDate.getMonth() < 6 ? 0 : 6, 1))}
-                  >
-                    <SelectTrigger className="h-9 border-none bg-transparent font-black uppercase tracking-widest text-xs min-w-[90px] outline-none shadow-none focus:ring-0">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl border-2">
-                      {yearOptions.map(year => (
-                        <SelectItem key={year} value={String(year)} className="font-bold">{year}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={viewDate.getMonth() < 6 ? '1' : '2'}
-                    onValueChange={(val) => setViewDate(new Date(viewDate.getFullYear(), val === '1' ? 0 : 6, 1))}
-                  >
-                    <SelectTrigger className="h-9 border-none bg-transparent font-black uppercase tracking-widest text-xs min-w-[150px] outline-none shadow-none focus:ring-0">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl border-2">
-                      <SelectItem value="1" className="font-bold">1º Semestre</SelectItem>
-                      <SelectItem value="2" className="font-bold">2º Semestre</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <Select
-                  value={String(viewDate.getFullYear())}
-                  onValueChange={(val) => setViewDate(new Date(Number(val), 0, 1))}
-                >
-                  <SelectTrigger className="h-9 border-none bg-transparent font-black uppercase tracking-widest text-xs min-w-[100px] outline-none shadow-none focus:ring-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-2xl border-2">
-                    {yearOptions.map(year => (
-                      <SelectItem key={year} value={String(year)} className="font-bold">{year}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-              <SelectTrigger className="h-11 w-[180px] rounded-2xl bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 font-bold text-gray-900 dark:text-zinc-50 outline-none">
-                <Wallet className="w-4 h-4 mr-2 text-primary" />
-                <SelectValue placeholder="Conta" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl border-2">
-                <SelectItem value="all" className="font-bold">Todas as Contas</SelectItem>
-                {accounts.map(acc => (
-                  <SelectItem key={acc.id} value={acc.id} className="font-bold">{acc.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <div className="flex bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
-              {(['projected', 'realized'] as ReportMode[]).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setReportMode(mode)}
-                  className={cn(
-                    "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
-                    reportMode === mode ? "bg-primary text-white shadow-lg" : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {mode === 'projected' ? 'Projetado' : 'Realizado'}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2 border-gray-100 dark:border-zinc-800">
               {(['month', 'semester', 'year'] as Period[]).map((p) => (
                 <button
                   key={p}
                   onClick={() => setPeriod(p)}
                   className={cn(
-                    "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
-                    period === p ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-lg" : "text-muted-foreground hover:text-foreground"
+                    "relative z-10 flex-1 py-1 text-center font-bold text-[10px] uppercase tracking-wider transition-colors duration-200 select-none",
+                    period === p ? "text-gray-900 dark:text-zinc-50" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {p === 'month' ? 'Mês' : p === 'semester' ? 'Semestre' : 'Ano'}
@@ -1472,16 +1272,147 @@ export default function ReportsDashboard() {
               ))}
             </div>
 
-            <button
-              onClick={() => setShowPrintReport(true)}
-              className="h-11 px-4 text-[10px] font-black uppercase tracking-widest rounded-2xl bg-primary text-white hover:bg-teal-700 transition-all flex items-center gap-2 shadow-sm border-2 border-primary"
-            >
-              <FileText className="w-4 h-4" />
-              <span>Extrair Relatório</span>
-            </button>
+            {/* Controles de avanço do período */}
+            <div className="flex items-center justify-between bg-gray-50 dark:bg-zinc-800 rounded-xl border border-border/40 p-0.5 h-9">
+              <button
+                onClick={handlePrevPeriod}
+                className="p-1.5 hover:bg-white dark:hover:bg-zinc-700 rounded-lg transition-all"
+                aria-label="Período anterior"
+              >
+                <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+              </button>
+              <span className="text-[10px] font-black uppercase tracking-wider text-foreground truncate max-w-[150px]">
+                {currentPeriodLabel}
+              </span>
+              <button
+                onClick={handleNextPeriod}
+                className="p-1.5 hover:bg-white dark:hover:bg-zinc-700 rounded-lg transition-all"
+                aria-label="Próximo período"
+              >
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
           </div>
-        )}
-      </PageHeader>
+        </div>
+
+        {/* SEÇÃO 2: REGIME E FILTRO DE CONTA */}
+        <div className="space-y-2">
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground block">
+            Conta & Regime Financeiro
+          </span>
+          <div className="flex flex-col gap-2">
+            {/* Seletor de Conta */}
+            <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+              <SelectTrigger className="h-9 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-border/50 font-bold text-xs text-foreground outline-none w-full">
+                <Wallet className="w-3.5 h-3.5 mr-2 text-primary" />
+                <SelectValue placeholder="Conta" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border border-border/50">
+                <SelectItem value="all" className="font-bold">Todas as Contas</SelectItem>
+                {accounts.map((acc) => (
+                  <SelectItem key={acc.id} value={acc.id} className="font-bold">
+                    {acc.bank ? `${acc.bank} - ${acc.name}` : acc.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Tabs para Projetado/Realizado */}
+            <div className="relative flex p-0.5 bg-gray-100 dark:bg-zinc-800 rounded-xl h-9 items-center w-full">
+              <div 
+                className="absolute top-0.5 bottom-0.5 bg-white dark:bg-zinc-700 rounded-lg shadow-sm transition-all duration-200 ease-out" 
+                style={{
+                  width: 'calc(50% - 2px)',
+                  transform: `translateX(${
+                    reportMode === 'projected' ? '0%' : '100%'
+                  })`
+                }}
+              />
+              {(['projected', 'realized'] as ReportMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setReportMode(mode)}
+                  className={cn(
+                    "relative z-10 flex-1 py-1 text-center font-bold text-[10px] uppercase tracking-wider transition-colors duration-200 select-none",
+                    reportMode === mode ? "text-gray-900 dark:text-zinc-50" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {mode === 'projected' ? 'Projetado' : 'Realizado'}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* SEÇÃO 3: SELEÇÃO DE DATA ADICIONAL & AÇÕES */}
+        <div className="space-y-2">
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground block">
+            Filtro de Ano / Mês & Ações
+          </span>
+          <div className="flex gap-2">
+            {/* Select de Ano */}
+            <Select
+              value={String(viewDate.getFullYear())}
+              onValueChange={(val) => setViewDate(new Date(Number(val), period === 'semester' ? (viewDate.getMonth() < 6 ? 0 : 6) : 0, 1))}
+              className="w-full"
+            >
+              <SelectTrigger className="h-9 rounded-xl border border-border/50 bg-gray-50 dark:bg-zinc-800 font-bold text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border border-border/50">
+                {yearOptions.map((year) => (
+                  <SelectItem key={year} value={String(year)} className="font-bold">{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Select de Mês (se aplicável) */}
+            {period === 'month' && (
+              <Select
+                value={String(viewDate.getMonth())}
+                onValueChange={(val) => setViewDate(new Date(viewDate.getFullYear(), Number(val), 1))}
+                className="w-full"
+              >
+                <SelectTrigger className="h-9 rounded-xl border border-border/50 bg-gray-50 dark:bg-zinc-800 font-bold text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border border-border/50">
+                  {Array.from({ length: 12 }).map((_, monthIndex) => (
+                    <SelectItem key={monthIndex} value={String(monthIndex)} className="font-bold">
+                      {format(new Date(2026, monthIndex, 1), 'MMMM', { locale: ptBR })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* Select de Semestre (se aplicável) */}
+            {period === 'semester' && (
+              <Select
+                value={viewDate.getMonth() < 6 ? '1' : '2'}
+                onValueChange={(val) => setViewDate(new Date(viewDate.getFullYear(), val === '1' ? 0 : 6, 1))}
+                className="w-full"
+              >
+                <SelectTrigger className="h-9 rounded-xl border border-border/50 bg-gray-50 dark:bg-zinc-800 font-bold text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border border-border/50">
+                  <SelectItem value="1" className="font-bold">1º Semestre</SelectItem>
+                  <SelectItem value="2" className="font-bold">2º Semestre</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+
+            <Button
+              onClick={() => setShowPrintReport(true)}
+              className="h-9 px-4 text-[10px] font-black uppercase tracking-wider rounded-xl bg-primary text-white hover:bg-teal-700 transition-all flex items-center gap-2 shadow-sm border border-primary shrink-0 ml-auto w-full md:w-auto"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>PDF</span>
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
         <StatCard

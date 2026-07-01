@@ -43,7 +43,7 @@ export function AccountsOverview({ accounts, creditCards }: AccountsOverviewProp
                   <Building2 className="w-4 h-4" style={{ color: account.color }} />
                 </div>
                 <div>
-                  <p className="font-medium text-sm truncate max-w-[100px]">{account.name}</p>
+                  <p className="font-medium text-sm truncate max-w-[160px]">{account.bank ? `${account.bank} - ${account.name}` : account.name}</p>
                   <p className="text-xs text-muted-foreground">{account.bank}</p>
                 </div>
               </div>

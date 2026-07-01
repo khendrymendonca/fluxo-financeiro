@@ -76,6 +76,7 @@ export function TransactionList({
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryKey, setSelectedCategoryKey] = useState('all');
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState('all');
   const [anticipatingIds, setAnticipatingIds] = useState<Set<string>>(new Set());
   const [anticipateAccount, setAnticipateAccount] = useState('');
 
@@ -176,6 +177,9 @@ export function TransactionList({
       }
 
       if (!matchesCanonicalCategoryFilter(t, categories, selectedCategoryKey, 'Não identificados')) return false;
+
+      // Filtro de Subcategoria
+      if (selectedSubcategoryId !== 'all' && t.subcategoryId !== selectedSubcategoryId) return false;
 
       // Filtro de Categoria (Receita/Despesa)
       if (filter !== 'all' && t.type !== filter) return false;
@@ -318,52 +322,102 @@ export function TransactionList({
 
       {/* Filtros */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 space-y-4">
-        <div className="flex flex-wrap gap-4 items-center justify-between">
-          <div className="flex flex-wrap gap-4 items-center">
+        <div className="flex items-center justify-between gap-4 w-full overflow-x-auto no-scrollbar pb-1 md:pb-0">
+          <div className="flex items-center gap-3 shrink-0">
             {/* Receita/Despesa */}
-            <div className="flex gap-1 p-1 bg-gray-50 dark:bg-zinc-800 rounded-xl">
+            <div className="relative flex p-0.5 bg-gray-100 dark:bg-zinc-800 rounded-xl w-[200px] h-9 items-center">
+              <div 
+                className="absolute top-0.5 bottom-0.5 bg-white dark:bg-zinc-700 rounded-lg shadow-sm transition-all duration-200 ease-out" 
+                style={{
+                  width: 'calc(33.333% - 2px)',
+                  transform: `translateX(${
+                    filter === 'all' ? '0%' : filter === 'income' ? '100%' : '200%'
+                  })`
+                }}
+              />
               {(['all', 'income', 'expense'] as const).map(f => (
-                <button key={f} onClick={() => setFilter(f)}
-                  className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
-                    filter === f ? "bg-white dark:bg-zinc-700 shadow-sm text-gray-900 dark:text-zinc-50" : "text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200")}>
-                  {f === 'all' ? 'Todos' : f === 'income' ? 'Receitas' : 'Despesas'}
+                <button 
+                  key={f} 
+                  onClick={() => setFilter(f)}
+                  className={cn(
+                    "relative z-10 flex-1 py-1 text-center font-bold text-[10px] uppercase tracking-wider transition-colors duration-200 select-none",
+                    filter === f ? "text-gray-900 dark:text-zinc-50" : "text-gray-500 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  )}
+                >
+                  {f === 'all' ? 'Todos' : f === 'income' ? 'Rec.' : 'Desp.'}
                 </button>
               ))}
             </div>
 
             {/* Origem */}
-            <div className="flex gap-1 p-1 bg-gray-50 dark:bg-zinc-800 rounded-xl">
-              <button onClick={() => { setSourceFilter('all'); setSpecificSourceId('all'); setSelectedBank('all'); }}
-                className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
-                  sourceFilter === 'all' ? "bg-white dark:bg-zinc-700 shadow-sm text-gray-900 dark:text-zinc-50" : "text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200")}>
-                Todas Origens
+            <div className="relative flex p-0.5 bg-gray-100 dark:bg-zinc-800 rounded-xl w-[220px] h-9 items-center">
+              <div 
+                className="absolute top-0.5 bottom-0.5 bg-white dark:bg-zinc-700 rounded-lg shadow-sm transition-all duration-200 ease-out" 
+                style={{
+                  width: 'calc(33.333% - 2px)',
+                  transform: `translateX(${
+                    sourceFilter === 'all' ? '0%' : sourceFilter === 'account' ? '100%' : '200%'
+                  })`
+                }}
+              />
+              <button 
+                onClick={() => { setSourceFilter('all'); setSpecificSourceId('all'); setSelectedBank('all'); }}
+                className={cn(
+                  "relative z-10 flex-1 py-1 text-center font-bold text-[10px] uppercase tracking-wider transition-colors duration-200 select-none",
+                  sourceFilter === 'all' ? "text-gray-900 dark:text-zinc-50" : "text-gray-500 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                )}
+              >
+                Todas
               </button>
-              <button onClick={() => { setSourceFilter('account'); setSpecificSourceId('all'); setSelectedBank('all'); }}
-                className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
-                  sourceFilter === 'account' ? "bg-white dark:bg-zinc-700 shadow-sm text-gray-900 dark:text-zinc-50" : "text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200")}>
+              <button 
+                onClick={() => { setSourceFilter('account'); setSpecificSourceId('all'); setSelectedBank('all'); }}
+                className={cn(
+                  "relative z-10 flex-1 py-1 text-center font-bold text-[10px] uppercase tracking-wider transition-colors duration-200 select-none",
+                  sourceFilter === 'account' ? "text-gray-900 dark:text-zinc-50" : "text-gray-500 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                )}
+              >
                 Débito
               </button>
-              <button onClick={() => { setSourceFilter('card'); setSpecificSourceId('all'); setSelectedBank('all'); }}
-                className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
-                  sourceFilter === 'card' ? "bg-white dark:bg-zinc-700 shadow-sm text-gray-900 dark:text-zinc-50" : "text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200")}>
+              <button 
+                onClick={() => { setSourceFilter('card'); setSpecificSourceId('all'); setSelectedBank('all'); }}
+                className={cn(
+                  "relative z-10 flex-1 py-1 text-center font-bold text-[10px] uppercase tracking-wider transition-colors duration-200 select-none",
+                  sourceFilter === 'card' ? "text-gray-900 dark:text-zinc-50" : "text-gray-500 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                )}
+              >
                 Cartão
               </button>
             </div>
 
             {/* Tipo */}
-            <div className="flex gap-1 p-1 bg-gray-50 dark:bg-zinc-800 rounded-xl">
+            <div className="relative flex p-0.5 bg-gray-100 dark:bg-zinc-800 rounded-xl w-[320px] h-9 items-center">
+              <div 
+                className="absolute top-0.5 bottom-0.5 bg-white dark:bg-zinc-700 rounded-lg shadow-sm transition-all duration-200 ease-out" 
+                style={{
+                  width: 'calc(25% - 2px)',
+                  transform: `translateX(${
+                    typeFilter === 'all' ? '0%' : typeFilter === 'punctual' ? '100%' : typeFilter === 'installment' ? '200%' : '300%'
+                  })`
+                }}
+              />
               {(['all', 'punctual', 'installment', 'fixed'] as const).map(f => (
-                <button key={f} onClick={() => setTypeFilter(f)}
-                  className={cn("py-1.5 px-4 rounded-lg font-bold text-xs transition-all",
-                    typeFilter === f ? "bg-white dark:bg-zinc-700 shadow-sm text-gray-900 dark:text-zinc-50" : "text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200")}>
-                  {f === 'all' ? 'Qualquer Tipo' : f === 'punctual' ? 'Pontual' : f === 'installment' ? 'Parcelado' : 'Fixo'}
+                <button 
+                  key={f} 
+                  onClick={() => setTypeFilter(f)}
+                  className={cn(
+                    "relative z-10 flex-1 py-1 text-center font-bold text-[10px] uppercase tracking-wider transition-colors duration-200 select-none",
+                    typeFilter === f ? "text-gray-900 dark:text-zinc-50" : "text-gray-500 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  )}
+                >
+                  {f === 'all' ? 'Todos' : f === 'punctual' ? 'Pontual' : f === 'installment' ? 'Parc.' : 'Fixo'}
                 </button>
               ))}
             </div>
 
-            <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-800">
+            {/* Categorias Select */}
+            <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-800 shrink-0">
               <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={selectedCategoryKey} onValueChange={setSelectedCategoryKey}>
+              <Select value={selectedCategoryKey} onValueChange={(val) => { setSelectedCategoryKey(val); setSelectedSubcategoryId('all'); }}>
                 <SelectTrigger className="w-auto h-auto bg-transparent border-0 shadow-none focus:ring-0 text-sm font-bold text-foreground p-0 gap-2">
                   <SelectValue placeholder="Todas as categorias" />
                 </SelectTrigger>
@@ -405,18 +459,42 @@ export function TransactionList({
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          {/* Botão de Remoção em Massa */}
-          <Button
-            variant={isSelectionMode ? "default" : "outline"}
-            onClick={toggleSelectionMode}
-            className={cn("h-9 px-4 rounded-xl font-black uppercase text-xs tracking-wider transition-all",
-              isSelectionMode ? "bg-primary text-white" : "border-danger/30 text-danger hover:bg-danger/10")}
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            {isSelectionMode ? 'Sair da Seleção' : 'Remover lançamentos'}
-          </Button>
+            {/* Subcategorias Select */}
+            {(() => {
+              const activeCategoryId = selectedCategoryKey.startsWith('category:') ? selectedCategoryKey.split(':')[1] : null;
+              const activeSubcategories = activeCategoryId ? subcategories.filter(s => s.categoryId === activeCategoryId && s.isActive !== false) : [];
+              if (!activeCategoryId || activeSubcategories.length === 0) return null;
+              return (
+                <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-800 shrink-0 animate-in fade-in duration-200">
+                  <Select value={selectedSubcategoryId} onValueChange={setSelectedSubcategoryId}>
+                    <SelectTrigger className="w-auto h-auto bg-transparent border-0 shadow-none focus:ring-0 text-sm font-bold text-foreground p-0 gap-2">
+                      <SelectValue placeholder="Todas as subcategorias" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as subcategorias</SelectItem>
+                      {activeSubcategories.map(sub => (
+                        <SelectItem key={sub.id} value={sub.id}>
+                          {sub.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })()}
+
+            {/* Botão de Remoção em Massa */}
+            <Button
+              variant={isSelectionMode ? "default" : "outline"}
+              onClick={toggleSelectionMode}
+              className={cn("h-9 px-4 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all shrink-0",
+                isSelectionMode ? "bg-primary text-white" : "border-danger/30 text-danger hover:bg-danger/10")}
+            >
+              <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+              {isSelectionMode ? 'Cancelar' : 'Remover lançamentos'}
+            </Button>
+          </div>
         </div>
 
         {/* Filtro Específico de Contas (Débito) */}
@@ -472,7 +550,7 @@ export function TransactionList({
                           specificSourceId === acc.id ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}
                       >
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: acc.color }} />
-                        {acc.name}
+                        {acc.bank ? `${acc.bank} - ${acc.name}` : acc.name}
                       </button>
                     ))}
                 </div>
