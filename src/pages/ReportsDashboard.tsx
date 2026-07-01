@@ -2212,7 +2212,7 @@ function PrintReportModal({
 
     const totalReleased = timelineEvents.reduce((sum, e) => sum + e.valueReleased, 0);
     const monthsNeeded = timelineEvents.length > 0 
-      ? Math.ceil((parseLocalDate(timelineEvents[timelineEvents.length - 1].date).getTime() - new Date().getTime()) / (30 * 24 * 60 * 60 * 1000))
+      ? Math.ceil((timelineEvents[timelineEvents.length - 1].date.getTime() - new Date().getTime()) / (30 * 24 * 60 * 60 * 1000))
       : 0;
 
     return `Previsão: Nos próximos ${monthsNeeded} meses, à medida que seus acordos e parcelamentos ativos forem quitados, um montante de R$ ${totalReleased.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês será totalmente liberado em seu orçamento, restabelecendo sua saúde de caixa e elevando gradativamente seu Fluxo Score para o patamar máximo de 1000.`;
