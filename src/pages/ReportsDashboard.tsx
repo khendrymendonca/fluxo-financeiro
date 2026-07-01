@@ -15,7 +15,15 @@ import {
   X,
   Award,
   Lightbulb,
-  ShieldAlert
+  ShieldAlert,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Info,
+  Sparkles,
+  TrendingDown,
+  Activity,
+  Calendar
 } from 'lucide-react';
 import {
   Select,
@@ -66,6 +74,7 @@ import { buildCardInvoiceObligations } from '@/utils/invoiceObligations';
 import { buildIncomeConsumption, buildPeriodComparison, PeriodComparison } from '@/utils/reportComparisons';
 import { Category, CreditCard, Transaction } from '@/types/finance';
 import { BudgetOverview } from '@/components/budgets/BudgetOverview';
+import { isAgreementEntryTransaction } from '@/utils/debtAgreement';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { calculateFluxoScore } from '@/utils/fluxoScore';
 import { FluxoScoreCard } from '@/components/dashboard/FluxoScoreCard';
@@ -1934,11 +1943,14 @@ function PrintReportModal({
   userName,
   onClose
 }: PrintReportModalProps) {
+  const { transactions, debts, categories, creditCards } = useFinanceStore();
+
   const totalIncome = metrics.income;
   const totalExpenses = metrics.totalExpenses;
   const balance = metrics.balance;
 
   const consumoPercent = totalIncome > 0 ? (totalExpenses / totalIncome) * 100 : 0;
+  const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
   const top5 = expenseCategories.slice(0, 5);
   const maiorCategoria = expenseCategories.length > 0 ? expenseCategories[0] : null;
   const maiorCategoriaPercent = maiorCategoria && totalExpenses > 0 ? (maiorCategoria.value / totalExpenses) * 100 : 0;
@@ -1947,10 +1959,269 @@ function PrintReportModal({
   const realizedExp = metrics.realizedExpenses;
   const desvio = projectedExp > 0 ? ((realizedExp - projectedExp) / projectedExp) * 100 : 0;
 
+  // 1. Recalcular e Extrair Penalidades Detalhadas do Score
+  const scoreBreakdown = useMemo(() => {
+    return calculateFluxoScore(transactions, debts, new Date());
+  }, [transactions, debts]);
+
+  const scorePenalties = useMemo(() => {
+    const list: { type: 'pending_late' | 'recent_late' | 'agreement'; description: string; points: number; detail: string; action: string }[] = [];
+    const today = new Date();
+
+    transactions.forEach(t => {
+      if (t.deleted_at || t.type !== 'expense') return;
+      if (t.cardId && !t.isInvoicePayment) return;
+      const dueDate = parseLocalDate(t.date);
+
+      if (!t.isPaid) {
+        const msPerDay = 24 * 60 * 60 * 1000;
+        const diff = Math.floor((today.getTime() - dueDate.getTime()) / msPerDay);
+        if (diff > 0) {
+          let points = -10;
+          if (diff <= 3) points = -10;
+          else if (diff <= 10) points = -25;
+          else points = Math.max(-100, -50 - ((diff - 10) * 2));
+
+          list.push({
+            type: 'pending_late',
+            description: t.description,
+            points,
+            detail: `Conta de R$ ${t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} vencida em ${dueDate.toLocaleDateString('pt-BR')} (${diff} dias de atraso).`,
+            action: `Liquide esta conta imediatamente para conter a perda de pontos diária.`
+          });
+        }
+      } else if (t.paymentDate) {
+        const paymentDate = parseLocalDate(t.paymentDate);
+        const msPerDay = 24 * 60 * 60 * 1000;
+        const diff = Math.floor((paymentDate.getTime() - dueDate.getTime()) / msPerDay);
+        if (diff > 0) {
+          const daysSincePayment = Math.floor((today.getTime() - paymentDate.getTime()) / msPerDay);
+          if (daysSincePayment <= 30) {
+            let points = -10;
+            if (diff <= 3) points = -10;
+            else if (diff <= 10) points = -25;
+            else points = Math.max(-100, -50 - ((diff - 10) * 2));
+
+            list.push({
+              type: 'recent_late',
+              description: t.description,
+              points,
+              detail: `Paga com ${diff} dias de atraso em ${paymentDate.toLocaleDateString('pt-BR')}.`,
+              action: `Penalidade temporária. O impacto expirará em ${Math.max(0, 30 - daysSincePayment)} dias.`
+            });
+          }
+        }
+      }
+    });
+
+    debts.forEach(d => {
+      if (d.status === 'paid') return;
+      if (typeof d.remainingAmount === 'number' && d.remainingAmount <= 0) return;
+
+      const installments = transactions.filter(tx => !tx.deleted_at && tx.type === 'expense' && tx.debtId === d.id && !isAgreementEntryTransaction(tx, d.id));
+      const totalInstallments = installments.length > 0 ? installments.length : Math.max(0, Number(d.totalInstallments) || 0);
+      const paidInstallments = installments.filter(tx => tx.isPaid).length;
+      const recovered = totalInstallments > 0 ? (paidInstallments / totalInstallments) * 100 : 0;
+      const points = -100 + recovered;
+
+      list.push({
+        type: 'agreement',
+        description: `Acordo: ${d.name}`,
+        points,
+        detail: `Acordo ativo. ${paidInstallments} de ${totalInstallments} parcelas pagas (${recovered.toFixed(1)}% quitado).`,
+        action: `Amortize parcelas extras para reaver até +${(100 - recovered).toFixed(0)} pontos no Score.`
+      });
+    });
+
+    return list;
+  }, [transactions, debts]);
+
+  // 2. Agrupar e Calcular Parcelamentos Ativos e datas de quitação
+  const activeInstallments = useMemo(() => {
+    const groups = new Map<string, typeof transactions>();
+    transactions.forEach(t => {
+      if (t.installmentGroupId && !t.deleted_at) {
+        if (!groups.has(t.installmentGroupId)) {
+          groups.set(t.installmentGroupId, []);
+        }
+        groups.get(t.installmentGroupId)!.push(t);
+      }
+    });
+
+    const list: {
+      description: string;
+      totalValue: number;
+      paidCount: number;
+      totalCount: number;
+      monthlyValue: number;
+      nextDueDate: string | null;
+      lastDueDate: string | null;
+    }[] = [];
+
+    groups.forEach((txs) => {
+      const sorted = [...txs].sort((a, b) => a.date.localeCompare(b.date));
+      const paid = sorted.filter(t => t.isPaid);
+      const unpaid = sorted.filter(t => !t.isPaid);
+      if (unpaid.length > 0) {
+        const firstUnpaid = unpaid[0];
+        const totalVal = sorted.reduce((sum, t) => sum + t.amount, 0);
+        const monthly = sorted[0].amount;
+        list.push({
+          description: sorted[0].description.replace(/\s\(\d+\/\d+\)$/, ''),
+          totalValue: totalVal,
+          paidCount: paid.length,
+          totalCount: sorted.length,
+          monthlyValue: monthly,
+          nextDueDate: firstUnpaid.date,
+          lastDueDate: sorted[sorted.length - 1].date
+        });
+      }
+    });
+
+    return list;
+  }, [transactions]);
+
+  // 3. Orçamentos Estourados (Categorias acima do planejado)
+  const exceededBudgets = useMemo(() => {
+    const spentMap = new Map<string, number>();
+    transactions.forEach(t => {
+      if (t.type === 'expense' && !t.deleted_at) {
+        const txDate = parseLocalDate(t.date);
+        const refDate = viewDate;
+        let inPeriod = false;
+        if (period === 'month') {
+          inPeriod = txDate.getMonth() === refDate.getMonth() && txDate.getFullYear() === refDate.getFullYear();
+        } else if (period === 'semester') {
+          const refSemester = refDate.getMonth() < 6 ? 0 : 1;
+          const txSemester = txDate.getMonth() < 6 ? 0 : 1;
+          inPeriod = txSemester === refSemester && txDate.getFullYear() === refDate.getFullYear();
+        } else {
+          inPeriod = txDate.getFullYear() === refDate.getFullYear();
+        }
+
+        if (inPeriod) {
+          spentMap.set(t.categoryId, (spentMap.get(t.categoryId) || 0) + t.amount);
+        }
+      }
+    });
+
+    const list: {
+      categoryName: string;
+      spent: number;
+      limit: number;
+      excess: number;
+    }[] = [];
+
+    categories.forEach(c => {
+      if (c.limit && c.limit > 0) {
+        const spent = spentMap.get(c.id) || 0;
+        if (spent > c.limit) {
+          list.push({
+            categoryName: c.name,
+            spent,
+            limit: c.limit,
+            excess: spent - c.limit
+          });
+        }
+      }
+    });
+
+    return list;
+  }, [transactions, categories, viewDate, period]);
+
+  // 4. Linha do Tempo de Liberação Orçamentária (Quitações futuras)
+  const timelineEvents = useMemo(() => {
+    const events: { date: Date; label: string; description: string; valueReleased: number }[] = [];
+    const today = new Date();
+
+    // Parcelamentos
+    activeInstallments.forEach(inst => {
+      if (inst.lastDueDate) {
+        const endDate = parseLocalDate(inst.lastDueDate);
+        if (endDate.getTime() >= today.getTime()) {
+          events.push({
+            date: endDate,
+            label: `Parcelamento Finalizado`,
+            description: `Quitação de '${inst.description}' (${inst.paidCount}/${inst.totalCount} parcelas pagas)`,
+            valueReleased: inst.monthlyValue
+          });
+        }
+      }
+    });
+
+    // Acordos
+    debts.forEach(d => {
+      if (d.status === 'paid') return;
+      if (typeof d.remainingAmount === 'number' && d.remainingAmount <= 0) return;
+
+      const installments = transactions.filter(tx => !tx.deleted_at && tx.type === 'expense' && tx.debtId === d.id && !isAgreementEntryTransaction(tx, d.id));
+      const unpaid = installments.filter(tx => !tx.isPaid).sort((a, b) => a.date.localeCompare(b.date));
+
+      if (unpaid.length > 0) {
+        const lastUnpaid = unpaid[unpaid.length - 1];
+        const endDate = parseLocalDate(lastUnpaid.date);
+        if (endDate.getTime() >= today.getTime()) {
+          events.push({
+            date: endDate,
+            label: `Acordo Finalizado`,
+            description: `Quitação do acordo '${d.name}' (${installments.filter(t => t.isPaid).length + unpaid.length} parcelas totais)`,
+            valueReleased: unpaid[0].amount
+          });
+        }
+      } else {
+        const total = Math.max(0, Number(d.totalInstallments) || 0);
+        const paidCount = installments.filter(tx => tx.isPaid).length;
+        const remaining = total - paidCount;
+        if (remaining > 0) {
+          const endDate = addMonths(today, remaining);
+          events.push({
+            date: endDate,
+            label: `Previsão de Fim de Acordo`,
+            description: `Quitação estimada de '${d.name}' (${remaining} parcelas restantes)`,
+            valueReleased: d.installmentAmount || (Number(d.amount) / total) || 0
+          });
+        }
+      }
+    });
+
+    return events.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [activeInstallments, debts, transactions]);
+
+  // 5. Saúde e Classificação Financeira
+  const healthStatus = useMemo(() => {
+    const score = scoreBreakdown.score;
+    if (score >= 900 && savingsRate >= 20) return { label: 'Excelente', color: 'text-emerald-600', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', desc: 'Sua vida financeira está em estado de excelência. Alta capacidade de poupança, Score excelente e baixíssimo endividamento parcelado.' };
+    if (score >= 800 && savingsRate >= 10) return { label: 'Saudável', color: 'text-teal-600', bg: 'bg-teal-500/10', border: 'border-teal-500/20', desc: 'Vida financeira saudável. Boa margem de sobra de caixa e controle de pagamentos em dia.' };
+    if (score >= 650 && savingsRate >= 0) return { label: 'Estável', color: 'text-blue-600', bg: 'bg-blue-500/10', border: 'border-blue-500/20', desc: 'Finanças sob controle, mas com margem apertada. Você paga as contas, mas sobra pouco para investir ou reserva.' };
+    if (score >= 500 || savingsRate < 0) return { label: 'Atenção', color: 'text-amber-600', bg: 'bg-amber-500/10', border: 'border-amber-500/20', desc: 'Alerta! Execução deficitária ou score comprometido. Suas contas estão consumindo quase tudo ou há parcelas em atraso.' };
+    return { label: 'Crítica', color: 'text-rose-600', bg: 'bg-rose-500/10', border: 'border-rose-500/20', desc: 'Situação de risco financeiro. Déficit recorrente, score muito baixo ou múltiplos acordos/pendências.' };
+  }, [scoreBreakdown.score, savingsRate]);
+
+  // Prognóstico de meses saudáveis
+  const monthsToHealthDesc = useMemo(() => {
+    const savings = totalIncome - totalExpenses;
+    if (savings > 0 && scoreBreakdown.score >= 800 && debts.filter(d=>d.status!=='paid').length === 0) {
+      return "Sua vida financeira já se encontra em estado saudável. Continue focado em manter o Score em 1000 e poupar regularmente.";
+    }
+
+    if (timelineEvents.length === 0) {
+      return savings <= 0 
+        ? "Para restabelecer a saúde de caixa, é necessário reduzir gastos supérfluos ou aumentar receitas imediatamente, pois não há parcelamentos futuros prestes a expirar."
+        : "Seu caixa está positivo. Foque agora em liquidar eventuais restrições antigas para reatar seu score ao patamar máximo.";
+    }
+
+    const totalReleased = timelineEvents.reduce((sum, e) => sum + e.valueReleased, 0);
+    const monthsNeeded = timelineEvents.length > 0 
+      ? Math.ceil((parseLocalDate(timelineEvents[timelineEvents.length - 1].date).getTime() - new Date().getTime()) / (30 * 24 * 60 * 60 * 1000))
+      : 0;
+
+    return `Previsão: Nos próximos ${monthsNeeded} meses, à medida que seus acordos e parcelamentos ativos forem quitados, um montante de R$ ${totalReleased.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês será totalmente liberado em seu orçamento, restabelecendo sua saúde de caixa e elevando gradativamente seu Fluxo Score para o patamar máximo de 1000.`;
+  }, [timelineEvents, totalIncome, totalExpenses, scoreBreakdown.score, debts]);
+
   // Gerar textos de insights ricos
   let healthInsight = "";
   if (consumoPercent > 90) {
-    healthInsight = `Sua margem de segurança financeira está em zona crítica neste período, com as despesas consumindo ${consumoPercent.toFixed(1)}% das suas receitas. É recomendável rastrear imediatamente compras supérfluas e restabelecer uma reserva líquida mínima para evitar o uso de limites de crédito rotativo.`;
+    healthInsight = `Sua margem de segurança financeira está em zona crítica neste período, com as despesas consumindo ${consumoPercent.toFixed(1)}% das receitas. É recomendável rastrear imediatamente compras supérfluas e restabelecer uma reserva líquida mínima para evitar o uso de limites de crédito rotativo.`;
   } else if (consumoPercent > 70) {
     healthInsight = `Seu orçamento está equilibrado, com despesas consumindo ${consumoPercent.toFixed(1)}% da receita. No entanto, sua margem para novos investimentos ou poupança está reduzida. Tente otimizar contratos de despesas recorrentes (contas fixas) para liberar mais fluxo de caixa.`;
   } else {
@@ -1964,45 +2235,17 @@ function PrintReportModal({
     concentrationInsight = `Nenhuma despesa expressiva foi registrada. Mantenha os lançamentos em dia para gerar análises consolidadas completas.`;
   }
 
-  let budgetInsight = "";
-  if (desvio > 10) {
-    budgetInsight = `Suas despesas efetivas superaram o planejado em ${desvio.toFixed(1)}% (uma diferença de R$ ${Math.abs(realizedExp - projectedExp).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}). Esse desvio acende um alerta sobre a importância de seguir mais fielmente o planejamento financeiro inicial.`;
-  } else if (desvio < -10) {
-    budgetInsight = `Suas despesas reais ficaram ${Math.abs(desvio).toFixed(1)}% abaixo do planejado (uma folga de R$ ${Math.abs(projectedExp - realizedExp).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}). Parabéns pelo controle rígido dos gastos frente ao planejamento inicial!`;
-  } else {
-    budgetInsight = `Sua execução orçamentária foi exemplar, com as despesas reais apresentando desvio mínimo de apenas ${Math.abs(desvio).toFixed(1)}% frente ao previsto. Isso representa previsibilidade excelente e alta disciplina financeira.`;
-  }
-
-  // Lista de Recomendações
-  const recommendations: string[] = [];
-  if (consumoPercent > 80) {
-    recommendations.push("Priorize a redução temporária de custos variáveis não-essenciais.");
-  }
-  if (balance < 0) {
-    recommendations.push("Evite contrair novas parcelas de cartão de crédito e use as contas apenas para o essencial.");
-  }
-  if (maiorCategoriaPercent > 30 && maiorCategoria) {
-    recommendations.push(`Crie uma meta informal de reduzir em 15% os custos na categoria de '${maiorCategoria.name}' no próximo ciclo.`);
-  }
-  if (consumoPercent <= 70 && balance > 0) {
-    recommendations.push(`Direcione o superávit de R$ ${balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} para os seus projetos ativos ou fundo de reserva.`);
-  }
-  if (recommendations.length < 3) {
-    recommendations.push("Mantenha uma rotina semanal de lançamentos para manter a saúde do seu Fluxo Score sempre alta.");
-    recommendations.push("Acompanhe suas contas fixas adiantadas para aproveitar descontos e evitar juros.");
-  }
-
   const accountName = selectedAccountId === 'all'
     ? 'Consolidado (Todas as Contas)'
     : accounts.find(a => a.id === selectedAccountId)?.name || 'Conta Específica';
 
   return (
-    <div className="print-modal-container no-scrollbar flex flex-col p-4 md:p-6">
+    <div className="print-modal-container no-scrollbar flex flex-col p-4 md:p-6 overflow-y-auto">
       {/* Barra de Ferramentas superior - OCULTADA NA IMPRESSÃO */}
-      <div className="max-w-[800px] w-full mx-auto bg-white dark:bg-zinc-900 rounded-3xl p-4 mb-4 border border-gray-150 dark:border-zinc-800 flex items-center justify-between no-print shadow-xl animate-fade-in">
+      <div className="max-w-[850px] w-full mx-auto bg-white dark:bg-zinc-900 rounded-3xl p-4 mb-4 border border-gray-150 dark:border-zinc-800 flex items-center justify-between no-print shadow-xl animate-fade-in shrink-0">
         <div className="flex items-center gap-2">
-          <FileText className="w-5 h-5 text-primary" />
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-zinc-50">Visualizar Relatório Gerencial</span>
+          <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-zinc-50">Diagnóstico Financeiro Profissional</span>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -2010,7 +2253,7 @@ function PrintReportModal({
             className="h-10 px-4 text-xs font-bold rounded-2xl bg-primary text-white hover:bg-teal-700 transition-all flex items-center gap-1.5 shadow-md shadow-primary/20 border-2 border-primary print-button-include"
           >
             <Printer className="w-4 h-4" />
-            <span>Salvar em PDF</span>
+            <span>Imprimir / Salvar PDF</span>
           </button>
           <button
             onClick={onClose}
@@ -2021,89 +2264,158 @@ function PrintReportModal({
         </div>
       </div>
 
-      {/* Página do Relatório A4 */}
-      <div className="max-w-[800px] w-full mx-auto bg-white text-zinc-900 p-10 md:p-14 rounded-3xl border border-gray-200 shadow-2xl flex flex-col justify-between min-h-[1050px] print-report-view relative animate-scale-up font-sans">
+      {/* Página do Relatório A4 (Página 1 de 2) */}
+      <div className="max-w-[850px] w-full mx-auto bg-white text-zinc-900 p-10 md:p-14 rounded-3xl border border-gray-200 shadow-2xl flex flex-col justify-between min-h-[1130px] print-report-view relative animate-scale-up font-sans">
         
         {/* Cabecalho Principal */}
         <div className="space-y-6">
           <div className="flex items-start justify-between border-b-2 border-gray-150 pb-6">
             <div>
               <div className="flex items-center gap-2 text-primary font-black text-lg uppercase tracking-wider">
-                <span className="bg-primary text-white p-1 rounded-lg">FF</span>
-                <span>Fluxo Financeiro</span>
+                <span className="bg-primary text-white px-2 py-0.5 rounded-lg text-sm">FLUXO</span>
+                <span>FLUXO INTELIGENTE</span>
               </div>
-              <h1 className="mt-4 text-2xl md:text-3xl font-black tracking-tight text-gray-900">Relatório Gerencial de Performance</h1>
-              <p className="text-xs uppercase font-black tracking-widest text-zinc-400 mt-1">Análise de saúde & insights de caixa</p>
+              <h1 className="mt-4 text-2xl md:text-3xl font-black tracking-tight text-gray-900">DIAGNÓSTICO FINANCEIRO & SCORE</h1>
+              <p className="text-xs uppercase font-black tracking-widest text-zinc-400 mt-1">Análise de Performance • Saúde Financeira • Projeções</p>
             </div>
             <div className="text-right text-xs text-zinc-400 font-bold space-y-1">
-              <p>Período: <span className="text-zinc-800 uppercase font-black tracking-wider">{currentPeriodLabel}</span></p>
-              <p>Conta: <span className="text-zinc-800 font-black">{accountName}</span></p>
-              <p>Emissão: <span className="text-zinc-800">{new Date().toLocaleDateString('pt-BR')}</span></p>
+              <p>Período de Análise: <span className="text-zinc-800 uppercase font-black tracking-wider">{currentPeriodLabel}</span></p>
+              <p>Carteira/Conta: <span className="text-zinc-800 font-black">{accountName}</span></p>
+              <p>Diagnóstico gerado em: <span className="text-zinc-800 font-black">{new Date().toLocaleDateString('pt-BR')}</span></p>
+            </div>
+          </div>
+
+          {/* Saúde Geral Box */}
+          <div className={cn("p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4", healthStatus.bg, healthStatus.border)}>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Activity className="w-5 h-5 text-primary" />
+                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Avaliação de Saúde Financeira</span>
+              </div>
+              <h3 className={cn("text-lg font-black uppercase tracking-tight", healthStatus.color)}>Status: {healthStatus.label}</h3>
+              <p className="text-xs text-zinc-600 leading-relaxed font-medium">{healthStatus.desc}</p>
+            </div>
+            <div className="flex flex-col items-center justify-center p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/55 shadow-sm text-center shrink-0 w-28">
+              <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest leading-none">Taxa Poupança</span>
+              <span className={cn("text-xl font-black mt-1", savingsRate >= 20 ? "text-emerald-600" : savingsRate >= 0 ? "text-blue-600" : "text-rose-600")}>
+                {savingsRate.toFixed(1)}%
+              </span>
             </div>
           </div>
 
           {/* Grid de Metricas do Periodo */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="rounded-2xl bg-gray-50 p-4 border border-gray-100">
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Receitas Totais</p>
+            <div className="rounded-2xl bg-gray-50 p-4 border border-gray-150">
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Entradas Totais</p>
               <p className="mt-1.5 text-xl font-black text-emerald-600 tabular-nums">{formatCurrency(totalIncome)}</p>
               <div className="mt-3 flex items-center justify-between text-[9px] font-bold text-zinc-400 border-t border-gray-200/60 pt-1.5">
-                <span>Previsto: {formatCurrency(metrics.projectedIncome)}</span>
+                <span>Orçamento Previsto: {formatCurrency(metrics.projectedIncome)}</span>
               </div>
             </div>
-            <div className="rounded-2xl bg-gray-50 p-4 border border-gray-100">
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Despesas Totais</p>
+            <div className="rounded-2xl bg-gray-50 p-4 border border-gray-150">
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Saídas Totais</p>
               <p className="mt-1.5 text-xl font-black text-rose-600 tabular-nums">{formatCurrency(totalExpenses)}</p>
               <div className="mt-3 flex items-center justify-between text-[9px] font-bold text-zinc-400 border-t border-gray-200/60 pt-1.5">
-                <span>Previsto: {formatCurrency(metrics.projectedExpenses)}</span>
+                <span>Orçamento Previsto: {formatCurrency(metrics.projectedExpenses)}</span>
               </div>
             </div>
-            <div className="rounded-2xl bg-gray-50 p-4 border border-gray-100">
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Resultado Líquido</p>
+            <div className="rounded-2xl bg-gray-50 p-4 border border-gray-150">
+              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Saldo Líquido</p>
               <p className={cn("mt-1.5 text-xl font-black tabular-nums", balance >= 0 ? "text-emerald-600" : "text-rose-600")}>
                 {formatCurrency(balance)}
               </p>
               <div className="mt-3 flex items-center justify-between text-[9px] font-bold text-zinc-400 border-t border-gray-200/60 pt-1.5">
-                <span>Variação: {metrics.comparisons.balance.direction === 'up' ? '↑' : '↓'} {Math.abs(metrics.comparisons.balance.percent ?? 0).toFixed(1)}%</span>
+                <span>Eficiência de Caixa: {consumoPercent.toFixed(1)}%</span>
               </div>
             </div>
           </div>
 
-          {/* Bloco de insights */}
-          <div className="space-y-4 pt-4">
-            <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400 border-b pb-1.5">Diagnósticos & Insights Gerenciais</h2>
-            
+          {/* DIAGNÓSTICO FLUXO SCORE */}
+          <div className="border border-gray-150 rounded-2xl p-5 bg-zinc-50/50 space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+              <div className="flex items-center gap-2">
+                <Award className="w-5 h-5 text-primary" />
+                <h2 className="text-sm font-black uppercase tracking-wider text-gray-900">Diagnóstico de Performance: Fluxo Score</h2>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block leading-none">Pontuação</span>
+                <span className="text-xl font-black text-primary tabular-nums">{scoreBreakdown.score}/1000</span>
+              </div>
+            </div>
+
             <div className="space-y-3">
-              <div className="flex gap-3 items-start p-3 bg-zinc-50 rounded-2xl border border-zinc-100">
-                <Award className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-xs font-black uppercase tracking-wider text-gray-900">1. Saúde de Caixa & Poupança</h3>
-                  <p className="text-xs text-zinc-600 leading-relaxed mt-1">{healthInsight}</p>
-                </div>
-              </div>
+              <p className="text-xs text-zinc-600 leading-relaxed">
+                O **Fluxo Score** é um indicador de saúde financeira que reflete a sua regularidade de pagamentos e nível de endividamento. Contas pagas com atraso ou parcelamentos/acordos ativos consomem pontos temporários.
+              </p>
 
-              <div className="flex gap-3 items-start p-3 bg-zinc-50 rounded-2xl border border-zinc-100">
-                <ShieldAlert className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-xs font-black uppercase tracking-wider text-gray-900">2. Concentração de Custos</h3>
-                  <p className="text-xs text-zinc-600 leading-relaxed mt-1">{concentrationInsight}</p>
-                </div>
-              </div>
+              {/* Fatores que estão reduzindo o Score */}
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Detalhamento de Redutores e Ocorrências</h4>
+                
+                {scorePenalties.map((pen, i) => (
+                  <div key={i} className="flex items-start justify-between text-xs p-2.5 bg-white rounded-xl border border-gray-200/80 gap-3">
+                    <div className="space-y-1">
+                      <p className="font-bold text-zinc-800">{pen.description}</p>
+                      <p className="text-[10px] text-zinc-500 leading-none">{pen.detail}</p>
+                      <p className="text-[10px] text-primary font-black uppercase tracking-wide mt-1">Ação: {pen.action}</p>
+                    </div>
+                    <span className="font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg text-[10px] tabular-nums shrink-0">
+                      {pen.points} pts
+                    </span>
+                  </div>
+                ))}
 
-              <div className="flex gap-3 items-start p-3 bg-zinc-50 rounded-2xl border border-zinc-100">
-                <Lightbulb className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-xs font-black uppercase tracking-wider text-gray-900">3. Aderência ao Planejamento</h3>
-                  <p className="text-xs text-zinc-600 leading-relaxed mt-1">{budgetInsight}</p>
-                </div>
+                {scorePenalties.length === 0 && (
+                  <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 p-3 rounded-xl border border-emerald-150 font-bold">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>Nenhum fator redutor ativo. Seu comportamento financeiro é exemplar neste período!</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Ranking e Recomendações */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+          {/* PROGNÓSTICO E SAÚDE */}
+          <div className="border border-primary/20 rounded-2xl p-5 bg-primary/5 space-y-2">
+            <h3 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4" /> Diagnóstico de Longo Prazo
+            </h3>
+            <p className="text-xs text-zinc-700 leading-relaxed font-medium">
+              {monthsToHealthDesc}
+            </p>
+          </div>
+        </div>
+
+        {/* Rodapé da Página 1 */}
+        <div className="border-t border-gray-150 pt-5 mt-8 flex justify-between items-center text-[9px] text-zinc-400 font-bold">
+          <div>
+            <p>© {new Date().getFullYear()} Fluxo Financeiro. Relatório Confidencial gerado para o usuário.</p>
+          </div>
+          <div className="text-right">
+            <p>Página 1 de 2 • Gerenciador Inteligente de Contas</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Página do Relatório A4 (Página 2 de 2) - QUEBRA DE PÁGINA IMPRESSÃO */}
+      <div className="max-w-[850px] w-full mx-auto bg-white text-zinc-900 p-10 md:p-14 rounded-3xl border border-gray-200 shadow-2xl flex flex-col justify-between min-h-[1130px] print-report-view relative animate-scale-up font-sans mt-6 print:mt-0 print:page-break-before-always">
+        
+        <div className="space-y-6">
+          {/* Min-Cabecalho Pagina 2 */}
+          <div className="flex items-center justify-between border-b border-gray-150 pb-4">
+            <div className="flex items-center gap-1 text-primary font-black text-xs uppercase tracking-wider">
+              <span className="bg-primary text-white px-1.5 py-0.5 rounded text-[10px]">FF</span>
+              <span>Fluxo Financeiro</span>
+            </div>
+            <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
+              PARCELAMENTOS, ACORDOS & CENTROS DE CUSTO
+            </span>
+          </div>
+
+          {/* MAIORES GASTOS E ORÇAMENTO */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400 border-b pb-1.5 mb-3">Maiores Centros de Custo</h2>
+              <h2 className="text-xs font-black uppercase tracking-wider text-zinc-400 border-b pb-1.5 mb-3">Concentração de Custos</h2>
               <div className="space-y-2.5">
                 {top5.map((cat, idx) => (
                   <div key={cat.id} className="flex items-center justify-between text-xs border-b border-gray-50 pb-1.5">
@@ -2112,8 +2424,8 @@ function PrintReportModal({
                       <span className="font-bold text-zinc-700">{cat.name}</span>
                     </div>
                     <div className="text-right">
-                      <span className="font-black text-zinc-900">{formatCurrency(cat.value)}</span>
-                      <span className="text-[10px] text-zinc-400 font-bold ml-1.5">({((cat.value / (totalExpenses || 1)) * 100).toFixed(1)}%)</span>
+                      <span className="font-black text-zinc-950">{formatCurrency(cat.value)}</span>
+                      <span className="text-[9px] text-zinc-400 font-bold ml-1">({((cat.value / (totalExpenses || 1)) * 100).toFixed(1)}%)</span>
                     </div>
                   </div>
                 ))}
@@ -2123,29 +2435,142 @@ function PrintReportModal({
               </div>
             </div>
 
-            <div>
-              <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400 border-b pb-1.5 mb-3">Recomendações Práticas</h2>
-              <ul className="space-y-2">
-                {recommendations.map((rec, i) => (
-                  <li key={i} className="text-xs text-zinc-600 flex items-start gap-2">
-                    <span className="text-primary font-black mt-0.5">•</span>
-                    <span>{rec}</span>
-                  </li>
+            {/* Estouro de Limites */}
+            <div className="space-y-3">
+              <h2 className="text-xs font-black uppercase tracking-wider text-zinc-400 border-b pb-1.5 mb-3">Limites Ultrapassados</h2>
+              <div className="space-y-2">
+                {exceededBudgets.map((eb, i) => (
+                  <div key={i} className="flex items-start gap-2.5 p-2.5 bg-rose-50 border border-rose-100 rounded-xl">
+                    <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <div className="text-xs">
+                      <p className="font-bold text-rose-900">{eb.categoryName}</p>
+                      <p className="text-rose-700 mt-0.5">
+                        Gasto de R$ {eb.spent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ultrapassou o limite planejado de R$ {eb.limit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em **R$ {eb.excess.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}**.
+                      </p>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+
+                {exceededBudgets.length === 0 && (
+                  <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 p-3 rounded-xl border border-emerald-150 font-bold">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>Nenhum orçamento planejado foi estourado neste período. Controle excelente!</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* DETALHAMENTO DE COMPROMISSOS (ACORDOS & PARCELAMENTOS) */}
+          <div className="space-y-4">
+            <h2 className="text-xs font-black uppercase tracking-wider text-zinc-400 border-b pb-1.5">Compromissos Financeiros Ativos</h2>
+            
+            {/* Acordos */}
+            <div className="space-y-2">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5" /> Acordos sob Quitação Ativos
+              </h3>
+              
+              {debts.filter(d => d.status !== 'paid' && !(typeof d.remainingAmount === 'number' && d.remainingAmount <= 0)).map((d, i) => {
+                const installments = transactions.filter(tx => !tx.deleted_at && tx.type === 'expense' && tx.debtId === d.id && !isAgreementEntryTransaction(tx, d.id));
+                const totalInstallments = installments.length > 0 ? installments.length : Math.max(0, Number(d.totalInstallments) || 0);
+                const paidInstallments = installments.filter(tx => tx.isPaid).length;
+                const recovered = totalInstallments > 0 ? (paidInstallments / totalInstallments) * 100 : 0;
+                const progressWidth = `${Math.min(recovered, 100)}%`;
+
+                return (
+                  <div key={d.id} className="p-3.5 bg-zinc-50 border border-gray-150 rounded-xl space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-black text-gray-900">{d.name}</span>
+                        <span className="text-[10px] text-zinc-400 font-bold uppercase ml-2">Total: R$ {Number(d.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      <span className="font-black text-zinc-700">Saldo devedor: R$ {Number(d.remainingAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    {/* Barra de Progresso */}
+                    <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                      <div className="bg-primary h-full rounded-full transition-all duration-300" style={{ width: progressWidth }} />
+                    </div>
+                    <div className="flex justify-between text-[9px] text-zinc-500 font-bold leading-none">
+                      <span>Progresso: {paidInstallments}/{totalInstallments} parcelas pagas ({recovered.toFixed(1)}%)</span>
+                      {d.installmentAmount && (
+                        <span>Parcela Mensal: R$ {Number(d.installmentAmount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {debts.filter(d => d.status !== 'paid' && !(typeof d.remainingAmount === 'number' && d.remainingAmount <= 0)).length === 0 && (
+                <p className="text-xs text-zinc-400 italic py-1">Nenhum acordo sob quitação pendente.</p>
+              )}
+            </div>
+
+            {/* Parcelamentos */}
+            <div className="space-y-2 pt-2">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" /> Parcelamentos Ativos no Crédito / Boleto
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {activeInstallments.map((inst, i) => (
+                  <div key={i} className="p-3 bg-zinc-50 border border-gray-150 rounded-xl space-y-1.5 text-xs">
+                    <div className="flex justify-between">
+                      <span className="font-bold text-gray-800 truncate max-w-[170px]">{inst.description}</span>
+                      <span className="font-black text-rose-600 tabular-nums">R$ {inst.monthlyValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês</span>
+                    </div>
+                    <div className="flex justify-between text-[9px] text-zinc-500 font-bold">
+                      <span>Progresso: {inst.paidCount} de {inst.totalCount} parcelas</span>
+                      <span>Total: R$ {inst.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    {inst.lastDueDate && (
+                      <p className="text-[9px] text-zinc-400 font-bold mt-1">
+                        Quitação estimada em: <span className="text-zinc-600 font-black">{format(parseLocalDate(inst.lastDueDate), "MMMM 'de' yyyy", { locale: ptBR })}</span>
+                      </p>
+                    )}
+                  </div>
+                ))}
+
+                {activeInstallments.length === 0 && (
+                  <p className="text-xs text-zinc-400 italic py-1">Nenhum parcelamento ativo cadastrado.</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* CRONOGRAMA DE LIBERAÇÃO ORÇAMENTÁRIA */}
+          <div className="space-y-3 pt-2">
+            <h2 className="text-xs font-black uppercase tracking-wider text-zinc-400 border-b pb-1.5">Previsão e Linha do Tempo de Quitações</h2>
+            
+            <div className="relative border-l border-gray-200 pl-4 space-y-4 text-xs ml-2">
+              {timelineEvents.slice(0, 4).map((evt, idx) => (
+                <div key={idx} className="relative">
+                  <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-primary border-2 border-white" />
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-gray-900">{evt.label}</span>
+                      <span className="text-[10px] font-black text-emerald-600">+{evt.date.toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' })}</span>
+                    </div>
+                    <p className="text-zinc-500 text-[10px]">{evt.description}</p>
+                    <p className="text-[9px] text-emerald-600 font-bold">Recuperação de caixa: R$ {evt.valueReleased.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês liberados no orçamento.</p>
+                  </div>
+                </div>
+              ))}
+
+              {timelineEvents.length === 0 && (
+                <p className="text-xs text-zinc-400 italic pl-1">Nenhum compromisso agendado para quitação futura imediata.</p>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Rodapé do Relatório */}
-        <div className="border-t border-gray-100 pt-6 mt-8 flex justify-between items-center text-[10px] text-zinc-400 font-bold">
+        {/* Rodapé da Página 2 */}
+        <div className="border-t border-gray-150 pt-5 mt-8 flex justify-between items-center text-[9px] text-zinc-400 font-bold">
           <div>
-            <p>Relatório gerado em benefício de {userName}.</p>
-            <p>© {new Date().getFullYear()} Fluxo Financeiro - Todos os direitos reservados.</p>
+            <p>Relatório gerencial confidencial em benefício de {userName}.</p>
           </div>
           <div className="text-right">
-            <p>Classificação: <span className="text-zinc-600 font-black uppercase">Privado</span></p>
-            <p>Assinatura Digital: <span className="text-primary font-mono select-all">FLUXO-IA-SIG-{metrics.balance >= 0 ? 'SUP' : 'DEF'}</span></p>
+            <p>Página 2 de 2 • Assinatura Digital: <span className="text-primary font-mono select-all">FLUXO-SIG-{scoreBreakdown.score}</span></p>
           </div>
         </div>
       </div>
