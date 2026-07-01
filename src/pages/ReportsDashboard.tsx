@@ -1943,7 +1943,7 @@ function PrintReportModal({
   userName,
   onClose
 }: PrintReportModalProps) {
-  const { transactions, debts, categories, creditCards } = useFinanceStore();
+  const { transactions, debts, categories, creditCards, viewDate } = useFinanceStore();
 
   const totalIncome = metrics.income;
   const totalExpenses = metrics.totalExpenses;
