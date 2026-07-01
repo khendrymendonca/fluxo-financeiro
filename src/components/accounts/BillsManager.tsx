@@ -537,9 +537,12 @@ export function BillsManager() {
                         return (
                             <div key={transaction.id} className="flex flex-col gap-1">
                                 <div className={cn(
-                                    "bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 transition-all hover:translate-x-1 border-l-4",
-                                    transaction.isPaid ? "border-l-success opacity-80" :
-                                        isLate ? "border-l-danger bg-danger/5 dark:bg-danger/5" : "border-l-info"
+                                    "bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm dark:shadow-none flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 transition-all hover:translate-x-1 border border-l-4",
+                                    transaction.isPaid 
+                                      ? "border-gray-100 dark:border-zinc-800 border-l-success opacity-80" 
+                                      : isLate 
+                                        ? "border-zinc-400 dark:border-zinc-700 border-l-zinc-500 dark:border-l-zinc-600 bg-zinc-50/50 dark:bg-zinc-900/50" 
+                                        : "border-primary/30 dark:border-primary/20 border-l-primary"
                                 )}>
                                     <div className="flex items-center gap-4 min-w-0 flex-1">
                                         <div className={cn("p-3 rounded-2xl shrink-0",
