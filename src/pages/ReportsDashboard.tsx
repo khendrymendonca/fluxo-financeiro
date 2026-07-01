@@ -1298,9 +1298,6 @@ export default function ReportsDashboard() {
 
         {/* SEÇÃO 2: REGIME E FILTRO DE CONTA */}
         <div className="space-y-2">
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground block">
-            Conta & Regime Financeiro
-          </span>
           <div className="flex flex-col gap-2">
             {/* Seletor de Conta */}
             <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
@@ -1348,7 +1345,7 @@ export default function ReportsDashboard() {
         {/* SEÇÃO 3: SELEÇÃO DE DATA ADICIONAL & AÇÕES */}
         <div className="space-y-2">
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground block">
-            Filtro de Ano / Mês & Ações
+            Filtros
           </span>
           <div className="flex gap-2">
             {/* Select de Ano */}
