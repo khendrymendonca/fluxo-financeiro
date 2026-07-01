@@ -69,6 +69,7 @@ import { BudgetOverview } from '@/components/budgets/BudgetOverview';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { calculateFluxoScore } from '@/utils/fluxoScore';
 import { FluxoScoreCard } from '@/components/dashboard/FluxoScoreCard';
+import { Button } from '@/components/ui/button';
 
 type Period = 'month' | 'semester' | 'year';
 type ReportMode = 'projected' | 'realized';
