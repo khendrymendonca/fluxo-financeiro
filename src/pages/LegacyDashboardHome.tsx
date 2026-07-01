@@ -142,78 +142,64 @@ export function LegacyDashboardHome({
 
   return (
     <div className="flex flex-col h-full animate-in slide-in-from-bottom-4 duration-500 overflow-hidden">
-      <div className="flex flex-col gap-1 shrink-0 mb-4 min-w-0 flex-1 overflow-hidden relative">
-        <p className="text-xs text-gray-500 dark:text-zinc-500 font-black uppercase tracking-widest">Patrimônio Total</p>
-        {accentColor === 'pascoa' && <Rabbit className="absolute right-4 top-0 w-8 h-8 text-primary animate-bounce duration-1000" />}
-        <h1
-          className="text-[clamp(1.5rem,4vw,3rem)] font-black tracking-tighter truncate block w-full max-w-[90vw] md:max-w-md text-gray-900 dark:text-white"
-          title={formatCurrency(totalNetWorth)}
-        >
-          {isBalanceVisible ? formatCurrency(totalNetWorth) : '••••••'}
-        </h1>
-      </div>
-
-      <div className="flex gap-4 overflow-x-auto no-scrollbar py-2 -mx-4 px-4 shrink-0 mb-4">
-        {[
-          { id: 'add', icon: Plus, label: 'Lançar', color: 'bg-primary/20 text-primary border-primary/30', action: onOpenTransactionForm },
-          {
-            id: 'transfer',
-            icon: ArrowRightLeft,
-            label: 'Transferir',
-            color: 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white border-gray-100 dark:border-zinc-800',
-            action: onOpenTransferForm,
-          },
-          {
-            id: 'pay',
-            icon: Receipt,
-            label: 'Pagar',
-            color: 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white border-gray-100 dark:border-zinc-800',
-            action: onNavigateToBills,
-          },
-        ].map((action) => (
-          <button
-            key={action.id}
-            onClick={action.action}
-            className="flex flex-col items-center gap-2 min-w-[70px] active:scale-95 transition-transform"
-          >
-            <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center border shadow-sm dark:shadow-none', action.color)}>
-              <action.icon className="w-6 h-6" />
-            </div>
-            <span className="text-xs font-bold text-gray-500 dark:text-zinc-500">{action.label}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
-        <div className="grid grid-cols-1 gap-3">
-          <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-900 p-5 rounded-[2rem] shadow-sm">
-            <div className="mb-1">
-              <p className="text-xs font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest">Saldo Projetado</p>
-            </div>
-            <h3
-              className={cn('text-2xl font-bold tracking-tight truncate block w-full max-w-full', projectedBalance < 0 ? 'text-danger' : 'text-gray-900 dark:text-white')}
-              title={isBalanceVisible ? formatCurrency(projectedBalance) : '••••••'}
-            >
-              {isBalanceVisible ? formatCurrency(projectedBalance) : '••••••'}
-            </h3>
+      <div className="flex-1 overflow-y-auto no-scrollbar space-y-5 pb-6">
+        {/* Main Dashboard Card (Patrimônio Total + Saldo Projetado, Entradas e Saídas) */}
+        <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-zinc-900 dark:to-zinc-900/40 border border-gray-100 dark:border-zinc-900 p-5 rounded-[2rem] shadow-sm relative">
+          {accentColor === 'pascoa' && <Rabbit className="absolute right-4 top-4 w-6 h-6 text-primary animate-bounce" />}
+          
+          <div className="space-y-1">
+            <p className="text-xs text-gray-500 dark:text-zinc-500 font-black uppercase tracking-widest">Patrimônio Total</p>
+            <h1 className="text-3xl font-black tracking-tighter text-gray-900 dark:text-white">
+              {isBalanceVisible ? formatCurrency(totalNetWorth) : '••••••'}
+            </h1>
           </div>
 
-          <div className="bg-white dark:bg-zinc-900/40 border border-gray-100 dark:border-zinc-900 p-5 rounded-[2rem] shadow-sm">
-            <p className="text-xs font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest mb-2">Fluxo do Mês</p>
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col">
-                <p className="text-[11px] text-emerald-500 font-black uppercase">Entradas</p>
-                <p className="font-bold text-sm">{isBalanceVisible ? formatCurrency(cashflow.totalIncome) : '••••'}</p>
-              </div>
-              <div className="w-[1px] h-6 bg-gray-100 dark:bg-zinc-800" />
-              <div className="flex flex-col">
-                <p className="text-[11px] text-danger font-black uppercase">Saídas</p>
-                <p className="font-bold text-sm">{isBalanceVisible ? formatCurrency(cashflow.totalExpenses) : '••••'}</p>
-              </div>
+          <div className="my-4 border-t border-gray-100 dark:border-zinc-800/80" />
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="flex flex-col">
+              <p className="text-[9px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-0.5">Projetado</p>
+              <p className={cn('text-xs font-black truncate', projectedBalance < 0 ? 'text-danger' : 'text-gray-900 dark:text-white')}>
+                {isBalanceVisible ? formatCurrency(projectedBalance) : '••••'}
+              </p>
+            </div>
+            
+            <div className="flex flex-col border-l border-gray-100 dark:border-zinc-800/80 pl-3">
+              <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-0.5">Entradas</p>
+              <p className="text-xs font-black text-emerald-500 truncate">
+                {isBalanceVisible ? formatCurrency(cashflow.totalIncome) : '••••'}
+              </p>
+            </div>
+
+            <div className="flex flex-col border-l border-gray-100 dark:border-zinc-800/80 pl-3">
+              <p className="text-[9px] font-black text-danger uppercase tracking-widest mb-0.5">Saídas</p>
+              <p className="text-xs font-black text-danger truncate">
+                {isBalanceVisible ? formatCurrency(cashflow.totalExpenses) : '••••'}
+              </p>
             </div>
           </div>
         </div>
 
+        {/* Quick Actions (Transferir, Pagar) */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={onOpenTransferForm}
+            className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl border border-gray-100 dark:border-zinc-900 bg-white dark:bg-zinc-900/40 text-gray-900 dark:text-white font-bold text-xs shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
+          >
+            <ArrowRightLeft className="w-4 h-4 text-primary" />
+            <span>Transferir</span>
+          </button>
+          
+          <button
+            onClick={onNavigateToBills}
+            className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl border border-gray-100 dark:border-zinc-900 bg-white dark:bg-zinc-900/40 text-gray-900 dark:text-white font-bold text-xs shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
+          >
+            <Receipt className="w-4 h-4 text-primary" />
+            <span>Pagar</span>
+          </button>
+        </div>
+
+        {/* Últimos Lançamentos */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between px-1">
             <p className="text-xs font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest">Últimos Lançamentos</p>

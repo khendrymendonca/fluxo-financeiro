@@ -418,6 +418,7 @@ async function syncDebtSnapshotTotals(debtId: string) {
     .update({
       total_amount: totalAmount,
       remaining_amount: remainingAmount,
+      status: remainingAmount <= 0 ? 'paid' : 'active',
     })
     .eq('id', debtId);
 

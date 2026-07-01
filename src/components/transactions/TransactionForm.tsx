@@ -83,7 +83,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   const [date, setDate] = useState(initialData?.date || todayLocalString());
   const [accountId, setAccountId] = useState<string>(initialData?.accountId || '');
   const [cardId, setCardId] = useState<string>(initialData?.cardId || '');
-  const [paymentMethod, setPaymentMethod] = useState<'account' | 'card'>(initialData?.cardId ? 'card' : 'account');
+  const [paymentMethod, setPaymentMethod] = useState<'account' | 'card' | 'boleto' | 'carne'>(initialData?.cardId ? 'card' : 'account');
   const [sourceAccountId, setSourceAccountId] = useState<string>('');
   const [selectedDebtId, setSelectedDebtId] = useState<string>(initialData?.debtId || '');
   const [isAutomatic, setIsAutomatic] = useState<boolean>((initialData as any)?.isAutomatic || false);
@@ -495,6 +495,8 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       const baseDate = parseLocalDate(date);
       const installmentList: any[] = [];
 
+      const isBoletoOrCarne = paymentMethod === 'boleto' || paymentMethod === 'carne';
+
       if (!areInstallmentsEqual) {
         const totalCustom = customInstallmentDates.reduce((s, x) => s + x.amount, 0);
         if (Math.abs(totalCustom - parsedAmount) > 0.10) {
@@ -510,8 +512,11 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
         const dateStr = format(currentInstDate, 'yyyy-MM-dd');
 
         // Se for cartão, consideramos pago (já que o limite é consumido)
-        // Se não for cartão, marcamos como pago apenas se a data for hoje ou passada
-        const instIsPaid = paymentMethod === 'card' ? true : isDateTodayOrPast(dateStr);
+        // Se for boleto/carne, a despesa é criada como NÃO paga (para aparecer no Gerenciador de Contas)
+        // Se for conta, marcamos como pago apenas se a data for hoje ou passada
+        const instIsPaid = paymentMethod === 'card' 
+          ? true 
+          : (isBoletoOrCarne ? false : isDateTodayOrPast(dateStr));
 
         const invoiceMonthYear = (paymentMethod === 'card' && selectedCard)
           ? (invoiceMode === 'custom' && selectedInvoiceMonthYear
@@ -519,10 +524,17 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               : calcInvoiceMonthYearForCard(currentInstDate, selectedCard))
           : undefined;
 
+        let descStr = `${description} (${i + 1}/${count})`;
+        if (paymentMethod === 'boleto') {
+          descStr = `[Boleto] ${description} (${i + 1}/${count})`;
+        } else if (paymentMethod === 'carne') {
+          descStr = `[Carnê] ${description} (${i + 1}/${count})`;
+        }
+
         installmentList.push({
           type,
           transactionType: 'installment',
-          description: `${description} (${i + 1}/${count})`,
+          description: descStr,
           amount: !areInstallmentsEqual && customInstallmentDates[i]
             ? customInstallmentDates[i].amount
             : parseFloat((parsedAmount / count).toFixed(2)),
@@ -637,7 +649,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
       ]
       : [
         { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Compra à vista no débito ou dinheiro.' },
-        { id: 'parcelamento', label: 'Parcelado', icon: CreditCard, desc: 'Compra no cartão de crédito.' },
+        { id: 'parcelamento', label: 'Parcelado', icon: CreditCard, desc: 'Compra no cartão, boleto ou carnê.' },
         { id: 'fixo', label: 'Fixo', icon: RotateCw, desc: 'Contas que repetem todo mês.' },
         { id: 'transfer', label: 'Transferência', icon: ArrowRightLeft, desc: 'Mover entre contas ou pagar cartão.' },
       ];
@@ -1011,16 +1023,38 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                         {type === 'income' ? 'Em qual conta vai cair?' : 'Forma de Pagamento'}
                       </Label>
                       <div className="flex gap-2">
-                        <button type="button" onClick={() => setPaymentMethod('account')}
-                          className={cn("flex-1 py-3 px-4 rounded-2xl font-bold text-sm transition-all border-2 flex items-center justify-center gap-2",
-                            paymentMethod === 'account' ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted/50 border-transparent text-muted-foreground")}>
-                          <Wallet className="w-4 h-4" /> Conta
-                        </button>
-                        <button type="button" onClick={() => setPaymentMethod('card')}
-                          className={cn("flex-1 py-3 px-4 rounded-2xl font-bold text-sm transition-all border-2 flex items-center justify-center gap-2",
-                            paymentMethod === 'card' ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted/50 border-transparent text-muted-foreground")}>
-                          <CreditCard className="w-4 h-4" /> Cartão
-                        </button>
+                        {type === 'expense' && activeTab === 'parcelamento' ? (
+                          <>
+                            <button type="button" onClick={() => setPaymentMethod('card')}
+                              className={cn("flex-1 py-3 px-4 rounded-2xl font-bold text-sm transition-all border-2 flex items-center justify-center gap-2",
+                                paymentMethod === 'card' ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted/50 border-transparent text-muted-foreground")}>
+                              <CreditCard className="w-4 h-4" /> Cartão
+                            </button>
+                            <button type="button" onClick={() => setPaymentMethod('boleto')}
+                              className={cn("flex-1 py-3 px-4 rounded-2xl font-bold text-sm transition-all border-2 flex items-center justify-center gap-2",
+                                paymentMethod === 'boleto' ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted/50 border-transparent text-muted-foreground")}>
+                              <Coins className="w-4 h-4" /> Boleto
+                            </button>
+                            <button type="button" onClick={() => setPaymentMethod('carne')}
+                              className={cn("flex-1 py-3 px-4 rounded-2xl font-bold text-sm transition-all border-2 flex items-center justify-center gap-2",
+                                paymentMethod === 'carne' ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted/50 border-transparent text-muted-foreground")}>
+                              <Coins className="w-4 h-4" /> Carnê
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button type="button" onClick={() => setPaymentMethod('account')}
+                              className={cn("flex-1 py-3 px-4 rounded-2xl font-bold text-sm transition-all border-2 flex items-center justify-center gap-2",
+                                paymentMethod === 'account' ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted/50 border-transparent text-muted-foreground")}>
+                              <Wallet className="w-4 h-4" /> Conta
+                            </button>
+                            <button type="button" onClick={() => setPaymentMethod('card')}
+                              className={cn("flex-1 py-3 px-4 rounded-2xl font-bold text-sm transition-all border-2 flex items-center justify-center gap-2",
+                                paymentMethod === 'card' ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted/50 border-transparent text-muted-foreground")}>
+                              <CreditCard className="w-4 h-4" /> Cartão
+                            </button>
+                          </>
+                        )}
                       </div>
 
                       {paymentMethod === 'account' && (
@@ -1179,6 +1213,17 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                           </div>
                         </div>
                       </div>
+                      {areInstallmentsEqual && (
+                        <div className="p-3.5 rounded-xl bg-muted/20 border border-border text-center text-xs font-bold text-muted-foreground animate-in fade-in duration-200">
+                          {(() => {
+                            const count = parseInt(installmentsCount) || 2;
+                            const parsedAmount = parseFloat(amount) || 0;
+                            const valuePerInstallment = parseFloat((parsedAmount / count).toFixed(2));
+                            const label = paymentMethod === 'boleto' ? 'Boleto' : paymentMethod === 'carne' ? 'Parcela do Carnê' : 'Parcela';
+                            return `Serão gerados ${count} lançamentos de ${formatCurrency(valuePerInstallment)} cada (${label}).`;
+                          })()}
+                        </div>
+                      )}
 
                       {/* Editor de parcelas desiguais */}
                       {!areInstallmentsEqual && customInstallmentDates.length > 0 && (

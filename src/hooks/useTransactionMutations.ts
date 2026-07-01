@@ -392,6 +392,13 @@ export function useDeleteTransaction() {
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['transactions'] });
     },
+    onSuccess: async (data, variables) => {
+      const { transaction } = variables;
+      const targetId = transaction.isVirtual ? (transaction.originalId || transaction.id.split('-virtual')[0]) : transaction.id;
+      if (transaction.debtId) {
+        await checkAndUpdateDebtStatus(targetId, transaction.debtId);
+      }
+    },
     onError: (err) => {
       logSafeError('useDeleteTransaction', err);
       toast({ title: 'Erro ao remover lançamento', variant: 'destructive' });
@@ -405,6 +412,66 @@ export function useDeleteTransaction() {
   });
 }
 
+export async function checkAndUpdateDebtStatus(txId: string, customDebtId?: string) {
+  if (import.meta.env.MODE === 'test') {
+    return;
+  }
+  try {
+    let debtId = customDebtId;
+    if (!debtId) {
+      const fromBuilder = supabase.from('transactions');
+      if (typeof fromBuilder.select !== 'function') return;
+      const selectResult = fromBuilder.select('debt_id');
+      if (typeof selectResult.eq !== 'function') return;
+      const { data: updatedTx } = await selectResult
+        .eq('id', txId)
+        .single();
+      debtId = updatedTx?.debt_id;
+    }
+
+    if (debtId) {
+      const { data: allTxs } = await supabase
+        .from('transactions')
+        .select('id, is_paid, amount, description, type')
+        .eq('debt_id', debtId)
+        .is('deleted_at', null);
+
+      if (allTxs) {
+        const installments = allTxs.filter(tx => 
+          tx.type === 'expense' && 
+          !(tx.description?.toLowerCase().includes('entrada acordo') || tx.description?.toLowerCase().includes('entrada do acordo'))
+        );
+
+        const totalInstallments = installments.length;
+        const paidInstallments = installments.filter(tx => tx.is_paid).length;
+        const allPaid = totalInstallments > 0 && paidInstallments === totalInstallments;
+
+        const { data: debt } = await supabase
+          .from('debts')
+          .select('total_amount')
+          .eq('id', debtId)
+          .single();
+
+        if (debt) {
+          const totalAmount = debt.total_amount || 0;
+          const totalPaidAmount = installments.filter(tx => tx.is_paid).reduce((sum, tx) => sum + (tx.amount || 0), 0);
+          const remainingAmount = Math.max(0, totalAmount - totalPaidAmount);
+
+          await supabase
+            .from('debts')
+            .update({
+              status: allPaid ? 'paid' : 'active',
+              remaining_amount: allPaid ? 0 : remainingAmount
+            })
+            .eq('id', debtId);
+        }
+      }
+    }
+  } catch (err) {
+    logSafeError('checkAndUpdateDebtStatus', err);
+  }
+}
+
 // --- 3. ALTERAR STATUS (OTIMISTA) ---
 export function useToggleTransactionPaid() {
   const queryClient = useQueryClient();
@@ -413,67 +480,6 @@ export function useToggleTransactionPaid() {
     mutationKey: ['togglePaid'],
     mutationFn: async ({ id, isPaid, date, accountId, isChild, clearSourceOnUnpay }: { id: string, isPaid: boolean, date?: string, accountId?: string, isChild?: boolean, clearSourceOnUnpay?: boolean }) => {
       const shouldClearSourceOnUnpay = !isPaid && (isChild || clearSourceOnUnpay);
-
-      const checkAndUpdateDebtStatus = async (txId: string) => {
-        if (import.meta.env.MODE === 'test') {
-          return;
-        }
-        try {
-          const fromBuilder = supabase.from('transactions');
-          if (typeof fromBuilder.select !== 'function') {
-            return;
-          }
-          const selectResult = fromBuilder.select('debt_id');
-          if (typeof selectResult.eq !== 'function') {
-            return;
-          }
-          const { data: updatedTx } = await selectResult
-            .eq('id', txId)
-            .single();
-
-          if (updatedTx?.debt_id) {
-            const debtId = updatedTx.debt_id;
-            const { data: allTxs } = await supabase
-              .from('transactions')
-              .select('id, is_paid, amount, description, type')
-              .eq('debt_id', debtId)
-              .is('deleted_at', null);
-
-            if (allTxs) {
-              const installments = allTxs.filter(tx => 
-                tx.type === 'expense' && 
-                !(tx.description?.toLowerCase().includes('entrada acordo') || tx.description?.toLowerCase().includes('entrada do acordo'))
-              );
-
-              const totalInstallments = installments.length;
-              const paidInstallments = installments.filter(tx => tx.is_paid).length;
-              const allPaid = totalInstallments > 0 && paidInstallments === totalInstallments;
-
-              const { data: debt } = await supabase
-                .from('debts')
-                .select('total_amount')
-                .eq('id', debtId)
-                .single();
-
-              if (debt) {
-                const totalAmount = debt.total_amount || 0;
-                const totalPaidAmount = installments.filter(tx => tx.is_paid).reduce((sum, tx) => sum + (tx.amount || 0), 0);
-                const remainingAmount = Math.max(0, totalAmount - totalPaidAmount);
-
-                await supabase
-                  .from('debts')
-                  .update({
-                    status: allPaid ? 'paid' : 'active',
-                    remaining_amount: allPaid ? 0 : remainingAmount
-                  })
-                  .eq('id', debtId);
-              }
-            }
-          }
-        } catch (err) {
-          logSafeError('checkAndUpdateDebtStatus', err);
-        }
-      };
 
       // Baixa e estorno precisam ser simetricos: ao estornar, a fonte financeira
       // usada no pagamento precisa ser removida para que o saldo volte ao estado
@@ -914,7 +920,9 @@ export function useUpdateTransaction() {
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['transactions'] });
     },
-    onSuccess: () => {
+    onSuccess: async (data, variables) => {
+      const realId = variables.id.includes('-virtual-') ? variables.id.split('-virtual-')[0] : variables.id;
+      await checkAndUpdateDebtStatus(realId);
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['credit-cards'] });

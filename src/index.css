@@ -12,20 +12,20 @@
   /* Common variables (Radius, Elevation, etc) */
   :root {
     --radius: 1rem;
-    --shadow-sm: 0 1px 2px 0 hsl(220 20% 15% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(220 20% 15% / 0.08), 0 2px 4px -2px hsl(220 20% 15% / 0.05);
-    --shadow-lg: 0 10px 15px -3px hsl(220 20% 15% / 0.1), 0 4px 6px -4px hsl(220 20% 15% / 0.05);
-    --shadow-xl: 0 20px 25px -5px hsl(220 20% 15% / 0.1), 0 8px 10px -6px hsl(220 20% 15% / 0.05);
+    --shadow-sm: 0 2px 8px hsl(220 20% 15% / 0.03);
+    --shadow-md: 0 10px 30px -4px hsl(220 20% 15% / 0.05), 0 2px 8px -2px hsl(220 20% 15% / 0.02);
+    --shadow-lg: 0 20px 48px -8px hsl(220 25% 12% / 0.06), 0 4px 16px -4px hsl(220 25% 12% / 0.02);
+    --shadow-xl: 0 32px 64px -12px hsl(220 25% 10% / 0.08), 0 8px 32px -8px hsl(220 25% 10% / 0.03);
   }
 
   /* Theme Light (Material You Pastel) - DEFAULT */
   :root {
-    --background: 210 20% 98%;
-    --foreground: 220 20% 15%;
+    --background: 220 16% 95%; /* Premium matte neutral platinum background */
+    --foreground: 220 25% 15%;
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 15%;
+    --card-foreground: 220 25% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 15%;
+    --popover-foreground: 220 25% 15%;
     --primary: 174 84% 31%;
     /* Teal 600 - #0d9488 */
     --primary-foreground: 0 0% 100%;
@@ -45,26 +45,26 @@
     --info: 210 80% 55%;
     --info-foreground: 0 0% 100%;
     --info-light: 210 70% 94%;
-    --muted: 220 15% 94%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 220 12% 91%; /* Softer muted background */
+    --muted-foreground: 220 10% 48%;
     --accent: 174 55% 92%;
     --accent-foreground: 174 60% 30%;
     --destructive: 0 70% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 15% 90%;
-    --input: 220 15% 90%;
+    --border: 220 12% 90%; /* Extremely clean soft border */
+    --input: 220 12% 90%;
     --ring: 174 60% 45%;
-    --sidebar-background: 0 0% 100%;
+    --sidebar-background: 220 16% 95%;
     --sidebar-foreground: 220 20% 35%;
     --sidebar-primary: 174 60% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 174 55% 94%;
+    --sidebar-accent: 174 55% 92%;
     --sidebar-accent-foreground: 174 60% 25%;
-    --sidebar-border: 220 15% 92%;
+    --sidebar-border: 220 12% 90%;
     --sidebar-ring: 174 60% 45%;
 
-    --shadow-md: 0 4px 6px -1px hsl(220 20% 15% / 0.08), 0 2px 4px -2px hsl(220 20% 15% / 0.05);
-    --shadow-lg: 0 10px 15px -3px hsl(220 20% 15% / 0.1), 0 4px 6px -4px hsl(220 20% 15% / 0.05);
+    --shadow-md: 0 8px 30px -4px hsl(220 20% 15% / 0.05), 0 2px 8px -2px hsl(220 20% 15% / 0.02);
+    --shadow-lg: 0 20px 48px -8px hsl(220 25% 12% / 0.06), 0 4px 16px -4px hsl(220 25% 12% / 0.02);
   }
 
   /* Theme Dark (Premium Matte Style) */

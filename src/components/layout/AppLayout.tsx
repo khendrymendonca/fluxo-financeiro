@@ -73,7 +73,7 @@ export function AppLayout({ children, sidebar, headerMobile, bottomNav, fab }: A
       {sidebar && (
         <header className={cn(
           "hidden md:flex flex-shrink-0 z-50 w-full",
-          "bg-card border-b border-border"
+          "bg-card border-b border-border shadow-sm"
         )}>
           {sidebar}
         </header>

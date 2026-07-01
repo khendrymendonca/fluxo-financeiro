@@ -168,7 +168,13 @@ function useFinanceProvider() {
       }
 
       // ✅ Demais transações (incluindo compras de cartão): usar date normalmente (Extrato Real/Dashboard)
-      const tDate = parseLocalDate(t.date);
+      // Ajuste: Para despesas pagas fora do cartão, se houver paymentDate (baixa), respeitamos a data de baixa.
+      let targetDate = t.date;
+      if (t.type === 'expense' && !t.cardId && t.isPaid && t.paymentDate) {
+        targetDate = t.paymentDate;
+      }
+
+      const tDate = parseLocalDate(targetDate);
       if (viewMode === 'day') {
         return tDate.getDate() === viewDate.getDate() && tDate.getMonth() === viewDate.getMonth() && tDate.getFullYear() === viewDate.getFullYear();
       }

@@ -28,12 +28,16 @@ interface MonthPlanPageProps {
   onNavigateToTransactions: () => void;
 }
 
-function cardToneClasses(tone: 'safe' | 'attention' | 'risk' | 'default') {
+function iconToneClasses(tone: 'safe' | 'attention' | 'risk' | 'default') {
   return {
-    safe: 'bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.18),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.105),rgba(15,23,42,0.045))] ring-emerald-950/10 dark:bg-[radial-gradient(circle_at_top_right,rgba(52,211,153,0.14),transparent_36%),linear-gradient(135deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))] dark:ring-emerald-300/10',
-    attention: 'bg-[radial-gradient(circle_at_top_right,rgba(217,119,6,0.17),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.10),rgba(15,23,42,0.04))] ring-amber-950/10 dark:bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.13),transparent_36%),linear-gradient(135deg,rgba(255,255,255,0.065),rgba(255,255,255,0.025))] dark:ring-amber-300/10',
-    risk: 'bg-[radial-gradient(circle_at_top_right,rgba(190,18,60,0.18),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.10),rgba(15,23,42,0.04))] ring-rose-950/10 dark:bg-[radial-gradient(circle_at_top_right,rgba(251,113,133,0.14),transparent_36%),linear-gradient(135deg,rgba(255,255,255,0.065),rgba(255,255,255,0.025))] dark:ring-rose-300/10',
-    default: 'bg-[radial-gradient(circle_at_top_right,rgba(100,116,139,0.16),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.095),rgba(15,23,42,0.038))] ring-slate-950/10 dark:bg-[radial-gradient(circle_at_top_right,rgba(226,232,240,0.10),transparent_36%),linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.024))] dark:ring-white/10',
+    safe: 
+      'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400',
+    attention: 
+      'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400',
+    risk: 
+      'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400',
+    default: 
+      'bg-slate-50 text-slate-600 dark:bg-slate-500/10 dark:text-slate-400',
   }[tone];
 }
 
@@ -53,17 +57,19 @@ function ControlMetricCard({
   return (
     <div
       className={cn(
-        'rounded-[1.8rem] p-4 md:p-5 shadow-[0_18px_46px_-32px_rgba(15,23,42,0.5)] ring-1 dark:shadow-[0_18px_52px_-34px_rgba(0,0,0,0.82)] backdrop-blur-sm',
-        cardToneClasses(tone)
+        'rounded-[1.8rem] p-5 bg-card border border-border/50 shadow-md backdrop-blur-sm'
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-2">
-          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-muted-foreground">{label}</p>
-          <p className="text-2xl md:text-3xl font-black tracking-tight whitespace-nowrap tabular-nums">{value}</p>
-          <p className="text-sm font-bold text-foreground/80">{support}</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">{label}</p>
+          <p className="text-2xl md:text-3xl font-black tracking-tight whitespace-nowrap tabular-nums text-foreground">{value}</p>
+          <p className="text-xs font-semibold text-muted-foreground/80">{support}</p>
         </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/55 ring-1 ring-slate-950/5 dark:bg-white/[0.07] dark:ring-white/10">
+        <div className={cn(
+          "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 ring-black/5 dark:ring-white/5",
+          iconToneClasses(tone)
+        )}>
           {icon}
         </div>
       </div>
@@ -214,15 +220,11 @@ export default function MonthPlanPage({
         </div>
       </div>
 
-      <section className="rounded-[2.25rem] bg-gradient-to-br from-background via-background to-muted/20 p-1 shadow-[0_18px_60px_-32px_rgba(15,23,42,0.28)] dark:shadow-[0_22px_80px_-38px_rgba(0,0,0,0.7)]">
-        <div className="rounded-[2rem] bg-background/88 p-5 backdrop-blur-xl md:p-6">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {controlCards.map((card) => (
-              <ControlMetricCard key={card.label} {...card} />
-            ))}
-          </div>
-        </div>
-      </section>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {controlCards.map((card) => (
+          <ControlMetricCard key={card.label} {...card} />
+        ))}
+      </div>
 
       <section className="rounded-[2rem] border border-border/50 bg-card p-5 shadow-sm dark:shadow-none md:p-6">
         <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">

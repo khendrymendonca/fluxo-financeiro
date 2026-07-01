@@ -1,4 +1,4 @@
-﻿import { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useCategories } from './useFinanceQueries';
 import { parseLocalDate } from '@/utils/dateUtils';
 import { Transaction } from '@/types/finance';
@@ -13,12 +13,18 @@ export function useDashboardMetrics(viewDate: Date, transactions: Transaction[])
     const viewYear = viewDate.getFullYear();
 
     const currentMonthTransactions = transactions.filter(t => {
-      // 🛡️ REGRA HÍBRIDA: Se for cartão, respeita a fatura. Se for conta, respeita a data.
+      // 🛡️ REGRA HÍBRIDA: Se for cartão, respeita a fatura. Se for conta, respeita a data (ou a baixa se já pago).
       if (t.cardId && t.invoiceMonthYear) {
         const [year, month] = t.invoiceMonthYear.split('-').map(Number);
         return (month - 1 === viewMonth && year === viewYear);
       }
-      const d = parseLocalDate(t.date);
+      
+      let targetDate = t.date;
+      if (t.type === 'expense' && !t.cardId && t.isPaid && t.paymentDate) {
+        targetDate = t.paymentDate;
+      }
+      
+      const d = parseLocalDate(targetDate);
       return d.getMonth() === viewMonth && d.getFullYear() === viewYear;
     });
 

@@ -72,7 +72,7 @@ export function TransactionList({
   const [payingItem, setPayingItem] = useState<Transaction | null>(null);
   const [selectedBank, setSelectedBank] = useState<string>('all');
   const [paymentDate, setPaymentDate] = useState<string>(todayLocalString());
-  const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card'>('account');
+  const [paymentMethod, setPaymentMethod] = useState<'account' | 'credit_card' | 'boleto' | 'carne'>('account');
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryKey, setSelectedCategoryKey] = useState('all');
@@ -220,20 +220,29 @@ export function TransactionList({
     return groups;
   }, {} as Record<string, any[]>);
 
-  const handleSubmitPayment = (targetId: string, isCard: boolean) => {
+  const handleSubmitPayment = (targetId: string | null, isCard: boolean) => {
     if (!payingItem) return;
     executePayment(targetId, isCard);
   };
 
-  const executePayment = async (targetId: string, isCard: boolean) => {
+  const executePayment = async (targetId: string | null, isCard: boolean) => {
     if (!payingItem) return;
+
+    const isBoleto = targetId === 'boleto';
+    const isCarne = targetId === 'carne';
+    const prefix = isBoleto ? '[Boleto] ' : (isCarne ? '[Carnê] ' : '');
+    let newDescription = payingItem.description;
+    if (prefix && !newDescription.startsWith('[Boleto]') && !newDescription.startsWith('[Carnê]')) {
+      newDescription = prefix + newDescription;
+    }
 
     // Atualiza a transação para paga
     const updates: Partial<Transaction> = {
       isPaid: true,
       paymentDate: paymentDate,
-      accountId: isCard ? undefined : targetId,
-      cardId: isCard ? targetId : undefined
+      accountId: (isCard || isBoleto || isCarne) ? undefined : (targetId || undefined),
+      cardId: isCard ? (targetId || undefined) : undefined,
+      description: newDescription
     };
 
     await onPayBill({ ...payingItem, ...updates });
@@ -791,18 +800,32 @@ export function TransactionList({
                         className="w-full pl-8 pr-2 bg-transparent text-sm font-bold focus:outline-none appearance-none cursor-pointer text-foreground" />
                     </label>
                   </div>
-                  <div className="flex rounded-xl bg-muted/40 p-1">
+                  <div className="grid grid-cols-4 gap-1 rounded-xl bg-muted/40 p-1">
                     <button onClick={() => setPaymentMethod('account')}
-                      className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
+                      className={cn("py-1.5 text-[10px] font-bold rounded-lg transition-all text-center truncate",
                         paymentMethod === 'account' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                      Conta Bancária
+                      Conta
                     </button>
                     {payingItem?.type !== 'income' && (
                       <button onClick={() => setPaymentMethod('credit_card')}
-                        className={cn("flex-1 py-1.5 text-xs font-bold rounded-lg transition-all",
+                        className={cn("py-1.5 text-[10px] font-bold rounded-lg transition-all text-center truncate",
                           paymentMethod === 'credit_card' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                        Cartão de Crédito
+                        Cartão
                       </button>
+                    )}
+                    {payingItem?.type !== 'income' && (
+                      <>
+                        <button onClick={() => setPaymentMethod('boleto')}
+                          className={cn("py-1.5 text-[10px] font-bold rounded-lg transition-all text-center truncate",
+                            paymentMethod === 'boleto' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                          Boleto
+                        </button>
+                        <button onClick={() => setPaymentMethod('carne')}
+                          className={cn("py-1.5 text-[10px] font-bold rounded-lg transition-all text-center truncate",
+                            paymentMethod === 'carne' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                          Carnê
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -876,6 +899,32 @@ export function TransactionList({
                         </button>
                       ))
                     )
+                  )}
+                  {paymentMethod === 'boleto' && (
+                    <div className="p-2 space-y-4">
+                      <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 text-center">
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Esta conta será baixada sem descontar de nenhuma carteira/cartão específica, registrando como pagamento por **Boleto**.
+                        </p>
+                      </div>
+                      <Button onClick={() => handleSubmitPayment('boleto', false)}
+                        className="w-full py-6 rounded-xl font-black uppercase tracking-wider bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
+                        Confirmar Pagamento via Boleto
+                      </Button>
+                    </div>
+                  )}
+                  {paymentMethod === 'carne' && (
+                    <div className="p-2 space-y-4">
+                      <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-center">
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Esta conta será baixada sem descontar de nenhuma carteira/cartão específica, registrando como pagamento por **Carnê**.
+                        </p>
+                      </div>
+                      <Button onClick={() => handleSubmitPayment('carne', false)}
+                        className="w-full py-6 rounded-xl font-black uppercase tracking-wider bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20">
+                        Confirmar Pagamento via Carnê
+                      </Button>
+                    </div>
                   )}
                 </div>
                 <div className="px-5 py-3 border-t border-border">
