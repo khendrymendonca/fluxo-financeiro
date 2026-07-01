@@ -1944,6 +1944,23 @@ function PrintReportModal({
   onClose
 }: PrintReportModalProps) {
   const { transactions, debts, categories, creditCards, viewDate } = useFinanceStore();
+  const { theme } = useTheme();
+
+  const isDark = useMemo(() => {
+    if (theme === 'dark' || theme === 'amoled') return true;
+    if (theme === 'system') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  }, [theme]);
+
+  // Dynamic style variables to match active theme
+  const bgClass = isDark ? "bg-zinc-950 text-zinc-50 border-zinc-800" : "bg-white text-zinc-900 border-gray-200";
+  const borderClass = isDark ? "border-zinc-800" : "border-gray-200";
+  const textMutedClass = isDark ? "text-zinc-500" : "text-zinc-400";
+  const textBodyClass = isDark ? "text-zinc-400" : "text-zinc-600";
+  const textHeadingClass = isDark ? "text-zinc-200" : "text-gray-900";
+  const innerCardBgClass = isDark ? "bg-zinc-900/80 border-zinc-800" : "bg-gray-50 border-gray-100";
 
   const totalIncome = metrics.income;
   const totalExpenses = metrics.totalExpenses;
@@ -1953,11 +1970,9 @@ function PrintReportModal({
   const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
   const top5 = expenseCategories.slice(0, 5);
   const maiorCategoria = expenseCategories.length > 0 ? expenseCategories[0] : null;
-  const maiorCategoriaPercent = maiorCategoria && totalExpenses > 0 ? (maiorCategoria.value / totalExpenses) * 100 : 0;
 
   const projectedExp = metrics.projectedExpenses;
   const realizedExp = metrics.realizedExpenses;
-  const desvio = projectedExp > 0 ? ((realizedExp - projectedExp) / projectedExp) * 100 : 0;
 
   // 1. Recalcular e Extrair Penalidades Detalhadas do Score
   const scoreBreakdown = useMemo(() => {
@@ -2190,11 +2205,11 @@ function PrintReportModal({
   // 5. Saúde e Classificação Financeira
   const healthStatus = useMemo(() => {
     const score = scoreBreakdown.score;
-    if (score >= 900 && savingsRate >= 20) return { label: 'Excelente', color: 'text-emerald-600', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', desc: 'Sua vida financeira está em estado de excelência. Alta capacidade de poupança, Score excelente e baixíssimo endividamento parcelado.' };
-    if (score >= 800 && savingsRate >= 10) return { label: 'Saudável', color: 'text-teal-600', bg: 'bg-teal-500/10', border: 'border-teal-500/20', desc: 'Vida financeira saudável. Boa margem de sobra de caixa e controle de pagamentos em dia.' };
-    if (score >= 650 && savingsRate >= 0) return { label: 'Estável', color: 'text-blue-600', bg: 'bg-blue-500/10', border: 'border-blue-500/20', desc: 'Finanças sob controle, mas com margem apertada. Você paga as contas, mas sobra pouco para investir ou reserva.' };
-    if (score >= 500 || savingsRate < 0) return { label: 'Atenção', color: 'text-amber-600', bg: 'bg-amber-500/10', border: 'border-amber-500/20', desc: 'Alerta! Execução deficitária ou score comprometido. Suas contas estão consumindo quase tudo ou há parcelas em atraso.' };
-    return { label: 'Crítica', color: 'text-rose-600', bg: 'bg-rose-500/10', border: 'border-rose-500/20', desc: 'Situação de risco financeiro. Déficit recorrente, score muito baixo ou múltiplos acordos/pendências.' };
+    if (score >= 900 && savingsRate >= 20) return { label: 'Excelente', color: 'text-emerald-650 dark:text-emerald-450', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', desc: 'Sua vida financeira está em estado de excelência. Alta capacidade de poupança, Score excelente e baixíssimo endividamento parcelado.' };
+    if (score >= 800 && savingsRate >= 10) return { label: 'Saudável', color: 'text-teal-650 dark:text-teal-450', bg: 'bg-teal-500/10', border: 'border-teal-500/20', desc: 'Vida financeira saudável. Boa margem de sobra de caixa e controle de pagamentos em dia.' };
+    if (score >= 650 && savingsRate >= 0) return { label: 'Estável', color: 'text-blue-650 dark:text-blue-450', bg: 'bg-blue-500/10', border: 'border-blue-500/20', desc: 'Finanças sob controle, mas com margem apertada. Você paga as contas, mas sobra pouco para investir ou reserva.' };
+    if (score >= 500 || savingsRate < 0) return { label: 'Atenção', color: 'text-amber-650 dark:text-amber-450', bg: 'bg-amber-500/10', border: 'border-amber-500/20', desc: 'Alerta! Execução deficitária ou score comprometido. Suas contas estão consumindo quase tudo ou há parcelas em atraso.' };
+    return { label: 'Crítica', color: 'text-rose-650 dark:text-rose-450', bg: 'bg-rose-500/10', border: 'border-rose-500/20', desc: 'Situação de risco financeiro. Déficit recorrente, score muito baixo ou múltiplos acordos/pendências.' };
   }, [scoreBreakdown.score, savingsRate]);
 
   // Prognóstico de meses saudáveis
@@ -2218,23 +2233,6 @@ function PrintReportModal({
     return `Previsão: Nos próximos ${monthsNeeded} meses, à medida que seus acordos e parcelamentos ativos forem quitados, um montante de R$ ${totalReleased.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês será totalmente liberado em seu orçamento, restabelecendo sua saúde de caixa e elevando gradativamente seu Fluxo Score para o patamar máximo de 1000.`;
   }, [timelineEvents, totalIncome, totalExpenses, scoreBreakdown.score, debts]);
 
-  // Gerar textos de insights ricos
-  let healthInsight = "";
-  if (consumoPercent > 90) {
-    healthInsight = `Sua margem de segurança financeira está em zona crítica neste período, com as despesas consumindo ${consumoPercent.toFixed(1)}% das receitas. É recomendável rastrear imediatamente compras supérfluas e restabelecer uma reserva líquida mínima para evitar o uso de limites de crédito rotativo.`;
-  } else if (consumoPercent > 70) {
-    healthInsight = `Seu orçamento está equilibrado, com despesas consumindo ${consumoPercent.toFixed(1)}% da receita. No entanto, sua margem para novos investimentos ou poupança está reduzida. Tente otimizar contratos de despesas recorrentes (contas fixas) para liberar mais fluxo de caixa.`;
-  } else {
-    healthInsight = `Excelente eficiência de caixa! Suas despesas consumiram apenas ${consumoPercent.toFixed(1)}% da receita, deixando uma folga saudável de ${(100 - consumoPercent).toFixed(1)}% para investimentos, projetos ou construção de patrimônio.`;
-  }
-
-  let concentrationInsight = "";
-  if (maiorCategoria) {
-    concentrationInsight = `A categoria '${maiorCategoria.name}' foi o seu maior centro de custos no período, somando R$ ${maiorCategoria.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (${maiorCategoriaPercent.toFixed(1)}% de todas as despesas). Ajustar pequenas despesas vinculadas a essa categoria pode gerar economias imediatas sem afetar seu estilo de vida.`;
-  } else {
-    concentrationInsight = `Nenhuma despesa expressiva foi registrada. Mantenha os lançamentos em dia para gerar análises consolidadas completas.`;
-  }
-
   const accountName = selectedAccountId === 'all'
     ? 'Consolidado (Todas as Contas)'
     : accounts.find(a => a.id === selectedAccountId)?.name || 'Conta Específica';
@@ -2245,7 +2243,7 @@ function PrintReportModal({
       <div className="max-w-[850px] w-full mx-auto bg-white dark:bg-zinc-900 rounded-3xl p-4 mb-4 border border-gray-150 dark:border-zinc-800 flex items-center justify-between no-print shadow-xl animate-fade-in shrink-0">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-primary animate-pulse" />
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-zinc-50">Diagnóstico Financeiro Profissional</span>
+          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-zinc-50 font-sans">Diagnóstico Financeiro Profissional</span>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -2265,23 +2263,23 @@ function PrintReportModal({
       </div>
 
       {/* Página do Relatório A4 (Página 1 de 2) */}
-      <div className="max-w-[850px] w-full mx-auto bg-white text-zinc-900 p-10 md:p-14 rounded-3xl border border-gray-200 shadow-2xl flex flex-col justify-between min-h-[1130px] print-report-view relative animate-scale-up font-sans">
+      <div className={cn("max-w-[850px] w-full mx-auto p-10 md:p-14 rounded-3xl border shadow-2xl flex flex-col justify-between min-h-[1130px] print-report-view relative animate-scale-up font-sans print:border-none print:shadow-none print:rounded-none print:p-0 print:m-0", bgClass, borderClass)}>
         
         {/* Cabecalho Principal */}
         <div className="space-y-6">
-          <div className="flex items-start justify-between border-b-2 border-gray-150 pb-6">
+          <div className={cn("flex items-start justify-between border-b-2 pb-6", isDark ? "border-zinc-800" : "border-gray-150")}>
             <div>
               <div className="flex items-center gap-2 text-primary font-black text-lg uppercase tracking-wider">
                 <span className="bg-primary text-white px-2 py-0.5 rounded-lg text-sm">FLUXO</span>
                 <span>FLUXO INTELIGENTE</span>
               </div>
-              <h1 className="mt-4 text-2xl md:text-3xl font-black tracking-tight text-gray-900">DIAGNÓSTICO FINANCEIRO & SCORE</h1>
-              <p className="text-xs uppercase font-black tracking-widest text-zinc-400 mt-1">Análise de Performance • Saúde Financeira • Projeções</p>
+              <h1 className={cn("mt-4 text-2xl md:text-3xl font-black tracking-tight", textHeadingClass)}>DIAGNÓSTICO FINANCEIRO & SCORE</h1>
+              <p className={cn("text-xs uppercase font-black tracking-widest mt-1", textMutedClass)}>Análise de Performance • Saúde Financeira • Projeções</p>
             </div>
-            <div className="text-right text-xs text-zinc-400 font-bold space-y-1">
-              <p>Período de Análise: <span className="text-zinc-800 uppercase font-black tracking-wider">{currentPeriodLabel}</span></p>
-              <p>Carteira/Conta: <span className="text-zinc-800 font-black">{accountName}</span></p>
-              <p>Diagnóstico gerado em: <span className="text-zinc-800 font-black">{new Date().toLocaleDateString('pt-BR')}</span></p>
+            <div className={cn("text-right text-xs font-bold space-y-1", textMutedClass)}>
+              <p>Período de Análise: <span className={cn("uppercase font-black tracking-wider", textHeadingClass)}>{currentPeriodLabel}</span></p>
+              <p>Carteira/Conta: <span className={cn("font-black", textHeadingClass)}>{accountName}</span></p>
+              <p>Diagnóstico gerado em: <span className={cn("font-black", textHeadingClass)}>{new Date().toLocaleDateString('pt-BR')}</span></p>
             </div>
           </div>
 
@@ -2293,10 +2291,10 @@ function PrintReportModal({
                 <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Avaliação de Saúde Financeira</span>
               </div>
               <h3 className={cn("text-lg font-black uppercase tracking-tight", healthStatus.color)}>Status: {healthStatus.label}</h3>
-              <p className="text-xs text-zinc-600 leading-relaxed font-medium">{healthStatus.desc}</p>
+              <p className={cn("text-xs leading-relaxed font-medium", isDark ? "text-zinc-300" : "text-zinc-650")}>{healthStatus.desc}</p>
             </div>
-            <div className="flex flex-col items-center justify-center p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/55 shadow-sm text-center shrink-0 w-28">
-              <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest leading-none">Taxa Poupança</span>
+            <div className={cn("flex flex-col items-center justify-center p-3 rounded-xl border shadow-sm text-center shrink-0 w-28", isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200/55")}>
+              <span className={cn("text-[9px] font-black uppercase tracking-widest leading-none", textMutedClass)}>Taxa Poupança</span>
               <span className={cn("text-xl font-black mt-1", savingsRate >= 20 ? "text-emerald-600" : savingsRate >= 0 ? "text-blue-600" : "text-rose-600")}>
                 {savingsRate.toFixed(1)}%
               </span>
@@ -2305,68 +2303,68 @@ function PrintReportModal({
 
           {/* Grid de Metricas do Periodo */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="rounded-2xl bg-gray-50 p-4 border border-gray-150">
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Entradas Totais</p>
+            <div className={cn("rounded-2xl p-4 border", innerCardBgClass)}>
+              <p className={cn("text-[10px] font-black uppercase tracking-widest", textMutedClass)}>Entradas Totais</p>
               <p className="mt-1.5 text-xl font-black text-emerald-600 tabular-nums">{formatCurrency(totalIncome)}</p>
-              <div className="mt-3 flex items-center justify-between text-[9px] font-bold text-zinc-400 border-t border-gray-200/60 pt-1.5">
+              <div className={cn("mt-3 flex items-center justify-between text-[9px] font-bold border-t pt-1.5", isDark ? "border-zinc-800 text-zinc-500" : "border-gray-200/60 text-zinc-400")}>
                 <span>Orçamento Previsto: {formatCurrency(metrics.projectedIncome)}</span>
               </div>
             </div>
-            <div className="rounded-2xl bg-gray-50 p-4 border border-gray-150">
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Saídas Totais</p>
+            <div className={cn("rounded-2xl p-4 border", innerCardBgClass)}>
+              <p className={cn("text-[10px] font-black uppercase tracking-widest", textMutedClass)}>Saídas Totais</p>
               <p className="mt-1.5 text-xl font-black text-rose-600 tabular-nums">{formatCurrency(totalExpenses)}</p>
-              <div className="mt-3 flex items-center justify-between text-[9px] font-bold text-zinc-400 border-t border-gray-200/60 pt-1.5">
+              <div className={cn("mt-3 flex items-center justify-between text-[9px] font-bold border-t pt-1.5", isDark ? "border-zinc-800 text-zinc-500" : "border-gray-200/60 text-zinc-400")}>
                 <span>Orçamento Previsto: {formatCurrency(metrics.projectedExpenses)}</span>
               </div>
             </div>
-            <div className="rounded-2xl bg-gray-50 p-4 border border-gray-150">
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Saldo Líquido</p>
+            <div className={cn("rounded-2xl p-4 border", innerCardBgClass)}>
+              <p className={cn("text-[10px] font-black uppercase tracking-widest", textMutedClass)}>Saldo Líquido</p>
               <p className={cn("mt-1.5 text-xl font-black tabular-nums", balance >= 0 ? "text-emerald-600" : "text-rose-600")}>
                 {formatCurrency(balance)}
               </p>
-              <div className="mt-3 flex items-center justify-between text-[9px] font-bold text-zinc-400 border-t border-gray-200/60 pt-1.5">
+              <div className={cn("mt-3 flex items-center justify-between text-[9px] font-bold border-t pt-1.5", isDark ? "border-zinc-800 text-zinc-500" : "border-gray-200/60 text-zinc-400")}>
                 <span>Eficiência de Caixa: {consumoPercent.toFixed(1)}%</span>
               </div>
             </div>
           </div>
 
           {/* DIAGNÓSTICO FLUXO SCORE */}
-          <div className="border border-gray-150 rounded-2xl p-5 bg-zinc-50/50 space-y-4">
-            <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+          <div className={cn("border rounded-2xl p-5 space-y-4", isDark ? "bg-zinc-900/30 border-zinc-800" : "bg-zinc-50/50 border-gray-150")}>
+            <div className={cn("flex items-center justify-between border-b pb-2", isDark ? "border-zinc-800" : "border-gray-200")}>
               <div className="flex items-center gap-2">
                 <Award className="w-5 h-5 text-primary" />
-                <h2 className="text-sm font-black uppercase tracking-wider text-gray-900">Diagnóstico de Performance: Fluxo Score</h2>
+                <h2 className={cn("text-sm font-black uppercase tracking-wider", textHeadingClass)}>Diagnóstico de Performance: Fluxo Score</h2>
               </div>
               <div className="text-right">
-                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block leading-none">Pontuação</span>
+                <span className={cn("text-[10px] font-black uppercase tracking-widest block leading-none", textMutedClass)}>Pontuação</span>
                 <span className="text-xl font-black text-primary tabular-nums">{scoreBreakdown.score}/1000</span>
               </div>
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs text-zinc-600 leading-relaxed">
+              <p className={cn("text-xs leading-relaxed", textBodyClass)}>
                 O **Fluxo Score** é um indicador de saúde financeira que reflete a sua regularidade de pagamentos e nível de endividamento. Contas pagas com atraso ou parcelamentos/acordos ativos consomem pontos temporários.
               </p>
 
               {/* Fatores que estão reduzindo o Score */}
               <div className="space-y-2">
-                <h4 className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Detalhamento de Redutores e Ocorrências</h4>
+                <h4 className={cn("text-[10px] font-black uppercase tracking-wider", textMutedClass)}>Detalhamento de Redutores e Ocorrências</h4>
                 
                 {scorePenalties.map((pen, i) => (
-                  <div key={i} className="flex items-start justify-between text-xs p-2.5 bg-white rounded-xl border border-gray-200/80 gap-3">
-                    <div className="space-y-1">
-                      <p className="font-bold text-zinc-800">{pen.description}</p>
-                      <p className="text-[10px] text-zinc-500 leading-none">{pen.detail}</p>
+                  <div key={i} className={cn("flex items-start justify-between text-xs p-2.5 rounded-xl border gap-3", isDark ? "bg-zinc-900/60 border-zinc-800/80" : "bg-white border-gray-200/80")}>
+                    <div className="space-y-1 text-left">
+                      <p className={cn("font-bold", textHeadingClass)}>{pen.description}</p>
+                      <p className={cn("text-[10px] leading-none", textBodyClass)}>{pen.detail}</p>
                       <p className="text-[10px] text-primary font-black uppercase tracking-wide mt-1">Ação: {pen.action}</p>
                     </div>
-                    <span className="font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg text-[10px] tabular-nums shrink-0">
+                    <span className="font-black text-rose-600 bg-rose-50 dark:bg-rose-950/20 px-2 py-0.5 rounded-lg text-[10px] tabular-nums shrink-0">
                       {pen.points} pts
                     </span>
                   </div>
                 ))}
 
                 {scorePenalties.length === 0 && (
-                  <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 p-3 rounded-xl border border-emerald-150 font-bold">
+                  <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-150 font-bold">
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     <span>Nenhum fator redutor ativo. Seu comportamento financeiro é exemplar neste período!</span>
                   </div>
@@ -2376,18 +2374,18 @@ function PrintReportModal({
           </div>
 
           {/* PROGNÓSTICO E SAÚDE */}
-          <div className="border border-primary/20 rounded-2xl p-5 bg-primary/5 space-y-2">
+          <div className={cn("border rounded-2xl p-5 space-y-2", isDark ? "bg-primary/5 border-primary/20" : "bg-primary/5 border-primary/20")}>
             <h3 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
               <Sparkles className="w-4 h-4" /> Diagnóstico de Longo Prazo
             </h3>
-            <p className="text-xs text-zinc-700 leading-relaxed font-medium">
+            <p className={cn("text-xs leading-relaxed font-medium", isDark ? "text-zinc-300" : "text-zinc-700")}>
               {monthsToHealthDesc}
             </p>
           </div>
         </div>
 
         {/* Rodapé da Página 1 */}
-        <div className="border-t border-gray-150 pt-5 mt-8 flex justify-between items-center text-[9px] text-zinc-400 font-bold">
+        <div className={cn("border-t pt-5 mt-8 flex justify-between items-center text-[9px] font-bold", isDark ? "border-zinc-800 text-zinc-500" : "border-gray-150 text-zinc-400")}>
           <div>
             <p>© {new Date().getFullYear()} Fluxo Financeiro. Relatório Confidencial gerado para o usuário.</p>
           </div>
@@ -2398,16 +2396,16 @@ function PrintReportModal({
       </div>
 
       {/* Página do Relatório A4 (Página 2 de 2) - QUEBRA DE PÁGINA IMPRESSÃO */}
-      <div className="max-w-[850px] w-full mx-auto bg-white text-zinc-900 p-10 md:p-14 rounded-3xl border border-gray-200 shadow-2xl flex flex-col justify-between min-h-[1130px] print-report-view relative animate-scale-up font-sans mt-6 print:mt-0 print:page-break-before-always">
+      <div className={cn("max-w-[850px] w-full mx-auto p-10 md:p-14 rounded-3xl border shadow-2xl flex flex-col justify-between min-h-[1130px] print-report-view relative animate-scale-up font-sans mt-6 print:mt-0 print:page-break-before-always print:border-none print:shadow-none print:rounded-none print:p-0 print:m-0", bgClass, borderClass)}>
         
         <div className="space-y-6">
           {/* Min-Cabecalho Pagina 2 */}
-          <div className="flex items-center justify-between border-b border-gray-150 pb-4">
+          <div className={cn("flex items-center justify-between border-b pb-4", isDark ? "border-zinc-800" : "border-gray-150")}>
             <div className="flex items-center gap-1 text-primary font-black text-xs uppercase tracking-wider">
               <span className="bg-primary text-white px-1.5 py-0.5 rounded text-[10px]">FF</span>
               <span>Fluxo Financeiro</span>
             </div>
-            <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
+            <span className={cn("text-[10px] font-bold uppercase tracking-wider", textMutedClass)}>
               PARCELAMENTOS, ACORDOS & CENTROS DE CUSTO
             </span>
           </div>
@@ -2415,36 +2413,36 @@ function PrintReportModal({
           {/* MAIORES GASTOS E ORÇAMENTO */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h2 className="text-xs font-black uppercase tracking-wider text-zinc-400 border-b pb-1.5 mb-3">Concentração de Custos</h2>
+              <h2 className={cn("text-xs font-black uppercase tracking-wider border-b pb-1.5 mb-3", textMutedClass, isDark ? "border-zinc-800" : "border-gray-200")}>Concentração de Custos</h2>
               <div className="space-y-2.5">
                 {top5.map((cat, idx) => (
-                  <div key={cat.id} className="flex items-center justify-between text-xs border-b border-gray-50 pb-1.5">
+                  <div key={cat.id} className={cn("flex items-center justify-between text-xs border-b pb-1.5", isDark ? "border-zinc-850" : "border-gray-50")}>
                     <div className="flex items-center gap-2">
-                      <span className="font-black text-zinc-300 w-4">{idx + 1}.</span>
-                      <span className="font-bold text-zinc-700">{cat.name}</span>
+                      <span className={cn("font-black w-4", textMutedClass)}>{idx + 1}.</span>
+                      <span className={cn("font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>{cat.name}</span>
                     </div>
                     <div className="text-right">
-                      <span className="font-black text-zinc-950">{formatCurrency(cat.value)}</span>
-                      <span className="text-[9px] text-zinc-400 font-bold ml-1">({((cat.value / (totalExpenses || 1)) * 100).toFixed(1)}%)</span>
+                      <span className={cn("font-black", textHeadingClass)}>{formatCurrency(cat.value)}</span>
+                      <span className={cn("text-[9px] font-bold ml-1", textMutedClass)}>({((cat.value / (totalExpenses || 1)) * 105).toFixed(0)}%)</span>
                     </div>
                   </div>
                 ))}
                 {top5.length === 0 && (
-                  <p className="text-xs text-zinc-400 italic py-4">Nenhuma despesa registrada.</p>
+                  <p className={cn("text-xs italic py-4", textMutedClass)}>Nenhuma despesa registrada.</p>
                 )}
               </div>
             </div>
 
             {/* Estouro de Limites */}
             <div className="space-y-3">
-              <h2 className="text-xs font-black uppercase tracking-wider text-zinc-400 border-b pb-1.5 mb-3">Limites Ultrapassados</h2>
+              <h2 className={cn("text-xs font-black uppercase tracking-wider border-b pb-1.5 mb-3", textMutedClass, isDark ? "border-zinc-800" : "border-gray-200")}>Limites Ultrapassados</h2>
               <div className="space-y-2">
                 {exceededBudgets.map((eb, i) => (
-                  <div key={i} className="flex items-start gap-2.5 p-2.5 bg-rose-50 border border-rose-100 rounded-xl">
+                  <div key={i} className={cn("flex items-start gap-2.5 p-2.5 border rounded-xl", isDark ? "bg-rose-950/20 border-rose-900/30 text-rose-200" : "bg-rose-50 border-rose-100 text-rose-900")}>
                     <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                    <div className="text-xs">
-                      <p className="font-bold text-rose-900">{eb.categoryName}</p>
-                      <p className="text-rose-700 mt-0.5">
+                    <div className="text-xs text-left">
+                      <p className="font-bold">{eb.categoryName}</p>
+                      <p className="mt-0.5 opacity-90">
                         Gasto de R$ {eb.spent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ultrapassou o limite planejado de R$ {eb.limit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em **R$ {eb.excess.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}**.
                       </p>
                     </div>
@@ -2452,7 +2450,7 @@ function PrintReportModal({
                 ))}
 
                 {exceededBudgets.length === 0 && (
-                  <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 p-3 rounded-xl border border-emerald-150 font-bold">
+                  <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-150 font-bold">
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     <span>Nenhum orçamento planejado foi estourado neste período. Controle excelente!</span>
                   </div>
@@ -2463,15 +2461,15 @@ function PrintReportModal({
 
           {/* DETALHAMENTO DE COMPROMISSOS (ACORDOS & PARCELAMENTOS) */}
           <div className="space-y-4">
-            <h2 className="text-xs font-black uppercase tracking-wider text-zinc-400 border-b pb-1.5">Compromissos Financeiros Ativos</h2>
+            <h2 className={cn("text-xs font-black uppercase tracking-wider border-b pb-1.5", textMutedClass, isDark ? "border-zinc-800" : "border-gray-200")}>Compromissos Financeiros Ativos</h2>
             
             {/* Acordos */}
-            <div className="space-y-2">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1">
+            <div className="space-y-2 text-left">
+              <h3 className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1", textMutedClass)}>
                 <Clock className="w-3.5 h-3.5" /> Acordos sob Quitação Ativos
               </h3>
               
-              {debts.filter(d => d.status !== 'paid' && !(typeof d.remainingAmount === 'number' && d.remainingAmount <= 0)).map((d, i) => {
+              {debts.filter(d => d.status !== 'paid' && !(typeof d.remainingAmount === 'number' && d.remainingAmount <= 0)).map((d) => {
                 const installments = transactions.filter(tx => !tx.deleted_at && tx.type === 'expense' && tx.debtId === d.id && !isAgreementEntryTransaction(tx, d.id));
                 const totalInstallments = installments.length > 0 ? installments.length : Math.max(0, Number(d.totalInstallments) || 0);
                 const paidInstallments = installments.filter(tx => tx.isPaid).length;
@@ -2479,19 +2477,19 @@ function PrintReportModal({
                 const progressWidth = `${Math.min(recovered, 100)}%`;
 
                 return (
-                  <div key={d.id} className="p-3.5 bg-zinc-50 border border-gray-150 rounded-xl space-y-2 text-xs">
+                  <div key={d.id} className={cn("p-3.5 border rounded-xl space-y-2 text-xs", isDark ? "bg-zinc-900/30 border-zinc-800" : "bg-zinc-50 border-gray-150")}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="font-black text-gray-900">{d.name}</span>
-                        <span className="text-[10px] text-zinc-400 font-bold uppercase ml-2">Total: R$ {Number(d.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        <span className={cn("font-black", textHeadingClass)}>{d.name}</span>
+                        <span className={cn("text-[10px] font-bold uppercase ml-2", textMutedClass)}>Total: R$ {Number(d.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                       </div>
-                      <span className="font-black text-zinc-700">Saldo devedor: R$ {Number(d.remainingAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      <span className={cn("font-black", textHeadingClass)}>Saldo devedor: R$ {Number(d.remainingAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                     </div>
                     {/* Barra de Progresso */}
-                    <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                    <div className={cn("w-full h-2 rounded-full overflow-hidden", isDark ? "bg-zinc-800" : "bg-gray-200")}>
                       <div className="bg-primary h-full rounded-full transition-all duration-300" style={{ width: progressWidth }} />
                     </div>
-                    <div className="flex justify-between text-[9px] text-zinc-500 font-bold leading-none">
+                    <div className={cn("flex justify-between text-[9px] font-bold leading-none", textMutedClass)}>
                       <span>Progresso: {paidInstallments}/{totalInstallments} parcelas pagas ({recovered.toFixed(1)}%)</span>
                       {d.installmentAmount && (
                         <span>Parcela Mensal: R$ {Number(d.installmentAmount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
@@ -2502,70 +2500,70 @@ function PrintReportModal({
               })}
 
               {debts.filter(d => d.status !== 'paid' && !(typeof d.remainingAmount === 'number' && d.remainingAmount <= 0)).length === 0 && (
-                <p className="text-xs text-zinc-400 italic py-1">Nenhum acordo sob quitação pendente.</p>
+                <p className={cn("text-xs italic py-1", textMutedClass)}>Nenhum acordo sob quitação pendente.</p>
               )}
             </div>
 
             {/* Parcelamentos */}
-            <div className="space-y-2 pt-2">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1">
+            <div className="space-y-2 pt-2 text-left">
+              <h3 className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1", textMutedClass)}>
                 <Calendar className="w-3.5 h-3.5" /> Parcelamentos Ativos no Crédito / Boleto
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {activeInstallments.map((inst, i) => (
-                  <div key={i} className="p-3 bg-zinc-50 border border-gray-150 rounded-xl space-y-1.5 text-xs">
+                  <div key={i} className={cn("p-3 border rounded-xl space-y-1.5 text-xs", isDark ? "bg-zinc-900/30 border-zinc-800" : "bg-zinc-50 border-gray-150")}>
                     <div className="flex justify-between">
-                      <span className="font-bold text-gray-800 truncate max-w-[170px]">{inst.description}</span>
+                      <span className={cn("font-bold truncate max-w-[170px]", textHeadingClass)}>{inst.description}</span>
                       <span className="font-black text-rose-600 tabular-nums">R$ {inst.monthlyValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês</span>
                     </div>
-                    <div className="flex justify-between text-[9px] text-zinc-500 font-bold">
+                    <div className={cn("flex justify-between text-[9px] font-bold", textMutedClass)}>
                       <span>Progresso: {inst.paidCount} de {inst.totalCount} parcelas</span>
                       <span>Total: R$ {inst.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                     </div>
                     {inst.lastDueDate && (
-                      <p className="text-[9px] text-zinc-400 font-bold mt-1">
-                        Quitação estimada em: <span className="text-zinc-600 font-black">{format(parseLocalDate(inst.lastDueDate), "MMMM 'de' yyyy", { locale: ptBR })}</span>
+                      <p className={cn("text-[9px] font-bold mt-1", textMutedClass)}>
+                        Quitação estimada em: <span className={cn("font-black", textHeadingClass)}>{format(parseLocalDate(inst.lastDueDate), "MMMM 'de' yyyy", { locale: ptBR })}</span>
                       </p>
                     )}
                   </div>
                 ))}
 
                 {activeInstallments.length === 0 && (
-                  <p className="text-xs text-zinc-400 italic py-1">Nenhum parcelamento ativo cadastrado.</p>
+                  <p className={cn("text-xs italic py-1", textMutedClass)}>Nenhum parcelamento ativo cadastrado.</p>
                 )}
               </div>
             </div>
           </div>
 
           {/* CRONOGRAMA DE LIBERAÇÃO ORÇAMENTÁRIA */}
-          <div className="space-y-3 pt-2">
-            <h2 className="text-xs font-black uppercase tracking-wider text-zinc-400 border-b pb-1.5">Previsão e Linha do Tempo de Quitações</h2>
+          <div className="space-y-3 pt-2 text-left">
+            <h2 className={cn("text-xs font-black uppercase tracking-wider border-b pb-1.5", textMutedClass, isDark ? "border-zinc-800" : "border-gray-200")}>Previsão e Linha do Tempo de Quitações</h2>
             
-            <div className="relative border-l border-gray-200 pl-4 space-y-4 text-xs ml-2">
+            <div className={cn("relative border-l pl-4 space-y-4 text-xs ml-2", isDark ? "border-zinc-800" : "border-gray-200")}>
               {timelineEvents.slice(0, 4).map((evt, idx) => (
                 <div key={idx} className="relative">
-                  <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-primary border-2 border-white" />
+                  <div className={cn("absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-primary border-2", isDark ? "border-zinc-950" : "border-white")} />
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="font-black text-gray-900">{evt.label}</span>
-                      <span className="text-[10px] font-black text-emerald-600">+{evt.date.toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' })}</span>
+                      <span className={cn("font-black", textHeadingClass)}>{evt.label}</span>
+                      <span className="text-[10px] font-black text-emerald-650 dark:text-emerald-450">+{evt.date.toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' })}</span>
                     </div>
-                    <p className="text-zinc-500 text-[10px]">{evt.description}</p>
-                    <p className="text-[9px] text-emerald-600 font-bold">Recuperação de caixa: R$ {evt.valueReleased.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês liberados no orçamento.</p>
+                    <p className={cn("text-[10px]", textBodyClass)}>{evt.description}</p>
+                    <p className="text-[9px] text-emerald-650 dark:text-emerald-450 font-bold">Recuperação de caixa: R$ {evt.valueReleased.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês liberados no orçamento.</p>
                   </div>
                 </div>
               ))}
 
               {timelineEvents.length === 0 && (
-                <p className="text-xs text-zinc-400 italic pl-1">Nenhum compromisso agendado para quitação futura imediata.</p>
+                <p className={cn("text-xs italic pl-1", textMutedClass)}>Nenhum compromisso agendado para quitação futura imediata.</p>
               )}
             </div>
           </div>
         </div>
 
         {/* Rodapé da Página 2 */}
-        <div className="border-t border-gray-150 pt-5 mt-8 flex justify-between items-center text-[9px] text-zinc-400 font-bold">
+        <div className={cn("border-t pt-5 mt-8 flex justify-between items-center text-[9px] font-bold", isDark ? "border-zinc-800 text-zinc-500" : "border-gray-150 text-zinc-400")}>
           <div>
             <p>Relatório gerencial confidencial em benefício de {userName}.</p>
           </div>
@@ -2577,4 +2575,3 @@ function PrintReportModal({
     </div>
   );
 }
-
