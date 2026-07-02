@@ -2054,13 +2054,28 @@ function PrintReportModal({
   // 2. Agrupar e Calcular Parcelamentos Ativos e datas de quitação
   const activeInstallments = useMemo(() => {
     const groups = new Map<string, typeof transactions>();
+    
     transactions.forEach(t => {
-      if (t.installmentGroupId && !t.deleted_at) {
-        if (!groups.has(t.installmentGroupId)) {
-          groups.set(t.installmentGroupId, []);
-        }
-        groups.get(t.installmentGroupId)!.push(t);
+      if (t.deleted_at || t.type !== 'expense') return;
+      
+      const hasSuffix = /\s*\(\d+\/\d+\)\s*$/.test(t.description);
+      const isInstallment = t.installmentGroupId || (t.installmentTotal && t.installmentTotal > 1) || hasSuffix;
+      
+      if (!isInstallment) return;
+
+      let groupKey = '';
+      if (t.installmentGroupId) {
+        groupKey = t.installmentGroupId;
+      } else {
+        const baseDesc = t.description.replace(/\s*\(\d+\/\d+\)\s*$/, '').trim();
+        const originId = t.cardId ? `card-${t.cardId}` : `acc-${t.accountId || 'none'}`;
+        groupKey = `manual-${baseDesc}-${originId}`;
       }
+
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, []);
+      }
+      groups.get(groupKey)!.push(t);
     });
 
     const list: {
@@ -2077,17 +2092,22 @@ function PrintReportModal({
       const sorted = [...txs].sort((a, b) => a.date.localeCompare(b.date));
       const paid = sorted.filter(t => t.isPaid);
       const unpaid = sorted.filter(t => !t.isPaid);
-      if (unpaid.length > 0) {
-        const firstUnpaid = unpaid[0];
+      
+      const totalCount = sorted[0].installmentTotal || sorted.length;
+      const paidCount = paid.length;
+      
+      if (paidCount < totalCount) {
+        const firstUnpaid = unpaid.length > 0 ? unpaid[0] : null;
         const totalVal = sorted.reduce((sum, t) => sum + t.amount, 0);
         const monthly = sorted[0].amount;
+        
         list.push({
-          description: sorted[0].description.replace(/\s\(\d+\/\d+\)$/, ''),
+          description: sorted[0].description.replace(/\s*\(\d+\/\d+\)\s*$/, '').trim(),
           totalValue: totalVal,
-          paidCount: paid.length,
-          totalCount: sorted.length,
+          paidCount,
+          totalCount,
           monthlyValue: monthly,
-          nextDueDate: firstUnpaid.date,
+          nextDueDate: firstUnpaid ? firstUnpaid.date : null,
           lastDueDate: sorted[sorted.length - 1].date
         });
       }
@@ -2151,16 +2171,21 @@ function PrintReportModal({
 
     // Parcelamentos
     activeInstallments.forEach(inst => {
+      let endDate: Date;
       if (inst.lastDueDate) {
-        const endDate = parseLocalDate(inst.lastDueDate);
-        if (endDate.getTime() >= today.getTime()) {
-          events.push({
-            date: endDate,
-            label: `Parcelamento Finalizado`,
-            description: `Quitação de '${inst.description}' (${inst.paidCount}/${inst.totalCount} parcelas pagas)`,
-            valueReleased: inst.monthlyValue
-          });
-        }
+        endDate = parseLocalDate(inst.lastDueDate);
+      } else {
+        const remainingMonths = Math.max(0, inst.totalCount - inst.paidCount);
+        endDate = addMonths(today, remainingMonths);
+      }
+      
+      if (endDate.getTime() >= today.getTime()) {
+        events.push({
+          date: endDate,
+          label: `Parcelamento Finalizado`,
+          description: `Quitação de '${inst.description}' (${inst.paidCount}/${inst.totalCount} parcelas pagas)`,
+          valueReleased: inst.monthlyValue
+        });
       }
     });
 
@@ -2292,12 +2317,6 @@ function PrintReportModal({
               </div>
               <h3 className={cn("text-lg font-black uppercase tracking-tight", healthStatus.color)}>Status: {healthStatus.label}</h3>
               <p className={cn("text-xs leading-relaxed font-medium", isDark ? "text-zinc-300" : "text-zinc-650")}>{healthStatus.desc}</p>
-            </div>
-            <div className={cn("flex flex-col items-center justify-center p-3 rounded-xl border shadow-sm text-center shrink-0 w-28", isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200/55")}>
-              <span className={cn("text-[9px] font-black uppercase tracking-widest leading-none", textMutedClass)}>Taxa Poupança</span>
-              <span className={cn("text-xl font-black mt-1", savingsRate >= 20 ? "text-emerald-600" : savingsRate >= 0 ? "text-blue-600" : "text-rose-600")}>
-                {savingsRate.toFixed(1)}%
-              </span>
             </div>
           </div>
 

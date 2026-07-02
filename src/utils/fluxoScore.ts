@@ -180,9 +180,11 @@ export function calculateFluxoScore(
   const clampedAccountsDelta = Math.min(0, accountsDelta);
 
   const rawScore = SCORE_BASELINE + clampedAccountsDelta + agreementsDelta + monthlyBonus;
-  const score = Math.max(
-    SCORE_MIN,
-    Math.min(SCORE_MAX, rawScore)
+  const score = Math.ceil(
+    Math.max(
+      SCORE_MIN,
+      Math.min(SCORE_MAX, rawScore)
+    )
   );
 
   console.log('[DEBUG SCORE] Contas com Penalidade:', accountsPenalties);

@@ -3,7 +3,7 @@ import { Debt, Transaction } from '@/types/finance';
 export const AGREEMENT_ENTRY_PREFIX = 'Entrada acordo';
 
 export function roundCurrency(value: number) {
-  return Number((Number(value || 0)).toFixed(2));
+  return Math.ceil((Number(value || 0)) * 100) / 100;
 }
 
 export function buildAgreementEntryDescription(name: string) {
