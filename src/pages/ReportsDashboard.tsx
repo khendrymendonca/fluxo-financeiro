@@ -1954,11 +1954,20 @@ function PrintReportModal({
     return false;
   }, [theme]);
 
+  // Efeito para disparar a impressão do PDF e fechar o overlay automaticamente
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      window.print();
+      onClose();
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
   // Dynamic style variables to match active theme
   const bgClass = isDark ? "bg-zinc-950 text-zinc-50 border-zinc-800" : "bg-white text-zinc-900 border-gray-200";
   const borderClass = isDark ? "border-zinc-800" : "border-gray-200";
   const textMutedClass = isDark ? "text-zinc-500" : "text-zinc-400";
-  const textBodyClass = isDark ? "text-zinc-400" : "text-zinc-600";
+  const textBodyClass = isDark ? "text-zinc-400" : "text-zinc-650";
   const textHeadingClass = isDark ? "text-zinc-200" : "text-gray-900";
   const innerCardBgClass = isDark ? "bg-zinc-900/80 border-zinc-800" : "bg-gray-50 border-gray-100";
 
@@ -2263,334 +2272,330 @@ function PrintReportModal({
     : accounts.find(a => a.id === selectedAccountId)?.name || 'Conta Específica';
 
   return (
-    <div className="print-modal-container no-scrollbar flex flex-col p-4 md:p-6 overflow-y-auto">
-      {/* Barra de Ferramentas superior - OCULTADA NA IMPRESSÃO */}
-      <div className="max-w-[850px] w-full mx-auto bg-white dark:bg-zinc-900 rounded-3xl p-4 mb-4 border border-gray-150 dark:border-zinc-800 flex items-center justify-between no-print shadow-xl animate-fade-in shrink-0">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-primary animate-pulse" />
-          <span className="font-black text-sm tracking-tight text-gray-900 dark:text-zinc-50 font-sans">Diagnóstico Financeiro Profissional</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => window.print()}
-            className="h-10 px-4 text-xs font-bold rounded-2xl bg-primary text-white hover:bg-teal-700 transition-all flex items-center gap-1.5 shadow-md shadow-primary/20 border-2 border-primary print-button-include"
-          >
-            <Printer className="w-4 h-4" />
-            <span>Imprimir / Salvar PDF</span>
-          </button>
-          <button
-            onClick={onClose}
-            className="h-10 w-10 flex items-center justify-center rounded-2xl bg-gray-50 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-all border-2 border-transparent"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Página do Relatório A4 (Página 1 de 2) */}
-      <div className={cn("max-w-[850px] w-full mx-auto p-10 md:p-14 rounded-3xl border shadow-2xl flex flex-col justify-between min-h-[1130px] print-report-view relative animate-scale-up font-sans print:border-none print:shadow-none print:rounded-none print:p-0 print:m-0", bgClass, borderClass)}>
-        
-        {/* Cabecalho Principal */}
-        <div className="space-y-6">
-          <div className={cn("flex items-start justify-between border-b-2 pb-6", isDark ? "border-zinc-800" : "border-gray-150")}>
-            <div>
-              <div className="flex items-center gap-2 text-primary font-black text-lg uppercase tracking-wider">
-                <span className="bg-primary text-white px-2 py-0.5 rounded-lg text-sm">FLUXO</span>
-                <span>FLUXO INTELIGENTE</span>
-              </div>
-              <h1 className={cn("mt-4 text-2xl md:text-3xl font-black tracking-tight", textHeadingClass)}>DIAGNÓSTICO FINANCEIRO & SCORE</h1>
-              <p className={cn("text-xs uppercase font-black tracking-widest mt-1", textMutedClass)}>Análise de Performance • Saúde Financeira • Projeções</p>
-            </div>
-            <div className={cn("text-right text-xs font-bold space-y-1", textMutedClass)}>
-              <p>Período de Análise: <span className={cn("uppercase font-black tracking-wider", textHeadingClass)}>{currentPeriodLabel}</span></p>
-              <p>Carteira/Conta: <span className={cn("font-black", textHeadingClass)}>{accountName}</span></p>
-              <p>Diagnóstico gerado em: <span className={cn("font-black", textHeadingClass)}>{new Date().toLocaleDateString('pt-BR')}</span></p>
-            </div>
+    <>
+      {/* Overlay de carregamento elegante na tela do usuário */}
+      <div className="fixed inset-0 z-[9999] bg-zinc-950/70 backdrop-blur-md flex flex-col items-center justify-center text-center p-4 no-print select-none animate-fade-in">
+        <div className="bg-zinc-900/90 border border-zinc-800 p-8 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl">
+          <div className="flex justify-center">
+            <Sparkles className="w-12 h-12 text-primary animate-pulse" />
           </div>
-
-          {/* Saúde Geral Box */}
-          <div className={cn("p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4", healthStatus.bg, healthStatus.border)}>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Activity className="w-5 h-5 text-primary" />
-                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Avaliação de Saúde Financeira</span>
-              </div>
-              <h3 className={cn("text-lg font-black uppercase tracking-tight", healthStatus.color)}>Status: {healthStatus.label}</h3>
-              <p className={cn("text-xs leading-relaxed font-medium", isDark ? "text-zinc-300" : "text-zinc-650")}>{healthStatus.desc}</p>
-            </div>
+          <div className="space-y-1">
+            <h3 className="text-zinc-100 font-black text-sm uppercase tracking-wider font-sans">Gerando Diagnóstico</h3>
+            <p className="text-zinc-400 text-[11px] leading-relaxed font-medium font-sans">Processando seu Fluxo Score, compromissos ativos e prognósticos em formato PDF...</p>
           </div>
-
-          {/* Grid de Metricas do Periodo */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className={cn("rounded-2xl p-4 border", innerCardBgClass)}>
-              <p className={cn("text-[10px] font-black uppercase tracking-widest", textMutedClass)}>Entradas Totais</p>
-              <p className="mt-1.5 text-xl font-black text-emerald-600 tabular-nums">{formatCurrency(totalIncome)}</p>
-              <div className={cn("mt-3 flex items-center justify-between text-[9px] font-bold border-t pt-1.5", isDark ? "border-zinc-800 text-zinc-500" : "border-gray-200/60 text-zinc-400")}>
-                <span>Orçamento Previsto: {formatCurrency(metrics.projectedIncome)}</span>
-              </div>
-            </div>
-            <div className={cn("rounded-2xl p-4 border", innerCardBgClass)}>
-              <p className={cn("text-[10px] font-black uppercase tracking-widest", textMutedClass)}>Saídas Totais</p>
-              <p className="mt-1.5 text-xl font-black text-rose-600 tabular-nums">{formatCurrency(totalExpenses)}</p>
-              <div className={cn("mt-3 flex items-center justify-between text-[9px] font-bold border-t pt-1.5", isDark ? "border-zinc-800 text-zinc-500" : "border-gray-200/60 text-zinc-400")}>
-                <span>Orçamento Previsto: {formatCurrency(metrics.projectedExpenses)}</span>
-              </div>
-            </div>
-            <div className={cn("rounded-2xl p-4 border", innerCardBgClass)}>
-              <p className={cn("text-[10px] font-black uppercase tracking-widest", textMutedClass)}>Saldo Líquido</p>
-              <p className={cn("mt-1.5 text-xl font-black tabular-nums", balance >= 0 ? "text-emerald-600" : "text-rose-600")}>
-                {formatCurrency(balance)}
-              </p>
-              <div className={cn("mt-3 flex items-center justify-between text-[9px] font-bold border-t pt-1.5", isDark ? "border-zinc-800 text-zinc-500" : "border-gray-200/60 text-zinc-400")}>
-                <span>Eficiência de Caixa: {consumoPercent.toFixed(1)}%</span>
-              </div>
-            </div>
-          </div>
-
-          {/* DIAGNÓSTICO FLUXO SCORE */}
-          <div className={cn("border rounded-2xl p-5 space-y-4", isDark ? "bg-zinc-900/30 border-zinc-800" : "bg-zinc-50/50 border-gray-150")}>
-            <div className={cn("flex items-center justify-between border-b pb-2", isDark ? "border-zinc-800" : "border-gray-200")}>
-              <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-primary" />
-                <h2 className={cn("text-sm font-black uppercase tracking-wider", textHeadingClass)}>Diagnóstico de Performance: Fluxo Score</h2>
-              </div>
-              <div className="text-right">
-                <span className={cn("text-[10px] font-black uppercase tracking-widest block leading-none", textMutedClass)}>Pontuação</span>
-                <span className="text-xl font-black text-primary tabular-nums">{scoreBreakdown.score}/1000</span>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <p className={cn("text-xs leading-relaxed", textBodyClass)}>
-                O **Fluxo Score** é um indicador de saúde financeira que reflete a sua regularidade de pagamentos e nível de endividamento. Contas pagas com atraso ou parcelamentos/acordos ativos consomem pontos temporários.
-              </p>
-
-              {/* Fatores que estão reduzindo o Score */}
-              <div className="space-y-2">
-                <h4 className={cn("text-[10px] font-black uppercase tracking-wider", textMutedClass)}>Detalhamento de Redutores e Ocorrências</h4>
-                
-                {scorePenalties.map((pen, i) => (
-                  <div key={i} className={cn("flex items-start justify-between text-xs p-2.5 rounded-xl border gap-3", isDark ? "bg-zinc-900/60 border-zinc-800/80" : "bg-white border-gray-200/80")}>
-                    <div className="space-y-1 text-left">
-                      <p className={cn("font-bold", textHeadingClass)}>{pen.description}</p>
-                      <p className={cn("text-[10px] leading-none", textBodyClass)}>{pen.detail}</p>
-                      <p className="text-[10px] text-primary font-black uppercase tracking-wide mt-1">Ação: {pen.action}</p>
-                    </div>
-                    <span className="font-black text-rose-600 bg-rose-50 dark:bg-rose-950/20 px-2 py-0.5 rounded-lg text-[10px] tabular-nums shrink-0">
-                      {pen.points} pts
-                    </span>
-                  </div>
-                ))}
-
-                {scorePenalties.length === 0 && (
-                  <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-150 font-bold">
-                    <CheckCircle2 className="w-4 h-4 shrink-0" />
-                    <span>Nenhum fator redutor ativo. Seu comportamento financeiro é exemplar neste período!</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* PROGNÓSTICO E SAÚDE */}
-          <div className={cn("border rounded-2xl p-5 space-y-2", isDark ? "bg-primary/5 border-primary/20" : "bg-primary/5 border-primary/20")}>
-            <h3 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4" /> Diagnóstico de Longo Prazo
-            </h3>
-            <p className={cn("text-xs leading-relaxed font-medium", isDark ? "text-zinc-300" : "text-zinc-700")}>
-              {monthsToHealthDesc}
-            </p>
-          </div>
-        </div>
-
-        {/* Rodapé da Página 1 */}
-        <div className={cn("border-t pt-5 mt-8 flex justify-between items-center text-[9px] font-bold", isDark ? "border-zinc-800 text-zinc-500" : "border-gray-150 text-zinc-400")}>
-          <div>
-            <p>© {new Date().getFullYear()} Fluxo Financeiro. Relatório Confidencial gerado para o usuário.</p>
-          </div>
-          <div className="text-right">
-            <p>Página 1 de 2 • Gerenciador Inteligente de Contas</p>
+          <div className="flex justify-center pt-2">
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
         </div>
       </div>
 
-      {/* Página do Relatório A4 (Página 2 de 2) - QUEBRA DE PÁGINA IMPRESSÃO */}
-      <div className={cn("max-w-[850px] w-full mx-auto p-10 md:p-14 rounded-3xl border shadow-2xl flex flex-col justify-between min-h-[1130px] print-report-view relative animate-scale-up font-sans mt-6 print:mt-0 print:page-break-before-always print:border-none print:shadow-none print:rounded-none print:p-0 print:m-0", bgClass, borderClass)}>
+      {/* Páginas Reais do PDF A4 - Invisíveis na tela, visíveis apenas na Impressão */}
+      <div className="absolute left-0 top-0 w-full hidden print:block z-0 bg-transparent">
         
-        <div className="space-y-6">
-          {/* Min-Cabecalho Pagina 2 */}
-          <div className={cn("flex items-center justify-between border-b pb-4", isDark ? "border-zinc-800" : "border-gray-150")}>
-            <div className="flex items-center gap-1 text-primary font-black text-xs uppercase tracking-wider">
-              <span className="bg-primary text-white px-1.5 py-0.5 rounded text-[10px]">FF</span>
-              <span>Fluxo Financeiro</span>
-            </div>
-            <span className={cn("text-[10px] font-bold uppercase tracking-wider", textMutedClass)}>
-              PARCELAMENTOS, ACORDOS & CENTROS DE CUSTO
-            </span>
-          </div>
-
-          {/* MAIORES GASTOS E ORÇAMENTO */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h2 className={cn("text-xs font-black uppercase tracking-wider border-b pb-1.5 mb-3", textMutedClass, isDark ? "border-zinc-800" : "border-gray-200")}>Concentração de Custos</h2>
-              <div className="space-y-2.5">
-                {top5.map((cat, idx) => (
-                  <div key={cat.id} className={cn("flex items-center justify-between text-xs border-b pb-1.5", isDark ? "border-zinc-850" : "border-gray-50")}>
-                    <div className="flex items-center gap-2">
-                      <span className={cn("font-black w-4", textMutedClass)}>{idx + 1}.</span>
-                      <span className={cn("font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>{cat.name}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className={cn("font-black", textHeadingClass)}>{formatCurrency(cat.value)}</span>
-                      <span className={cn("text-[9px] font-bold ml-1", textMutedClass)}>({((cat.value / (totalExpenses || 1)) * 105).toFixed(0)}%)</span>
-                    </div>
-                  </div>
-                ))}
-                {top5.length === 0 && (
-                  <p className={cn("text-xs italic py-4", textMutedClass)}>Nenhuma despesa registrada.</p>
-                )}
+        {/* Página 1 de 2 */}
+        <div className={cn("w-full p-10 md:p-14 flex flex-col justify-between min-h-[1130px] print-report-view relative font-sans border-none shadow-none rounded-none", bgClass)}>
+          
+          <div className="space-y-6">
+            <div className={cn("flex items-start justify-between border-b-2 pb-6", isDark ? "border-zinc-800" : "border-gray-150")}>
+              <div>
+                <div className="flex items-center gap-2 text-primary font-black text-lg uppercase tracking-wider">
+                  <span className="bg-primary text-white px-2 py-0.5 rounded-lg text-sm">FLUXO</span>
+                  <span>FLUXO INTELIGENTE</span>
+                </div>
+                <h1 className={cn("mt-4 text-2xl md:text-3xl font-black tracking-tight", textHeadingClass)}>DIAGNÓSTICO FINANCEIRO & SCORE</h1>
+                <p className={cn("text-xs uppercase font-black tracking-widest mt-1", textMutedClass)}>Análise de Performance • Saúde Financeira • Projeções</p>
+              </div>
+              <div className={cn("text-right text-xs font-bold space-y-1", textMutedClass)}>
+                <p>Período de Análise: <span className={cn("uppercase font-black tracking-wider", textHeadingClass)}>{currentPeriodLabel}</span></p>
+                <p>Carteira/Conta: <span className={cn("font-black", textHeadingClass)}>{accountName}</span></p>
+                <p>Diagnóstico gerado em: <span className={cn("font-black", textHeadingClass)}>{new Date().toLocaleDateString('pt-BR')}</span></p>
               </div>
             </div>
 
-            {/* Estouro de Limites */}
-            <div className="space-y-3">
-              <h2 className={cn("text-xs font-black uppercase tracking-wider border-b pb-1.5 mb-3", textMutedClass, isDark ? "border-zinc-800" : "border-gray-200")}>Limites Ultrapassados</h2>
-              <div className="space-y-2">
-                {exceededBudgets.map((eb, i) => (
-                  <div key={i} className={cn("flex items-start gap-2.5 p-2.5 border rounded-xl", isDark ? "bg-rose-950/20 border-rose-900/30 text-rose-200" : "bg-rose-50 border-rose-100 text-rose-900")}>
-                    <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                    <div className="text-xs text-left">
-                      <p className="font-bold">{eb.categoryName}</p>
-                      <p className="mt-0.5 opacity-90">
-                        Gasto de R$ {eb.spent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ultrapassou o limite planejado de R$ {eb.limit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em **R$ {eb.excess.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}**.
-                      </p>
-                    </div>
-                  </div>
-                ))}
-
-                {exceededBudgets.length === 0 && (
-                  <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-150 font-bold">
-                    <CheckCircle2 className="w-4 h-4 shrink-0" />
-                    <span>Nenhum orçamento planejado foi estourado neste período. Controle excelente!</span>
-                  </div>
-                )}
+            {/* Saúde Geral Box */}
+            <div className={cn("p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4", healthStatus.bg, healthStatus.border)}>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-primary" />
+                  <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Avaliação de Saúde Financeira</span>
+                </div>
+                <h3 className={cn("text-lg font-black uppercase tracking-tight", healthStatus.color)}>Status: {healthStatus.label}</h3>
+                <p className={cn("text-xs leading-relaxed font-medium", isDark ? "text-zinc-300" : "text-zinc-650")}>{healthStatus.desc}</p>
               </div>
             </div>
-          </div>
 
-          {/* DETALHAMENTO DE COMPROMISSOS (ACORDOS & PARCELAMENTOS) */}
-          <div className="space-y-4">
-            <h2 className={cn("text-xs font-black uppercase tracking-wider border-b pb-1.5", textMutedClass, isDark ? "border-zinc-800" : "border-gray-200")}>Compromissos Financeiros Ativos</h2>
-            
-            {/* Acordos */}
-            <div className="space-y-2 text-left">
-              <h3 className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1", textMutedClass)}>
-                <Clock className="w-3.5 h-3.5" /> Acordos sob Quitação Ativos
-              </h3>
-              
-              {debts.filter(d => d.status !== 'paid' && !(typeof d.remainingAmount === 'number' && d.remainingAmount <= 0)).map((d) => {
-                const installments = transactions.filter(tx => !tx.deleted_at && tx.type === 'expense' && tx.debtId === d.id && !isAgreementEntryTransaction(tx, d.id));
-                const totalInstallments = installments.length > 0 ? installments.length : Math.max(0, Number(d.totalInstallments) || 0);
-                const paidInstallments = installments.filter(tx => tx.isPaid).length;
-                const recovered = totalInstallments > 0 ? (paidInstallments / totalInstallments) * 100 : 0;
-                const progressWidth = `${Math.min(recovered, 100)}%`;
+            {/* Grid de Metricas do Periodo */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className={cn("rounded-2xl p-4 border", innerCardBgClass)}>
+                <p className={cn("text-[10px] font-black uppercase tracking-widest", textMutedClass)}>Entradas Totais</p>
+                <p className="mt-1.5 text-xl font-black text-emerald-650 dark:text-emerald-400 tabular-nums">{formatCurrency(totalIncome)}</p>
+                <div className={cn("mt-3 flex items-center justify-between text-[9px] font-bold border-t pt-1.5", isDark ? "border-zinc-800 text-zinc-500" : "border-gray-200/60 text-zinc-400")}>
+                  <span>Orçamento Previsto: {formatCurrency(metrics.projectedIncome)}</span>
+                </div>
+              </div>
+              <div className={cn("rounded-2xl p-4 border", innerCardBgClass)}>
+                <p className={cn("text-[10px] font-black uppercase tracking-widest", textMutedClass)}>Saídas Totais</p>
+                <p className="mt-1.5 text-xl font-black text-rose-650 dark:text-rose-400 tabular-nums">{formatCurrency(totalExpenses)}</p>
+                <div className={cn("mt-3 flex items-center justify-between text-[9px] font-bold border-t pt-1.5", isDark ? "border-zinc-800 text-zinc-500" : "border-gray-200/60 text-zinc-400")}>
+                  <span>Orçamento Previsto: {formatCurrency(metrics.projectedExpenses)}</span>
+                </div>
+              </div>
+              <div className={cn("rounded-2xl p-4 border", innerCardBgClass)}>
+                <p className={cn("text-[10px] font-black uppercase tracking-widest", textMutedClass)}>Saldo Líquido</p>
+                <p className={cn("mt-1.5 text-xl font-black tabular-nums", balance >= 0 ? "text-emerald-650 dark:text-emerald-400" : "text-rose-650 dark:text-rose-400")}>
+                  {formatCurrency(balance)}
+                </p>
+                <div className={cn("mt-3 flex items-center justify-between text-[9px] font-bold border-t pt-1.5", isDark ? "border-zinc-800 text-zinc-500" : "border-gray-200/60 text-zinc-400")}>
+                  <span>Eficiência de Caixa: {consumoPercent.toFixed(1)}%</span>
+                </div>
+              </div>
+            </div>
 
-                return (
-                  <div key={d.id} className={cn("p-3.5 border rounded-xl space-y-2 text-xs", isDark ? "bg-zinc-900/30 border-zinc-800" : "bg-zinc-50 border-gray-150")}>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className={cn("font-black", textHeadingClass)}>{d.name}</span>
-                        <span className={cn("text-[10px] font-bold uppercase ml-2", textMutedClass)}>Total: R$ {Number(d.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            {/* DIAGNÓSTICO FLUXO SCORE */}
+            <div className={cn("border rounded-2xl p-5 space-y-4", isDark ? "bg-zinc-900/30 border-zinc-800" : "bg-zinc-50/50 border-gray-150")}>
+              <div className={cn("flex items-center justify-between border-b pb-2", isDark ? "border-zinc-800" : "border-gray-200")}>
+                <div className="flex items-center gap-2">
+                  <Award className="w-5 h-5 text-primary" />
+                  <h2 className={cn("text-sm font-black uppercase tracking-wider", textHeadingClass)}>Diagnóstico de Performance: Fluxo Score</h2>
+                </div>
+                <div className="text-right">
+                  <span className={cn("text-[10px] font-black uppercase tracking-widest block leading-none", textMutedClass)}>Pontuação</span>
+                  <span className="text-xl font-black text-primary tabular-nums">{scoreBreakdown.score}/1000</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className={cn("text-xs leading-relaxed", textBodyClass)}>
+                  O **Fluxo Score** é um indicador de saúde financeira que reflete a sua regularidade de pagamentos e nível de endividamento. Contas pagas com atraso ou parcelamentos/acordos ativos consomem pontos temporários.
+                </p>
+
+                {/* Fatores que estão reduzindo o Score */}
+                <div className="space-y-2">
+                  <h4 className={cn("text-[10px] font-black uppercase tracking-wider", textMutedClass)}>Detalhamento de Redutores e Ocorrências</h4>
+                  
+                  {scorePenalties.map((pen, i) => (
+                    <div key={i} className={cn("flex items-start justify-between text-xs p-2.5 rounded-xl border gap-3", isDark ? "bg-zinc-900/60 border-zinc-800/80" : "bg-white border-gray-200/80")}>
+                      <div className="space-y-1 text-left">
+                        <p className={cn("font-bold", textHeadingClass)}>{pen.description}</p>
+                        <p className={cn("text-[10px] leading-none", textBodyClass)}>{pen.detail}</p>
+                        <p className="text-[10px] text-primary font-black uppercase tracking-wide mt-1">Ação: {pen.action}</p>
                       </div>
-                      <span className={cn("font-black", textHeadingClass)}>Saldo devedor: R$ {Number(d.remainingAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      <span className="font-black text-rose-600 bg-rose-50 dark:bg-rose-950/20 px-2 py-0.5 rounded-lg text-[10px] tabular-nums shrink-0">
+                        {pen.points} pts
+                      </span>
                     </div>
-                    {/* Barra de Progresso */}
-                    <div className={cn("w-full h-2 rounded-full overflow-hidden", isDark ? "bg-zinc-800" : "bg-gray-200")}>
-                      <div className="bg-primary h-full rounded-full transition-all duration-300" style={{ width: progressWidth }} />
+                  ))}
+
+                  {scorePenalties.length === 0 && (
+                    <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-150 font-bold">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>Nenhum fator redutor ativo. Seu comportamento financeiro é exemplar neste período!</span>
                     </div>
-                    <div className={cn("flex justify-between text-[9px] font-bold leading-none", textMutedClass)}>
-                      <span>Progresso: {paidInstallments}/{totalInstallments} parcelas pagas ({recovered.toFixed(1)}%)</span>
-                      {d.installmentAmount && (
-                        <span>Parcela Mensal: R$ {Number(d.installmentAmount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* PROGNÓSTICO E SAÚDE */}
+            <div className={cn("border rounded-2xl p-5 space-y-2", isDark ? "bg-primary/5 border-primary/20" : "bg-primary/5 border-primary/20")}>
+              <h3 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4" /> Diagnóstico de Longo Prazo
+              </h3>
+              <p className={cn("text-xs leading-relaxed font-medium", isDark ? "text-zinc-300" : "text-zinc-700")}>
+                {monthsToHealthDesc}
+              </p>
+            </div>
+          </div>
+
+          {/* Rodapé da Página 1 */}
+          <div className={cn("border-t pt-5 mt-8 flex justify-between items-center text-[9px] font-bold", isDark ? "border-zinc-800 text-zinc-500" : "border-gray-150 text-zinc-400")}>
+            <div>
+              <p>© {new Date().getFullYear()} Fluxo Financeiro. Relatório Confidencial gerado para o usuário.</p>
+            </div>
+            <div className="text-right">
+              <p>Página 1 de 2 • Gerenciador Inteligente de Contas</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Página 2 de 2 */}
+        <div className={cn("w-full p-10 md:p-14 flex flex-col justify-between min-h-[1130px] print-report-view relative font-sans print:page-break-before-always border-none shadow-none rounded-none", bgClass)}>
+          
+          <div className="space-y-6">
+            {/* Min-Cabecalho Pagina 2 */}
+            <div className={cn("flex items-center justify-between border-b pb-4", isDark ? "border-zinc-800" : "border-gray-150")}>
+              <div className="flex items-center gap-1 text-primary font-black text-xs uppercase tracking-wider">
+                <span className="bg-primary text-white px-1.5 py-0.5 rounded text-[10px]">FF</span>
+                <span>Fluxo Financeiro</span>
+              </div>
+              <span className={cn("text-[10px] font-bold uppercase tracking-wider", textMutedClass)}>
+                PARCELAMENTOS, ACORDOS & CENTROS DE CUSTO
+              </span>
+            </div>
+
+            {/* MAIORES GASTOS E ORÇAMENTO */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h2 className={cn("text-xs font-black uppercase tracking-wider border-b pb-1.5 mb-3", textMutedClass, isDark ? "border-zinc-800" : "border-gray-200")}>Concentração de Custos</h2>
+                <div className="space-y-2.5">
+                  {top5.map((cat, idx) => (
+                    <div key={cat.id} className={cn("flex items-center justify-between text-xs border-b pb-1.5", isDark ? "border-zinc-850" : "border-gray-50")}>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("font-black w-4", textMutedClass)}>{idx + 1}.</span>
+                        <span className={cn("font-bold", isDark ? "text-zinc-300" : "text-zinc-700")}>{cat.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className={cn("font-black", textHeadingClass)}>{formatCurrency(cat.value)}</span>
+                        <span className={cn("text-[9px] font-bold ml-1", textMutedClass)}>({((cat.value / (totalExpenses || 1)) * 105).toFixed(0)}%)</span>
+                      </div>
+                    </div>
+                  ))}
+                  {top5.length === 0 && (
+                    <p className={cn("text-xs italic py-4", textMutedClass)}>Nenhuma despesa registrada.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Estouro de Limites */}
+              <div className="space-y-3">
+                <h2 className={cn("text-xs font-black uppercase tracking-wider border-b pb-1.5 mb-3", textMutedClass, isDark ? "border-zinc-800" : "border-gray-200")}>Limites Ultrapassados</h2>
+                <div className="space-y-2">
+                  {exceededBudgets.map((eb, i) => (
+                    <div key={i} className={cn("flex items-start gap-2.5 p-2.5 border rounded-xl", isDark ? "bg-rose-950/20 border-rose-900/30 text-rose-200" : "bg-rose-50 border-rose-100 text-rose-900")}>
+                      <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div className="text-xs text-left">
+                        <p className="font-bold">{eb.categoryName}</p>
+                        <p className="mt-0.5 opacity-90">
+                          Gasto de R$ {eb.spent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ultrapassou o limite planejado de R$ {eb.limit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em **R$ {eb.excess.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}**.
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+
+                  {exceededBudgets.length === 0 && (
+                    <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-150 font-bold">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>Nenhum orçamento planejado foi estourado neste período. Controle excelente!</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* DETALHAMENTO DE COMPROMISSOS (ACORDOS & PARCELAMENTOS) */}
+            <div className="space-y-4">
+              <h2 className={cn("text-xs font-black uppercase tracking-wider border-b pb-1.5", textMutedClass, isDark ? "border-zinc-800" : "border-gray-200")}>Compromissos Financeiros Ativos</h2>
+              
+              {/* Acordos */}
+              <div className="space-y-2 text-left">
+                <h3 className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1", textMutedClass)}>
+                  <Clock className="w-3.5 h-3.5" /> Acordos sob Quitação Ativos
+                </h3>
+                
+                {debts.filter(d => d.status !== 'paid' && !(typeof d.remainingAmount === 'number' && d.remainingAmount <= 0)).map((d) => {
+                  const installments = transactions.filter(tx => !tx.deleted_at && tx.type === 'expense' && tx.debtId === d.id && !isAgreementEntryTransaction(tx, d.id));
+                  const totalInstallments = installments.length > 0 ? installments.length : Math.max(0, Number(d.totalInstallments) || 0);
+                  const paidInstallments = installments.filter(tx => tx.isPaid).length;
+                  const recovered = totalInstallments > 0 ? (paidInstallments / totalInstallments) * 100 : 0;
+                  const progressWidth = `${Math.min(recovered, 100)}%`;
+
+                  return (
+                    <div key={d.id} className={cn("p-3.5 border rounded-xl space-y-2 text-xs", isDark ? "bg-zinc-900/30 border-zinc-800" : "bg-zinc-50 border-gray-150")}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className={cn("font-black", textHeadingClass)}>{d.name}</span>
+                          <span className={cn("text-[10px] font-bold uppercase ml-2", textMutedClass)}>Total: R$ {Number(d.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <span className={cn("font-black", textHeadingClass)}>Saldo devedor: R$ {Number(d.remainingAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      {/* Barra de Progresso */}
+                      <div className={cn("w-full h-2 rounded-full overflow-hidden", isDark ? "bg-zinc-800" : "bg-gray-200")}>
+                        <div className="bg-primary h-full rounded-full transition-all duration-300" style={{ width: progressWidth }} />
+                      </div>
+                      <div className={cn("flex justify-between text-[9px] font-bold leading-none", textMutedClass)}>
+                        <span>Progresso: {paidInstallments}/{totalInstallments} parcelas pagas ({recovered.toFixed(1)}%)</span>
+                        {d.installmentAmount && (
+                          <span>Parcela Mensal: R$ {Number(d.installmentAmount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {debts.filter(d => d.status !== 'paid' && !(typeof d.remainingAmount === 'number' && d.remainingAmount <= 0)).length === 0 && (
+                  <p className={cn("text-xs italic py-1", textMutedClass)}>Nenhum acordo sob quitação pendente.</p>
+                )}
+              </div>
+
+              {/* Parcelamentos */}
+              <div className="space-y-2 pt-2 text-left">
+                <h3 className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1", textMutedClass)}>
+                  <Calendar className="w-3.5 h-3.5" /> Parcelamentos Ativos no Crédito / Boleto
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {activeInstallments.map((inst, i) => (
+                    <div key={i} className={cn("p-3 border rounded-xl space-y-1.5 text-xs", isDark ? "bg-zinc-900/30 border-zinc-800" : "bg-zinc-50 border-gray-150")}>
+                      <div className="flex justify-between">
+                        <span className={cn("font-bold truncate max-w-[170px]", textHeadingClass)}>{inst.description}</span>
+                        <span className="font-black text-rose-600 tabular-nums">R$ {inst.monthlyValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês</span>
+                      </div>
+                      <div className={cn("flex justify-between text-[9px] font-bold", textMutedClass)}>
+                        <span>Progresso: {inst.paidCount} de {inst.totalCount} parcelas</span>
+                        <span>Total: R$ {inst.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      {inst.lastDueDate && (
+                        <p className={cn("text-[9px] font-bold mt-1", textMutedClass)}>
+                          Quitação estimada em: <span className={cn("font-black", textHeadingClass)}>{format(parseLocalDate(inst.lastDueDate), "MMMM 'de' yyyy", { locale: ptBR })}</span>
+                        </p>
                       )}
                     </div>
-                  </div>
-                );
-              })}
+                  ))}
 
-              {debts.filter(d => d.status !== 'paid' && !(typeof d.remainingAmount === 'number' && d.remainingAmount <= 0)).length === 0 && (
-                <p className={cn("text-xs italic py-1", textMutedClass)}>Nenhum acordo sob quitação pendente.</p>
-              )}
+                  {activeInstallments.length === 0 && (
+                    <p className={cn("text-xs italic py-1", textMutedClass)}>Nenhum parcelamento ativo cadastrado.</p>
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* Parcelamentos */}
-            <div className="space-y-2 pt-2 text-left">
-              <h3 className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1", textMutedClass)}>
-                <Calendar className="w-3.5 h-3.5" /> Parcelamentos Ativos no Crédito / Boleto
-              </h3>
+            {/* CRONOGRAMA DE LIBERAÇÃO ORÇAMENTÁRIA */}
+            <div className="space-y-3 pt-2 text-left">
+              <h2 className={cn("text-xs font-black uppercase tracking-wider border-b pb-1.5", textMutedClass, isDark ? "border-zinc-800" : "border-gray-200")}>Previsão e Linha do Tempo de Quitações</h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {activeInstallments.map((inst, i) => (
-                  <div key={i} className={cn("p-3 border rounded-xl space-y-1.5 text-xs", isDark ? "bg-zinc-900/30 border-zinc-800" : "bg-zinc-50 border-gray-150")}>
-                    <div className="flex justify-between">
-                      <span className={cn("font-bold truncate max-w-[170px]", textHeadingClass)}>{inst.description}</span>
-                      <span className="font-black text-rose-600 tabular-nums">R$ {inst.monthlyValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês</span>
+              <div className={cn("relative border-l pl-4 space-y-4 text-xs ml-2", isDark ? "border-zinc-800" : "border-gray-200")}>
+                {timelineEvents.slice(0, 4).map((evt, idx) => (
+                  <div key={idx} className="relative">
+                    <div className={cn("absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-primary border-2", isDark ? "border-zinc-950" : "border-white")} />
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className={cn("font-black", textHeadingClass)}>{evt.label}</span>
+                        <span className="text-[10px] font-black text-emerald-650 dark:text-emerald-450">+{evt.date.toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' })}</span>
+                      </div>
+                      <p className={cn("text-[10px]", textBodyClass)}>{evt.description}</p>
+                      <p className="text-[9px] text-emerald-650 dark:text-emerald-450 font-bold">Recuperação de caixa: R$ {evt.valueReleased.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês liberados no orçamento.</p>
                     </div>
-                    <div className={cn("flex justify-between text-[9px] font-bold", textMutedClass)}>
-                      <span>Progresso: {inst.paidCount} de {inst.totalCount} parcelas</span>
-                      <span>Total: R$ {inst.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    {inst.lastDueDate && (
-                      <p className={cn("text-[9px] font-bold mt-1", textMutedClass)}>
-                        Quitação estimada em: <span className={cn("font-black", textHeadingClass)}>{format(parseLocalDate(inst.lastDueDate), "MMMM 'de' yyyy", { locale: ptBR })}</span>
-                      </p>
-                    )}
                   </div>
                 ))}
 
-                {activeInstallments.length === 0 && (
-                  <p className={cn("text-xs italic py-1", textMutedClass)}>Nenhum parcelamento ativo cadastrado.</p>
+                {timelineEvents.length === 0 && (
+                  <p className={cn("text-xs italic pl-1", textMutedClass)}>Nenhum compromisso agendado para quitação futura imediata.</p>
                 )}
               </div>
             </div>
           </div>
 
-          {/* CRONOGRAMA DE LIBERAÇÃO ORÇAMENTÁRIA */}
-          <div className="space-y-3 pt-2 text-left">
-            <h2 className={cn("text-xs font-black uppercase tracking-wider border-b pb-1.5", textMutedClass, isDark ? "border-zinc-800" : "border-gray-200")}>Previsão e Linha do Tempo de Quitações</h2>
-            
-            <div className={cn("relative border-l pl-4 space-y-4 text-xs ml-2", isDark ? "border-zinc-800" : "border-gray-200")}>
-              {timelineEvents.slice(0, 4).map((evt, idx) => (
-                <div key={idx} className="relative">
-                  <div className={cn("absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-primary border-2", isDark ? "border-zinc-950" : "border-white")} />
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className={cn("font-black", textHeadingClass)}>{evt.label}</span>
-                      <span className="text-[10px] font-black text-emerald-650 dark:text-emerald-450">+{evt.date.toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' })}</span>
-                    </div>
-                    <p className={cn("text-[10px]", textBodyClass)}>{evt.description}</p>
-                    <p className="text-[9px] text-emerald-650 dark:text-emerald-450 font-bold">Recuperação de caixa: R$ {evt.valueReleased.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês liberados no orçamento.</p>
-                  </div>
-                </div>
-              ))}
-
-              {timelineEvents.length === 0 && (
-                <p className={cn("text-xs italic pl-1", textMutedClass)}>Nenhum compromisso agendado para quitação futura imediata.</p>
-              )}
+          {/* Rodapé da Página 2 */}
+          <div className={cn("border-t pt-5 mt-8 flex justify-between items-center text-[9px] font-bold", isDark ? "border-zinc-800 text-zinc-500" : "border-gray-150 text-zinc-400")}>
+            <div>
+              <p>Relatório gerencial confidencial em benefício de {userName}.</p>
+            </div>
+            <div className="text-right">
+              <p>Página 2 de 2 • Assinatura Digital: <span className="text-primary font-mono select-all">FLUXO-SIG-{scoreBreakdown.score}</span></p>
             </div>
           </div>
         </div>
-
-        {/* Rodapé da Página 2 */}
-        <div className={cn("border-t pt-5 mt-8 flex justify-between items-center text-[9px] font-bold", isDark ? "border-zinc-800 text-zinc-500" : "border-gray-150 text-zinc-400")}>
-          <div>
-            <p>Relatório gerencial confidencial em benefício de {userName}.</p>
-          </div>
-          <div className="text-right">
-            <p>Página 2 de 2 • Assinatura Digital: <span className="text-primary font-mono select-all">FLUXO-SIG-{scoreBreakdown.score}</span></p>
-          </div>
-        </div>
       </div>
-    </div>
+    </>
   );
 }

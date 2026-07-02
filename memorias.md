@@ -1888,10 +1888,15 @@ Em recÃƒÂ¡lculo:
      - **OrÃ§amentos Ultrapassados**: Exibe alertas dinÃ¢micos destacando quais categorias estouraram os limites estipulados no planejamento e a quantia excedida.
      - **SaÃºde e PrognÃ³stico Financeiro**: Classifica a saÃºde financeira do perÃ­odo (Excelente, SaudÃ¡vel, EstÃ¡vel, AtenÃ§Ã£o, CrÃ­tica) e gera previsÃµes automÃ¡ticas de longo prazo (informando a quantidade de meses atÃ© a quitaÃ§Ã£o de todos os acordos/parcelamentos e o valor que serÃ¡ liberado no orÃ§amento mensal).
   10. **Ajustes de Arredondamento Financeiro e Fluxo Score**:
-      - **Arredondamento para Cima**: Atualizamos o formatador geral de moeda (ormatCurrency, ormatCurrencyCompact e ormatCompactCurrency em ormatters.ts) e o utilitÃ¡rio matemÃ¡tico de contratos (oundCurrency em debtAgreement.ts) para sempre arredondar os valores financeiros para cima com 2 casas decimais usando Math.ceil.
-      - **Fluxo Score Inteiro**: Alteramos o cÃ¡lculo do Score (calculateFluxoScore em luxoScore.ts) para retornar apenas nÃºmeros inteiros arredondados para cima.
+      - **Arredondamento para Cima**: Atualizamos o formatador geral de moeda (formatCurrency, formatCurrencyCompact e formatCompactCurrency em formatters.ts) e o utilitÃ¡rio matemÃ¡tico de contratos (roundCurrency em debtAgreement.ts) para sempre arredondar os valores financeiros para cima com 2 casas decimais usando Math.ceil.
+      - **Fluxo Score Inteiro**: Alteramos o cÃ¡lculo do Score (calculateFluxoScore em fluxoScore.ts) para retornar apenas nÃºmeros inteiros arredondados para cima.
   11. **Refinamento do DiagnÃ³stico e Rastreabilidade de Parcelamentos**:
       - **RemoÃ§Ã£o da Taxa de PoupanÃ§a**: ExcluÃ­mos a caixa informativa "Taxa PoupanÃ§a" do modal de PDF por solicitaÃ§Ã£o de design simplificado e focado.
       - **Rastreabilidade de Parcelamentos de CrÃ©dito**: Aprimoramos o agrupamento do relatÃ³rio. Se installmentGroupId estiver ausente, ele agrupa por descriÃ§Ã£o base (removendo o sufixo numÃ©rico (X/Y)). AlÃ©m disso, a verificaÃ§Ã£o de atividade agora avalia se paidCount < totalCount (em vez de unpaid.length > 0), garantindo que compras com parcelas futuras ainda nÃ£o carregadas em memÃ³ria sejam exibidas no relatÃ³rio, tornando as projeÃ§Ãµes inteligentes e 100% integradas.
+  12. **GeraÃ§Ã£o Direta de PDF (Sem Telas IntermediÃ¡rias)**:
+      - **Fluxo AutomÃ¡tico**: SubstituÃ­mos a exibiÃ§Ã£o do modal do relatÃ³rio em tela por um elegante loading spinner de carregamento estilo Apple com efeito de vidro fosco (ackdrop-blur-md).
+      - **ImpressÃ£o Nativa Direta**: O componente printa na tela o spinner e monta as pÃ¡ginas do relatÃ³rio em um contÃªiner oculto (hidden print:block). O sistema chama o mÃ©todo window.print() e fecha o overlay automaticamente apÃ³s 450ms, abrindo a janela de salvamento em PDF nativa do navegador imediatamente apÃ³s o clique.
+      - **ExperiÃªncia Limpa**: O usuÃ¡rio nunca visualiza a pÃ¡gina do relatÃ³rio desmontada ou incompleta na tela do dispositivo, preservando a estÃ©tica minimalista e premium do app.
 - **MotivaÃ§Ã£o**: Atender ao cerne estratÃ©gico do Fluxo como um gestor inteligente e simplificado de finanÃ§as pessoais, fornecendo um diagnÃ³stico profissional, prognÃ³sticos de quitaÃ§Ã£o detalhados, justificativas de comportamento do Fluxo Score e visÃµes claras de estouros de orÃ§amentos e parcelamentos em um PDF gerencial corporativo.
+
 
