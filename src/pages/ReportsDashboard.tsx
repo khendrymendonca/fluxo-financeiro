@@ -1061,9 +1061,8 @@ export default function ReportsDashboard() {
     const dates = transactions.map(t => parseLocalDate(t.date).getTime()).filter(t => !isNaN(t));
     const histStart = dates.length > 0 ? new Date(Math.min(...dates)) : new Date();
     const histEnd = dates.length > 0 ? new Date(Math.max(...dates)) : new Date();
-    const totalMonths = Math.max(1, eachMonthOfInterval({ start: startOfMonth(histStart), end: endOfMonth(histEnd) }).length);
 
-    const historicalTotal = getCategoryTransactionsForPeriod({
+    const allCategoryTransactions = getCategoryTransactionsForPeriod({
       transactions,
       creditCards,
       categories,
@@ -1073,9 +1072,18 @@ export default function ReportsDashboard() {
       reportMode,
       bucketId: selectedCategory.id,
       subcategoryId: selectedSubcategoryId,
-    }).reduce((total, transaction) => total + Number(transaction.amount), 0);
+    });
 
-    const historicalAverage = historicalTotal / totalMonths;
+    const categoryDates = allCategoryTransactions.map(t => parseLocalDate(t.date).getTime()).filter(t => !isNaN(t));
+    
+    let historicalAverage = 0;
+    if (categoryDates.length > 0) {
+      const catMinDate = new Date(Math.min(...categoryDates));
+      const catMaxDate = new Date(Math.max(...categoryDates));
+      const categoryMonthsCount = Math.max(1, eachMonthOfInterval({ start: startOfMonth(catMinDate), end: endOfMonth(catMaxDate) }).length);
+      const historicalTotal = allCategoryTransactions.reduce((total, t) => total + Number(t.amount), 0);
+      historicalAverage = historicalTotal / categoryMonthsCount;
+    }
 
     return {
       current,
