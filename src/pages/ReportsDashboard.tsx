@@ -1058,6 +1058,25 @@ export default function ReportsDashboard() {
       isCurrent: point.isCurrent,
     }));
 
+    const dates = transactions.map(t => parseLocalDate(t.date).getTime()).filter(t => !isNaN(t));
+    const histStart = dates.length > 0 ? new Date(Math.min(...dates)) : new Date();
+    const histEnd = dates.length > 0 ? new Date(Math.max(...dates)) : new Date();
+    const totalMonths = Math.max(1, eachMonthOfInterval({ start: startOfMonth(histStart), end: endOfMonth(histEnd) }).length);
+
+    const historicalTotal = getCategoryTransactionsForPeriod({
+      transactions,
+      creditCards,
+      categories,
+      start: startOfMonth(histStart),
+      end: endOfMonth(histEnd),
+      selectedAccountId,
+      reportMode,
+      bucketId: selectedCategory.id,
+      subcategoryId: selectedSubcategoryId,
+    }).reduce((total, transaction) => total + Number(transaction.amount), 0);
+
+    const historicalAverage = historicalTotal / totalMonths;
+
     return {
       current,
       previous,
@@ -1074,6 +1093,7 @@ export default function ReportsDashboard() {
         bucketId: selectedCategory.id,
         subcategoryId: selectedSubcategoryId,
       }),
+      historicalAverage,
     };
   }, [categories, creditCards, intervals, period, reportMode, selectedAccountId, selectedCategory, selectedSubcategoryId, transactions, viewDate]);
 
@@ -1597,9 +1617,9 @@ export default function ReportsDashboard() {
                     <p className="mt-1 text-2xl font-black tabular-nums whitespace-nowrap">{formatCurrency(selectedCategoryAnalysis.current)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Média Mensal</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Média Histórica</p>
                     <p className="mt-1 text-lg font-black tabular-nums text-primary whitespace-nowrap">
-                      {formatCurrency(selectedCategoryAnalysis.current / Math.max(1, eachMonthOfInterval({ start: intervals.start, end: intervals.end }).length))}
+                      {formatCurrency(selectedCategoryAnalysis.historicalAverage)}
                     </p>
                   </div>
                   <div>
