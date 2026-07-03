@@ -1897,6 +1897,12 @@ Em recÃƒÂ¡lculo:
       - **Fluxo AutomÃ¡tico**: SubstituÃ­mos a exibiÃ§Ã£o do modal do relatÃ³rio em tela por um elegante loading spinner de carregamento estilo Apple com efeito de vidro fosco (ackdrop-blur-md).
       - **ImpressÃ£o Nativa Direta**: O componente printa na tela o spinner e monta as pÃ¡ginas do relatÃ³rio em um contÃªiner oculto (hidden print:block). O sistema chama o mÃ©todo window.print() e fecha o overlay automaticamente apÃ³s 450ms, abrindo a janela de salvamento em PDF nativa do navegador imediatamente apÃ³s o clique.
       - **ExperiÃªncia Limpa**: O usuÃ¡rio nunca visualiza a pÃ¡gina do relatÃ³rio desmontada ou incompleta na tela do dispositivo, preservando a estÃ©tica minimalista e premium do app.
+  13. **DesativaÃ§Ã£o Completa de ExportaÃ§Ã£o de PDF & Refinamento de Responsividade**:
+      - **RemoÃ§Ã£o de PDF**: Desativamos o botÃ£o de PDF e eliminamos o componente PrintReportModal com todas as suas dependÃªncias do arquivo ReportsDashboard.tsx, focando na simplicidade direta na prÃ³pria interface.
+      - **Alinhamento dos Filtros (Responsividade)**: Inserimos um espaÃ§ador vertical na segunda seÃ§Ã£o (Conta e Regime) do painel de filtros em ReportsDashboard.tsx para assegurar o alinhamento perfeito de altura das colunas no desktop. AlÃ©m disso, reestruturamos os seletores da terceira seÃ§Ã£o em uma grid responsiva que ocupa 100% da largura em perÃ­odos anuais e se divide em duas colunas de 50% em perÃ­odos mensais e semestrais.
+      - **PrevenÃ§Ã£o de Quebras de Linha Financeiras**: SubstituÃ­mos os espaÃ§os comuns do formatador de moedas (ormatCurrency, ormatCompactCurrency, ormatCurrencyCompact em ormatters.ts) por espaÃ§os nÃ£o quebrÃ¡veis (\u00A0), garantindo que o sÃ­mbolo monetÃ¡rio (R$), os sinais negativos (-) e o valor numÃ©rico jamais quebrem em linhas diferentes no mobile ou web.
+      - **MÃ©dia Mensal na AnÃ¡lise de Categoria**: Adicionamos a exibiÃ§Ã£o da mÃ©dia mensal de despesas diretamente na seÃ§Ã£o detalhada de anÃ¡lise de categorias (calculada dividindo-se o valor total pelo nÃºmero real de meses selecionados no perÃ­odo), permitindo ao usuÃ¡rio planejar seus gastos fixos com mais acurÃ¡cia.
 - **MotivaÃ§Ã£o**: Atender ao cerne estratÃ©gico do Fluxo como um gestor inteligente e simplificado de finanÃ§as pessoais, fornecendo um diagnÃ³stico profissional, prognÃ³sticos de quitaÃ§Ã£o detalhados, justificativas de comportamento do Fluxo Score e visÃµes claras de estouros de orÃ§amentos e parcelamentos em um PDF gerencial corporativo.
+
 
 
