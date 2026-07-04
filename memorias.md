@@ -1903,9 +1903,11 @@ Em recÃ¡lculo:
       - **PrevenÃ§Ã£o de Quebras de Linha Financeiras**: SubstituÃ­mos os espaÃ§os comuns do formatador de moedas (formatCurrency, formatCompactCurrency, formatCurrencyCompact em formatters.ts) por espaÃ§os nÃ£o quebrÃ¡veis (\u00A0), garantindo que o sÃ­mbolo monetÃ¡rio (R$), os sinais negativos (-) e o valor numÃ©rico jamais quebrem em linhas diferentes no mobile ou web.
       - **RemoÃ§Ã£o de MÃ©dia HistÃ³rica**: Removemos a seÃ§Ã£o de mÃ©dia do painel de anÃ¡lise de categoria para evitar distorÃ§Ãµes de visualizaÃ§Ã£o sob demanda.
       - **Linha de Meta por OrÃ§amento**: Adicionamos uma linha de meta horizontal vermelha tracejada (ReferenceLine) no grÃ¡fico de AnÃ¡lise de Categoria quando a categoria selecionada possuir um limite de orÃ§amento mensal definido.
-      - **Destaque Visual de Meses Extremos**: Implementamos no grÃ¡fico de AnÃ¡lise de Categoria o destaque dinÃ¢mico do mÃªs com menor gasto (ponto/barra em vermelho, indicando menor consumo) e o mÃªs com maior gasto (ponto/barra em verde, indicando pico de consumo) no perÃ­odo filtrado.
+      - **Destaque Visual e RÃ³tulos de Outliers**: Invertemos a lÃ³gica de cor de despesas (menor gasto fica em verde/positivo e o maior gasto fica em vermelho/preocupante). TambÃ©m adicionamos rÃ³tulos numÃ©ricos permanentes acima dos extremos (mÃ­nimo e mÃ¡ximo) para exibiÃ§Ã£o imediata dos valores sem necessidade de interaÃ§Ã£o.
+      - **PrevenÃ§Ã£o de RÃ³tulos Cortados**: Ajustamos o domÃ­nio vertical do eixo Y para criar 15% de margem extra (dataMax * 1.15) no topo do grÃ¡fico e expandimos a margem de renderizaÃ§Ã£o superior para 30px, evitando que os rÃ³tulos fiquem ocultados ou truncados pelas bordas do contÃªiner.
       - **SeleÃ§Ã£o de Tipo de GrÃ¡fico**: Criamos um controle segmentado interativo (ChartTypeSelector) para permitir ao usuÃ¡rio alternar a visualizaÃ§Ã£o dos grÃ¡ficos entre Linhas, Barras e Ãrea (com gradiente moderno de opacidade). O controle foi implementado tanto no grÃ¡fico principal (Total de Despesas vs Receitas) quanto no grÃ¡fico de AnÃ¡lise de Categoria.
 - **MotivaÃ§Ã£o**: Atender ao cerne estratÃ©gico do Fluxo como um gestor inteligente e simplificado de finanÃ§as pessoais, fornecendo um diagnÃ³stico profissional, prognÃ³sticos de quitaÃ§Ã£o detalhados, justificativas de comportamento do Fluxo Score e visÃµes claras de estouros de orÃ§amentos e parcelamentos em um PDF gerencial corporativo.
+
 
 
 

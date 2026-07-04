@@ -1125,6 +1125,28 @@ export default function ReportsDashboard() {
   const catMaxValue = useMemo(() => categoryValues.length > 1 ? Math.max(...categoryValues) : null, [categoryValues]);
   const hasDifference = useMemo(() => catMinValue !== null && catMaxValue !== null && catMinValue !== catMaxValue, [catMinValue, catMaxValue]);
 
+  const renderOutlierLabel = useCallback((props: any) => {
+    const { x, y, value } = props;
+    if (value === undefined || value === null) return null;
+    const val = Number(value);
+    if (!hasDifference) return null;
+    if (val === catMinValue) {
+      return (
+        <text x={x} y={y - 12} fill="#10b981" fontSize={10} fontWeight="900" textAnchor="middle" className="font-sans select-none pointer-events-none">
+          {formatCurrency(val)}
+        </text>
+      );
+    }
+    if (val === catMaxValue) {
+      return (
+        <text x={x} y={y - 12} fill="#ef4444" fontSize={10} fontWeight="900" textAnchor="middle" className="font-sans select-none pointer-events-none">
+          {formatCurrency(val)}
+        </text>
+      );
+    }
+    return null;
+  }, [hasDifference, catMinValue, catMaxValue]);
+
   const annualVision = useMemo(() => {
     const tableMonths = period === 'year' ? yearMonths : periodMonths;
     const monthKeys = tableMonths.map((month) => format(month, 'yyyy-MM'));
@@ -1757,10 +1779,10 @@ export default function ReportsDashboard() {
                   <div className="h-[200px] lg:h-[220px] min-w-0">
                     <ResponsiveContainer width="100%" height="100%" minHeight={180}>
                       {categoryChartType === 'bar' ? (
-                        <BarChart data={categoryTrendData} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
+                        <BarChart data={categoryTrendData} margin={{ top: 30, right: 12, left: -18, bottom: 6 }}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
                           <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
-                          <YAxis hide domain={[0, 'auto']} />
+                          <YAxis hide domain={[0, (max) => max * 1.15]} />
                           <Tooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} formatter={(value) => formatCurrency(Number(value))} />
                           {selectedCategory.budgetLimit && selectedCategory.budgetLimit > 0 && (
                             <ReferenceLine 
@@ -1770,18 +1792,18 @@ export default function ReportsDashboard() {
                               label={{ value: `Meta: ${formatCurrency(selectedCategory.budgetLimit)}`, fill: '#ef4444', position: 'top', fontSize: 10, fontWeight: 'bold' }} 
                             />
                           )}
-                          <Bar dataKey="valor" radius={[8, 8, 0, 0]}>
+                          <Bar dataKey="valor" radius={[8, 8, 0, 0]} label={renderOutlierLabel}>
                             {categoryTrendData.map((entry, idx) => {
                               const val = Number(entry.valor);
                               let fill = 'hsl(var(--primary))';
-                              if (hasDifference && val === catMinValue) fill = '#ef4444'; // lowest
-                              else if (hasDifference && val === catMaxValue) fill = '#10b981'; // highest
+                              if (hasDifference && val === catMinValue) fill = '#10b981'; // lowest (good)
+                              else if (hasDifference && val === catMaxValue) fill = '#ef4444'; // highest (bad)
                               return <Cell key={`cell-${idx}`} fill={fill} />;
                             })}
                           </Bar>
                         </BarChart>
                       ) : categoryChartType === 'area' ? (
-                        <AreaChart data={categoryTrendData} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
+                        <AreaChart data={categoryTrendData} margin={{ top: 30, right: 12, left: -18, bottom: 6 }}>
                           <defs>
                             <linearGradient id="colorCatVal" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.2}/>
@@ -1790,7 +1812,7 @@ export default function ReportsDashboard() {
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
                           <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
-                          <YAxis hide domain={[0, 'auto']} />
+                          <YAxis hide domain={[0, (max) => max * 1.15]} />
                           <Tooltip cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }} formatter={(value) => formatCurrency(Number(value))} />
                           {selectedCategory.budgetLimit && selectedCategory.budgetLimit > 0 && (
                             <ReferenceLine 
@@ -1808,14 +1830,15 @@ export default function ReportsDashboard() {
                             strokeWidth={3} 
                             fillOpacity={1}
                             fill="url(#colorCatVal)"
+                            label={renderOutlierLabel}
                             dot={(props) => {
                               const { cx, cy, payload } = props;
                               const val = Number(payload.valor);
                               if (hasDifference && val === catMinValue) {
-                                return <circle key={`dot-min-${cx}`} cx={cx} cy={cy} r={6} fill="#ef4444" stroke="#fff" strokeWidth={2} />;
+                                return <circle key={`dot-min-${cx}`} cx={cx} cy={cy} r={6} fill="#10b981" stroke="#fff" strokeWidth={2} />;
                               }
                               if (hasDifference && val === catMaxValue) {
-                                return <circle key={`dot-max-${cx}`} cx={cx} cy={cy} r={6} fill="#10b981" stroke="#fff" strokeWidth={2} />;
+                                return <circle key={`dot-max-${cx}`} cx={cx} cy={cy} r={6} fill="#ef4444" stroke="#fff" strokeWidth={2} />;
                               }
                               return <circle key={`dot-${cx}`} cx={cx} cy={cy} r={4} fill="hsl(var(--primary))" />;
                             }}
@@ -1823,10 +1846,10 @@ export default function ReportsDashboard() {
                           />
                         </AreaChart>
                       ) : (
-                        <LineChart data={categoryTrendData} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
+                        <LineChart data={categoryTrendData} margin={{ top: 30, right: 12, left: -18, bottom: 6 }}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
                           <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
-                          <YAxis hide domain={[0, 'auto']} />
+                          <YAxis hide domain={[0, (max) => max * 1.15]} />
                           <Tooltip cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }} formatter={(value) => formatCurrency(Number(value))} />
                           {selectedCategory.budgetLimit && selectedCategory.budgetLimit > 0 && (
                             <ReferenceLine 
@@ -1842,14 +1865,15 @@ export default function ReportsDashboard() {
                             dataKey="valor" 
                             stroke="hsl(var(--primary))" 
                             strokeWidth={3} 
+                            label={renderOutlierLabel}
                             dot={(props) => {
                               const { cx, cy, payload } = props;
                               const val = Number(payload.valor);
                               if (hasDifference && val === catMinValue) {
-                                return <circle key={`dot-min-${cx}`} cx={cx} cy={cy} r={6} fill="#ef4444" stroke="#fff" strokeWidth={2} />;
+                                return <circle key={`dot-min-${cx}`} cx={cx} cy={cy} r={6} fill="#10b981" stroke="#fff" strokeWidth={2} />;
                               }
                               if (hasDifference && val === catMaxValue) {
-                                return <circle key={`dot-max-${cx}`} cx={cx} cy={cy} r={6} fill="#10b981" stroke="#fff" strokeWidth={2} />;
+                                return <circle key={`dot-max-${cx}`} cx={cx} cy={cy} r={6} fill="#ef4444" stroke="#fff" strokeWidth={2} />;
                               }
                               return <circle key={`dot-${cx}`} cx={cx} cy={cy} r={4} fill="hsl(var(--primary))" />;
                             }}
