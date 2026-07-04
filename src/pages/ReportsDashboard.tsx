@@ -1779,10 +1779,10 @@ export default function ReportsDashboard() {
                   <div className="h-[200px] lg:h-[220px] min-w-0">
                     <ResponsiveContainer width="100%" height="100%" minHeight={180}>
                       {categoryChartType === 'bar' ? (
-                        <BarChart data={categoryTrendData} margin={{ top: 30, right: 12, left: -18, bottom: 6 }}>
+                        <BarChart data={categoryTrendData} margin={{ top: 35, right: 35, left: 35, bottom: 6 }}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
                           <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
-                          <YAxis hide domain={[0, (max) => max * 1.15]} />
+                          <YAxis hide domain={[0, (max) => max * 1.25]} />
                           <Tooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} formatter={(value) => formatCurrency(Number(value))} />
                           {selectedCategory.budgetLimit && selectedCategory.budgetLimit > 0 && (
                             <ReferenceLine 
@@ -1803,7 +1803,7 @@ export default function ReportsDashboard() {
                           </Bar>
                         </BarChart>
                       ) : categoryChartType === 'area' ? (
-                        <AreaChart data={categoryTrendData} margin={{ top: 30, right: 12, left: -18, bottom: 6 }}>
+                        <AreaChart data={categoryTrendData} margin={{ top: 35, right: 35, left: 35, bottom: 6 }}>
                           <defs>
                             <linearGradient id="colorCatVal" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.2}/>
@@ -1812,7 +1812,7 @@ export default function ReportsDashboard() {
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
                           <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
-                          <YAxis hide domain={[0, (max) => max * 1.15]} />
+                          <YAxis hide domain={[0, (max) => max * 1.25]} />
                           <Tooltip cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }} formatter={(value) => formatCurrency(Number(value))} />
                           {selectedCategory.budgetLimit && selectedCategory.budgetLimit > 0 && (
                             <ReferenceLine 
@@ -1846,10 +1846,10 @@ export default function ReportsDashboard() {
                           />
                         </AreaChart>
                       ) : (
-                        <LineChart data={categoryTrendData} margin={{ top: 30, right: 12, left: -18, bottom: 6 }}>
+                        <LineChart data={categoryTrendData} margin={{ top: 35, right: 35, left: 35, bottom: 6 }}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
                           <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
-                          <YAxis hide domain={[0, (max) => max * 1.15]} />
+                          <YAxis hide domain={[0, (max) => max * 1.25]} />
                           <Tooltip cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }} formatter={(value) => formatCurrency(Number(value))} />
                           {selectedCategory.budgetLimit && selectedCategory.budgetLimit > 0 && (
                             <ReferenceLine 
