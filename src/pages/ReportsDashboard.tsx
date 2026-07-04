@@ -35,6 +35,12 @@ import {
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
+  AreaChart,
+  Area,
+  Cell,
+  ReferenceLine,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -704,6 +710,40 @@ function getFinancialPeriodLabel(period: Period, date: Date) {
   return String(date.getFullYear());
 }
 
+function ChartTypeSelector({ 
+  value, 
+  onChange 
+}: { 
+  value: 'line' | 'bar' | 'area', 
+  onChange: (val: 'line' | 'bar' | 'area') => void 
+}) {
+  return (
+    <div className="relative flex p-0.5 bg-gray-100 dark:bg-zinc-800 rounded-xl h-8 items-center shrink-0 w-[170px] select-none border border-border/10">
+      <div 
+        className="absolute top-0.5 bottom-0.5 bg-white dark:bg-zinc-700 rounded-lg shadow-sm transition-all duration-200 ease-out" 
+        style={{
+          width: 'calc(33.333% - 2px)',
+          transform: `translateX(${
+            value === 'line' ? '0%' : value === 'bar' ? '100%' : '200%'
+          })`
+        }}
+      />
+      {(['line', 'bar', 'area'] as const).map((type) => (
+        <button
+          key={type}
+          onClick={() => onChange(type)}
+          className={cn(
+            "relative z-10 flex-1 py-1 text-center font-bold text-[9px] uppercase tracking-wider transition-colors duration-200",
+            value === type ? "text-gray-900 dark:text-zinc-50" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {type === 'line' ? 'Linhas' : type === 'bar' ? 'Barras' : 'Área'}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function ReportsDashboard() {
   const { user } = useAuth();
   const { theme } = useTheme();
@@ -724,6 +764,8 @@ export default function ReportsDashboard() {
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>('all');
+  const [mainChartType, setMainChartType] = useState<'line' | 'bar' | 'area'>('line');
+  const [categoryChartType, setCategoryChartType] = useState<'line' | 'bar' | 'area'>('line');
 
   // Reset da subcategoria ao mudar de categoria
   useEffect(() => {
@@ -1058,33 +1100,6 @@ export default function ReportsDashboard() {
       isCurrent: point.isCurrent,
     }));
 
-    const dates = transactions.map(t => parseLocalDate(t.date).getTime()).filter(t => !isNaN(t));
-    const histStart = dates.length > 0 ? new Date(Math.min(...dates)) : new Date();
-    const histEnd = dates.length > 0 ? new Date(Math.max(...dates)) : new Date();
-
-    const allCategoryTransactions = getCategoryTransactionsForPeriod({
-      transactions,
-      creditCards,
-      categories,
-      start: startOfMonth(histStart),
-      end: endOfMonth(histEnd),
-      selectedAccountId,
-      reportMode,
-      bucketId: selectedCategory.id,
-      subcategoryId: selectedSubcategoryId,
-    });
-
-    const categoryDates = allCategoryTransactions.map(t => parseLocalDate(t.date).getTime()).filter(t => !isNaN(t));
-    
-    let historicalAverage = 0;
-    if (categoryDates.length > 0) {
-      const catMinDate = new Date(Math.min(...categoryDates));
-      const catMaxDate = new Date(Math.max(...categoryDates));
-      const categoryMonthsCount = Math.max(1, eachMonthOfInterval({ start: startOfMonth(catMinDate), end: endOfMonth(catMaxDate) }).length);
-      const historicalTotal = allCategoryTransactions.reduce((total, t) => total + Number(t.amount), 0);
-      historicalAverage = historicalTotal / categoryMonthsCount;
-    }
-
     return {
       current,
       previous,
@@ -1101,9 +1116,14 @@ export default function ReportsDashboard() {
         bucketId: selectedCategory.id,
         subcategoryId: selectedSubcategoryId,
       }),
-      historicalAverage,
     };
   }, [categories, creditCards, intervals, period, reportMode, selectedAccountId, selectedCategory, selectedSubcategoryId, transactions, viewDate]);
+
+  const categoryTrendData = useMemo(() => selectedCategoryAnalysis?.trend || [], [selectedCategoryAnalysis]);
+  const categoryValues = useMemo(() => categoryTrendData.map(d => Number(d.valor)), [categoryTrendData]);
+  const catMinValue = useMemo(() => categoryValues.length > 1 ? Math.min(...categoryValues) : null, [categoryValues]);
+  const catMaxValue = useMemo(() => categoryValues.length > 1 ? Math.max(...categoryValues) : null, [categoryValues]);
+  const hasDifference = useMemo(() => catMinValue !== null && catMaxValue !== null && catMinValue !== catMaxValue, [catMinValue, catMaxValue]);
 
   const annualVision = useMemo(() => {
     const tableMonths = period === 'year' ? yearMonths : periodMonths;
@@ -1496,11 +1516,14 @@ export default function ReportsDashboard() {
                 {formatCurrency(metrics.totalExpenses)} de {formatCurrency(metrics.income)}
               </p>
             </div>
-            <div className="text-left md:text-right">
-              <p className="text-4xl font-black tracking-tighter tabular-nums">
-                {metrics.consumption.percent !== null ? `${metrics.consumption.percent.toFixed(1)}%` : 'Sem receita'}
-              </p>
-              <ComparisonBadge comparison={metrics.comparisons.consumption} periodLabel={periodLabel} isPercentPoints compact={isMobile} />
+            <div className="flex flex-wrap items-center gap-3">
+              <ChartTypeSelector value={mainChartType} onChange={setMainChartType} />
+              <div className="text-left md:text-right shrink-0">
+                <p className="text-4xl font-black tracking-tighter tabular-nums leading-none">
+                  {metrics.consumption.percent !== null ? `${metrics.consumption.percent.toFixed(1)}%` : 'Sem receita'}
+                </p>
+                <ComparisonBadge comparison={metrics.comparisons.consumption} periodLabel={periodLabel} isPercentPoints compact={isMobile} className="mt-1" />
+              </div>
             </div>
           </div>
 
@@ -1523,70 +1546,171 @@ export default function ReportsDashboard() {
 
           <div className="h-[220px] lg:h-[260px] w-full">
             <ResponsiveContainer width="100%" height="100%" minHeight={isMobile ? 200 : 240}>
-              <LineChart data={consumptionTrendData} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
-                <YAxis hide domain={[0, 'auto']} />
-                <Tooltip
-                  cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }}
-                  content={({ active, payload, label }) => {
-                    if (!active || !payload?.length) return null;
-                    const point = payload[0]?.payload as ConsumptionTrendPoint | undefined;
-                    if (!point) return null;
-                    return (
-                      <div className="min-w-[210px] rounded-2xl border border-white/10 bg-zinc-900 p-3 text-[10px] text-white shadow-xl">
-                        <p className="mb-2 font-black uppercase tracking-widest opacity-70">{label}</p>
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="font-bold uppercase tracking-widest text-white">Receitas</span>
-                          <span className="font-black whitespace-nowrap">{formatCurrency(point.receita)}</span>
+              {mainChartType === 'bar' ? (
+                <BarChart data={consumptionTrendData} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
+                  <YAxis hide domain={[0, 'auto']} />
+                  <Tooltip
+                    cursor={{ fill: 'rgba(0,0,0,0.02)' }}
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload?.length) return null;
+                      const point = payload[0]?.payload as ConsumptionTrendPoint | undefined;
+                      if (!point) return null;
+                      return (
+                        <div className="min-w-[210px] rounded-2xl border border-white/10 bg-zinc-900 p-3 text-[10px] text-white shadow-xl">
+                          <p className="mb-2 font-black uppercase tracking-widest opacity-70">{label}</p>
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="font-bold uppercase tracking-widest text-white">Receitas</span>
+                            <span className="font-black whitespace-nowrap">{formatCurrency(point.receita)}</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between gap-4">
+                            <span className="font-bold uppercase tracking-widest text-rose-300">Despesas</span>
+                            <span className="font-black whitespace-nowrap text-rose-300">{formatCurrency(point.despesa)}</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between gap-4">
+                            <span className="font-bold uppercase tracking-widest opacity-70">Consumo</span>
+                            <span className="font-black">{Number(point.consumo).toFixed(1)}%</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between gap-4">
+                            <span className="font-bold uppercase tracking-widest opacity-70">Saldo</span>
+                            <span className={cn(
+                              "font-black whitespace-nowrap",
+                              point.receita - point.despesa >= 0 ? "text-emerald-300" : "text-rose-300"
+                            )}>
+                              {formatCurrency(point.receita - point.despesa)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="mt-1 flex items-center justify-between gap-4">
-                          <span className="font-bold uppercase tracking-widest text-rose-300">Despesas</span>
-                          <span className="font-black whitespace-nowrap text-rose-300">{formatCurrency(point.despesa)}</span>
+                      );
+                    }}
+                  />
+                  <Bar dataKey="receita" name="Receitas" fill={incomeTrendColor} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="despesa" name="Despesas" fill={expenseTrendColor} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              ) : mainChartType === 'area' ? (
+                <AreaChart data={consumptionTrendData} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
+                  <defs>
+                    <linearGradient id="colorMainIncome" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={incomeTrendColor} stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor={incomeTrendColor} stopOpacity={0.0}/>
+                    </linearGradient>
+                    <linearGradient id="colorMainExpense" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={expenseTrendColor} stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor={expenseTrendColor} stopOpacity={0.0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
+                  <YAxis hide domain={[0, 'auto']} />
+                  <Tooltip
+                    cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }}
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload?.length) return null;
+                      const point = payload[0]?.payload as ConsumptionTrendPoint | undefined;
+                      if (!point) return null;
+                      return (
+                        <div className="min-w-[210px] rounded-2xl border border-white/10 bg-zinc-900 p-3 text-[10px] text-white shadow-xl">
+                          <p className="mb-2 font-black uppercase tracking-widest opacity-70">{label}</p>
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="font-bold uppercase tracking-widest text-white">Receitas</span>
+                            <span className="font-black whitespace-nowrap">{formatCurrency(point.receita)}</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between gap-4">
+                            <span className="font-bold uppercase tracking-widest text-rose-300">Despesas</span>
+                            <span className="font-black whitespace-nowrap text-rose-300">{formatCurrency(point.despesa)}</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between gap-4">
+                            <span className="font-bold uppercase tracking-widest opacity-70">Consumo</span>
+                            <span className="font-black">{Number(point.consumo).toFixed(1)}%</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between gap-4">
+                            <span className="font-bold uppercase tracking-widest opacity-70">Saldo</span>
+                            <span className={cn(
+                              "font-black whitespace-nowrap",
+                              point.receita - point.despesa >= 0 ? "text-emerald-300" : "text-rose-300"
+                            )}>
+                              {formatCurrency(point.receita - point.despesa)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="mt-1 flex items-center justify-between gap-4">
-                          <span className="font-bold uppercase tracking-widest opacity-70">Consumo</span>
-                          <span className="font-black">{Number(point.consumo).toFixed(1)}%</span>
+                      );
+                    }}
+                  />
+                  <Area type="monotone" name="Receitas" dataKey="receita" stroke={incomeTrendColor} strokeWidth={3} fillOpacity={1} fill="url(#colorMainIncome)" dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                  <Area type="monotone" name="Despesas" dataKey="despesa" stroke={expenseTrendColor} strokeWidth={3} fillOpacity={1} fill="url(#colorMainExpense)" dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                </AreaChart>
+              ) : (
+                <LineChart data={consumptionTrendData} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
+                  <YAxis hide domain={[0, 'auto']} />
+                  <Tooltip
+                    cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }}
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload?.length) return null;
+                      const point = payload[0]?.payload as ConsumptionTrendPoint | undefined;
+                      if (!point) return null;
+                      return (
+                        <div className="min-w-[210px] rounded-2xl border border-white/10 bg-zinc-900 p-3 text-[10px] text-white shadow-xl">
+                          <p className="mb-2 font-black uppercase tracking-widest opacity-70">{label}</p>
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="font-bold uppercase tracking-widest text-white">Receitas</span>
+                            <span className="font-black whitespace-nowrap">{formatCurrency(point.receita)}</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between gap-4">
+                            <span className="font-bold uppercase tracking-widest text-rose-300">Despesas</span>
+                            <span className="font-black whitespace-nowrap text-rose-300">{formatCurrency(point.despesa)}</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between gap-4">
+                            <span className="font-bold uppercase tracking-widest opacity-70">Consumo</span>
+                            <span className="font-black">{Number(point.consumo).toFixed(1)}%</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between gap-4">
+                            <span className="font-bold uppercase tracking-widest opacity-70">Saldo</span>
+                            <span className={cn(
+                              "font-black whitespace-nowrap",
+                              point.receita - point.despesa >= 0 ? "text-emerald-300" : "text-rose-300"
+                            )}>
+                              {formatCurrency(point.receita - point.despesa)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="mt-1 flex items-center justify-between gap-4">
-                          <span className="font-bold uppercase tracking-widest opacity-70">Saldo</span>
-                          <span className={cn(
-                            "font-black whitespace-nowrap",
-                            point.receita - point.despesa >= 0 ? "text-emerald-300" : "text-rose-300"
-                          )}>
-                            {formatCurrency(point.receita - point.despesa)}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  name="Receitas"
-                  dataKey="receita"
-                  stroke={incomeTrendColor}
-                  strokeWidth={3}
-                  dot={{ r: 3.5, strokeWidth: 2, fill: incomeTrendColor }}
-                  activeDot={{ r: 5, strokeWidth: 0, fill: incomeTrendColor }}
-                />
-                <Line
-                  type="monotone"
-                  name="Despesas"
-                  dataKey="despesa"
-                  stroke={expenseTrendColor}
-                  strokeWidth={3}
-                  dot={{ r: 3.5, strokeWidth: 2, fill: expenseTrendColor }}
-                  activeDot={{ r: 5, strokeWidth: 0, fill: expenseTrendColor }}
-                />
-              </LineChart>
+                      );
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    name="Receitas"
+                    dataKey="receita"
+                    stroke={incomeTrendColor}
+                    strokeWidth={3}
+                    dot={{ r: 3.5, strokeWidth: 2, fill: incomeTrendColor }}
+                    activeDot={{ r: 5, strokeWidth: 0, fill: incomeTrendColor }}
+                  />
+                  <Line
+                    type="monotone"
+                    name="Despesas"
+                    dataKey="despesa"
+                    stroke={expenseTrendColor}
+                    strokeWidth={3}
+                    dot={{ r: 3.5, strokeWidth: 2, fill: expenseTrendColor }}
+                    activeDot={{ r: 5, strokeWidth: 0, fill: expenseTrendColor }}
+                  />
+                </LineChart>
+              )}
             </ResponsiveContainer>
           </div>
         </div>
 
         <div ref={analysisSectionRef} className="bg-white dark:bg-zinc-900 rounded-[1.75rem] lg:rounded-[2rem] p-4 lg:p-6 border border-gray-100 dark:border-zinc-800 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <h3 className="text-lg font-black tracking-tight">Análise de Categoria</h3>
+            <div className="flex flex-wrap items-center gap-3">
+              <h3 className="text-lg font-black tracking-tight">Análise de Categoria</h3>
+              {selectedCategory && (
+                <ChartTypeSelector value={categoryChartType} onChange={setCategoryChartType} />
+              )}
+            </div>
             <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
               <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
                 <SelectTrigger className="h-11 w-full md:w-[180px] lg:w-[200px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 font-bold">
@@ -1617,45 +1741,125 @@ export default function ReportsDashboard() {
           </div>
 
           {selectedCategory && selectedCategoryAnalysis ? (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6">
-                <div className="rounded-2xl border border-gray-100 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-950/40 p-4 space-y-4">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Atual</p>
-                    <p className="mt-1 text-2xl font-black tabular-nums whitespace-nowrap">{formatCurrency(selectedCategoryAnalysis.current)}</p>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6">
+                  <div className="rounded-2xl border border-gray-100 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-950/40 p-4 space-y-4">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Atual</p>
+                      <p className="mt-1 text-2xl font-black tabular-nums whitespace-nowrap">{formatCurrency(selectedCategoryAnalysis.current)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Anterior</p>
+                      <p className="mt-1 text-lg font-black tabular-nums text-muted-foreground whitespace-nowrap">{formatCurrency(selectedCategoryAnalysis.previous)}</p>
+                    </div>
+                    <ComparisonBadge comparison={selectedCategoryAnalysis.comparison} periodLabel={periodLabel} invertColors compact={isMobile} className="mt-1" />
                   </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Média Histórica</p>
-                    <p className="mt-1 text-lg font-black tabular-nums text-primary whitespace-nowrap">
-                      {formatCurrency(selectedCategoryAnalysis.historicalAverage)}
-                    </p>
+                  <div className="h-[200px] lg:h-[220px] min-w-0">
+                    <ResponsiveContainer width="100%" height="100%" minHeight={180}>
+                      {categoryChartType === 'bar' ? (
+                        <BarChart data={categoryTrendData} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
+                          <YAxis hide domain={[0, 'auto']} />
+                          <Tooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} formatter={(value) => formatCurrency(Number(value))} />
+                          {selectedCategory.budgetLimit && selectedCategory.budgetLimit > 0 && (
+                            <ReferenceLine 
+                              y={selectedCategory.budgetLimit} 
+                              stroke="#ef4444" 
+                              strokeDasharray="3 3" 
+                              label={{ value: `Meta: ${formatCurrency(selectedCategory.budgetLimit)}`, fill: '#ef4444', position: 'top', fontSize: 10, fontWeight: 'bold' }} 
+                            />
+                          )}
+                          <Bar dataKey="valor" radius={[8, 8, 0, 0]}>
+                            {categoryTrendData.map((entry, idx) => {
+                              const val = Number(entry.valor);
+                              let fill = 'hsl(var(--primary))';
+                              if (hasDifference && val === catMinValue) fill = '#ef4444'; // lowest
+                              else if (hasDifference && val === catMaxValue) fill = '#10b981'; // highest
+                              return <Cell key={`cell-${idx}`} fill={fill} />;
+                            })}
+                          </Bar>
+                        </BarChart>
+                      ) : categoryChartType === 'area' ? (
+                        <AreaChart data={categoryTrendData} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
+                          <defs>
+                            <linearGradient id="colorCatVal" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.2}/>
+                              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
+                          <YAxis hide domain={[0, 'auto']} />
+                          <Tooltip cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }} formatter={(value) => formatCurrency(Number(value))} />
+                          {selectedCategory.budgetLimit && selectedCategory.budgetLimit > 0 && (
+                            <ReferenceLine 
+                              y={selectedCategory.budgetLimit} 
+                              stroke="#ef4444" 
+                              strokeDasharray="3 3" 
+                              label={{ value: `Meta: ${formatCurrency(selectedCategory.budgetLimit)}`, fill: '#ef4444', position: 'top', fontSize: 10, fontWeight: 'bold' }} 
+                            />
+                          )}
+                          <Area 
+                            type="monotone" 
+                            name={selectedCategory.name} 
+                            dataKey="valor" 
+                            stroke="hsl(var(--primary))" 
+                            strokeWidth={3} 
+                            fillOpacity={1}
+                            fill="url(#colorCatVal)"
+                            dot={(props) => {
+                              const { cx, cy, payload } = props;
+                              const val = Number(payload.valor);
+                              if (hasDifference && val === catMinValue) {
+                                return <circle key={`dot-min-${cx}`} cx={cx} cy={cy} r={6} fill="#ef4444" stroke="#fff" strokeWidth={2} />;
+                              }
+                              if (hasDifference && val === catMaxValue) {
+                                return <circle key={`dot-max-${cx}`} cx={cx} cy={cy} r={6} fill="#10b981" stroke="#fff" strokeWidth={2} />;
+                              }
+                              return <circle key={`dot-${cx}`} cx={cx} cy={cy} r={4} fill="hsl(var(--primary))" />;
+                            }}
+                            activeDot={{ r: 6 }} 
+                          />
+                        </AreaChart>
+                      ) : (
+                        <LineChart data={categoryTrendData} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
+                          <YAxis hide domain={[0, 'auto']} />
+                          <Tooltip cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }} formatter={(value) => formatCurrency(Number(value))} />
+                          {selectedCategory.budgetLimit && selectedCategory.budgetLimit > 0 && (
+                            <ReferenceLine 
+                              y={selectedCategory.budgetLimit} 
+                              stroke="#ef4444" 
+                              strokeDasharray="3 3" 
+                              label={{ value: `Meta: ${formatCurrency(selectedCategory.budgetLimit)}`, fill: '#ef4444', position: 'top', fontSize: 10, fontWeight: 'bold' }} 
+                            />
+                          )}
+                          <Line 
+                            type="monotone" 
+                            name={selectedCategory.name} 
+                            dataKey="valor" 
+                            stroke="hsl(var(--primary))" 
+                            strokeWidth={3} 
+                            dot={(props) => {
+                              const { cx, cy, payload } = props;
+                              const val = Number(payload.valor);
+                              if (hasDifference && val === catMinValue) {
+                                return <circle key={`dot-min-${cx}`} cx={cx} cy={cy} r={6} fill="#ef4444" stroke="#fff" strokeWidth={2} />;
+                              }
+                              if (hasDifference && val === catMaxValue) {
+                                return <circle key={`dot-max-${cx}`} cx={cx} cy={cy} r={6} fill="#10b981" stroke="#fff" strokeWidth={2} />;
+                              }
+                              return <circle key={`dot-${cx}`} cx={cx} cy={cy} r={4} fill="hsl(var(--primary))" />;
+                            }}
+                            activeDot={{ r: 6 }} 
+                          />
+                        </LineChart>
+                      )}
+                    </ResponsiveContainer>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Anterior</p>
-                    <p className="mt-1 text-lg font-black tabular-nums text-muted-foreground whitespace-nowrap">{formatCurrency(selectedCategoryAnalysis.previous)}</p>
-                  </div>
-                  <ComparisonBadge comparison={selectedCategoryAnalysis.comparison} periodLabel={periodLabel} invertColors compact={isMobile} className="mt-1" />
                 </div>
-                <div className="h-[200px] lg:h-[220px] min-w-0">
-                  <ResponsiveContainer width="100%" height="100%" minHeight={180}>
-                    <LineChart data={selectedCategoryAnalysis.trend} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
-                      <YAxis hide domain={[0, 'auto']} />
-                      <Tooltip cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }} formatter={(value) => formatCurrency(Number(value))} />
-                      <Line 
-                        type="monotone" 
-                        name={selectedSubcategoryId !== 'all' ? currentSubcategories.find(s => s.id === selectedSubcategoryId)?.name || selectedCategory.name : selectedCategory.name} 
-                        dataKey="valor" 
-                        stroke="hsl(var(--primary))" 
-                        strokeWidth={3} 
-                        dot={{ r: 4 }} 
-                        activeDot={{ r: 6 }} 
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
 
               <div className="rounded-2xl border border-gray-100 dark:border-zinc-800 bg-gray-50/60 dark:bg-zinc-950/30 p-4">
                 <div className="flex items-center justify-between gap-3">

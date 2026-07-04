@@ -4,16 +4,16 @@
 
 O Fluxo Financeiro deve ser tratado como um app financeiro modular, robusto e profissional.
 
-O objetivo principal atual nÃƒÂ£o ÃƒÂ© vender ainda, mas fazer o app funcionar de forma confiÃƒÂ¡vel para uso real e ser escalÃƒÂ¡vel no futuro.
+O objetivo principal atual nÃ£o ÃƒÂ© vender ainda, mas fazer o app funcionar de forma confiÃƒÂ¡vel para uso real e ser escalÃƒÂ¡vel no futuro.
 
 O desenvolvimento deve evitar gambiarras, excesso de cÃƒÂ³digo e soluÃƒÂ§ÃƒÂµes temporÃƒÂ¡rias sem documentaÃƒÂ§ÃƒÂ£o. Sempre que uma soluÃƒÂ§ÃƒÂ£o temporÃƒÂ¡ria for usada, ela deve ficar registrada como tal.
 
 O app deve ser modular:
 - As funcionalidades podem existir no backend/cÃƒÂ³digo.
 - O acesso/visibilidade deve ser controlado por plano/mÃƒÂ³dulo/feature flag.
-- NÃƒÂ£o remover estruturalmente features apenas porque um plano nÃƒÂ£o deve vÃƒÂª-las.
+- NÃƒÂ£o remover estruturalmente features apenas porque um plano nÃ£o deve vÃƒÂª-las.
 - Planos futuros: Basic, Pro e Premium.
-- A matriz final de planos ainda nÃƒÂ£o deve ser definida agora.
+- A matriz final de planos ainda nÃ£o deve ser definida agora.
 
 NÃƒÂ£o mexer sem autorizaÃƒÂ§ÃƒÂ£o explÃƒÂ­cita em:
 - Supabase migrations;
@@ -29,7 +29,7 @@ NÃƒÂ£o mexer sem autorizaÃƒÂ§ÃƒÂ£o explÃƒÂ­cita em:
 
 ## PadrÃƒÂ£o visual geral
 
-O Fluxo deve parecer um produto financeiro profissional, nÃƒÂ£o um tutorial.
+O Fluxo deve parecer um produto financeiro profissional, nÃ£o um tutorial.
 
 Diretriz visual:
 
@@ -71,7 +71,7 @@ Exemplos de nomenclatura aprovada:
 - Ã¢â‚¬Å“Despesas efetivasÃ¢â‚¬ï¿½
 - Ã¢â‚¬Å“Saldo efetivoÃ¢â‚¬ï¿½
 
-Regras de cÃƒÂ¡lculo complexas devem ficar em tooltip, documentaÃƒÂ§ÃƒÂ£o ou cÃƒÂ³digo, nÃƒÂ£o como texto fixo na tela.
+Regras de cÃ¡lculo complexas devem ficar em tooltip, documentaÃƒÂ§ÃƒÂ£o ou cÃƒÂ³digo, nÃ£o como texto fixo na tela.
 
 ---
 
@@ -83,7 +83,7 @@ Se o usuÃƒÂ¡rio estiver logado:
 - o app deve mostrar uma tela de carregamento/sincronizaÃƒÂ§ÃƒÂ£o;
 - deve executar automaticamente a mesma rotina do botÃƒÂ£o Ã¢â‚¬Å“AtualizarÃ¢â‚¬ï¿½;
 - deve carregar os dados reais antes de liberar a Home;
-- a Home nÃƒÂ£o pode abrir com valores zerados falsos.
+- a Home nÃ£o pode abrir com valores zerados falsos.
 
 A rotina de boot deve:
 1. Aguardar autenticaÃƒÂ§ÃƒÂ£o/sessÃƒÂ£o pronta.
@@ -92,12 +92,12 @@ A rotina de boot deve:
 4. SÃƒÂ³ liberar o app apÃƒÂ³s refresh ou timeout/falha controlada.
 5. Em erro, mostrar aviso discreto e abrir com dados disponÃƒÂ­veis.
 
-O usuÃƒÂ¡rio nÃƒÂ£o deve precisar clicar em Ã¢â‚¬Å“AtualizarÃ¢â‚¬ï¿½ ao abrir o app.
+O usuÃƒÂ¡rio nÃ£o deve precisar clicar em Ã¢â‚¬Å“AtualizarÃ¢â‚¬ï¿½ ao abrir o app.
 
 O botÃƒÂ£o Ã¢â‚¬Å“AtualizarÃ¢â‚¬ï¿½ manual deve continuar existindo e funcionando como fallback.
 
-O app nÃƒÂ£o deve recarregar automaticamente no meio de aÃƒÂ§ÃƒÂµes crÃƒÂ­ticas, como:
-- editar lanÃƒÂ§amento;
+O app nÃ£o deve recarregar automaticamente no meio de aÃƒÂ§ÃƒÂµes crÃƒÂ­ticas, como:
+- editar lanÃ§amento;
 - pagar fatura;
 - criar acordo;
 - parcelar fatura;
@@ -122,9 +122,9 @@ NÃƒÂ£o deve existir:
 - componentes GuidedTour, HelpButton ou TutorialOfferDialog.
 
 Motivo:
-O tutorial estava gerando comportamento indesejado e atrapalhando a experiÃƒÂªncia. O app deve comunicar por UX profissional, nÃƒÂ£o por explicaÃƒÂ§ÃƒÂµes de onboarding.
+O tutorial estava gerando comportamento indesejado e atrapalhando a experiÃƒÂªncia. O app deve comunicar por UX profissional, nÃ£o por explicaÃƒÂ§ÃƒÂµes de onboarding.
 
-Se no futuro houver ajuda, ela deve ser repensada como central de ajuda discreta, nÃƒÂ£o como tutorial automÃƒÂ¡tico.
+Se no futuro houver ajuda, ela deve ser repensada como central de ajuda discreta, nÃ£o como tutorial automÃƒÂ¡tico.
 
 ---
 
@@ -191,7 +191,7 @@ Textos corretos:
 
 Regra permanente:
 - antes de finalizar qualquer sprint, rodar `npm run check:encoding`;
-- nÃƒÂ£o fazer conversÃƒÂ£o automÃƒÂ¡tica cega de arquivos inteiros;
+- nÃ£o fazer conversÃƒÂ£o automÃƒÂ¡tica cega de arquivos inteiros;
 - corrigir manualmente textos quebrados;
 - allowlist deve ser mÃƒÂ­nima e justificada.
 
@@ -217,14 +217,14 @@ No desktop:
 - podem ocupar mais largura/altura da tela;
 - devem usar `max-height` baseado em viewport;
 - corpo do modal deve ter `overflow-y-auto`;
-- conteÃƒÂºdo nÃƒÂ£o pode ficar cortado.
+- conteÃƒÂºdo nÃ£o pode ficar cortado.
 
 No mobile:
 - modal deve ocupar quase toda a tela;
 - campos devem ir para uma coluna;
 - rolagem deve funcionar;
 - botÃƒÂµes devem continuar acessÃƒÂ­veis;
-- inputs nÃƒÂ£o podem ficar escondidos pelo teclado.
+- inputs nÃ£o podem ficar escondidos pelo teclado.
 
 Exemplo importante:
 O modal de Novo Acordo/EdiÃƒÂ§ÃƒÂ£o de Acordo deve ser largo o suficiente no desktop e rolÃƒÂ¡vel no mobile, porque agora possui campos de entrada, parcelas, datas e total.
@@ -243,7 +243,7 @@ Ela responde:
 Regra:
 - mostra obrigaÃƒÂ§ÃƒÂµes do mÃƒÂªs selecionado;
 - mostra pendÃƒÂªncias anteriores ainda abertas;
-- nÃƒÂ£o deve depender de `original_id` para exibir obrigaÃƒÂ§ÃƒÂ£o real;
+- nÃ£o deve depender de `original_id` para exibir obrigaÃƒÂ§ÃƒÂ£o real;
 - pendÃƒÂªncia anterior em aberto deve aparecer mesmo sem `original_id`.
 
 No filtro por MÃƒÂªs:
@@ -253,7 +253,7 @@ No filtro por MÃƒÂªs:
 No filtro por Dia:
 - mostra obrigaÃƒÂ§ÃƒÂµes daquele dia;
 - mais pendÃƒÂªncias anteriores abertas;
-- nÃƒÂ£o mostra obrigaÃƒÂ§ÃƒÂµes futuras depois do dia selecionado.
+- nÃ£o mostra obrigaÃƒÂ§ÃƒÂµes futuras depois do dia selecionado.
 
 Filtro Dia deve existir na GestÃƒÂ£o de Contas.
 
@@ -269,17 +269,17 @@ Ela responde:
 Ã¢â‚¬Å“Como estÃƒÂ¡ o mÃƒÂªs selecionado?Ã¢â‚¬ï¿½
 
 Cards principais da Home devem usar competÃƒÂªncia do mÃƒÂªs selecionado:
-- nÃƒÂ£o somar despesas pendentes de meses anteriores dentro dos cards principais;
+- nÃ£o somar despesas pendentes de meses anteriores dentro dos cards principais;
 - pendÃƒÂªncias anteriores podem aparecer apenas em indicador separado;
-- vencidas devem usar a data real de hoje, nÃƒÂ£o o fim do mÃƒÂªs selecionado.
+- vencidas devem usar a data real de hoje, nÃ£o o fim do mÃƒÂªs selecionado.
 
 Regra importante:
 - `viewDate` define a competÃƒÂªncia analisada;
 - `currentDate`/data real define se algo estÃƒÂ¡ vencido.
 
-Home nÃƒÂ£o deve funcionar como GestÃƒÂ£o de Contas disfarÃƒÂ§ada.
+Home nÃ£o deve funcionar como GestÃƒÂ£o de Contas disfarÃƒÂ§ada.
 
-Filtro Dia nÃƒÂ£o deve existir na Home.
+Filtro Dia nÃ£o deve existir na Home.
 
 ---
 
@@ -298,7 +298,7 @@ Ela deve mostrar:
 - status da fatura;
 - atalho para GestÃƒÂ£o de Contas.
 
-A tela de CartÃƒÂµes nÃƒÂ£o deve:
+A tela de CartÃƒÂµes nÃ£o deve:
 - pagar fatura;
 - baixar fatura;
 - parcelar fatura;
@@ -314,7 +314,7 @@ Foram removidos da UI de CartÃƒÂµes os blocos:
 - DisponÃƒÂ­vel como card separado;
 - mensagens de conciliaÃƒÂ§ÃƒÂ£o visual que confundiam o usuÃƒÂ¡rio.
 
-Esses cÃƒÂ¡lculos podem existir internamente, mas nÃƒÂ£o devem poluir a tela.
+Esses cÃ¡lculos podem existir internamente, mas nÃ£o devem poluir a tela.
 
 ---
 
@@ -332,11 +332,11 @@ Deve mostrar:
 - acordos;
 - entradas e parcelas quando aplicÃƒÂ¡vel.
 
-Compra no cartÃƒÂ£o aparece em LanÃƒÂ§amentos, mas nÃƒÂ£o conta como despesa efetiva.
+Compra no cartÃƒÂ£o aparece em LanÃƒÂ§amentos, mas nÃ£o conta como despesa efetiva.
 
 Pagamento de fatura aparece em LanÃƒÂ§amentos e conta como despesa efetiva.
 
-TransferÃƒÂªncias aparecem em LanÃƒÂ§amentos, mas nÃƒÂ£o contam como receita/despesa.
+TransferÃƒÂªncias aparecem em LanÃƒÂ§amentos, mas nÃ£o contam como receita/despesa.
 
 Filtro Dia deve permanecer em LanÃƒÂ§amentos.
 
@@ -353,7 +353,7 @@ Ela deve responder:
 - quanto sobra/falta;
 - como evolui o consumo;
 - quais categorias/macrogrupos consomem mais;
-- como o perÃƒÂ­odo atual compara com o anterior.
+- como o perÃ­odo atual compara com o anterior.
 
 RelatÃƒÂ³rios deve ter modos:
 
@@ -371,7 +371,7 @@ Considera:
 - despesas pendentes;
 - receitas pendentes;
 - recorrÃƒÂªncias;
-- compromissos do perÃƒÂ­odo.
+- compromissos do perÃ­odo.
 
 NÃƒÂ£o exige `isPaid`.
 
@@ -381,8 +381,8 @@ Considera somente caixa efetivo:
 - receitas pagas/recebidas;
 - despesas pagas;
 - pagamento de fatura;
-- nÃƒÂ£o soma compra comum no cartÃƒÂ£o;
-- nÃƒÂ£o soma transferÃƒÂªncia.
+- nÃ£o soma compra comum no cartÃƒÂ£o;
+- nÃ£o soma transferÃƒÂªncia.
 
 ### Cards principais
 
@@ -427,7 +427,7 @@ Ano:
 - calcula ano selecionado;
 - compara com ano anterior.
 
-Filtro Dia nÃƒÂ£o deve existir em RelatÃƒÂ³rios.
+Filtro Dia nÃ£o deve existir em RelatÃƒÂ³rios.
 
 ---
 
@@ -438,7 +438,7 @@ O antigo grÃƒÂ¡fico de EvoluÃƒÂ§ÃƒÂ£o Mensal foi substituÃƒÂ­do 
 CÃƒÂ¡lculo:
 
 Consumo da receita (%) =
-despesas do perÃƒÂ­odo / receitas do perÃƒÂ­odo Ãƒâ€” 100
+despesas do perÃ­odo / receitas do perÃ­odo Ãƒâ€” 100
 
 No modo Projetado:
 - usa receitas previstas;
@@ -452,7 +452,7 @@ Deve exibir:
 - percentual;
 - valor consumido;
 - receita total;
-- variaÃƒÂ§ÃƒÂ£o contra perÃƒÂ­odo anterior em pontos percentuais;
+- variaÃƒÂ§ÃƒÂ£o contra perÃ­odo anterior em pontos percentuais;
 - grÃƒÂ¡fico de linha/evoluÃƒÂ§ÃƒÂ£o.
 
 Exemplo:
@@ -467,7 +467,7 @@ Sem textos explicativos longos.
 
 # REGRA DE RELATÃƒâ€œRIOS Ã¢â‚¬â€ COMPOSIÃƒâ€¡ÃƒÆ’O DAS DESPESAS
 
-ComposiÃƒÂ§ÃƒÂ£o das Despesas deve destrinchar o total de despesas do perÃƒÂ­odo selecionado por categoria.
+ComposiÃƒÂ§ÃƒÂ£o das Despesas deve destrinchar o total de despesas do perÃ­odo selecionado por categoria.
 
 MÃƒÂªs:
 - despesas do mÃƒÂªs por categoria.
@@ -484,9 +484,9 @@ Modo Projetado:
 Modo Realizado:
 - despesas efetivas por categoria.
 
-A composiÃƒÂ§ÃƒÂ£o deve respeitar o modo e o perÃƒÂ­odo selecionados.
+A composiÃƒÂ§ÃƒÂ£o deve respeitar o modo e o perÃ­odo selecionados.
 
-Clicar em uma categoria na ComposiÃƒÂ§ÃƒÂ£o das Despesas deve alimentar a seÃƒÂ§ÃƒÂ£o AnÃƒÂ¡lise de Categoria.
+Clicar em uma categoria na ComposiÃƒÂ§ÃƒÂ£o das Despesas deve alimentar a seÃ§Ã£o AnÃƒÂ¡lise de Categoria.
 
 PreferÃƒÂªncia:
 - cards principais continuam globais;
@@ -498,14 +498,14 @@ PreferÃƒÂªncia:
 
 # REGRA DE RELATÃƒâ€œRIOS Ã¢â‚¬â€ ANÃƒï¿½LISE DE CATEGORIA
 
-A seÃƒÂ§ÃƒÂ£o deve se chamar:
+A seÃ§Ã£o deve se chamar:
 
 AnÃƒÂ¡lise de Categoria
 
 Deve conter:
 - seletor de categoria;
-- consumo do perÃƒÂ­odo atual;
-- consumo do perÃƒÂ­odo anterior;
+- consumo do perÃ­odo atual;
+- consumo do perÃ­odo anterior;
 - diferenÃƒÂ§a;
 - percentual de variaÃƒÂ§ÃƒÂ£o;
 - grÃƒÂ¡fico/linha de evoluÃƒÂ§ÃƒÂ£o.
@@ -523,7 +523,7 @@ Sem textos explicativos longos.
 
 OrÃƒÂ§amentos comparam Planejado x Realizado por categoria ou agrupamento.
 
-OrÃƒÂ§amento nÃƒÂ£o ÃƒÂ© a mesma coisa que despesa efetiva financeira.
+OrÃƒÂ§amento nÃ£o ÃƒÂ© a mesma coisa que despesa efetiva financeira.
 
 ## OrÃƒÂ§amento por Categoria
 
@@ -550,7 +550,7 @@ Acompanhar = visibilidade.
 OrÃƒÂ§amento = meta.
 Movimento = consumo.
 
-Essas trÃƒÂªs coisas nÃƒÂ£o podem ser misturadas.
+Essas trÃƒÂªs coisas nÃ£o podem ser misturadas.
 
 O usuÃƒÂ¡rio deve escolher explicitamente quais categorias quer acompanhar.
 
@@ -564,30 +564,30 @@ NÃƒÂ£o deve aparecer apenas porque:
 - estÃƒÂ¡ em macrocategoria.
 
 Se o toggle Ã¢â‚¬Å“AcompanharÃ¢â‚¬ï¿½ estiver desligado:
-- categoria nÃƒÂ£o aparece na lista principal;
+- categoria nÃ£o aparece na lista principal;
 - mesmo com orÃƒÂ§amento definido;
 - mesmo com movimento.
 
 Se estiver ligado:
 - aparece;
 - se tiver orÃƒÂ§amento, mostra meta;
-- se nÃƒÂ£o tiver orÃƒÂ§amento, mostra Ã¢â‚¬Å“Sem orÃƒÂ§amento definidoÃ¢â‚¬ï¿½;
-- se nÃƒÂ£o tiver movimento, mostra realizado R$ 0,00.
+- se nÃ£o tiver orÃƒÂ§amento, mostra Ã¢â‚¬Å“Sem orÃƒÂ§amento definidoÃ¢â‚¬ï¿½;
+- se nÃ£o tiver movimento, mostra realizado R$ 0,00.
 
-O aviso de categorias com movimento nÃƒÂ£o acompanhadas foi removido porque poluÃƒÂ­a a tela.
+O aviso de categorias com movimento nÃ£o acompanhadas foi removido porque poluÃƒÂ­a a tela.
 
 ## CartÃƒÂ£o no orÃƒÂ§amento por categoria
 
 Para mÃƒÂ©tricas financeiras gerais:
-- compra no cartÃƒÂ£o nÃƒÂ£o conta como despesa efetiva;
+- compra no cartÃƒÂ£o nÃ£o conta como despesa efetiva;
 - pagamento da fatura conta como despesa efetiva.
 
 Para orÃƒÂ§amento por categoria:
 - compra no cartÃƒÂ£o conta no consumo da categoria da compra;
-- pagamento da fatura nÃƒÂ£o entra no orÃƒÂ§amento por categoria.
+- pagamento da fatura nÃ£o entra no orÃƒÂ§amento por categoria.
 
 Motivo:
-OrÃƒÂ§amento mede comportamento de consumo por categoria. Fatura ÃƒÂ© forma de pagamento, nÃƒÂ£o categoria de consumo.
+OrÃƒÂ§amento mede comportamento de consumo por categoria. Fatura ÃƒÂ© forma de pagamento, nÃ£o categoria de consumo.
 
 Exemplo:
 Compra no cartÃƒÂ£o:
@@ -623,7 +623,7 @@ Essencial
 - SaÃƒÂºde;
 - AlimentaÃƒÂ§ÃƒÂ£o Base.
 
-Cada macrocategoria pode ter teto percentual sobre a receita do perÃƒÂ­odo.
+Cada macrocategoria pode ter teto percentual sobre a receita do perÃ­odo.
 
 Exemplo:
 Essencial = 25% da receita.
@@ -631,10 +631,10 @@ Essencial = 25% da receita.
 CÃƒÂ¡lculo:
 
 Teto do agrupamento =
-receita do perÃƒÂ­odo Ãƒâ€” percentual definido
+receita do perÃ­odo Ãƒâ€” percentual definido
 
 Consumo do agrupamento =
-soma dos gastos das categorias vinculadas no perÃƒÂ­odo
+soma dos gastos das categorias vinculadas no perÃ­odo
 
 Uso =
 consumo / teto
@@ -654,14 +654,14 @@ A tela de RelatÃƒÂ³rios/OrÃƒÂ§amentos deve alternar entre:
 
 ## PersistÃƒÂªncia atual
 
-A estrutura persistente oficial ainda nÃƒÂ£o foi criada no Supabase.
+A estrutura persistente oficial ainda nÃ£o foi criada no Supabase.
 
 A implementaÃƒÂ§ÃƒÂ£o atual usa `localStorage` por usuÃƒÂ¡rio:
 - `fluxo_budget_groups:<userId>`;
 - `fluxo_category_group_assignments:<userId>`.
 
 Risco:
-- nÃƒÂ£o sincroniza entre dispositivos/navegadores.
+- nÃ£o sincroniza entre dispositivos/navegadores.
 
 Futuro recomendado:
 Criar migration oficial:
@@ -697,13 +697,13 @@ Compra no cartÃƒÂ£o:
 - aparece em LanÃƒÂ§amentos;
 - aparece em CartÃƒÂµes/Fatura;
 - consome limite do cartÃƒÂ£o;
-- nÃƒÂ£o conta como despesa efetiva no momento da compra.
+- nÃ£o conta como despesa efetiva no momento da compra.
 
 Pagamento de fatura:
 - ÃƒÂ© despesa efetiva;
 - acontece somente pela GestÃƒÂ£o de Contas;
 - pode ser total, parcial ou parcelado;
-- nÃƒÂ£o pode duplicar compra + fatura.
+- nÃ£o pode duplicar compra + fatura.
 
 CartÃƒÂµes ÃƒÂ© demonstrativo.
 
@@ -715,7 +715,7 @@ Ao pagar fatura total:
 - registra despesa efetiva `isInvoicePayment`;
 - debita conta/carteira escolhida;
 - marca fatura/itens como baixados conforme regra;
-- nÃƒÂ£o gera saldo futuro.
+- nÃ£o gera saldo futuro.
 
 ## Pagamento parcial
 
@@ -723,18 +723,18 @@ Ao pagar fatura parcialmente:
 - registra somente o valor pago como despesa efetiva;
 - marca a obrigaÃƒÂ§ÃƒÂ£o/fatura atual como baixada/settled;
 - gera saldo restante na prÃƒÂ³xima fatura como obrigaÃƒÂ§ÃƒÂ£o/despesa futura;
-- nÃƒÂ£o duplica compras originais;
-- nÃƒÂ£o libera limite total indevidamente se houver saldo remanescente.
+- nÃ£o duplica compras originais;
+- nÃ£o libera limite total indevidamente se houver saldo remanescente.
 
 ## Parcelamento de fatura
 
 Ao parcelar fatura:
 - usuÃƒÂ¡rio informa entrada, se houver;
 - usuÃƒÂ¡rio informa quantidade/valor das parcelas conforme banco/app do cartÃƒÂ£o;
-- o Fluxo nÃƒÂ£o calcula juros;
+- o Fluxo nÃ£o calcula juros;
 - fatura atual ÃƒÂ© considerada renegociada/baixada;
 - parcelas futuras sÃƒÂ£o geradas conforme valores informados;
-- nÃƒÂ£o exigir que entrada + parcelas fechem valor original, pois juros podem jÃƒÂ¡ estar embutidos pelo banco.
+- nÃ£o exigir que entrada + parcelas fechem valor original, pois juros podem jÃƒÂ¡ estar embutidos pelo banco.
 
 ---
 
@@ -742,15 +742,15 @@ Ao parcelar fatura:
 
 Compras no cartÃƒÂ£o podem ser registradas como `isPaid = true` porque representam uma despesa baixada via cartÃƒÂ£o.
 
-Mas isso nÃƒÂ£o significa que a fatura foi paga.
+Mas isso nÃ£o significa que a fatura foi paga.
 
 Para limite de cartÃƒÂ£o:
 - compra no cartÃƒÂ£o continua consumindo limite atÃƒÂ© que a fatura correspondente seja quitada, renegociada ou tratada conforme regra;
 - pagamento de fatura (`isInvoicePayment`) ÃƒÂ© o evento financeiro que ajusta/libera limite;
-- o campo `isPaid` da compra individual nÃƒÂ£o deve, sozinho, zerar o impacto da compra no limite.
+- o campo `isPaid` da compra individual nÃ£o deve, sozinho, zerar o impacto da compra no limite.
 
 Erro corrigido:
-O cÃƒÂ¡lculo de limite descartava compras no cartÃƒÂ£o marcadas como `isPaid = true`, o que fazia a fatura ter valor, mas o limite usado aparecer como 0.
+O cÃ¡lculo de limite descartava compras no cartÃƒÂ£o marcadas como `isPaid = true`, o que fazia a fatura ter valor, mas o limite usado aparecer como 0.
 
 Regra correta:
 - fatura aberta com valor lanÃƒÂ§ado e valor pago R$ 0,00 deve consumir limite;
@@ -773,11 +773,11 @@ Resultado esperado:
 
 Acordo = entrada opcional + parcelas futuras.
 
-Entrada nÃƒÂ£o ÃƒÂ© parcela.
+Entrada nÃ£o ÃƒÂ© parcela.
 
 Parcelas comeÃƒÂ§am depois da entrada.
 
-O app nÃƒÂ£o calcula juros; registra o acordo informado pelo usuÃƒÂ¡rio.
+O app nÃ£o calcula juros; registra o acordo informado pelo usuÃƒÂ¡rio.
 
 Exemplo real:
 Entrada: R$ 79,60
@@ -811,7 +811,7 @@ Se paga no ato:
 - `account_id`/conta informada;
 - deve debitar conta/carteira se o fluxo atual faz isso.
 
-Se nÃƒÂ£o paga:
+Se nÃ£o paga:
 - fica pendente;
 - aparece na GestÃƒÂ£o de Contas como obrigaÃƒÂ§ÃƒÂ£o separada.
 
@@ -826,13 +826,13 @@ Gerar parcelas separadas:
 - ...
 - Parcela N/N acordo [nome]
 
-Entrada nÃƒÂ£o entra na contagem.
+Entrada nÃ£o entra na contagem.
 
 Exemplo:
 Entrada + 11 parcelas gera:
 - 1 transaÃƒÂ§ÃƒÂ£o de entrada;
 - 11 parcelas;
-- nÃƒÂ£o 12 parcelas.
+- nÃ£o 12 parcelas.
 
 ## Novo Acordo vs EdiÃƒÂ§ÃƒÂ£o
 
@@ -863,10 +863,10 @@ Ao lidar com strings `yyyy-mm-dd`, usar parsing local (`parseLocalDate`) em vez 
 
 # REGRA DE CLASSIFICAÃƒâ€¡ÃƒÆ’O CANÃƒâ€NICA DE CATEGORIAS
 
-RelatÃƒÂ³rios e composiÃƒÂ§ÃƒÂµes por categoria devem agrupar transaÃƒÂ§ÃƒÂµes por chave canÃƒÂ´nica, nÃƒÂ£o por label solto, `debt_id` individual ou fallback local.
+RelatÃƒÂ³rios e composiÃƒÂ§ÃƒÂµes por categoria devem agrupar transaÃƒÂ§ÃƒÂµes por chave canÃƒÂ´nica, nÃ£o por label solto, `debt_id` individual ou fallback local.
 
 Regra geral:
-- label igual nÃƒÂ£o basta;
+- label igual nÃ£o basta;
 - agrupamento deve usar key canÃƒÂ´nica.
 
 ## Buckets canÃƒÂ´nicos
@@ -889,7 +889,7 @@ Sem categoria:
 
 Categoria ÃƒÂ³rfÃƒÂ£:
 - key: `logical:missing-category:{categoryId}`;
-- label: `Categoria nÃƒÂ£o encontrada`.
+- label: `Categoria nÃ£o encontrada`.
 
 ## Prioridade atual
 
@@ -898,12 +898,12 @@ Categoria ÃƒÂ³rfÃƒÂ£:
 3. Categoria real chamada Acordo Ã¢â€ â€™ Acordo.
 4. Categoria real diferente de NÃƒÂ£o Identificados Ã¢â€ â€™ categoria real.
 5. Categoria real NÃƒÂ£o Identificados Ã¢â€ â€™ NÃƒÂ£o identificados.
-6. `categoryId` ÃƒÂ³rfÃƒÂ£o Ã¢â€ â€™ Categoria nÃƒÂ£o encontrada.
+6. `categoryId` ÃƒÂ³rfÃƒÂ£o Ã¢â€ â€™ Categoria nÃ£o encontrada.
 7. Fallback Ã¢â€ â€™ NÃƒÂ£o identificados.
 
 ## Acordo
 
-TransaÃƒÂ§ÃƒÂµes com `debt_id` devem cair na categoria lÃƒÂ³gica Acordo, quando nÃƒÂ£o houver categoria real melhor.
+TransaÃƒÂ§ÃƒÂµes com `debt_id` devem cair na categoria lÃƒÂ³gica Acordo, quando nÃ£o houver categoria real melhor.
 
 Todos os acordos devem somar no mesmo bucket:
 - `logical:agreement`.
@@ -937,7 +937,7 @@ Exemplos de transaÃƒÂ§ÃƒÂµes que podem ser RenegociaÃƒÂ§ÃƒÂ£o:
 - Parcela fatura;
 - Saldo restante;
 - parcelamentos/ajustes sistÃƒÂªmicos de fatura;
-- registros com sinais estruturados como `transactionType`, `cardId`, `invoiceMonthYear`, desde que nÃƒÂ£o sejam `isInvoicePayment`.
+- registros com sinais estruturados como `transactionType`, `cardId`, `invoiceMonthYear`, desde que nÃ£o sejam `isInvoicePayment`.
 
 Regra:
 - usar campo estruturado quando existir;
@@ -953,21 +953,21 @@ RenegociaÃƒÂ§ÃƒÂ£o Ã¢â‚¬â€ R$ 483,86
 ## NÃƒÂ£o Identificados
 
 NÃƒÂ£o Identificados deve ser usado apenas quando:
-- nÃƒÂ£o hÃƒÂ¡ categoria real;
-- nÃƒÂ£o hÃƒÂ¡ `debt_id`;
-- nÃƒÂ£o hÃƒÂ¡ regra lÃƒÂ³gica nativa melhor;
-- nÃƒÂ£o hÃƒÂ¡ categoria ÃƒÂ³rfÃƒÂ£ identificÃƒÂ¡vel.
+- nÃ£o hÃƒÂ¡ categoria real;
+- nÃ£o hÃƒÂ¡ `debt_id`;
+- nÃ£o hÃƒÂ¡ regra lÃƒÂ³gica nativa melhor;
+- nÃ£o hÃƒÂ¡ categoria ÃƒÂ³rfÃƒÂ£ identificÃƒÂ¡vel.
 
 NÃƒÂ£o deve esconder:
 - acordo;
 - renegociaÃƒÂ§ÃƒÂ£o;
 - categoria ÃƒÂ³rfÃƒÂ£.
 
-## Categoria nÃƒÂ£o encontrada
+## Categoria nÃ£o encontrada
 
-Se `category_id` existe, mas a categoria nÃƒÂ£o ÃƒÂ© encontrada na lista carregada:
-- mostrar como `Categoria nÃƒÂ£o encontrada`;
-- nÃƒÂ£o misturar com NÃƒÂ£o Identificados.
+Se `category_id` existe, mas a categoria nÃ£o ÃƒÂ© encontrada na lista carregada:
+- mostrar como `Categoria nÃ£o encontrada`;
+- nÃ£o misturar com NÃƒÂ£o Identificados.
 
 Isso indica problema de integridade:
 - categoria apagada;
@@ -979,13 +979,13 @@ Isso indica problema de integridade:
 
 # REGRA DE RELATÃƒâ€œRIOS Ã¢â‚¬â€ CATEGORIAS LÃƒâ€œGICAS NATIVAS
 
-Algumas classificaÃƒÂ§ÃƒÂµes nÃƒÂ£o dependem apenas da categoria manual cadastrada pelo usuÃƒÂ¡rio.
+Algumas classificaÃƒÂ§ÃƒÂµes nÃ£o dependem apenas da categoria manual cadastrada pelo usuÃƒÂ¡rio.
 
 Categorias lÃƒÂ³gicas/nativas:
 - Acordo;
 - RenegociaÃƒÂ§ÃƒÂ£o;
 - NÃƒÂ£o identificados;
-- Categoria nÃƒÂ£o encontrada.
+- Categoria nÃ£o encontrada.
 
 Acordo:
 - transaÃƒÂ§ÃƒÂµes com `debt_id` ou categoria real Acordo.
@@ -996,8 +996,8 @@ RenegociaÃƒÂ§ÃƒÂ£o:
 NÃƒÂ£o Identificados:
 - usado apenas como ÃƒÂºltimo recurso.
 
-Categoria nÃƒÂ£o encontrada:
-- usada quando hÃƒÂ¡ `category_id`, mas a categoria nÃƒÂ£o resolve.
+Categoria nÃ£o encontrada:
+- usada quando hÃƒÂ¡ `category_id`, mas a categoria nÃ£o resolve.
 
 ---
 
@@ -1008,14 +1008,14 @@ Acordos devem entrar em RelatÃƒÂ³rios conforme competÃƒÂªncia/data.
 Modo Projetado:
 - entrada pendente ou paga entra no mÃƒÂªs da entrada;
 - parcelas futuras entram nos meses de vencimento;
-- nÃƒÂ£o exigir `is_paid`.
+- nÃ£o exigir `is_paid`.
 
 Modo Realizado:
 - entrada/parcela sÃƒÂ³ entra se paga.
 
 ComposiÃƒÂ§ÃƒÂ£o das Despesas:
 - transaÃƒÂ§ÃƒÂµes com `debt_id` e sem categoria real devem cair como Acordo;
-- mÃƒÂºltiplos acordos no mesmo perÃƒÂ­odo somam em uma ÃƒÂºnica linha Acordo.
+- mÃƒÂºltiplos acordos no mesmo perÃ­odo somam em uma ÃƒÂºnica linha Acordo.
 
 Exemplo:
 Entrada Inter: Maio/2026 Ã¢â‚¬â€ R$ 79,60
@@ -1058,7 +1058,7 @@ Quando selecionar Semestre:
 
 # REGRA DE VALORES MONETÃƒï¿½RIOS
 
-Valores monetÃƒÂ¡rios nÃƒÂ£o podem quebrar linha entre:
+Valores monetÃ¡rios nÃ£o podem quebrar linha entre:
 - sinal negativo;
 - R$;
 - valor.
@@ -1078,7 +1078,7 @@ Aplicar em:
 - resumos financeiros.
 
 Exemplo de problema corrigido:
-`-R$ 3.005,30` nÃƒÂ£o deve quebrar depois do hÃƒÂ­fen.
+`-R$ 3.005,30` nÃ£o deve quebrar depois do hÃƒÂ­fen.
 
 ---
 
@@ -1091,11 +1091,11 @@ Antes de fechar sprint, executar:
 - `npm run build`
 - `npm run lint`
 
-Quando mexer em cÃƒÂ¡lculo financeiro, adicionar teste de regressÃƒÂ£o.
+Quando mexer em cÃ¡lculo financeiro, adicionar teste de regressÃƒÂ£o.
 
 Quando mexer em UI com texto acentuado, garantir `check:encoding` e testes com texto correto.
 
-Quando mexer em cartÃƒÂ£o/fatura/acordos/orÃƒÂ§amentos/relatÃƒÂ³rios, validar manualmente cenÃƒÂ¡rios reais alÃƒÂ©m dos testes.
+Quando mexer em cartÃƒÂ£o/fatura/acordos/orÃ§amentos/relatÃƒÂ³rios, validar manualmente cenÃƒÂ¡rios reais alÃƒÂ©m dos testes.
 
 ---
 
@@ -1110,7 +1110,7 @@ CorreÃƒÂ§ÃƒÂ£o:
 Boot passou a executar a rotina real do botÃƒÂ£o Atualizar automaticamente ao acessar o app logado.
 
 Regra:
-Home nÃƒÂ£o pode renderizar estado zerado falso enquanto dados ainda carregam.
+Home nÃ£o pode renderizar estado zerado falso enquanto dados ainda carregam.
 
 ---
 
@@ -1144,7 +1144,7 @@ Problema:
 Fatura tinha valor, mas limite usado aparecia como 0%.
 
 Causa:
-Compra no cartÃƒÂ£o marcada como `isPaid = true` estava sendo removida do cÃƒÂ¡lculo de limite.
+Compra no cartÃƒÂ£o marcada como `isPaid = true` estava sendo removida do cÃ¡lculo de limite.
 
 CorreÃƒÂ§ÃƒÂ£o:
 Compra no cartÃƒÂ£o continua consumindo limite atÃƒÂ© pagamento/baixa/renegociaÃƒÂ§ÃƒÂ£o da fatura.
@@ -1167,7 +1167,7 @@ Mantidos:
 - limite;
 - fatura;
 - status;
-- lista de lanÃƒÂ§amentos;
+- lista de lanÃ§amentos;
 - atalho para GestÃƒÂ£o de Contas.
 
 ---
@@ -1214,7 +1214,7 @@ RenegociaÃƒÂ§ÃƒÂ£o virou categoria lÃƒÂ³gica nativa:
 ## CorreÃƒÂ§ÃƒÂ£o: Acordos Ã¢â‚¬â€ entrada
 
 Problema:
-Tela de Acordos nÃƒÂ£o permitia entrada.
+Tela de Acordos nÃ£o permitia entrada.
 
 CorreÃƒÂ§ÃƒÂ£o:
 Acordos agora suportam entrada opcional separada das parcelas.
@@ -1240,7 +1240,7 @@ Estado de novo acordo e ediÃƒÂ§ÃƒÂ£o foi separado:
 ## CorreÃƒÂ§ÃƒÂ£o: Acordos Ã¢â‚¬â€ relatÃƒÂ³rios
 
 Problema:
-Acordos sem categoria nÃƒÂ£o apareciam corretamente em RelatÃƒÂ³rios.
+Acordos sem categoria nÃ£o apareciam corretamente em RelatÃƒÂ³rios.
 
 CorreÃƒÂ§ÃƒÂ£o:
 TransaÃƒÂ§ÃƒÂ£o com `debt_id` e sem categoria cai em Acordo.
@@ -1280,7 +1280,7 @@ PossÃƒÂ­veis campos:
 ## EdiÃƒÂ§ÃƒÂ£o segura de Acordos
 
 Se entrada jÃƒÂ¡ foi paga:
-- nÃƒÂ£o permitir remover livremente;
+- nÃ£o permitir remover livremente;
 - exigir estorno/correÃƒÂ§ÃƒÂ£o assistida;
 - preservar histÃƒÂ³rico.
 
@@ -1320,24 +1320,24 @@ A funÃƒÂ§ÃƒÂ£o deve:
 - revogar execuÃƒÂ§ÃƒÂ£o pÃƒÂºblica;
 - conceder execuÃƒÂ§ÃƒÂ£o apenas para `authenticated`.
 
-A funÃƒÂ§ÃƒÂ£o nÃƒÂ£o deve permitir exclusÃƒÂ£o cruzada de dados entre usuÃƒÂ¡rios.
+A funÃƒÂ§ÃƒÂ£o nÃ£o deve permitir exclusÃƒÂ£o cruzada de dados entre usuÃƒÂ¡rios.
 
 Antes de aplicar ou testar exclusÃƒÂ£o real:
 - usar somente usuÃƒÂ¡rio de teste;
 - confirmar existÃƒÂªncia da funÃƒÂ§ÃƒÂ£o;
 - confirmar grants;
-- validar que o frontend nÃƒÂ£o retorna `PGRST202`;
+- validar que o frontend nÃ£o retorna `PGRST202`;
 - nunca testar primeiro em usuÃƒÂ¡rio real.
 
 ---
 
 # REGRA DE UX Ã¢â‚¬â€ FILTROS MOBILE EM RELATÃƒâ€œRIOS
 
-No mobile, os controles de RelatÃƒÂ³rios nÃƒÂ£o podem se sobrepor.
+No mobile, os controles de RelatÃƒÂ³rios nÃ£o podem se sobrepor.
 
-Projetado/Realizado deve ficar em uma linha prÃƒÂ³pria.
+Projetado/Realizado deve ficar em uma linha prÃ³pria.
 
-MÃƒÂªs/Semestre/Ano deve ficar em outra linha prÃƒÂ³pria.
+MÃƒÂªs/Semestre/Ano deve ficar em outra linha prÃ³pria.
 
 Os filtros precisam ser tocÃƒÂ¡veis, legÃƒÂ­veis e sem sobreposiÃƒÂ§ÃƒÂ£o em telas pequenas.
 
@@ -1345,14 +1345,14 @@ Os filtros precisam ser tocÃƒÂ¡veis, legÃƒÂ­veis e sem sobreposiÃƒÂ§
 
 # REGRA DE DEVTOOLS
 
-TanStack/React Query Devtools nÃƒÂ£o deve aparecer para o usuÃƒÂ¡rio.
+TanStack/React Query Devtools nÃ£o deve aparecer para o usuÃƒÂ¡rio.
 
 O Devtools sÃƒÂ³ pode renderizar quando:
 
 - ambiente for DEV;
 - e `VITE_ENABLE_QUERY_DEVTOOLS=true`.
 
-Por padrÃƒÂ£o, ele deve ficar desativado para nÃƒÂ£o atrapalhar web nem mobile.
+Por padrÃƒÂ£o, ele deve ficar desativado para nÃ£o atrapalhar web nem mobile.
 
 ---
 
@@ -1360,9 +1360,9 @@ Por padrÃƒÂ£o, ele deve ficar desativado para nÃƒÂ£o atrapalhar web nem 
 
 A tabela `accounts` no Supabase usa o campo tÃƒÂ©cnico `bank`.
 
-O app nÃƒÂ£o deve enviar `institution` em inserts ou updates de contas.
+O app nÃ£o deve enviar `institution` em inserts ou updates de contas.
 
-`institution` pode existir apenas como fallback legado de leitura em objetos antigos de UI/testes, mas nÃƒÂ£o deve ser persistido no Supabase.
+`institution` pode existir apenas como fallback legado de leitura em objetos antigos de UI/testes, mas nÃ£o deve ser persistido no Supabase.
 
 Regra:
 - campo visual pode ser Ã¢â‚¬Å“InstituiÃƒÂ§ÃƒÂ£oÃ¢â‚¬ï¿½ ou Ã¢â‚¬Å“BancoÃ¢â‚¬ï¿½;
@@ -1382,15 +1382,15 @@ NÃƒÂ£o alterar contas existentes por causa disso.
 Fluxo Score ÃƒÂ© funcionalidade estritamente aditiva e de observaÃƒÂ§ÃƒÂ£o.
 
 ObrigatÃƒÂ³rio:
-- nÃƒÂ£o alterar mecÃƒÂ¢nicas atuais de criaÃƒÂ§ÃƒÂ£o/ediÃƒÂ§ÃƒÂ£o/exclusÃƒÂ£o de contas;
-- nÃƒÂ£o alterar mecÃƒÂ¢nicas atuais de criaÃƒÂ§ÃƒÂ£o/ediÃƒÂ§ÃƒÂ£o/exclusÃƒÂ£o de acordos;
-- nÃƒÂ£o alterar hooks de mutaÃƒÂ§ÃƒÂ£o jÃƒÂ¡ existentes;
-- nÃƒÂ£o alterar endpoints/RPC jÃƒÂ¡ existentes;
-- nÃƒÂ£o introduzir efeitos colaterais de escrita para calcular Score.
+- nÃ£o alterar mecÃƒÂ¢nicas atuais de criaÃƒÂ§ÃƒÂ£o/ediÃƒÂ§ÃƒÂ£o/exclusÃƒÂ£o de contas;
+- nÃ£o alterar mecÃƒÂ¢nicas atuais de criaÃƒÂ§ÃƒÂ£o/ediÃƒÂ§ÃƒÂ£o/exclusÃƒÂ£o de acordos;
+- nÃ£o alterar hooks de mutaÃƒÂ§ÃƒÂ£o jÃƒÂ¡ existentes;
+- nÃ£o alterar endpoints/RPC jÃƒÂ¡ existentes;
+- nÃ£o introduzir efeitos colaterais de escrita para calcular Score.
 
 Regra de implementaÃƒÂ§ÃƒÂ£o:
 - Score apenas lÃƒÂª `transactions`, `debts` e estado atual da aplicaÃƒÂ§ÃƒÂ£o;
-- cÃƒÂ¡lculo isolado em utilitÃƒÂ¡rio dedicado;
+- cÃ¡lculo isolado em utilitÃƒÂ¡rio dedicado;
 - arredondamento apenas na exibiÃƒÂ§ÃƒÂ£o da UI;
 - lÃƒÂ³gica financeira existente permanece intacta.
 
@@ -1399,7 +1399,7 @@ Regra de implementaÃƒÂ§ÃƒÂ£o:
 - faixa de Score: 0 a 1000;
 - baseline inicial/neutro: 500.
 
-## Motor de cÃƒÂ¡lculo Ã¢â‚¬â€ contas de consumo/pagamentos padrÃƒÂ£o
+## Motor de cÃ¡lculo Ã¢â‚¬â€ contas de consumo/pagamentos padrÃƒÂ£o
 
 Para cada conta/obrigaÃƒÂ§ÃƒÂ£o paga, calcular diferenÃƒÂ§a em dias:
 - `dias = paymentDate - dueDate`.
@@ -1419,11 +1419,11 @@ Regras:
 
 Adicionar `+10` para contas em dia.
 
-Regra de cÃƒÂ¡lculo:
-- **A partir de 01/06/2026**: O bÃƒÂ´nus ÃƒÂ© verificado e definido com base no primeiro dia ÃƒÂºtil do mÃƒÂªs de referÃƒÂªncia. No primeiro dia ÃƒÂºtil de cada mÃƒÂªs, ÃƒÂ© verificada a existÃƒÂªncia de despesas em atraso (vencidas antes do primeiro dia ÃƒÂºtil e nÃƒÂ£o pagas atÃƒÂ© o primeiro dia ÃƒÂºtil). Se houver, a bonificaÃƒÂ§ÃƒÂ£o de `+10` nÃƒÂ£o ÃƒÂ© concedida para o mÃƒÂªs corrente. Caso contrÃƒÂ¡rio, o bÃƒÂ´nus de `+10` ÃƒÂ© ganho e mantido para o restante do mÃƒÂªs. Para datas anteriores ao primeiro dia ÃƒÂºtil do mÃƒÂªs, a elegibilidade ÃƒÂ© verificada dinamicamente com base nas contas vencidas atÃƒÂ© o dia atual.
+Regra de cÃ¡lculo:
+- **A partir de 01/06/2026**: O bÃƒÂ´nus ÃƒÂ© verificado e definido com base no primeiro dia ÃƒÂºtil do mÃƒÂªs de referÃƒÂªncia. No primeiro dia ÃƒÂºtil de cada mÃƒÂªs, ÃƒÂ© verificada a existÃƒÂªncia de despesas em atraso (vencidas antes do primeiro dia ÃƒÂºtil e nÃ£o pagas atÃƒÂ© o primeiro dia ÃƒÂºtil). Se houver, a bonificaÃƒÂ§ÃƒÂ£o de `+10` nÃ£o ÃƒÂ© concedida para o mÃƒÂªs corrente. Caso contrÃƒÂ¡rio, o bÃƒÂ´nus de `+10` ÃƒÂ© ganho e mantido para o restante do mÃƒÂªs. Para datas anteriores ao primeiro dia ÃƒÂºtil do mÃƒÂªs, a elegibilidade ÃƒÂ© verificada dinamicamente com base nas contas vencidas atÃƒÂ© o dia atual.
 - **Antes de 01/06/2026**: O bÃƒÂ´nus mensal ÃƒÂ© fixado em `0` (desativado antes da data de implantaÃƒÂ§ÃƒÂ£o da feature).
 
-## Motor de cÃƒÂ¡lculo Ã¢â‚¬â€ acordos e dÃƒÂ­vidas
+## Motor de cÃ¡lculo Ã¢â‚¬â€ acordos e dÃƒÂ­vidas
 
 Acordos ativos tÃƒÂªm peso prÃƒÂ³prio no Score:
 
@@ -1464,7 +1464,7 @@ Centro:
 - mostrar nÃƒÂºmero inteiro do Score com tipografia forte.
 
 Cores:
-- nÃƒÂ£o usar gradiente semÃƒÂ¡foro (vermelho/amarelo/verde);
+- nÃ£o usar gradiente semÃƒÂ¡foro (vermelho/amarelo/verde);
 - usar variaÃƒÂ§ÃƒÂµes da cor de destaque ativa (`--primary`/accent da aplicaÃƒÂ§ÃƒÂ£o).
 
 Glow:
@@ -1477,7 +1477,7 @@ Na carga inicial:
 - anel deve animar de `0` atÃƒÂ© Score atual;
 - transiÃƒÂ§ÃƒÂ£o suave em `1.0s` a `1.5s`, `ease-out` ou `cubic-bezier`.
 
-Em recÃƒÂ¡lculo:
+Em recÃ¡lculo:
 - nÃƒÂºmero e barra devem interpolar suavemente;
 - evitar saltos bruscos na atualizaÃƒÂ§ÃƒÂ£o.
 
@@ -1485,37 +1485,37 @@ Em recÃƒÂ¡lculo:
 
 # HISTÃƒâ€œRICO DE VALIDAÃƒâ€¡Ãƒâ€¢ES DE ALTERAÃƒâ€¡Ãƒâ€¢ES
 
-## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o de UI - RemoÃƒÂ§ÃƒÂ£o do Tooltip de InformaÃƒÂ§ÃƒÂ£o do Saldo Projetado no Mobile
+## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o de UI - RemoÃ§Ã£o do Tooltip de InformaÃƒÂ§ÃƒÂ£o do Saldo Projetado no Mobile
 - **Resumo**: O botÃƒÂ£o de informaÃƒÂ§ÃƒÂ£o (Tooltip) ao lado do texto "Saldo Projetado" na tela inicial do mobile (`src/pages/LegacyDashboardHome.tsx`) foi removido.
-- **MotivaÃƒÂ§ÃƒÂ£o**: Atender ao design minimalista e executivo, de modo a evitar textos explicativos repetitivos/desnecessÃƒÂ¡rios no corpo principal da UI mÃƒÂ³vel. Limpeza executada dos imports nÃƒÂ£o utilizados do Tooltip e do ÃƒÂ­cone Info.
+- **MotivaÃ§Ã£o**: Atender ao design minimalista e executivo, de modo a evitar textos explicativos repetitivos/desnecessÃƒÂ¡rios no corpo principal da UI mÃƒÂ³vel. Limpeza executada dos imports nÃ£o utilizados do Tooltip e do ÃƒÂ­cone Info.
 
-## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o de UI / Funcionalidade - RemoÃƒÂ§ÃƒÂ£o de Macrocategorias e Melhoria de Selects no Cadastro de Categorias
+## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o de UI / Funcionalidade - RemoÃ§Ã£o de Macrocategorias e Melhoria de Selects no Cadastro de Categorias
 - **Resumo**: Toda e qualquer referÃƒÂªncia ÃƒÂ  funcionalidade de macrocategorias foi removida do cadastro de categorias (`src/components/settings/CategoriesManager.tsx`), incluindo o botÃƒÂ£o do cabeÃƒÂ§alho para gerenciar macrocategorias (`BudgetGroupManagerModal`) e o dropdown/seletor de macrocategoria nos diÃƒÂ¡logos de nova categoria e de ediÃƒÂ§ÃƒÂ£o de categoria. Adicionalmente, os seletores de grupos de despesas (`BudgetGroup`), que antes eram componentes de `<select>` nativos do navegador e apresentavam visualizaÃƒÂ§ÃƒÂ£o fora do padrÃƒÂ£o do app, foram substituÃƒÂ­dos pelo componente premium `<Select>` da biblioteca do Shadcn UI.
-- **MotivaÃƒÂ§ÃƒÂ£o**: Atender ÃƒÂ  solicitaÃƒÂ§ÃƒÂ£o direta do usuÃƒÂ¡rio para remover macrocategorias do fluxo de cadastro e corrigir o design visual dos seletores de grupo no cadastro de categorias, alinhando-o com o estilo visual dark do restante da aplicaÃƒÂ§ÃƒÂ£o.
+- **MotivaÃ§Ã£o**: Atender ÃƒÂ  solicitaÃƒÂ§ÃƒÂ£o direta do usuÃƒÂ¡rio para remover macrocategorias do fluxo de cadastro e corrigir o design visual dos seletores de grupo no cadastro de categorias, alinhando-o com o estilo visual dark do restante da aplicaÃƒÂ§ÃƒÂ£o.
 
 ## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o Arquitetural / Regra de NegÃƒÂ³cio - AtualizaÃƒÂ§ÃƒÂ£o DiÃƒÂ¡ria do Score, BÃƒÂ´nus no Primeiro Dia ÃƒÅ¡til e ConsideraÃƒÂ§ÃƒÂ£o Total de Dados
-- **Resumo**: A verificaÃƒÂ§ÃƒÂ£o da bonificaÃƒÂ§ÃƒÂ£o mensal no cÃƒÂ¡lculo do Fluxo Score foi reduzida de `+50` para `+10` e configurada para ocorrer com base no estado do primeiro dia ÃƒÂºtil do mÃƒÂªs de referÃƒÂªncia (`src/utils/fluxoScore.ts`), com data de inÃƒÂ­cio em `01/06/2026`. Para datas de referÃƒÂªncia anteriores a `01/06/2026` (como maio de 2026), o bÃƒÂ´nus mensal ÃƒÂ© fixado em `0` (desativado). Adicionamos a lÃƒÂ³gica para detectar o primeiro dia ÃƒÂºtil do mÃƒÂªs (ajustando para segunda-feira caso caia em fins de semana) e congelar a verificaÃƒÂ§ÃƒÂ£o de atrasos a partir dessa data. Adicionalmente, para garantir que as parcelas de acordos cadastrados e contas pendentes de meses/anos passados sejam sempre computadas no cÃƒÂ¡lculo do score e no saldo projetado do app, expandimos a query global do Supabase (`src/hooks/useFinanceQueries.ts`) para retornar todas as transaÃƒÂ§ÃƒÂµes nÃƒÂ£o pagas (`is_paid = false`) e transaÃƒÂ§ÃƒÂµes vinculadas a acordos (`debt_id`) de todos os tempos.
-- **MotivaÃƒÂ§ÃƒÂ£o**: Atender ÃƒÂ  nova dinÃƒÂ¢mica de lanÃƒÂ§amentos diÃƒÂ¡rios, reduzindo o peso do bÃƒÂ´nus mensal de acordo com as preferÃƒÂªncias do usuÃƒÂ¡rio, aplicando a nova lÃƒÂ³gica do primeiro dia ÃƒÂºtil a partir de 1Ã‚Âº de junho e fixando o bÃƒÂ´nus de maio como 0 para refletir os atrasos anteriores ao acordo criado hoje.
+- **Resumo**: A verificaÃƒÂ§ÃƒÂ£o da bonificaÃƒÂ§ÃƒÂ£o mensal no cÃ¡lculo do Fluxo Score foi reduzida de `+50` para `+10` e configurada para ocorrer com base no estado do primeiro dia ÃƒÂºtil do mÃƒÂªs de referÃƒÂªncia (`src/utils/fluxoScore.ts`), com data de inÃƒÂ­cio em `01/06/2026`. Para datas de referÃƒÂªncia anteriores a `01/06/2026` (como maio de 2026), o bÃƒÂ´nus mensal ÃƒÂ© fixado em `0` (desativado). Adicionamos a lÃƒÂ³gica para detectar o primeiro dia ÃƒÂºtil do mÃƒÂªs (ajustando para segunda-feira caso caia em fins de semana) e congelar a verificaÃƒÂ§ÃƒÂ£o de atrasos a partir dessa data. Adicionalmente, para garantir que as parcelas de acordos cadastrados e contas pendentes de meses/anos passados sejam sempre computadas no cÃ¡lculo do score e no saldo projetado do app, expandimos a query global do Supabase (`src/hooks/useFinanceQueries.ts`) para retornar todas as transaÃƒÂ§ÃƒÂµes nÃ£o pagas (`is_paid = false`) e transaÃƒÂ§ÃƒÂµes vinculadas a acordos (`debt_id`) de todos os tempos.
+- **MotivaÃ§Ã£o**: Atender ÃƒÂ  nova dinÃƒÂ¢mica de lanÃ§amentos diÃƒÂ¡rios, reduzindo o peso do bÃƒÂ´nus mensal de acordo com as preferÃƒÂªncias do usuÃƒÂ¡rio, aplicando a nova lÃƒÂ³gica do primeiro dia ÃƒÂºtil a partir de 1Ã‚Âº de junho e fixando o bÃƒÂ´nus de maio como 0 para refletir os atrasos anteriores ao acordo criado hoje.
 
 ## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o Arquitetural / Regra de SeguranÃƒÂ§a - Garantia de Isolamento de UsuÃƒÂ¡rios e CorreÃƒÂ§ÃƒÂ£o de Queries
 - **Resumo**: Foi realizada uma revisÃƒÂ£o e correÃƒÂ§ÃƒÂ£o estrutural no arquivo `src/hooks/useFinanceQueries.ts` para garantir o isolamento estrito de dados entre diferentes usuÃƒÂ¡rios. Todos os hooks de leitura (`useAccounts`, `useTransactions`, `useCreditCards`, `useDebts` e `useSavingsGoals`) foram updated para aplicar explicitamente o filtro `.eq('user_id', user.id)` baseando-se no ID do usuÃƒÂ¡rio autenticado no Supabase Auth. Adicionalmente, as importaÃƒÂ§ÃƒÂµes duplicadas no topo do arquivo foram limpas e a query de metas de economia (`useSavingsGoals`), que havia sido corrompida por um erro de merge anterior, foi completamente restaurada e isolada por usuÃƒÂ¡rio.
-- **MotivaÃƒÂ§ÃƒÂ£o**: Atender ÃƒÂ  garantia solicitada pelo usuÃƒÂ¡rio de que os dados de diferentes usuÃƒÂ¡rios nÃƒÂ£o se misturem e corrigir o score do usuÃƒÂ¡rio (Khendry) que estava zerado na conta oficial devido ao vazamento de acordos/transaÃƒÂ§ÃƒÂµes de teste de outro usuÃƒÂ¡rio no cÃƒÂ¡lculo global do score.
+- **MotivaÃ§Ã£o**: Atender ÃƒÂ  garantia solicitada pelo usuÃƒÂ¡rio de que os dados de diferentes usuÃƒÂ¡rios nÃ£o se misturem e corrigir o score do usuÃƒÂ¡rio (Khendry) que estava zerado na conta oficial devido ao vazamento de acordos/transaÃƒÂ§ÃƒÂµes de teste de outro usuÃƒÂ¡rio no cÃ¡lculo global do score.
 
 ## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o Arquitetural / Funcionalidade - Cor de Destaque Salva e Sincronizada por UsuÃƒÂ¡rio
-- **Resumo**: Refatoramos o hook de cores [useThemeColor.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useThemeColor.tsx) para salvar a cor de destaque (accent color) de maneira individual por usuÃƒÂ¡rio, em vez de salvar de forma genÃƒÂ©rica e compartilhada no navegador. O estado local agora ÃƒÂ© persistido sob a chave `accent-color:${userId}` no localStorage (e de forma retrocompatÃƒÂ­vel na chave `accent-color` para os testes e legado). O processo de hidrataÃƒÂ§ÃƒÂ£o no carregamento agora prioriza em primeiro nÃƒÂ­vel o metadado do usuÃƒÂ¡rio autenticado retornado do Supabase (`user.user_metadata?.accent_color`), seguido pela chave especÃƒÂ­fica do usuÃƒÂ¡rio e, por ÃƒÂºltimo, o fallback legado, garantindo que a preferÃƒÂªncia do usuÃƒÂ¡rio o acompanhe em qualquer mÃƒÂ¡quina ou navegador.
-- **MotivaÃƒÂ§ÃƒÂ£o**: Atender ÃƒÂ  solicitaÃƒÂ§ÃƒÂ£o direta do usuÃƒÂ¡rio para salvar as preferÃƒÂªncias de cores no perfil do usuÃƒÂ¡rio (na nuvem) e isolar o armazenamento de layout no mesmo navegador de acordo com a conta logada.
+- **Resumo**: Refatoramos o hook de cores [useThemeColor.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useThemeColor.tsx) para salvar a cor de destaque (accent color) de maneira individual por usuÃƒÂ¡rio, em vez de salvar de forma genÃƒÂ©rica e compartilhada no navegador. O estado local agora ÃƒÂ© persistido sob a chave `accent-color:${userId}` no localStorage (e de forma retrocompatÃƒÂ­vel na chave `accent-color` para os testes e legado). O processo de hidrataÃƒÂ§ÃƒÂ£o no carregamento agora prioriza em primeiro nÃƒÂ­vel o metadado do usuÃƒÂ¡rio autenticado retornado do Supabase (`user.user_metadata?.accent_color`), seguido pela chave especÃ­fica do usuÃƒÂ¡rio e, por ÃƒÂºltimo, o fallback legado, garantindo que a preferÃƒÂªncia do usuÃƒÂ¡rio o acompanhe em qualquer mÃƒÂ¡quina ou navegador.
+- **MotivaÃ§Ã£o**: Atender ÃƒÂ  solicitaÃƒÂ§ÃƒÂ£o direta do usuÃƒÂ¡rio para salvar as preferÃƒÂªncias de cores no perfil do usuÃƒÂ¡rio (na nuvem) e isolar o armazenamento de layout no mesmo navegador de acordo com a conta logada.
 
 ## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o Arquitetural / Regra de NegÃƒÂ³cio - Ajuste no PerÃƒÂ­odo de Penalidades e InclusÃƒÂ£o de Contas Pendentes no Score
-- **Resumo**: Atualizamos a lÃƒÂ³gica do Fluxo Score ([fluxoScore.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/utils/fluxoScore.ts)) para se alinhar ao conceito de "diagnÃƒÂ³stico de saÃƒÂºde financeira atual". Agora, contas pendentes (nÃƒÂ£o pagas) que estÃƒÂ£o vencidas ativamente geram penalidades de atraso no Score de acordo com a quantidade de dias em atraso, incentivando o usuÃƒÂ¡rio a quitÃƒÂ¡-las ou consolidÃƒÂ¡-las em acordos. Por outro lado, para evitar que um usuÃƒÂ¡rio histÃƒÂ³rico (com base de dados antiga ou importada via CSV) seja penalizado perpetuamente por contas quitadas com atraso hÃƒÂ¡ muito tempo, as penalidades de despesas pagas com atraso passam a expirar apÃƒÂ³s 30 dias do pagamento. Adicionalmente, as compras individuais realizadas no cartÃƒÂ£o de crÃƒÂ©dito (`tx.cardId` preenchido e nÃƒÂ£o sendo o pagamento da fatura em si) foram **desconsideradas** do cÃƒÂ¡lculo de pontualidade de contas (`accountsDelta`), visto que a ÃƒÂºnica obrigaÃƒÂ§ÃƒÂ£o financeira direta vinculada a prazos no cartÃƒÂ£o ÃƒÂ© o pagamento da fatura consolidada. A regra de acordos ativos com penalidades de `-100` e recuperaÃƒÂ§ÃƒÂ£o proporcional por parcelas pagas foi mantida e integrada a essa lÃƒÂ³gica.
-- **MotivaÃƒÂ§ÃƒÂ£o**: Resolver o bug que travava o Score de usuÃƒÂ¡rios antigos em 0 devido a contas quitadas em atraso do passado distante (ex. importaÃƒÂ§ÃƒÂ£o histÃƒÂ³rica de extratos via CSV), evitar a penalizaÃƒÂ§ÃƒÂ£o artificial por compras rotineiras no cartÃƒÂ£o de crÃƒÂ©dito cujas datas de pagamento/conciliaÃƒÂ§ÃƒÂ£o divergem da data da compra e incentivar a quitaÃƒÂ§ÃƒÂ£o de contas ativamente vencidas e nÃƒÂ£o pagas.
+- **Resumo**: Atualizamos a lÃƒÂ³gica do Fluxo Score ([fluxoScore.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/utils/fluxoScore.ts)) para se alinhar ao conceito de "diagnÃ³stico de saÃƒÂºde financeira atual". Agora, contas pendentes (nÃ£o pagas) que estÃƒÂ£o vencidas ativamente geram penalidades de atraso no Score de acordo com a quantidade de dias em atraso, incentivando o usuÃƒÂ¡rio a quitÃƒÂ¡-las ou consolidÃƒÂ¡-las em acordos. Por outro lado, para evitar que um usuÃƒÂ¡rio histÃƒÂ³rico (com base de dados antiga ou importada via CSV) seja penalizado perpetuamente por contas quitadas com atraso hÃƒÂ¡ muito tempo, as penalidades de despesas pagas com atraso passam a expirar apÃƒÂ³s 30 dias do pagamento. Adicionalmente, as compras individuais realizadas no cartÃƒÂ£o de crÃƒÂ©dito (`tx.cardId` preenchido e nÃ£o sendo o pagamento da fatura em si) foram **desconsideradas** do cÃ¡lculo de pontualidade de contas (`accountsDelta`), visto que a ÃƒÂºnica obrigaÃƒÂ§ÃƒÂ£o financeira direta vinculada a prazos no cartÃƒÂ£o ÃƒÂ© o pagamento da fatura consolidada. A regra de acordos ativos com penalidades de `-100` e recuperaÃƒÂ§ÃƒÂ£o proporcional por parcelas pagas foi mantida e integrada a essa lÃƒÂ³gica.
+- **MotivaÃ§Ã£o**: Resolver o bug que travava o Score de usuÃƒÂ¡rios antigos em 0 devido a contas quitadas em atraso do passado distante (ex. importaÃƒÂ§ÃƒÂ£o histÃƒÂ³rica de extratos via CSV), evitar a penalizaÃƒÂ§ÃƒÂ£o artificial por compras rotineiras no cartÃƒÂ£o de crÃƒÂ©dito cujas datas de pagamento/conciliaÃƒÂ§ÃƒÂ£o divergem da data da compra e incentivar a quitaÃ§Ã£o de contas ativamente vencidas e nÃ£o pagas.
 
 ## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o Arquitetural / Regra de NegÃƒÂ³cio - CalibraÃƒÂ§ÃƒÂ£o de DiagnÃƒÂ³stico do Score e CorreÃƒÂ§ÃƒÂ£o de Acordos Ativos
-- **Resumo**: Corrigimos a funÃƒÂ§ÃƒÂ£o de avaliaÃƒÂ§ÃƒÂ£o do Fluxo Score (`src/utils/fluxoScore.ts`) e o arquivo de testes unitÃƒÂ¡rios correspondente (`src/test/utils/fluxoScore.test.ts`). Alteramos o cÃƒÂ¡lculo das contas para remover completamente a bonificaÃƒÂ§ÃƒÂ£o cumulativa por contas pagas em dia ou adiantadas (as quais agora geram `0` ponto de variaÃƒÂ§ÃƒÂ£o em vez de acumular crÃƒÂ©ditos positivos, evitando ocultar contas atualmente em atraso). Adicionalmente, corrigimos a lÃƒÂ³gica do `isDebtActive` para permitir que acordos criados pelo app (que por padrÃƒÂ£o sÃƒÂ£o salvos com o status `'renegotiated'` no banco de dados) sejam contabilizados como acordos ativos na avaliaÃƒÂ§ÃƒÂ£o do score, aplicando corretamente o impacto negativo de `-100` pontos e a recuperaÃƒÂ§ÃƒÂ£o proporcional correspondente ao pagamento de parcelas do acordo.
-- **MotivaÃƒÂ§ÃƒÂ£o**: Resolver os dois problemas identificados na conta antiga do usuÃƒÂ¡rio Khendry: primeiro, as bonificaÃƒÂ§ÃƒÂµes acumuladas de contas em dia mascaravam as contas em atraso (mantendo o score em 1000); segundo, todos os seus acordos criados hoje no app eram incorretamente ignorados por serem de status `'renegotiated'`, impedindo o score de cair para o patamar real correto e impossibilitando o diagnÃƒÂ³stico financeiro adequado.
+- **Resumo**: Corrigimos a funÃƒÂ§ÃƒÂ£o de avaliaÃƒÂ§ÃƒÂ£o do Fluxo Score (`src/utils/fluxoScore.ts`) e o arquivo de testes unitÃƒÂ¡rios correspondente (`src/test/utils/fluxoScore.test.ts`). Alteramos o cÃ¡lculo das contas para remover completamente a bonificaÃƒÂ§ÃƒÂ£o cumulativa por contas pagas em dia ou adiantadas (as quais agora geram `0` ponto de variaÃƒÂ§ÃƒÂ£o em vez de acumular crÃƒÂ©ditos positivos, evitando ocultar contas atualmente em atraso). Adicionalmente, corrigimos a lÃƒÂ³gica do `isDebtActive` para permitir que acordos criados pelo app (que por padrÃƒÂ£o sÃƒÂ£o salvos com o status `'renegotiated'` no banco de dados) sejam contabilizados como acordos ativos na avaliaÃƒÂ§ÃƒÂ£o do score, aplicando corretamente o impacto negativo de `-100` pontos e a recuperaÃƒÂ§ÃƒÂ£o proporcional correspondente ao pagamento de parcelas do acordo.
+- **MotivaÃ§Ã£o**: Resolver os dois problemas identificados na conta antiga do usuÃƒÂ¡rio Khendry: primeiro, as bonificaÃƒÂ§ÃƒÂµes acumuladas de contas em dia mascaravam as contas em atraso (mantendo o score em 1000); segundo, todos os seus acordos criados hoje no app eram incorretamente ignorados por serem de status `'renegotiated'`, impedindo o score de cair para o patamar real correto e impossibilitando o diagnÃ³stico financeiro adequado.
 
-## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o Arquitetural / Regra de NegÃƒÂ³cio e UI - LiberaÃƒÂ§ÃƒÂ£o Total de Planos e RemoÃƒÂ§ÃƒÂ£o de Mapa por Categoria dos RelatÃƒÂ³rios
-- **Resumo**: Removemos as limitaÃƒÂ§ÃƒÂµes de planos na aplicaÃƒÂ§ÃƒÂ£o, alterando o hook central `useFeatureFlag` (`src/hooks/useFeatureFlags.ts`) para retornar `true` para todas as funcionalidades e planos, com exceÃƒÂ§ÃƒÂ£o da feature `admin_panel` que continua restrita ao super admin. AlÃƒÂ©m disso, removemos completamente a seÃƒÂ§ÃƒÂ£o "Mapa por categoria" da tela de RelatÃƒÂ³rios (`src/pages/ReportsDashboard.tsx`), incluindo o contÃƒÂªiner condicional e a tabela anual detalhada por categoria, e atualizamos os testes correspondentes (`ReportsDashboard.test.tsx`, `ProjectionAccess.test.tsx` e `sprintAccessMobileTheme.test.tsx`).
-- **MotivaÃƒÂ§ÃƒÂ£o**: Atender ÃƒÂ  solicitaÃƒÂ§ÃƒÂ£o direta do usuÃƒÂ¡rio para permitir testes completos de todas as funcionalidades para os usuÃƒÂ¡rios sem restriÃƒÂ§ÃƒÂµes de planos (com exceÃƒÂ§ÃƒÂ£o do painel super admin), e simplificar a tela de relatÃƒÂ³rios removendo o mapa anual por categoria.
+## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o Arquitetural / Regra de NegÃƒÂ³cio e UI - LiberaÃƒÂ§ÃƒÂ£o Total de Planos e RemoÃ§Ã£o de Mapa por Categoria dos RelatÃƒÂ³rios
+- **Resumo**: Removemos as limitaÃƒÂ§ÃƒÂµes de planos na aplicaÃƒÂ§ÃƒÂ£o, alterando o hook central `useFeatureFlag` (`src/hooks/useFeatureFlags.ts`) para retornar `true` para todas as funcionalidades e planos, com exceÃƒÂ§ÃƒÂ£o da feature `admin_panel` que continua restrita ao super admin. AlÃƒÂ©m disso, removemos completamente a seÃ§Ã£o "Mapa por categoria" da tela de RelatÃƒÂ³rios (`src/pages/ReportsDashboard.tsx`), incluindo o contÃƒÂªiner condicional e a tabela anual detalhada por categoria, e atualizamos os testes correspondentes (`ReportsDashboard.test.tsx`, `ProjectionAccess.test.tsx` e `sprintAccessMobileTheme.test.tsx`).
+- **MotivaÃ§Ã£o**: Atender ÃƒÂ  solicitaÃƒÂ§ÃƒÂ£o direta do usuÃƒÂ¡rio para permitir testes completos de todas as funcionalidades para os usuÃƒÂ¡rios sem restriÃƒÂ§ÃƒÂµes de planos (com exceÃƒÂ§ÃƒÂ£o do painel super admin), e simplificar a tela de relatÃƒÂ³rios removendo o mapa anual por categoria.
 
 
 ## 01/06/2026
@@ -1533,7 +1533,7 @@ Em recÃƒÂ¡lculo:
 ## [2026-06-09] CorreÃƒÂ§ÃƒÂ£o de Bug / Arquitetura - Cadastro de Categorias e Race Condition na SessÃƒÂ£o
 - **Resumo**: Corrigimos o bug crÃƒÂ­tico que impedia novos usuÃƒÂ¡rios (ou usuÃƒÂ¡rios apÃƒÂ³s carregamento limpo) de criarem categorias. A restriÃƒÂ§ÃƒÂ£o `NOT NULL` da coluna `group_id` na tabela `categories` foi removida via migraÃƒÂ§ÃƒÂ£o Supabase (`0036_make_category_group_id_optional.sql`). No front-end:
   1. O tipo `Category` em [finance.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/types/finance.ts) foi atualizado para tornar `groupId` opcional e aceitar `null`.
-  2. O componente [CategoriesManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/settings/CategoriesManager.tsx) teve sua validaÃƒÂ§ÃƒÂ£o restritiva que exigia um grupo removida, definindo `groupId` como nulo caso os grupos globais ainda nÃƒÂ£o estivessem disponÃƒÂ­veis.
+  2. O componente [CategoriesManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/settings/CategoriesManager.tsx) teve sua validaÃƒÂ§ÃƒÂ£o restritiva que exigia um grupo removida, definindo `groupId` como nulo caso os grupos globais ainda nÃ£o estivessem disponÃƒÂ­veis.
   2. O componente [CategoriesManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/settings/CategoriesManager.tsx) teve sua validaÃ§Ã£o restritiva que exigia um grupo removida, definindo `groupId` como nulo caso os grupos globais ainda nÃ£o estivessem disponÃ­veis.
   3. Todas as queries de [useFinanceQueries.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useFinanceQueries.ts) foram atualizadas para integrar o hook `useAuth()`. A execuÃ§Ã£o foi vinculada a `enabled: !!user` e a chave de cache a `user?.id`, corrigindo a race condition onde o React Query cacheava um array vazio (`[]`) por 24 horas caso a query rodasse antes da restauraÃ§Ã£o da sessÃ£o do Supabase, o que gerava o bloqueio persistente na criaÃ§Ã£o de categorias.
 - **MotivaÃ§Ã£o**: Resolver a inconsistÃªncia onde novos usuÃ¡rios nÃ£o conseguiam cadastrar categorias devido ao atraso de inicializaÃ§Ã£o do Supabase Auth no carregamento inicial, que gerava um cache duradouro vazio dos grupos de categorias na tela de gestÃ£o de categorias.
@@ -1901,8 +1901,12 @@ Em recÃƒÂ¡lculo:
       - **RemoÃ§Ã£o de PDF**: Desativamos o botÃ£o de PDF e eliminamos o componente PrintReportModal com todas as suas dependÃªncias do arquivo ReportsDashboard.tsx, focando na simplicidade direta na prÃ³pria interface.
       - **Alinhamento dos Filtros (Responsividade)**: Inserimos um espaÃ§ador vertical na segunda seÃ§Ã£o (Conta e Regime) do painel de filtros em ReportsDashboard.tsx para assegurar o alinhamento perfeito de altura das colunas no desktop. AlÃ©m disso, reestruturamos os seletores da terceira seÃ§Ã£o em uma grid responsiva que ocupa 100% da largura em perÃ­odos anuais e se divide em duas colunas de 50% em perÃ­odos mensais e semestrais.
       - **PrevenÃ§Ã£o de Quebras de Linha Financeiras**: SubstituÃ­mos os espaÃ§os comuns do formatador de moedas (formatCurrency, formatCompactCurrency, formatCurrencyCompact em formatters.ts) por espaÃ§os nÃ£o quebrÃ¡veis (\u00A0), garantindo que o sÃ­mbolo monetÃ¡rio (R$), os sinais negativos (-) e o valor numÃ©rico jamais quebrem em linhas diferentes no mobile ou web.
-      - **MÃ©dia HistÃ³rica por Data de InÃ­cio da Categoria**: Refinamos o cÃ¡lculo da mÃ©dia de gastos com a categoria selecionada. O app agora localiza automaticamente a primeira transaÃ§Ã£o (lanÃ§amento inicial) daquela categoria ou subcategoria especÃ­fica no banco. O perÃ­odo de divisÃ£o de meses passa a contar somente a partir deste primeiro lanÃ§amento atÃ© a transaÃ§Ã£o mais recente, impedindo que gastos de categorias novas ou lanÃ§adas tardiamente sejam diluÃ­dos incorretamente por meses anteriores onde a categoria ainda nÃ£o existia.
+      - **RemoÃ§Ã£o de MÃ©dia HistÃ³rica**: Removemos a seÃ§Ã£o de mÃ©dia do painel de anÃ¡lise de categoria para evitar distorÃ§Ãµes de visualizaÃ§Ã£o sob demanda.
+      - **Linha de Meta por OrÃ§amento**: Adicionamos uma linha de meta horizontal vermelha tracejada (ReferenceLine) no grÃ¡fico de AnÃ¡lise de Categoria quando a categoria selecionada possuir um limite de orÃ§amento mensal definido.
+      - **Destaque Visual de Meses Extremos**: Implementamos no grÃ¡fico de AnÃ¡lise de Categoria o destaque dinÃ¢mico do mÃªs com menor gasto (ponto/barra em vermelho, indicando menor consumo) e o mÃªs com maior gasto (ponto/barra em verde, indicando pico de consumo) no perÃ­odo filtrado.
+      - **SeleÃ§Ã£o de Tipo de GrÃ¡fico**: Criamos um controle segmentado interativo (ChartTypeSelector) para permitir ao usuÃ¡rio alternar a visualizaÃ§Ã£o dos grÃ¡ficos entre Linhas, Barras e Ãrea (com gradiente moderno de opacidade). O controle foi implementado tanto no grÃ¡fico principal (Total de Despesas vs Receitas) quanto no grÃ¡fico de AnÃ¡lise de Categoria.
 - **MotivaÃ§Ã£o**: Atender ao cerne estratÃ©gico do Fluxo como um gestor inteligente e simplificado de finanÃ§as pessoais, fornecendo um diagnÃ³stico profissional, prognÃ³sticos de quitaÃ§Ã£o detalhados, justificativas de comportamento do Fluxo Score e visÃµes claras de estouros de orÃ§amentos e parcelamentos em um PDF gerencial corporativo.
+
 
 
 
