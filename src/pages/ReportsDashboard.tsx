@@ -1125,27 +1125,41 @@ export default function ReportsDashboard() {
   const catMaxValue = useMemo(() => categoryValues.length > 1 ? Math.max(...categoryValues) : null, [categoryValues]);
   const hasDifference = useMemo(() => catMinValue !== null && catMaxValue !== null && catMinValue !== catMaxValue, [catMinValue, catMaxValue]);
 
+  const catChartMargin = isMobile 
+    ? { top: 22, right: 16, left: 16, bottom: 6 } 
+    : { top: 35, right: 35, left: 35, bottom: 6 };
+  const catChartDomain = isMobile 
+    ? [0, (max: number) => max * 1.2] 
+    : [0, (max: number) => max * 1.25];
+
   const renderOutlierLabel = useCallback((props: any) => {
-    const { x, y, value } = props;
+    const { x, y, width, value } = props;
     if (value === undefined || value === null) return null;
     const val = Number(value);
     if (!hasDifference) return null;
+    
+    // For bar charts, Recharts passes a width prop. We center by adding width / 2.
+    const labelX = width ? x + width / 2 : x;
+    const labelY = isMobile ? y - 8 : y - 12;
+    const labelSize = isMobile ? 8 : 10;
+    const labelWeight = isMobile ? "700" : "900";
+    
     if (val === catMinValue) {
       return (
-        <text x={x} y={y - 12} fill="#10b981" fontSize={10} fontWeight="900" textAnchor="middle" className="font-sans select-none pointer-events-none">
+        <text x={labelX} y={labelY} fill="#10b981" fontSize={labelSize} fontWeight={labelWeight} textAnchor="middle" className="font-sans select-none pointer-events-none">
           {formatCurrency(val)}
         </text>
       );
     }
     if (val === catMaxValue) {
       return (
-        <text x={x} y={y - 12} fill="#ef4444" fontSize={10} fontWeight="900" textAnchor="middle" className="font-sans select-none pointer-events-none">
+        <text x={labelX} y={labelY} fill="#ef4444" fontSize={labelSize} fontWeight={labelWeight} textAnchor="middle" className="font-sans select-none pointer-events-none">
           {formatCurrency(val)}
         </text>
       );
     }
     return null;
-  }, [hasDifference, catMinValue, catMaxValue]);
+  }, [hasDifference, catMinValue, catMaxValue, isMobile]);
 
   const annualVision = useMemo(() => {
     const tableMonths = period === 'year' ? yearMonths : periodMonths;
@@ -1566,8 +1580,8 @@ export default function ReportsDashboard() {
             </div>
           </div>
 
-          <div className="h-[220px] lg:h-[260px] w-full">
-            <ResponsiveContainer width="100%" height="100%" minHeight={isMobile ? 200 : 240}>
+          <div className="h-[200px] md:h-[300px] lg:h-[380px] w-full">
+            <ResponsiveContainer width="100%" height="100%" minHeight={isMobile ? 180 : 340}>
               {mainChartType === 'bar' ? (
                 <BarChart data={consumptionTrendData} margin={{ top: 12, right: 12, left: -18, bottom: 6 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
@@ -1724,208 +1738,6 @@ export default function ReportsDashboard() {
             </ResponsiveContainer>
           </div>
         </div>
-
-        <div ref={analysisSectionRef} className="bg-white dark:bg-zinc-900 rounded-[1.75rem] lg:rounded-[2rem] p-4 lg:p-6 border border-gray-100 dark:border-zinc-800 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <h3 className="text-lg font-black tracking-tight">Análise de Categoria</h3>
-              {selectedCategory && (
-                <ChartTypeSelector value={categoryChartType} onChange={setCategoryChartType} />
-              )}
-            </div>
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-              <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-                <SelectTrigger className="h-11 w-full md:w-[180px] lg:w-[200px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 font-bold">
-                  <SelectValue placeholder="Categoria" />
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl border-2">
-                  <SelectItem value="all" className="font-bold">Selecionar categoria</SelectItem>
-                  {categoryAnalysisOptions.map((category) => (
-                    <SelectItem key={category.id} value={category.id} className="font-bold">{category.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {selectedCategory && currentSubcategories.length > 0 && (
-                <Select value={selectedSubcategoryId} onValueChange={setSelectedSubcategoryId}>
-                  <SelectTrigger className="h-11 w-full md:w-[180px] lg:w-[200px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 font-bold animate-fade-in">
-                    <SelectValue placeholder="Subcategoria" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-2xl border-2">
-                    <SelectItem value="all" className="font-bold">Todas as subcategorias</SelectItem>
-                    {currentSubcategories.map((sub) => (
-                      <SelectItem key={sub.id} value={sub.id} className="font-bold">{sub.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          </div>
-
-          {selectedCategory && selectedCategoryAnalysis ? (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6">
-                  <div className="rounded-2xl border border-gray-100 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-950/40 p-4 space-y-4">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Atual</p>
-                      <p className="mt-1 text-2xl font-black tabular-nums whitespace-nowrap">{formatCurrency(selectedCategoryAnalysis.current)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Anterior</p>
-                      <p className="mt-1 text-lg font-black tabular-nums text-muted-foreground whitespace-nowrap">{formatCurrency(selectedCategoryAnalysis.previous)}</p>
-                    </div>
-                    <ComparisonBadge comparison={selectedCategoryAnalysis.comparison} periodLabel={periodLabel} invertColors compact={isMobile} className="mt-1" />
-                  </div>
-                  <div className="h-[200px] lg:h-[220px] min-w-0">
-                    <ResponsiveContainer width="100%" height="100%" minHeight={180}>
-                      {categoryChartType === 'bar' ? (
-                        <BarChart data={categoryTrendData} margin={{ top: 35, right: 35, left: 35, bottom: 6 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
-                          <YAxis hide domain={[0, (max) => max * 1.25]} />
-                          <Tooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} formatter={(value) => formatCurrency(Number(value))} />
-                          {selectedCategory.budgetLimit && selectedCategory.budgetLimit > 0 && (
-                            <ReferenceLine 
-                              y={selectedCategory.budgetLimit} 
-                              stroke="#ef4444" 
-                              strokeDasharray="3 3" 
-                              label={{ value: `Meta: ${formatCurrency(selectedCategory.budgetLimit)}`, fill: '#ef4444', position: 'top', fontSize: 10, fontWeight: 'bold' }} 
-                            />
-                          )}
-                          <Bar dataKey="valor" radius={[8, 8, 0, 0]} label={renderOutlierLabel}>
-                            {categoryTrendData.map((entry, idx) => {
-                              const val = Number(entry.valor);
-                              let fill = 'hsl(var(--primary))';
-                              if (hasDifference && val === catMinValue) fill = '#10b981'; // lowest (good)
-                              else if (hasDifference && val === catMaxValue) fill = '#ef4444'; // highest (bad)
-                              return <Cell key={`cell-${idx}`} fill={fill} />;
-                            })}
-                          </Bar>
-                        </BarChart>
-                      ) : categoryChartType === 'area' ? (
-                        <AreaChart data={categoryTrendData} margin={{ top: 35, right: 35, left: 35, bottom: 6 }}>
-                          <defs>
-                            <linearGradient id="colorCatVal" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.2}/>
-                              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.0}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
-                          <YAxis hide domain={[0, (max) => max * 1.25]} />
-                          <Tooltip cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }} formatter={(value) => formatCurrency(Number(value))} />
-                          {selectedCategory.budgetLimit && selectedCategory.budgetLimit > 0 && (
-                            <ReferenceLine 
-                              y={selectedCategory.budgetLimit} 
-                              stroke="#ef4444" 
-                              strokeDasharray="3 3" 
-                              label={{ value: `Meta: ${formatCurrency(selectedCategory.budgetLimit)}`, fill: '#ef4444', position: 'top', fontSize: 10, fontWeight: 'bold' }} 
-                            />
-                          )}
-                          <Area 
-                            type="monotone" 
-                            name={selectedCategory.name} 
-                            dataKey="valor" 
-                            stroke="hsl(var(--primary))" 
-                            strokeWidth={3} 
-                            fillOpacity={1}
-                            fill="url(#colorCatVal)"
-                            label={renderOutlierLabel}
-                            dot={(props) => {
-                              const { cx, cy, payload } = props;
-                              const val = Number(payload.valor);
-                              if (hasDifference && val === catMinValue) {
-                                return <circle key={`dot-min-${cx}`} cx={cx} cy={cy} r={6} fill="#10b981" stroke="#fff" strokeWidth={2} />;
-                              }
-                              if (hasDifference && val === catMaxValue) {
-                                return <circle key={`dot-max-${cx}`} cx={cx} cy={cy} r={6} fill="#ef4444" stroke="#fff" strokeWidth={2} />;
-                              }
-                              return <circle key={`dot-${cx}`} cx={cx} cy={cy} r={4} fill="hsl(var(--primary))" />;
-                            }}
-                            activeDot={{ r: 6 }} 
-                          />
-                        </AreaChart>
-                      ) : (
-                        <LineChart data={categoryTrendData} margin={{ top: 35, right: 35, left: 35, bottom: 6 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
-                          <YAxis hide domain={[0, (max) => max * 1.25]} />
-                          <Tooltip cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }} formatter={(value) => formatCurrency(Number(value))} />
-                          {selectedCategory.budgetLimit && selectedCategory.budgetLimit > 0 && (
-                            <ReferenceLine 
-                              y={selectedCategory.budgetLimit} 
-                              stroke="#ef4444" 
-                              strokeDasharray="3 3" 
-                              label={{ value: `Meta: ${formatCurrency(selectedCategory.budgetLimit)}`, fill: '#ef4444', position: 'top', fontSize: 10, fontWeight: 'bold' }} 
-                            />
-                          )}
-                          <Line 
-                            type="monotone" 
-                            name={selectedCategory.name} 
-                            dataKey="valor" 
-                            stroke="hsl(var(--primary))" 
-                            strokeWidth={3} 
-                            label={renderOutlierLabel}
-                            dot={(props) => {
-                              const { cx, cy, payload } = props;
-                              const val = Number(payload.valor);
-                              if (hasDifference && val === catMinValue) {
-                                return <circle key={`dot-min-${cx}`} cx={cx} cy={cy} r={6} fill="#10b981" stroke="#fff" strokeWidth={2} />;
-                              }
-                              if (hasDifference && val === catMaxValue) {
-                                return <circle key={`dot-max-${cx}`} cx={cx} cy={cy} r={6} fill="#ef4444" stroke="#fff" strokeWidth={2} />;
-                              }
-                              return <circle key={`dot-${cx}`} cx={cx} cy={cy} r={4} fill="hsl(var(--primary))" />;
-                            }}
-                            activeDot={{ r: 6 }} 
-                          />
-                        </LineChart>
-                      )}
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-              <div className="rounded-2xl border border-gray-100 dark:border-zinc-800 bg-gray-50/60 dark:bg-zinc-950/30 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Itens do período</h4>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
-                    {selectedCategoryAnalysis.items.length}
-                  </span>
-                </div>
-
-                {selectedCategoryAnalysis.items.length > 0 ? (
-                  <div className="mt-4 space-y-2 max-h-[280px] overflow-y-auto pr-1" data-testid="category-analysis-items">
-                    {selectedCategoryAnalysis.items.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between gap-3 rounded-2xl bg-background/90 px-3 py-3"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-foreground">{item.description}</p>
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                            <span>{format(parseLocalDate(item.date), 'dd/MM/yyyy')}</span>
-                            <span>{item.isPaid ? 'Pago' : 'Pendente'}</span>
-                          </div>
-                        </div>
-                        <span className="shrink-0 whitespace-nowrap tabular-nums text-sm font-black">
-                          {formatCurrency(item.amount)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-4 rounded-2xl border border-dashed border-border/70 px-4 py-6 text-center text-sm font-bold text-muted-foreground">
-                    Nenhum item no período
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm font-bold text-muted-foreground">
-              Sem categoria selecionada
-            </div>
-          )}
-        </div>
       </div>
 
         <div className="order-2 lg:col-span-2 bg-white dark:bg-zinc-900 rounded-[1.75rem] lg:rounded-[2.5rem] p-4 lg:p-8 border border-gray-100 dark:border-zinc-800 shadow-sm">
@@ -1984,6 +1796,208 @@ export default function ReportsDashboard() {
             )}
           </div>
         </div>
+      </div>
+
+      <div ref={analysisSectionRef} className="bg-white dark:bg-zinc-900 rounded-[1.75rem] lg:rounded-[2.5rem] p-4 lg:p-8 border border-gray-100 dark:border-zinc-800 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 className="text-lg font-black tracking-tight">Análise de Categoria</h3>
+            {selectedCategory && (
+              <ChartTypeSelector value={categoryChartType} onChange={setCategoryChartType} />
+            )}
+          </div>
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+              <SelectTrigger className="h-11 w-full md:w-[180px] lg:w-[200px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 font-bold">
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-2">
+                <SelectItem value="all" className="font-bold">Selecionar categoria</SelectItem>
+                {categoryAnalysisOptions.map((category) => (
+                  <SelectItem key={category.id} value={category.id} className="font-bold">{category.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {selectedCategory && currentSubcategories.length > 0 && (
+              <Select value={selectedSubcategoryId} onValueChange={setSelectedSubcategoryId}>
+                <SelectTrigger className="h-11 w-full md:w-[180px] lg:w-[200px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 font-bold animate-fade-in">
+                  <SelectValue placeholder="Subcategoria" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl border-2">
+                  <SelectItem value="all" className="font-bold">Todas as subcategorias</SelectItem>
+                  {currentSubcategories.map((sub) => (
+                    <SelectItem key={sub.id} value={sub.id} className="font-bold">{sub.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        </div>
+
+        {selectedCategory && selectedCategoryAnalysis ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6">
+              <div className="rounded-2xl border border-gray-100 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-950/40 p-4 space-y-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Atual</p>
+                  <p className="mt-1 text-2xl font-black tabular-nums whitespace-nowrap">{formatCurrency(selectedCategoryAnalysis.current)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Anterior</p>
+                  <p className="mt-1 text-lg font-black tabular-nums text-muted-foreground whitespace-nowrap">{formatCurrency(selectedCategoryAnalysis.previous)}</p>
+                </div>
+                <ComparisonBadge comparison={selectedCategoryAnalysis.comparison} periodLabel={periodLabel} invertColors compact={isMobile} className="mt-1" />
+              </div>
+              <div className="h-[150px] md:h-[200px] lg:h-[220px] min-w-0">
+                <ResponsiveContainer width="100%" height="100%" minHeight={isMobile ? 140 : 180}>
+                  {categoryChartType === 'bar' ? (
+                    <BarChart data={categoryTrendData} margin={catChartMargin}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
+                      <YAxis hide domain={catChartDomain} />
+                      <Tooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} formatter={(value) => formatCurrency(Number(value))} />
+                      {selectedCategory.budgetLimit && selectedCategory.budgetLimit > 0 && (
+                        <ReferenceLine 
+                          y={selectedCategory.budgetLimit} 
+                          stroke="#ef4444" 
+                          strokeDasharray="3 3" 
+                          label={{ value: `Meta: ${formatCurrency(selectedCategory.budgetLimit)}`, fill: '#ef4444', position: 'top', fontSize: 10, fontWeight: 'bold' }} 
+                        />
+                      )}
+                      <Bar dataKey="valor" radius={[8, 8, 0, 0]} label={renderOutlierLabel}>
+                        {categoryTrendData.map((entry, idx) => {
+                          const val = Number(entry.valor);
+                          let fill = 'hsl(var(--primary))';
+                          if (hasDifference && val === catMinValue) fill = '#10b981'; // lowest (good)
+                          else if (hasDifference && val === catMaxValue) fill = '#ef4444'; // highest (bad)
+                          return <Cell key={`cell-${idx}`} fill={fill} />;
+                        })}
+                      </Bar>
+                    </BarChart>
+                  ) : categoryChartType === 'area' ? (
+                    <AreaChart data={categoryTrendData} margin={catChartMargin}>
+                      <defs>
+                        <linearGradient id="colorCatVal" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
+                      <YAxis hide domain={catChartDomain} />
+                      <Tooltip cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }} formatter={(value) => formatCurrency(Number(value))} />
+                      {selectedCategory.budgetLimit && selectedCategory.budgetLimit > 0 && (
+                        <ReferenceLine 
+                          y={selectedCategory.budgetLimit} 
+                          stroke="#ef4444" 
+                          strokeDasharray="3 3" 
+                          label={{ value: `Meta: ${formatCurrency(selectedCategory.budgetLimit)}`, fill: '#ef4444', position: 'top', fontSize: 10, fontWeight: 'bold' }} 
+                        />
+                      )}
+                      <Area 
+                        type="monotone" 
+                        name={selectedCategory.name} 
+                        dataKey="valor" 
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={3} 
+                        fillOpacity={1}
+                        fill="url(#colorCatVal)"
+                        label={renderOutlierLabel}
+                        dot={(props) => {
+                          const { cx, cy, payload } = props;
+                          const val = Number(payload.valor);
+                          if (hasDifference && val === catMinValue) {
+                            return <circle key={`dot-min-${cx}`} cx={cx} cy={cy} r={6} fill="#10b981" stroke="#fff" strokeWidth={2} />;
+                          }
+                          if (hasDifference && val === catMaxValue) {
+                            return <circle key={`dot-max-${cx}`} cx={cx} cy={cy} r={6} fill="#ef4444" stroke="#fff" strokeWidth={2} />;
+                          }
+                          return <circle key={`dot-${cx}`} cx={cx} cy={cy} r={4} fill="hsl(var(--primary))" />;
+                        }}
+                        activeDot={{ r: 6 }} 
+                      />
+                    </AreaChart>
+                  ) : (
+                    <LineChart data={categoryTrendData} margin={catChartMargin}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
+                      <YAxis hide domain={catChartDomain} />
+                      <Tooltip cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }} formatter={(value) => formatCurrency(Number(value))} />
+                      {selectedCategory.budgetLimit && selectedCategory.budgetLimit > 0 && (
+                        <ReferenceLine 
+                          y={selectedCategory.budgetLimit} 
+                          stroke="#ef4444" 
+                          strokeDasharray="3 3" 
+                          label={{ value: `Meta: ${formatCurrency(selectedCategory.budgetLimit)}`, fill: '#ef4444', position: 'top', fontSize: 10, fontWeight: 'bold' }} 
+                        />
+                      )}
+                      <Line 
+                        type="monotone" 
+                        name={selectedCategory.name} 
+                        dataKey="valor" 
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={3} 
+                        label={renderOutlierLabel}
+                        dot={(props) => {
+                          const { cx, cy, payload } = props;
+                          const val = Number(payload.valor);
+                          if (hasDifference && val === catMinValue) {
+                            return <circle key={`dot-min-${cx}`} cx={cx} cy={cy} r={6} fill="#10b981" stroke="#fff" strokeWidth={2} />;
+                          }
+                          if (hasDifference && val === catMaxValue) {
+                            return <circle key={`dot-max-${cx}`} cx={cx} cy={cy} r={6} fill="#ef4444" stroke="#fff" strokeWidth={2} />;
+                          }
+                          return <circle key={`dot-${cx}`} cx={cx} cy={cy} r={4} fill="hsl(var(--primary))" />;
+                        }}
+                        activeDot={{ r: 6 }} 
+                      />
+                    </LineChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-gray-100 dark:border-zinc-800 bg-gray-50/60 dark:bg-zinc-950/30 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Itens do período</h4>
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
+                  {selectedCategoryAnalysis.items.length}
+                </span>
+              </div>
+
+              {selectedCategoryAnalysis.items.length > 0 ? (
+                <div className="mt-4 space-y-2 max-h-[280px] overflow-y-auto pr-1" data-testid="category-analysis-items">
+                  {selectedCategoryAnalysis.items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between gap-3 rounded-2xl bg-background/90 px-3 py-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-foreground">{item.description}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                          <span>{format(parseLocalDate(item.date), 'dd/MM/yyyy')}</span>
+                          <span>{item.isPaid ? 'Pago' : 'Pendente'}</span>
+                        </div>
+                      </div>
+                      <span className="shrink-0 whitespace-nowrap tabular-nums text-sm font-black">
+                        {formatCurrency(item.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-4 rounded-2xl border border-dashed border-border/70 px-4 py-6 text-center text-sm font-bold text-muted-foreground">
+                  Nenhum item no período
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm font-bold text-muted-foreground">
+            Sem categoria selecionada
+          </div>
+        )}
       </div>
       </div>
     </>

@@ -1906,7 +1906,16 @@ Em recÃ¡lculo:
       - **Destaque Visual e RÃ³tulos de Outliers**: Invertemos a lÃ³gica de cor de despesas (menor gasto fica em verde/positivo e o maior gasto fica em vermelho/preocupante). TambÃ©m adicionamos rÃ³tulos numÃ©ricos permanentes acima dos extremos (mÃ­nimo e mÃ¡ximo) para exibiÃ§Ã£o imediata dos valores sem necessidade de interaÃ§Ã£o.
       - **PrevenÃ§Ã£o de RÃ³tulos Cortados**: Ajustamos o domÃ­nio vertical do eixo Y para criar 15% de margem extra (dataMax * 1.15) no topo do grÃ¡fico e expandimos a margem de renderizaÃ§Ã£o superior para 30px, evitando que os rÃ³tulos fiquem ocultados ou truncados pelas bordas do contÃªiner.
       - **SeleÃ§Ã£o de Tipo de GrÃ¡fico**: Criamos um controle segmentado interativo (ChartTypeSelector) para permitir ao usuÃ¡rio alternar a visualizaÃ§Ã£o dos grÃ¡ficos entre Linhas, Barras e Ãrea (com gradiente moderno de opacidade). O controle foi implementado tanto no grÃ¡fico principal (Total de Despesas vs Receitas) quanto no grÃ¡fico de AnÃ¡lise de Categoria.
+      - **Reestruturação de Layout Full Width (Responsividade)**: Retiramos o container de Análise de Categoria de dentro da grid de colunas limitantes e o posicionamos como uma seção independente de largura total logo abaixo da linha principal (Gráfico Geral + Ranking de Despesas). Isso resolveu os problemas de espremimento de layouts e quebras de filtro em dispositivos de tamanho intermediário e mobile.
+      - **Estilização Sutil e Responsiva no Mobile**:
+        * Reduzimos as alturas de renderização no celular: o gráfico geral fica com `200px` (minHeight `180px`) e o gráfico da categoria fica com `150px` (minHeight `140px`).
+        * Ajustamos as margens laterais da Análise de Categoria no mobile para `16px`/`20px` (em vez de `35px` do desktop) para ampliar o espaço de visualização das séries.
+        * Refinamos os rótulos fixos de outliers no mobile: reduzimos o tamanho do texto para `8px`, o peso para `700` (bold sutil) e o recuo vertical de `y - 12` para `y - 8`, deixando-os perfeitamente proporcionais a telas pequenas.
+        * Ajustamos a lógica do `renderOutlierLabel` para calcular `x + width / 2` quando renderizado em gráficos do tipo `Bar`, garantindo que os valores fiquem perfeitamente alinhados ao centro das colunas.
+      - **Ajuste de Altura e Preenchimento de Espaços**: Aumentamos a altura do contêiner do gráfico geral de "Receitas vs Despesas" para `h-[200px] md:h-[300px] lg:h-[380px]` (minHeight 180px/340px), o que equalizou de forma limpa a altura das colunas da grid superior (eliminando qualquer espaço em branco na tela ao lado do Ranking de Despesas) no desktop, enquanto permanece compacto no mobile.
 - **MotivaÃ§Ã£o**: Atender ao cerne estratÃ©gico do Fluxo como um gestor inteligente e simplificado de finanÃ§as pessoais, fornecendo um diagnÃ³stico profissional, prognÃ³sticos de quitaÃ§Ã£o detalhados, justificativas de comportamento do Fluxo Score e visÃµes claras de estouros de orÃ§amentos e parcelamentos em um PDF gerencial corporativo.
+
+
 
 
 
