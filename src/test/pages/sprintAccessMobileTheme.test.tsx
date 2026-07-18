@@ -138,8 +138,8 @@ describe('Sprint de acesso, mobile, AMOLED e acento', () => {
   it('empilha os filtros mobile de Relatórios sem sobrepor Projetado/Realizado e Mês/Semestre/Ano', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/pages/ReportsDashboard.tsx'), 'utf8');
 
-    expect(source).toContain('<div className="space-y-2">');
-    expect(source).toContain('flex w-full bg-gray-50 dark:bg-zinc-800/50 p-1 rounded-2xl border-2');
+    expect(source).toContain('flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 lg:flex-initial');
+    expect(source).toContain('relative flex p-0.5 bg-gray-100 dark:bg-zinc-800 rounded-xl h-9');
     expect(source).not.toContain('<div className="grid grid-cols-2 gap-2">');
   });
 

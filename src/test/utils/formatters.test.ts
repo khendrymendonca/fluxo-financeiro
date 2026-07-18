@@ -12,15 +12,15 @@ describe('formatters', () => {
     });
 
     it('deve formatar null como R$ 0,00', () => {
-      expect(formatCurrency(null as any)).toBe('R$ 0,00');
+      expect(formatCurrency(null as any).replace(/\u00A0/g, ' ')).toBe('R$ 0,00');
     });
 
     it('deve formatar undefined como R$ 0,00', () => {
-      expect(formatCurrency(undefined as any)).toBe('R$ 0,00');
+      expect(formatCurrency(undefined as any).replace(/\u00A0/g, ' ')).toBe('R$ 0,00');
     });
 
     it('deve formatar NaN/string inválida como R$ 0,00', () => {
-      expect(formatCurrency('abc' as any)).toBe('R$ 0,00');
+      expect(formatCurrency('abc' as any).replace(/\u00A0/g, ' ')).toBe('R$ 0,00');
     });
   });
 

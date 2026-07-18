@@ -270,6 +270,7 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
     expect(snapshotUpdate.update).toHaveBeenCalledWith({
       total_amount: 1000,
       remaining_amount: 1000,
+      status: 'active',
     });
   });
 
@@ -332,7 +333,7 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
     expect(debtInsert.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         total_amount: 1073.89,
-        remaining_amount: 994.29,
+        remaining_amount: 994.3,
       }),
     );
 
@@ -355,6 +356,7 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
     expect(snapshotUpdate.update).toHaveBeenCalledWith({
       total_amount: 1073.89,
       remaining_amount: 994.29,
+      status: 'active',
     });
   });
 

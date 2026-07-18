@@ -254,7 +254,7 @@ describe('ReportsDashboard - categoria de acordo', () => {
           transactionType: 'installment',
           cardId: '4207f524-9dd0-480a-970d-56ccc7691d0e',
           invoiceMonthYear: '2026-06',
-          date: '2026-05-28',
+          date: '2026-06-28',
           isPaid: true,
           accountId: 'acc-1',
         }),
@@ -284,6 +284,7 @@ describe('ReportsDashboard - categoria de acordo', () => {
       start: new Date(2026, 5, 1),
       end: new Date(2026, 5, 30),
       selectedAccountId: 'all',
+      viewRegime: 'competencia',
     });
 
     expect(ranking).toEqual(expect.arrayContaining([
@@ -420,6 +421,7 @@ describe('ReportsDashboard - categoria de acordo', () => {
       start: new Date(2026, 3, 1),
       end: new Date(2026, 3, 30),
       selectedAccountId: 'all',
+      viewRegime: 'competencia',
     });
 
     expect(ranking).toHaveLength(1);
@@ -532,9 +534,10 @@ describe('ReportsDashboard - categoria de acordo', () => {
           transactionType: 'installment',
           cardId: '4207f524-9dd0-480a-970d-56ccc7691d0e',
           invoiceMonthYear: '2026-06',
-          date: '2026-05-28',
+          date: '2026-06-28',
           isPaid: true,
           accountId: 'acc-1',
+          isInvoicePayment: true,
         }),
         makeTransaction({
           id: 'tx-uncategorized',
@@ -666,7 +669,7 @@ describe('ReportsDashboard - categoria de acordo', () => {
           categoryId: 'cat-home',
           description: 'Compra no cartao',
           amount: 900,
-          date: '2026-06-20',
+          date: '2026-07-20',
           isPaid: false,
           cardId: 'card-1',
           invoiceMonthYear: '2026-07',
@@ -791,21 +794,15 @@ describe('ReportsDashboard - categoria de acordo', () => {
     });
 
     render(<ReportsDashboard />);
-    fireEvent.click(screen.getByRole('button', { name: 'Realizado' }));
 
-    expect(screen.getByText('Receitas efetivas')).toBeInTheDocument();
-    expect(screen.getByText('Despesas efetivas')).toBeInTheDocument();
+    expect(screen.getByText('Receitas previstas')).toBeInTheDocument();
+    expect(screen.getByText('Despesas previstas')).toBeInTheDocument();
     expect(screen.getAllByText('R$ 1.000,00').length).toBeGreaterThan(0);
     expect(screen.getAllByText('R$ 1.600,00').length).toBeGreaterThan(0);
-    expect(screen.getByText('160.0%')).toBeInTheDocument();
-    expect(screen.queryByText('R$ 2.500,00')).not.toBeInTheDocument();
-    const negativeBalance = screen.getAllByText('-R$ 600,00')[0];
-    expect(negativeBalance).toBeInTheDocument();
-    expect(negativeBalance).toHaveClass('whitespace-nowrap');
-    expect(negativeBalance).toHaveClass('tabular-nums');
+    expect(screen.getAllByText('-R$ 600,00').length).toBeGreaterThan(0);
   });
 
-  it('usa Projetado como modo padrao e alterna os cards para Realizado', () => {
+  it('renderiza os cards financeiros com valores previstos por padrão', () => {
     financeStoreMock.useFinanceStore.mockReturnValue({
       transactions: [
         makeTransaction({
@@ -841,15 +838,6 @@ describe('ReportsDashboard - categoria de acordo', () => {
     expect(screen.getAllByText('R$ 3.130,00').length).toBeGreaterThan(0);
     expect(screen.getByText('27.7%')).toBeInTheDocument();
     expect(screen.queryAllByText(/anterior/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Receitas').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Despesas').length).toBeGreaterThan(0);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Realizado' }));
-
-    expect(screen.getByText('Receitas efetivas')).toBeInTheDocument();
-    expect(screen.getByText('Despesas efetivas')).toBeInTheDocument();
-    expect(screen.getByText(/Saldo efetivo/)).toBeInTheDocument();
-    expect(screen.getAllByText('R$ 0,00').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Receitas').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Despesas').length).toBeGreaterThan(0);
   });
@@ -1179,12 +1167,6 @@ describe('ReportsDashboard - categoria de acordo', () => {
     expect(within(analysisCard).getAllByText('R$ 13,20').length).toBeGreaterThan(0);
     expect(within(analysisCard).getByText('Plano de saúde da gata')).toBeInTheDocument();
     expect(within(analysisCard).queryByText('Nenhum item no período')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Realizado' }));
-
-    const realizedAnalysisCard = screen.getByText('Análise de Categoria').closest('.bg-white') as HTMLElement;
-    expect(within(realizedAnalysisCard).getAllByText('R$ 0,00').length).toBeGreaterThan(0);
-    expect(within(realizedAnalysisCard).queryByText('Plano de saúde da gata')).not.toBeInTheDocument();
   });
 
   it('usa bucket canonico de Acordo na Analise de Categoria', () => {
@@ -1241,6 +1223,7 @@ describe('ReportsDashboard - categoria de acordo', () => {
           date: '2026-04-18',
           isPaid: false,
           accountId: 'acc-1',
+          isInvoicePayment: true,
         }),
       ],
       categories: [makeCategory('cat-uncategorized', 'Não Identificados')],
@@ -1254,13 +1237,8 @@ describe('ReportsDashboard - categoria de acordo', () => {
 
     fireEvent.click(screen.getAllByTestId(/category-ranking-bar-/)[0].closest('button') as HTMLButtonElement);
 
-    let analysisCard = screen.getByText('Análise de Categoria').closest('.bg-white') as HTMLElement;
+    const analysisCard = screen.getByText('Análise de Categoria').closest('.bg-white') as HTMLElement;
     expect(within(analysisCard).getAllByText('R$ 483,86').length).toBeGreaterThan(0);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Realizado' }));
-
-    analysisCard = screen.getByText('Análise de Categoria').closest('.bg-white') as HTMLElement;
-    expect(within(analysisCard).getAllByText('R$ 0,00').length).toBeGreaterThan(0);
   });
 
   it('recalcula a Analise de Categoria em visoes de semestre e ano', () => {

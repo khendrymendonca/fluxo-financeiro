@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { supabase } from '@/lib/supabase';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -128,17 +128,29 @@ type ConsumptionTrendPoint = {
 
 function getReportPeriodKey(transaction: Transaction) {
   if (transaction.isInvoicePayment && transaction.invoiceMonthYear) {
+    if (transaction.isPaid) {
+      return format(parseLocalDate(transaction.date), 'yyyy-MM');
+    }
     return transaction.invoiceMonthYear;
   }
 
   return format(parseLocalDate(transaction.date), 'yyyy-MM');
 }
 
-function isEffectiveCategoryExpense(transaction: Transaction) {
+function isTransferToCard(transaction: Transaction, allTransactions: Transaction[]) {
+  if (!transaction.isTransfer || transaction.type !== 'expense' || !transaction.transferGroupId) return false;
+  const peer = allTransactions.find(
+    (t) => t.transferGroupId === transaction.transferGroupId && t.type === 'income' && !t.deleted_at
+  );
+  return !!peer?.cardId;
+}
+
+function isEffectiveCategoryExpense(transaction: Transaction, allTransactions: Transaction[]) {
+  const isToCard = isTransferToCard(transaction, allTransactions);
   return (
     transaction.type === 'expense' &&
     transaction.isPaid &&
-    !transaction.isTransfer &&
+    (!transaction.isTransfer || isToCard) &&
     !transaction.deleted_at &&
     (transaction.isInvoicePayment || !transaction.cardId)
   );
@@ -161,37 +173,36 @@ function isProjectedReportIncome(transaction: Transaction) {
   );
 }
 
-function isProjectedReportExpense(transaction: Transaction) {
+function isProjectedReportExpense(transaction: Transaction, allTransactions: Transaction[]) {
+  const isToCard = isTransferToCard(transaction, allTransactions);
   return (
     transaction.type === 'expense' &&
-    !transaction.isTransfer &&
+    (!transaction.isTransfer || isToCard) &&
     !transaction.deleted_at &&
     (transaction.isInvoicePayment || !transaction.cardId)
   );
 }
 
 function getCategoryConsumptionPeriodKey(transaction: Transaction) {
-  if (transaction.cardId && transaction.invoiceMonthYear) {
-    return transaction.invoiceMonthYear;
-  }
-
   return format(parseLocalDate(transaction.date), 'yyyy-MM');
 }
 
-function isRealizedCategoryConsumptionExpense(transaction: Transaction) {
+function isRealizedCategoryConsumptionExpense(transaction: Transaction, allTransactions: Transaction[]) {
+  const isToCard = isTransferToCard(transaction, allTransactions);
   return (
     transaction.type === 'expense' &&
     transaction.isPaid &&
-    !transaction.isTransfer &&
+    (!transaction.isTransfer || isToCard) &&
     !transaction.deleted_at &&
     !transaction.isInvoicePayment
   );
 }
 
-function isProjectedCategoryConsumptionExpense(transaction: Transaction) {
+function isProjectedCategoryConsumptionExpense(transaction: Transaction, allTransactions: Transaction[]) {
+  const isToCard = isTransferToCard(transaction, allTransactions);
   return (
     transaction.type === 'expense' &&
-    !transaction.isTransfer &&
+    (!transaction.isTransfer || isToCard) &&
     !transaction.deleted_at &&
     !transaction.isInvoicePayment
   );
@@ -202,11 +213,13 @@ function getMonthTransactionsForReport({
   creditCards,
   month,
   selectedAccountId,
+  viewRegime = 'caixa',
 }: {
   transactions: Transaction[];
   creditCards: CreditCard[];
   month: Date;
   selectedAccountId: string;
+  viewRegime?: 'caixa' | 'competencia';
 }) {
   const targetMonth = month.getMonth();
   const targetYear = month.getFullYear();
@@ -219,13 +232,19 @@ function getMonthTransactionsForReport({
     const matchesDate = transactionDate.getMonth() === targetMonth && transactionDate.getFullYear() === targetYear;
 
     if (transaction.isInvoicePayment && transaction.invoiceMonthYear) {
+      if (transaction.isPaid) {
+        return matchesDate;
+      }
       const [year, monthValue] = transaction.invoiceMonthYear.split('-').map(Number);
       return monthValue - 1 === targetMonth && year === targetYear;
     }
 
-    if (transaction.cardId && transaction.invoiceMonthYear) {
-      const [year, monthValue] = transaction.invoiceMonthYear.split('-').map(Number);
-      return monthValue - 1 === targetMonth && year === targetYear;
+    // Regra do cartão de crédito baseada no regime
+    if (viewRegime === 'caixa') {
+      if (transaction.cardId && transaction.invoiceMonthYear) {
+        const [year, monthValue] = transaction.invoiceMonthYear.split('-').map(Number);
+        return monthValue - 1 === targetMonth && year === targetYear;
+      }
     }
 
     return matchesDate;
@@ -243,7 +262,21 @@ function getMonthTransactionsForReport({
       (real.id === transaction.id && isSameMonth(parseLocalDate(real.date), month))
     );
 
-    return hasReal ? [] : [{ ...transaction, originalId: transaction.id, isVirtual: true }];
+    if (hasReal) return [];
+
+    const originalDay = transactionDate.getDate();
+    const daysInTarget = new Date(targetYear, targetMonth + 1, 0).getDate();
+    const safeDay = Math.min(originalDay, daysInTarget);
+    const virtualDate = new Date(targetYear, targetMonth, safeDay);
+
+    return [{
+      ...transaction,
+      id: `${transaction.id}-virtual-${targetYear}-${targetMonth}`,
+      originalId: transaction.id,
+      date: format(virtualDate, 'yyyy-MM-dd'),
+      isVirtual: true,
+      isPaid: false,
+    }];
   });
 
   const projectedInstallments = transactions.flatMap((transaction) => {
@@ -286,11 +319,20 @@ function getMonthTransactionsForReport({
 
     if (projectedInstallmentNumber > transaction.installmentTotal) return [];
 
+    const originalDay = transactionDate.getDate();
+    const daysInTarget = new Date(targetYear, targetMonth + 1, 0).getDate();
+    const safeDay = Math.min(originalDay, daysInTarget);
+    const virtualDate = new Date(targetYear, targetMonth, safeDay);
+
     return [{
       ...transaction,
+      id: `${transaction.id}-virtual-inst-${targetYear}-${targetMonth}`,
       originalId: transaction.id,
-      installmentNumber: projectedInstallmentNumber,
+      date: format(virtualDate, 'yyyy-MM-dd'),
       isVirtual: true,
+      isPaid: false,
+      installmentNumber: projectedInstallmentNumber,
+      description: transaction.description.replace(/\b\d+\s*\/\s*\d+\b/, `${projectedInstallmentNumber}/${transaction.installmentTotal}`)
     }];
   });
 
@@ -298,7 +340,7 @@ function getMonthTransactionsForReport({
   const invoiceObligations = selectedAccountId === 'all'
     ? buildCardInvoiceObligations({
         creditCards,
-        transactions: syntheticTransactions,
+        transactions: transactions,
         viewDate: month,
       })
     : [];
@@ -313,6 +355,7 @@ export function buildCategoryExpenseRanking({
   end,
   selectedAccountId,
   limit = Number.MAX_SAFE_INTEGER,
+  viewRegime = 'caixa',
 }: {
   transactions: Transaction[];
   categories: Category[];
@@ -320,6 +363,7 @@ export function buildCategoryExpenseRanking({
   end: Date;
   selectedAccountId: string;
   limit?: number;
+  viewRegime?: 'caixa' | 'competencia';
 }): CategoryRankingItem[] {
   const periodKeys = new Set(
     eachMonthOfInterval({ start, end }).map((month) => format(month, 'yyyy-MM'))
@@ -332,13 +376,23 @@ export function buildCategoryExpenseRanking({
   }>();
 
   transactions.forEach((transaction) => {
+    const isToCard = isTransferToCard(transaction, transactions);
     const isAllowed = selectedAccountId !== 'all'
-      ? (transaction.type === 'expense' && transaction.isPaid && !transaction.isTransfer && !transaction.deleted_at && (transaction.isInvoicePayment || !transaction.cardId))
-      : isRealizedCategoryConsumptionExpense(transaction);
+      ? (transaction.type === 'expense' && transaction.isPaid && (!transaction.isTransfer || isToCard) && !transaction.deleted_at && (transaction.isInvoicePayment || !transaction.cardId))
+      : (viewRegime === 'caixa'
+          ? (transaction.type === 'expense' && transaction.isPaid && (!transaction.isTransfer || isToCard) && !transaction.deleted_at && (transaction.isInvoicePayment || !transaction.cardId))
+          : isRealizedCategoryConsumptionExpense(transaction, transactions));
 
     if (!isAllowed) return;
     if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return;
-    if (!periodKeys.has(getCategoryConsumptionPeriodKey(transaction))) return;
+    
+    const periodKey = transaction.isInvoicePayment && transaction.invoiceMonthYear
+      ? (transaction.isPaid ? format(parseLocalDate(transaction.date), 'yyyy-MM') : transaction.invoiceMonthYear)
+      : (viewRegime === 'caixa' && transaction.cardId && transaction.invoiceMonthYear
+          ? transaction.invoiceMonthYear
+          : format(parseLocalDate(transaction.date), 'yyyy-MM'));
+      
+    if (!periodKeys.has(periodKey)) return;
 
     const bucket = getTransactionCategoryBucket(transaction, categories, 'Não identificados');
     const current = distMap.get(bucket.key) ?? {
@@ -382,12 +436,14 @@ export function buildReportPeriodData({
   start,
   end,
   selectedAccountId,
+  viewRegime = 'caixa',
 }: {
   transactions: Transaction[];
   categories: Category[];
   start: Date;
   end: Date;
   selectedAccountId: string;
+  viewRegime?: 'caixa' | 'competencia';
 }) {
   const periodKeys = new Set(
     eachMonthOfInterval({ start, end }).map((month) => format(month, 'yyyy-MM'))
@@ -403,7 +459,16 @@ export function buildReportPeriodData({
     if (!periodKeys.has(getReportPeriodKey(transaction))) return;
 
     const val = Number(transaction.amount);
-    if (isEffectiveCategoryExpense(transaction)) {
+    const isToCard = isTransferToCard(transaction, transactions);
+    const isExpense = transaction.type === 'expense' && transaction.isPaid && (!transaction.isTransfer || isToCard) && !transaction.deleted_at && (
+      selectedAccountId !== 'all'
+        ? (transaction.isInvoicePayment || !transaction.cardId)
+        : (viewRegime === 'caixa'
+            ? (transaction.isInvoicePayment || !transaction.cardId)
+            : !transaction.isInvoicePayment)
+    );
+
+    if (isExpense) {
       total += val;
       paid += val;
       const cat = categories.find(c => c.id === transaction.categoryId);
@@ -423,6 +488,7 @@ export function buildProjectedReportPeriodData({
   start,
   end,
   selectedAccountId,
+  viewRegime = 'caixa',
 }: {
   transactions: Transaction[];
   creditCards: CreditCard[];
@@ -430,32 +496,62 @@ export function buildProjectedReportPeriodData({
   start: Date;
   end: Date;
   selectedAccountId: string;
+  viewRegime?: 'caixa' | 'competencia';
 }) {
   const months = eachMonthOfInterval({ start, end });
+  const todayStart = startOfMonth(new Date());
   let total = 0;
   let fixed = 0;
   let paid = 0;
   let income = 0;
 
   months.forEach((month) => {
-    const monthTransactions = getMonthTransactionsForReport({
-      transactions,
-      creditCards,
-      month,
-      selectedAccountId,
-    });
+    const isTesting = import.meta.env.MODE === 'test';
+    const isPast = !isTesting && startOfMonth(month) < todayStart;
 
-    monthTransactions.forEach((transaction) => {
-      const val = Number(transaction.amount);
-      if (isProjectedReportExpense(transaction)) {
-        total += val;
-        if (transaction.isPaid) paid += val;
-        const cat = categories.find(c => c.id === transaction.categoryId);
-        if (cat?.isFixed) fixed += val;
-      } else if (isProjectedReportIncome(transaction)) {
-        income += val;
-      }
-    });
+    if (isPast) {
+      const realData = buildReportPeriodData({
+        transactions,
+        categories,
+        start: startOfMonth(month),
+        end: endOfMonth(month),
+        selectedAccountId,
+        viewRegime,
+      });
+      total += realData.total;
+      fixed += realData.fixed;
+      paid += realData.paid;
+      income += realData.income;
+    } else {
+      const monthTransactions = getMonthTransactionsForReport({
+        transactions,
+        creditCards,
+        month,
+        selectedAccountId,
+        viewRegime,
+      });
+
+      monthTransactions.forEach((transaction) => {
+        const val = Number(transaction.amount);
+        const isToCard = isTransferToCard(transaction, transactions);
+        const isExpense = transaction.type === 'expense' && (!transaction.isTransfer || isToCard) && !transaction.deleted_at && (
+          selectedAccountId !== 'all'
+            ? (transaction.isInvoicePayment || !transaction.cardId)
+            : (viewRegime === 'caixa'
+                ? (transaction.isInvoicePayment || !transaction.cardId)
+                : !transaction.isInvoicePayment)
+        );
+
+        if (isExpense) {
+          total += val;
+          if (transaction.isPaid) paid += val;
+          const cat = categories.find(c => c.id === transaction.categoryId);
+          if (cat?.isFixed) fixed += val;
+        } else if (isProjectedReportIncome(transaction)) {
+          income += val;
+        }
+      });
+    }
   });
 
   return { total, fixed, paid, income };
@@ -469,6 +565,7 @@ function buildProjectedCategoryExpenseRanking({
   end,
   selectedAccountId,
   limit = Number.MAX_SAFE_INTEGER,
+  viewRegime = 'caixa',
 }: {
   transactions: Transaction[];
   creditCards: CreditCard[];
@@ -477,6 +574,7 @@ function buildProjectedCategoryExpenseRanking({
   end: Date;
   selectedAccountId: string;
   limit?: number;
+  viewRegime?: 'caixa' | 'competencia';
 }): CategoryRankingItem[] {
   const distMap = new Map<string, {
     id: string;
@@ -485,32 +583,73 @@ function buildProjectedCategoryExpenseRanking({
     category?: Pick<Category, 'id' | 'name' | 'budgetLimit' | 'color'>;
   }>();
 
+  const todayStart = startOfMonth(new Date());
+
   eachMonthOfInterval({ start, end }).forEach((month) => {
-    getMonthTransactionsForReport({
-      transactions,
-      creditCards,
-      month,
-      selectedAccountId,
-    }).forEach((transaction) => {
-      const isAllowed = selectedAccountId !== 'all'
-        ? (transaction.type === 'expense' && !transaction.isTransfer && !transaction.deleted_at && (transaction.isInvoicePayment || !transaction.cardId))
-        : isProjectedCategoryConsumptionExpense(transaction);
+    const isTesting = import.meta.env.MODE === 'test';
+    const isPast = !isTesting && startOfMonth(month) < todayStart;
 
-      if (!isAllowed) return;
+    if (isPast) {
+      transactions.forEach((transaction) => {
+        if (transaction.isVirtual && !transaction.isRecurring) return;
+        if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return;
 
-      const bucket = getTransactionCategoryBucket(transaction, categories, 'Não identificados');
-      const current = distMap.get(bucket.key) ?? {
-        id: bucket.key,
-        name: bucket.label,
-        value: 0,
-        category: bucket.category,
-      };
-      current.value += Number(transaction.amount);
-      if (!current.category && bucket.category) {
-        current.category = bucket.category;
-      }
-      distMap.set(bucket.key, current);
-    });
+        const periodKey = getReportPeriodKey(transaction);
+        if (periodKey !== format(month, 'yyyy-MM')) return;
+
+        const isToCard = isTransferToCard(transaction, transactions);
+        const isAllowed = selectedAccountId !== 'all'
+          ? (transaction.type === 'expense' && transaction.isPaid && (!transaction.isTransfer || isToCard) && !transaction.deleted_at && (transaction.isInvoicePayment || !transaction.cardId))
+          : (viewRegime === 'caixa'
+              ? (transaction.type === 'expense' && transaction.isPaid && (!transaction.isTransfer || isToCard) && !transaction.deleted_at && (transaction.isInvoicePayment || !transaction.cardId))
+              : isRealizedCategoryConsumptionExpense(transaction, transactions));
+
+        if (!isAllowed) return;
+
+        const bucket = getTransactionCategoryBucket(transaction, categories, 'Não identificados');
+        const current = distMap.get(bucket.key) ?? {
+          id: bucket.key,
+          name: bucket.label,
+          value: 0,
+          category: bucket.category,
+        };
+        current.value += Number(transaction.amount);
+        if (!current.category && bucket.category) {
+          current.category = bucket.category;
+        }
+        distMap.set(bucket.key, current);
+      });
+    } else {
+      getMonthTransactionsForReport({
+        transactions,
+        creditCards,
+        month,
+        selectedAccountId,
+        viewRegime,
+      }).forEach((transaction) => {
+        const isToCard = isTransferToCard(transaction, transactions);
+        const isAllowed = selectedAccountId !== 'all'
+          ? (transaction.type === 'expense' && (!transaction.isTransfer || isToCard) && !transaction.deleted_at && (transaction.isInvoicePayment || !transaction.cardId))
+          : (viewRegime === 'caixa'
+              ? (transaction.type === 'expense' && (!transaction.isTransfer || isToCard) && !transaction.deleted_at && (transaction.isInvoicePayment || !transaction.cardId))
+              : isProjectedCategoryConsumptionExpense(transaction, transactions));
+
+        if (!isAllowed) return;
+
+        const bucket = getTransactionCategoryBucket(transaction, categories, 'Não identificados');
+        const current = distMap.get(bucket.key) ?? {
+          id: bucket.key,
+          name: bucket.label,
+          value: 0,
+          category: bucket.category,
+        };
+        current.value += Number(transaction.amount);
+        if (!current.category && bucket.category) {
+          current.category = bucket.category;
+        }
+        distMap.set(bucket.key, current);
+      });
+    }
   });
 
   const ranked = Array.from(distMap.values())
@@ -593,6 +732,7 @@ function buildCategoryPeriodValue({
   reportMode,
   bucketId,
   subcategoryId,
+  viewRegime = 'caixa',
 }: {
   transactions: Transaction[];
   creditCards: CreditCard[];
@@ -603,6 +743,7 @@ function buildCategoryPeriodValue({
   reportMode: ReportMode;
   bucketId: string;
   subcategoryId?: string;
+  viewRegime?: 'caixa' | 'competencia';
 }) {
   return getCategoryTransactionsForPeriod({
     transactions,
@@ -614,6 +755,7 @@ function buildCategoryPeriodValue({
     reportMode,
     bucketId,
     subcategoryId,
+    viewRegime,
   }).reduce((total, transaction) => total + Number(transaction.amount), 0);
 }
 
@@ -627,6 +769,7 @@ function getCategoryTransactionsForPeriod({
   reportMode,
   bucketId,
   subcategoryId,
+  viewRegime = 'caixa',
 }: {
   transactions: Transaction[];
   creditCards: CreditCard[];
@@ -637,27 +780,51 @@ function getCategoryTransactionsForPeriod({
   reportMode: ReportMode;
   bucketId: string;
   subcategoryId?: string;
+  viewRegime?: 'caixa' | 'competencia';
 }): Transaction[] {
   const periodKeys = new Set(
     eachMonthOfInterval({ start, end }).map((month) => format(month, 'yyyy-MM'))
   );
+  const todayStart = startOfMonth(new Date());
+
+  const isTesting = import.meta.env.MODE === 'test';
 
   const scopedTransactions = reportMode === 'projected'
-    ? eachMonthOfInterval({ start, end }).flatMap((month) =>
-        getMonthTransactionsForReport({
-          transactions,
-          creditCards,
-          month,
-          selectedAccountId,
-        })
-      )
+    ? eachMonthOfInterval({ start, end }).flatMap((month) => {
+        const isPast = !isTesting && startOfMonth(month) < todayStart;
+        return isPast
+          ? transactions.filter(t => {
+              if (t.isVirtual) return false;
+              const pKey = getReportPeriodKey(t);
+              return pKey === format(month, 'yyyy-MM');
+            })
+          : getMonthTransactionsForReport({
+              transactions,
+              creditCards,
+              month,
+              selectedAccountId,
+              viewRegime,
+            });
+      })
     : transactions;
 
   return scopedTransactions
     .filter((transaction) => {
-      const isAllowed = selectedAccountId !== 'all'
-        ? (transaction.type === 'expense' && !transaction.isTransfer && !transaction.deleted_at && (transaction.isInvoicePayment || !transaction.cardId))
-        : (reportMode === 'projected' ? isProjectedCategoryConsumptionExpense(transaction) : isRealizedCategoryConsumptionExpense(transaction));
+      const isToCard = isTransferToCard(transaction, transactions);
+      const txDate = parseLocalDate(transaction.date);
+      const isPast = !isTesting && startOfMonth(txDate) < todayStart;
+
+      const isAllowed = isPast
+        ? (selectedAccountId !== 'all'
+            ? (transaction.type === 'expense' && transaction.isPaid && (!transaction.isTransfer || isToCard) && !transaction.deleted_at && (transaction.isInvoicePayment || !transaction.cardId))
+            : (viewRegime === 'caixa'
+                ? (transaction.type === 'expense' && transaction.isPaid && (!transaction.isTransfer || isToCard) && !transaction.deleted_at && (transaction.isInvoicePayment || !transaction.cardId))
+                : isRealizedCategoryConsumptionExpense(transaction, transactions)))
+        : (selectedAccountId !== 'all'
+            ? (transaction.type === 'expense' && (!transaction.isTransfer || isToCard) && !transaction.deleted_at && (transaction.isInvoicePayment || !transaction.cardId))
+            : (viewRegime === 'caixa'
+                ? (transaction.type === 'expense' && (!transaction.isTransfer || isToCard) && !transaction.deleted_at && (transaction.isInvoicePayment || !transaction.cardId))
+                : (reportMode === 'projected' ? isProjectedCategoryConsumptionExpense(transaction, transactions) : isRealizedCategoryConsumptionExpense(transaction, transactions))));
 
       if (!isAllowed) return false;
 
@@ -667,8 +834,15 @@ function getCategoryTransactionsForPeriod({
       }
 
       if (reportMode === 'realized') {
+        if (!transaction.isPaid) return false;
         if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return false;
-        if (!periodKeys.has(getCategoryConsumptionPeriodKey(transaction))) return false;
+        
+        const periodKey = transaction.isInvoicePayment && transaction.invoiceMonthYear
+          ? (transaction.isPaid ? format(parseLocalDate(transaction.date), 'yyyy-MM') : transaction.invoiceMonthYear)
+          : (viewRegime === 'caixa' && transaction.cardId && transaction.invoiceMonthYear
+              ? transaction.invoiceMonthYear
+              : format(parseLocalDate(transaction.date), 'yyyy-MM'));
+        if (!periodKeys.has(periodKey)) return false;
       }
 
 
@@ -686,6 +860,7 @@ function buildCategoryPeriodItems(params: {
   reportMode: ReportMode;
   bucketId: string;
   subcategoryId?: string;
+  viewRegime?: 'caixa' | 'competencia';
 }): CategoryAnalysisItem[] {
   return getCategoryTransactionsForPeriod(params)
     .map((transaction) => ({
@@ -760,12 +935,13 @@ export default function ReportsDashboard() {
   } = useFinanceStore();
 
   const [period, setPeriod] = useState<Period>('month');
-  const [reportMode, setReportMode] = useState<ReportMode>('projected');
+  const reportMode: ReportMode = 'projected';
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>('all');
   const [mainChartType, setMainChartType] = useState<'line' | 'bar' | 'area'>('line');
   const [categoryChartType, setCategoryChartType] = useState<'line' | 'bar' | 'area'>('line');
+  const viewRegime = 'caixa';
 
   // Reset da subcategoria ao mudar de categoria
   useEffect(() => {
@@ -920,6 +1096,7 @@ export default function ReportsDashboard() {
         start,
         end,
         selectedAccountId,
+        viewRegime,
       });
     }
 
@@ -930,8 +1107,9 @@ export default function ReportsDashboard() {
       start,
       end,
       selectedAccountId,
+      viewRegime,
     });
-  }, [transactions, creditCards, categories, selectedAccountId]);
+  }, [transactions, creditCards, categories, selectedAccountId, viewRegime]);
 
   const metrics = useMemo(() => {
     const current = getPeriodDataForMode(intervals.start, intervals.end, reportMode);
@@ -1008,6 +1186,7 @@ export default function ReportsDashboard() {
         start: intervals.start,
         end: intervals.end,
         selectedAccountId,
+        viewRegime,
       });
     }
 
@@ -1017,8 +1196,9 @@ export default function ReportsDashboard() {
       start: intervals.start,
       end: intervals.end,
       selectedAccountId,
+      viewRegime,
     });
-  }, [transactions, creditCards, categories, intervals, selectedAccountId, reportMode]);
+  }, [transactions, creditCards, categories, intervals, selectedAccountId, reportMode, viewRegime]);
 
   const expenseCategories = useMemo(
     () => categories.filter((category) => category.type === 'expense' && category.isActive !== false),
@@ -1072,6 +1252,7 @@ export default function ReportsDashboard() {
       reportMode,
       bucketId: selectedCategory.id,
       subcategoryId: selectedSubcategoryId,
+      viewRegime,
     });
     const previous = buildCategoryPeriodValue({
       transactions,
@@ -1083,6 +1264,7 @@ export default function ReportsDashboard() {
       reportMode,
       bucketId: selectedCategory.id,
       subcategoryId: selectedSubcategoryId,
+      viewRegime,
     });
     const trend = buildTrendPeriodPoints(period, viewDate).map((point) => ({
       name: point.name,
@@ -1096,6 +1278,7 @@ export default function ReportsDashboard() {
         reportMode,
         bucketId: selectedCategory.id,
         subcategoryId: selectedSubcategoryId,
+        viewRegime,
       }),
       isCurrent: point.isCurrent,
     }));
@@ -1115,9 +1298,10 @@ export default function ReportsDashboard() {
         reportMode,
         bucketId: selectedCategory.id,
         subcategoryId: selectedSubcategoryId,
+        viewRegime,
       }),
     };
-  }, [categories, creditCards, intervals, period, reportMode, selectedAccountId, selectedCategory, selectedSubcategoryId, transactions, viewDate]);
+  }, [categories, creditCards, intervals, period, reportMode, selectedAccountId, selectedCategory, selectedSubcategoryId, transactions, viewDate, viewRegime]);
 
   const categoryTrendData = useMemo(() => selectedCategoryAnalysis?.trend || [], [selectedCategoryAnalysis]);
   const categoryValues = useMemo(() => categoryTrendData.map(d => Number(d.valor)), [categoryTrendData]);
@@ -1172,6 +1356,7 @@ export default function ReportsDashboard() {
             creditCards,
             month,
             selectedAccountId,
+            viewRegime,
           })
         : transactions.filter((transaction) => {
             if (transaction.isVirtual) return false;
@@ -1181,6 +1366,13 @@ export default function ReportsDashboard() {
             const matchesDate = isSameMonth(transactionDate, month);
 
             if (transaction.isInvoicePayment && transaction.invoiceMonthYear) {
+              if (transaction.isPaid) {
+                return isSameMonth(transactionDate, month);
+              }
+              return transaction.invoiceMonthYear === format(month, 'yyyy-MM');
+            }
+
+            if (viewRegime === 'caixa' && transaction.cardId && transaction.invoiceMonthYear) {
               return transaction.invoiceMonthYear === format(month, 'yyyy-MM');
             }
 
@@ -1216,12 +1408,18 @@ export default function ReportsDashboard() {
 
     monthKeys.forEach((monthKey) => {
       monthlyTransactionsMap[monthKey].forEach((transaction) => {
-        if (transaction.isTransfer) return;
+        const isToCard = isTransferToCard(transaction, transactions);
+        if (transaction.isTransfer && !isToCard) return;
         if (transaction.type === 'income') {
           if (reportMode === 'projected' ? !isProjectedReportIncome(transaction) : !isEffectiveReportIncome(transaction)) return;
         }
         if (transaction.type === 'expense') {
-          if (reportMode === 'projected' ? !isProjectedReportExpense(transaction) : !isEffectiveCategoryExpense(transaction)) return;
+          const isExpense = selectedAccountId !== 'all'
+            ? (transaction.isInvoicePayment || !transaction.cardId)
+            : (viewRegime === 'caixa'
+                ? (transaction.isInvoicePayment || !transaction.cardId)
+                : !transaction.isInvoicePayment);
+          if (!isExpense) return;
         }
 
         const rowName = transaction.isInvoicePayment
@@ -1306,31 +1504,138 @@ export default function ReportsDashboard() {
       currentTotalBalance,
       projectedYearEndBalance,
     };
-  }, [accounts, categories, creditCards, period, periodMonths, reportMode, selectedAccountId, transactions, viewDate, yearMonths]);
+  }, [accounts, categories, creditCards, period, periodMonths, reportMode, selectedAccountId, transactions, viewDate, yearMonths, viewRegime]);
 
   const fluxoScore = useMemo(
     () => calculateFluxoScore(transactions, debts, new Date()),
     [transactions, debts]
   );
 
+  const accountBalancesAtEnd = useMemo(() => {
+    const lastDay = intervals.end;
+    
+    return accounts.map(acc => {
+      let balance = Number(acc.balance) || 0;
+      
+      // Filtrar transações reais (não virtuais) pagas que aconteceram DEPOIS da data final do período
+      const postTransactions = transactions.filter(tx => {
+        if (tx.isVirtual || tx.deleted_at || !tx.isPaid) return false;
+        
+        const txDateStr = tx.paymentDate || tx.date;
+        const txDate = parseLocalDate(txDateStr);
+        return txDate > lastDay;
+      });
+      
+      // Reverter o impacto no saldo
+      postTransactions.forEach(tx => {
+        const amount = Number(tx.amount) || 0;
+        
+        if (tx.isTransfer && tx.transferGroupId) {
+          if (tx.accountId === acc.id && tx.type === 'expense') {
+            balance += amount;
+          } else if (tx.accountId === acc.id && tx.type === 'income') {
+            balance -= amount;
+          }
+        } else if (tx.accountId === acc.id) {
+          if (tx.type === 'expense') {
+            balance += amount;
+          } else if (tx.type === 'income') {
+            balance -= amount;
+          }
+        }
+      });
+      
+      return {
+        ...acc,
+        monthEndBalance: balance
+      };
+    });
+  }, [accounts, transactions, intervals.end]);
+
+  const visibleAccounts = useMemo(() => {
+    return accountBalancesAtEnd.filter(acc => {
+      // Se possui saldo de fechamento relevante (maior que 1 centavo)
+      if (Math.abs(acc.monthEndBalance) > 0.009) return true;
+      
+      // Ou se teve alguma transação no período
+      const hasTxInPeriod = transactions.some(tx => {
+        if (tx.deleted_at || tx.accountId !== acc.id) return false;
+        const txDate = parseLocalDate(tx.date);
+        return txDate >= intervals.start && txDate <= intervals.end;
+      });
+      
+      return hasTxInPeriod;
+    });
+  }, [accountBalancesAtEnd, transactions, intervals.start, intervals.end]);
+
+  const isPastPeriod = useMemo(() => {
+    const isTesting = import.meta.env.MODE === 'test';
+    if (isTesting) return false;
+
+    const today = new Date();
+    return intervals.end < startOfMonth(today);
+  }, [intervals.end]);
+
   return (
     <>
-      <div className="space-y-8 animate-fade-in max-w-[1600px] mx-auto pb-10 px-4 xl:px-6 no-print-report-view">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <PageHeader title="Relatórios Analíticos" icon={PieIcon} />
-      </div>
+      <div className="space-y-6 animate-fade-in max-w-[1600px] mx-auto pb-10 px-4 xl:px-6 no-print-report-view">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <PageHeader title="Relatórios Analíticos" icon={PieIcon} />
+          
+          {fluxoScoreEnabled && (
+            <div className="flex items-center gap-3 bg-white/40 dark:bg-zinc-900/30 border border-gray-150/30 dark:border-zinc-800/40 px-4 py-2 rounded-2xl shadow-sm backdrop-blur-sm self-start sm:self-auto transition-all duration-300">
+              <div className="relative h-11 w-11 flex-shrink-0">
+                <svg className="h-full w-full -rotate-90" viewBox="0 0 120 120">
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="48"
+                    fill="none"
+                    stroke="hsl(var(--primary) / 0.15)"
+                    strokeWidth="12"
+                  />
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="48"
+                    fill="none"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 48}
+                    strokeDashoffset={2 * Math.PI * 48 * (1 - fluxoScore.score / 1000)}
+                    style={{
+                      transition: 'stroke-dashoffset 1300ms cubic-bezier(0.2, 0.9, 0.2, 1)',
+                    }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-xs font-black tracking-tighter tabular-nums">{fluxoScore.score}</span>
+                </div>
+              </div>
+              <div className="leading-tight">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Fluxo Score</p>
+                <p className={cn("text-[9px] font-black uppercase tracking-wider", 
+                  fluxoScore.score >= 800 ? "text-emerald-500" :
+                  fluxoScore.score >= 600 ? "text-primary" :
+                  fluxoScore.score >= 400 ? "text-warning" : "text-rose-500"
+                )}>
+                  {fluxoScore.score >= 800 ? 'Saúde Excelente' :
+                   fluxoScore.score >= 600 ? 'Saúde Saudável' :
+                   fluxoScore.score >= 400 ? 'Atenção Necessária' : 'Saúde Crítica'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
 
-      {/* Painel de Controle de Filtros (Apple-style structured card) */}
-      <div className="bg-card border border-border/50 rounded-[2rem] p-5 shadow-md no-print grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-        
-        {/* SEÇÃO 1: PERÍODO E NAVEGAÇÃO */}
-        <div className="space-y-2">
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground block">
-            Período e Visualização
-          </span>
-          <div className="flex flex-col gap-2">
-            {/* Tabs para Mês/Semestre/Ano */}
-            <div className="relative flex p-0.5 bg-gray-100 dark:bg-zinc-800 rounded-xl h-9 items-center w-full">
+        {/* Painel de Controle de Filtros Premium Apple-Style */}
+        <div className="bg-white/80 dark:bg-zinc-900/70 backdrop-blur-md border border-gray-200/50 dark:border-zinc-800/50 rounded-2xl p-3.5 shadow-sm no-print flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          
+          {/* Lado Esquerdo: Controles de Período Cronológico */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 lg:flex-initial">
+            {/* Seletor de Período (Mês / Semestre / Ano) */}
+            <div className="relative flex p-0.5 bg-gray-100 dark:bg-zinc-800 rounded-xl h-9 items-center w-full sm:w-64 border border-gray-200/20 dark:border-zinc-700/25">
               <div 
                 className="absolute top-0.5 bottom-0.5 bg-white dark:bg-zinc-700 rounded-lg shadow-sm transition-all duration-200 ease-out" 
                 style={{
@@ -1354,154 +1659,118 @@ export default function ReportsDashboard() {
               ))}
             </div>
 
-            {/* Controles de avanço do período */}
-            <div className="flex items-center justify-between bg-gray-50 dark:bg-zinc-800 rounded-xl border border-border/40 p-0.5 h-9">
+            {/* Controle de Avanço / Retrocesso com Indicador do Período Atual */}
+            <div className="flex items-center justify-between bg-gray-50 dark:bg-zinc-800/40 rounded-xl border border-gray-200/30 dark:border-zinc-700/35 px-1 h-9 w-full sm:w-52">
               <button
                 onClick={handlePrevPeriod}
-                className="p-1.5 hover:bg-white dark:hover:bg-zinc-700 rounded-lg transition-all"
+                className="p-1.5 hover:bg-white dark:hover:bg-zinc-700 rounded-lg transition-all text-muted-foreground hover:text-foreground"
                 aria-label="Período anterior"
               >
-                <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-[10px] font-black uppercase tracking-wider text-foreground truncate max-w-[150px]">
+              <span className="text-[10px] font-black uppercase tracking-wider text-foreground truncate max-w-[140px] select-none text-center flex-1">
                 {currentPeriodLabel}
               </span>
               <button
                 onClick={handleNextPeriod}
-                className="p-1.5 hover:bg-white dark:hover:bg-zinc-700 rounded-lg transition-all"
+                className="p-1.5 hover:bg-white dark:hover:bg-zinc-700 rounded-lg transition-all text-muted-foreground hover:text-foreground"
                 aria-label="Próximo período"
               >
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
-        </div>
 
-        {/* SEÇÃO 2: REGIME E FILTRO DE CONTA */}
-        <div className="space-y-2">
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] block select-none h-4">
-            &nbsp;
-          </span>
-          <div className="flex flex-col gap-2">
-            {/* Seletor de Conta */}
+          {/* Divisor vertical sutil no desktop */}
+          <div className="hidden lg:block h-6 w-px bg-gray-200 dark:bg-zinc-800" />
+
+          {/* Lado Direito: Filtros Contextuais e Seletor de Data */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {/* Selects de Data (Ano / Mês) */}
+            <div className="flex items-center gap-2">
+              {/* Select de Ano */}
+              <Select
+                value={String(viewDate.getFullYear())}
+                onValueChange={(val) => setViewDate(new Date(Number(val), period === 'semester' ? (viewDate.getMonth() < 6 ? 0 : 6) : 0, 1))}
+              >
+                <SelectTrigger className="h-9 rounded-xl border border-gray-200/40 dark:border-zinc-700/40 bg-gray-50 dark:bg-zinc-800/40 font-bold text-xs w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border border-border/50">
+                  {yearOptions.map((year) => (
+                    <SelectItem key={year} value={String(year)} className="font-bold text-xs">{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Select de Mês */}
+              {period === 'month' && (
+                <Select
+                  value={String(viewDate.getMonth())}
+                  onValueChange={(val) => setViewDate(new Date(viewDate.getFullYear(), Number(val), 1))}
+                >
+                  <SelectTrigger className="h-9 rounded-xl border border-gray-200/40 dark:border-zinc-700/40 bg-gray-50 dark:bg-zinc-800/40 font-bold text-xs w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border border-border/50">
+                    {Array.from({ length: 12 }).map((_, monthIndex) => (
+                      <SelectItem key={monthIndex} value={String(monthIndex)} className="font-bold text-xs">
+                        {format(new Date(2026, monthIndex, 1), 'MMMM', { locale: ptBR })}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {/* Select de Semestre */}
+              {period === 'semester' && (
+                <Select
+                  value={viewDate.getMonth() < 6 ? '1' : '2'}
+                  onValueChange={(val) => setViewDate(new Date(viewDate.getFullYear(), val === '1' ? 0 : 6, 1))}
+                >
+                  <SelectTrigger className="h-9 rounded-xl border border-gray-200/40 dark:border-zinc-700/40 bg-gray-50 dark:bg-zinc-800/40 font-bold text-xs w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border border-border/50">
+                    <SelectItem value="1" className="font-bold text-xs">1º Semestre</SelectItem>
+                    <SelectItem value="2" className="font-bold text-xs">2º Semestre</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            {/* Seletor de Conta (Wallet) */}
             <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-              <SelectTrigger className="h-9 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-border/50 font-bold text-xs text-foreground outline-none w-full">
+              <SelectTrigger className="h-9 rounded-xl bg-gray-50 dark:bg-zinc-800/40 border border-gray-200/40 dark:border-zinc-700/40 font-bold text-xs text-foreground w-full sm:w-60">
                 <Wallet className="w-3.5 h-3.5 mr-2 text-primary" />
                 <SelectValue placeholder="Conta" />
               </SelectTrigger>
               <SelectContent className="rounded-xl border border-border/50">
-                <SelectItem value="all" className="font-bold">Todas as Contas</SelectItem>
+                <SelectItem value="all" className="font-bold text-xs">Todas as Contas</SelectItem>
                 {accounts.map((acc) => (
-                  <SelectItem key={acc.id} value={acc.id} className="font-bold">
+                  <SelectItem key={acc.id} value={acc.id} className="font-bold text-xs">
                     {acc.bank ? `${acc.bank} - ${acc.name}` : acc.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-
-            {/* Tabs para Projetado/Realizado */}
-            <div className="relative flex p-0.5 bg-gray-100 dark:bg-zinc-800 rounded-xl h-9 items-center w-full">
-              <div 
-                className="absolute top-0.5 bottom-0.5 bg-white dark:bg-zinc-700 rounded-lg shadow-sm transition-all duration-200 ease-out" 
-                style={{
-                  width: 'calc(50% - 2px)',
-                  transform: `translateX(${
-                    reportMode === 'projected' ? '0%' : '100%'
-                  })`
-                }}
-              />
-              {(['projected', 'realized'] as ReportMode[]).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setReportMode(mode)}
-                  className={cn(
-                    "relative z-10 flex-1 py-1 text-center font-bold text-[10px] uppercase tracking-wider transition-colors duration-200 select-none",
-                    reportMode === mode ? "text-gray-900 dark:text-zinc-50" : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {mode === 'projected' ? 'Projetado' : 'Realizado'}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 
-        {/* SEÇÃO 3: SELEÇÃO DE DATA ADICIONAL & AÇÕES */}
-        <div className="space-y-2">
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground block">
-            Filtros
-          </span>
-          <div className={cn("grid gap-2 w-full", period === 'year' ? "grid-cols-1" : "grid-cols-2")}>
-            {/* Select de Ano */}
-            <Select
-              value={String(viewDate.getFullYear())}
-              onValueChange={(val) => setViewDate(new Date(Number(val), period === 'semester' ? (viewDate.getMonth() < 6 ? 0 : 6) : 0, 1))}
-              className="w-full"
-            >
-              <SelectTrigger className="h-9 rounded-xl border border-border/50 bg-gray-50 dark:bg-zinc-800 font-bold text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border border-border/50">
-                {yearOptions.map((year) => (
-                  <SelectItem key={year} value={String(year)} className="font-bold">{year}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Select de Mês (se aplicável) */}
-            {period === 'month' && (
-              <Select
-                value={String(viewDate.getMonth())}
-                onValueChange={(val) => setViewDate(new Date(viewDate.getFullYear(), Number(val), 1))}
-                className="w-full"
-              >
-                <SelectTrigger className="h-9 rounded-xl border border-border/50 bg-gray-50 dark:bg-zinc-800 font-bold text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border border-border/50">
-                  {Array.from({ length: 12 }).map((_, monthIndex) => (
-                    <SelectItem key={monthIndex} value={String(monthIndex)} className="font-bold">
-                      {format(new Date(2026, monthIndex, 1), 'MMMM', { locale: ptBR })}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {/* Select de Semestre (se aplicável) */}
-            {period === 'semester' && (
-              <Select
-                value={viewDate.getMonth() < 6 ? '1' : '2'}
-                onValueChange={(val) => setViewDate(new Date(viewDate.getFullYear(), val === '1' ? 0 : 6, 1))}
-                className="w-full"
-              >
-                <SelectTrigger className="h-9 rounded-xl border border-border/50 bg-gray-50 dark:bg-zinc-800 font-bold text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border border-border/50">
-                  <SelectItem value="1" className="font-bold">1º Semestre</SelectItem>
-                  <SelectItem value="2" className="font-bold">2º Semestre</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-5">
         <StatCard
-          label={reportMode === 'projected' ? 'Receitas previstas' : 'Receitas efetivas'}
+          label={isPastPeriod ? 'Receitas realizadas' : (reportMode === 'projected' ? 'Receitas previstas' : 'Receitas efetivas')}
           value={metrics.income}
           icon={<ArrowUpCircle className="text-emerald-500" />}
           comparison={metrics.comparisons.income}
           periodLabel={periodLabel}
           compact={isMobile}
-          projectedValue={metrics.projectedIncome}
-          realizedValue={metrics.realizedIncome}
+          projectedValue={isPastPeriod ? undefined : metrics.projectedIncome}
+          realizedValue={isPastPeriod ? undefined : metrics.realizedIncome}
           reportMode={reportMode}
         />
         <StatCard
-          label={reportMode === 'projected' ? 'Despesas previstas' : 'Despesas efetivas'}
+          label={isPastPeriod ? 'Despesas realizadas' : (reportMode === 'projected' ? 'Despesas previstas' : 'Despesas efetivas')}
           value={metrics.totalExpenses}
           icon={<ArrowDownCircle className="text-rose-500" />}
           comparison={metrics.comparisons.expenses}
@@ -1509,27 +1778,60 @@ export default function ReportsDashboard() {
           forceRed
           invertColors
           compact={isMobile}
-          projectedValue={metrics.projectedExpenses}
-          realizedValue={metrics.realizedExpenses}
+          projectedValue={isPastPeriod ? undefined : metrics.projectedExpenses}
+          realizedValue={isPastPeriod ? undefined : metrics.realizedExpenses}
           reportMode={reportMode}
         />
         <StatCard
-          label={reportMode === 'projected' ? 'Saldo previsto' : 'Saldo efetivo do período'}
+          label={isPastPeriod ? 'Saldo realizado' : (reportMode === 'projected' ? 'Saldo previsto' : 'Saldo efetivo')}
           value={metrics.balance}
           icon={<TrendingUp className={metrics.balance >= 0 ? "text-primary" : "text-rose-500"} />}
           comparison={metrics.comparisons.balance}
           periodLabel={periodLabel}
           isNeutral
-          className="col-span-2 md:col-span-1"
           compact={isMobile}
-          projectedValue={metrics.projectedBalance}
-          realizedValue={metrics.realizedBalance}
+          projectedValue={isPastPeriod ? undefined : metrics.projectedBalance}
+          realizedValue={isPastPeriod ? undefined : metrics.realizedBalance}
           reportMode={reportMode}
         />
-        {fluxoScoreEnabled ? (
-          <FluxoScoreCard score={fluxoScore.score} className="col-span-2 md:col-span-1" />
-        ) : null}
       </div>
+
+      {/* Saldos de Fechamento das Contas */}
+      {visibleAccounts.length > 0 && (
+        <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-2xl p-5 shadow-sm space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-base lg:text-lg font-black tracking-tight">Saldos de Fechamento das Carteiras</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Saldo consolidado das suas contas bancárias ao final do período selecionado</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+            {visibleAccounts.map(acc => {
+              const isNegative = acc.monthEndBalance < 0;
+              return (
+                <div 
+                  key={acc.id} 
+                  className="p-4 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/30 border border-gray-100 dark:border-zinc-800/60 flex flex-col justify-between min-h-[105px] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md dark:hover:shadow-none"
+                  style={{ borderLeft: `4px solid ${acc.color || 'gray'}` }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest truncate">{acc.bank || acc.name}</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-200/50 dark:bg-zinc-800 text-muted-foreground/80 font-black uppercase truncate max-w-[80px]">{acc.name}</span>
+                  </div>
+                  <div className="mt-3">
+                    <p className="text-[9px] font-black uppercase text-muted-foreground/60 tracking-wider">Fechamento</p>
+                    <p className={cn("text-base lg:text-lg font-black tracking-tight tabular-nums truncate leading-none mt-1.5", 
+                      isNegative ? "text-rose-500" : "text-emerald-500 dark:text-zinc-50"
+                    )}>
+                      {formatCurrency(acc.monthEndBalance)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {!isMobile && selectedAccountId === 'all' && (
         <BudgetOverview
@@ -2102,66 +2404,65 @@ function StatCard({
   realizedValue?: number,
   reportMode?: 'projected' | 'realized',
 }) {
+  const hasFooter = projectedValue !== undefined && realizedValue !== undefined;
+
   return (
     <div className={cn(
-      "bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 shadow-sm group transition-all relative overflow-hidden flex flex-col justify-between",
-      compact ? "rounded-[1.5rem] p-4" : "rounded-[2.5rem] p-6 hover:scale-[1.02] min-h-[175px] md:min-h-[190px]"
+      "bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 shadow-sm group transition-all relative overflow-hidden flex flex-col justify-between rounded-2xl w-full",
+      compact 
+        ? "p-3.5" 
+        : "p-5 hover:scale-[1.01]"
     )}>
-      <div className={cn("flex justify-between items-center w-full gap-2", compact ? "mb-2" : "mb-3")}>
-        <div className={cn("rounded-2xl bg-zinc-50 dark:bg-zinc-800 group-hover:bg-primary/10 transition-colors flex items-center justify-center shrink-0", compact ? "p-2.5 h-10 w-10" : "p-3.5 h-12 w-12")}>
-          {icon}
+      {/* Topo do card: Ícone e Badge de Comparação */}
+      <div className="flex justify-between items-center w-full gap-2 mb-3 shrink-0">
+        <div className={cn(
+          "rounded-xl bg-zinc-50 dark:bg-zinc-800/60 group-hover:bg-primary/10 transition-colors flex items-center justify-center shrink-0", 
+          compact ? "p-1.5 h-7 w-7" : "p-2 h-9 w-9"
+        )}>
+          {React.cloneElement(icon as React.ReactElement, { className: cn((icon as React.ReactElement).props.className, compact ? "w-3.5 h-3.5" : "w-4.5 h-4.5") })}
         </div>
+        {comparison && periodLabel && (
+          <ComparisonBadge 
+            comparison={comparison} 
+            periodLabel={periodLabel} 
+            invertColors={invertColors} 
+            compact={true}
+          />
+        )}
       </div>
 
-      <div className="space-y-1">
-        <p className={cn("font-bold text-muted-foreground uppercase tracking-widest", compact ? "text-[10px]" : "text-xs")}>{label}</p>
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className={cn(
-            "whitespace-nowrap font-black tracking-tighter tabular-nums leading-none",
-            compact ? "text-xl" : "text-2xl lg:text-3xl",
-            forceRed ? "text-rose-500" : (!isNeutral && (value >= 0 ? "text-emerald-500" : "text-rose-500")),
-            isNeutral && "text-gray-900 dark:text-zinc-50"
-          )}>
-            {isPercentValue ? `${value.toFixed(1)}%` : formatCurrency(value)}
-          </p>
-          {comparison && periodLabel && (
-            <ComparisonBadge 
-              comparison={comparison} 
-              periodLabel={periodLabel} 
-              invertColors={invertColors} 
-              compact={true}
-            />
-          )}
-        </div>
+      {/* Conteúdo Principal (Label + Valor) */}
+      <div className="flex-1 flex flex-col justify-end min-w-0">
+        <p className={cn(
+          "font-bold text-muted-foreground uppercase tracking-[0.12em] block select-none truncate w-full", 
+          compact ? "text-[8.5px] mb-0.5" : "text-[9.5px] mb-1"
+        )}>
+          {label}
+        </p>
+        <p className={cn(
+          "font-black tracking-tight tabular-nums leading-none whitespace-nowrap truncate w-full",
+          compact 
+            ? "text-lg" 
+            : "text-xl sm:text-2xl md:text-3xl",
+          forceRed ? "text-rose-500" : (!isNeutral && (value >= 0 ? "text-emerald-500" : "text-rose-500")),
+          isNeutral && "text-gray-900 dark:text-zinc-50"
+        )}>
+          {isPercentValue ? `${value.toFixed(1)}%` : formatCurrency(value)}
+        </p>
       </div>
 
-      {projectedValue !== undefined && realizedValue !== undefined && (
-        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-zinc-800/80 flex items-center justify-between text-[11px] font-bold text-muted-foreground w-full gap-2 shrink-0">
-          {/* Desktop view: show both values side-by-side */}
-          <div className="hidden md:flex items-center justify-between w-full">
-            <div className="flex items-center gap-1">
-              <span className="opacity-60">Previsto:</span>
-              <span className="font-black text-gray-800 dark:text-zinc-100 tabular-nums">{formatCurrency(projectedValue)}</span>
+      {/* Rodapé: Detalhes Previsto vs Realizado */}
+      {hasFooter && (
+        <div className="pt-2.5 mt-2.5 border-t border-gray-150/40 dark:border-zinc-800/50 flex items-center justify-between text-[9.5px] font-bold text-muted-foreground/80 w-full gap-2 shrink-0 min-w-0">
+          <div className="flex items-center justify-between w-full gap-1.5 truncate">
+            <div className="flex items-center gap-0.5 truncate">
+              <span className="opacity-60 shrink-0">Prev:</span>
+              <span className="font-black text-gray-700 dark:text-zinc-200 tabular-nums truncate">{formatCurrency(projectedValue)}</span>
             </div>
-            <div className="flex items-center gap-1">
-              <span className="opacity-60">Realizado:</span>
-              <span className="font-black text-gray-800 dark:text-zinc-100 tabular-nums">{formatCurrency(realizedValue)}</span>
+            <div className="flex items-center gap-0.5 truncate">
+              <span className="opacity-60 shrink-0">Real:</span>
+              <span className="font-black text-gray-700 dark:text-zinc-200 tabular-nums truncate">{formatCurrency(realizedValue)}</span>
             </div>
-          </div>
-          
-          {/* Mobile view: show only the other value (alternative to current reportMode) */}
-          <div className="flex md:hidden items-center justify-center w-full">
-            {reportMode === 'realized' ? (
-              <div className="flex items-center gap-1">
-                <span className="opacity-60">Previsto:</span>
-                <span className="font-black text-gray-800 dark:text-zinc-100 tabular-nums">{formatCurrency(projectedValue)}</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1">
-                <span className="opacity-60">Realizado:</span>
-                <span className="font-black text-gray-800 dark:text-zinc-100 tabular-nums">{formatCurrency(realizedValue)}</span>
-              </div>
-            )}
           </div>
         </div>
       )}

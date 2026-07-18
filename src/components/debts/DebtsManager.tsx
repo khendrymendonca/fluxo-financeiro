@@ -280,7 +280,18 @@ export function DebtsManager({
   const computedAgreementTotal = calculateAgreementTotal(parsedEntryAmount, parsedInstallmentAmount, parsedTotalInstallments);
 
   const toNegotiate = debts.filter(d => d.status !== 'renegotiated');
-  const inPayment = debts.filter(d => d.status === 'renegotiated');
+  const inPayment = debts.filter(d => {
+    if (d.status !== 'renegotiated') return false;
+    const summary = debtSummaries[d.id];
+    const remAmt = summary ? summary.remainingAmount : d.remainingAmount;
+    return remAmt > 0;
+  });
+  const finishedAgreements = debts.filter(d => {
+    if (d.status !== 'renegotiated') return false;
+    const summary = debtSummaries[d.id];
+    const remAmt = summary ? summary.remainingAmount : d.remainingAmount;
+    return remAmt <= 0;
+  });
 
   return (
     <div className="space-y-6">
@@ -439,6 +450,58 @@ export function DebtsManager({
                       <div className="p-3 rounded-xl bg-success/5 border border-success/10 text-center">
                         <p className="text-xs font-bold text-success select-none">
                           As parcelas deste acordo estão na sua Gestão de Contas para pagamento.
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {finishedAgreements.length > 0 && (
+              <div className="space-y-4 mt-6">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground ml-1">Acordos Finalizados</h3>
+                {finishedAgreements.map((debt) => {
+                  const summary = debtSummaries[debt.id];
+                  const totalAmt = summary?.totalAmount ?? Number(debt.totalAmount || 0);
+
+                  return (
+                    <div key={debt.id} className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 space-y-4 group animate-fade-in border-l-4 border-l-gray-400 opacity-60 hover:opacity-80 transition-opacity">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="font-semibold text-lg text-gray-900 dark:text-zinc-50 line-through">{debt.name}</h3>
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            <span className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-zinc-800 text-gray-500 text-[11px] font-black uppercase">Acordo Quitado</span>
+                            <p className="text-[11px] sm:text-xs text-gray-500 dark:text-zinc-500 font-bold">
+                              {summary?.hasDerivedInstallments
+                                ? `${summary.totalInstallments}/${summary.totalInstallments} pagas`
+                                : `${debt.totalInstallments} parcelas`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all">
+                          <button onClick={() => handleEdit(debt)} className="p-2 rounded-lg hover:bg-info/10 text-info" title="Editar">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => onDeleteDebt(debt.id)} className="p-2 rounded-lg hover:bg-danger/10 text-danger" title="Excluir">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-[11px] sm:text-xs font-black uppercase">
+                          <span className="text-muted-foreground whitespace-nowrap">Total Pago: {formatCurrency(totalAmt)}</span>
+                          <span className="text-success whitespace-nowrap">Restante: R$ 0,00</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden">
+                          <div className="h-full rounded-full bg-success/80 transition-all duration-500" style={{ width: `100%` }} />
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 text-center">
+                        <p className="text-xs font-bold text-gray-500 select-none">
+                          ✓ Parabéns! Este acordo foi totalmente quitado.
                         </p>
                       </div>
                     </div>

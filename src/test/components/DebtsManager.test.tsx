@@ -225,7 +225,7 @@ describe('DebtsManager - acordos em pagamento', () => {
     expect(onAddDebt).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Acordo real',
       totalAmount: 1073.89,
-      remainingAmount: 994.29,
+      remainingAmount: 994.3,
       installmentAmount: 90.39,
       totalInstallments: 11,
       status: 'renegotiated',

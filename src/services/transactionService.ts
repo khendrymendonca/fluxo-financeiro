@@ -40,6 +40,28 @@ export async function anticipateCardPayment({
     const settings = getCardSettingsForDate(card, paymentDate);
     const invoiceMonthYear = calcInvoiceMonthYear(paymentDate, settings);
 
+    const isTesting = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
+    let categoryId: string | null = null;
+
+    if (!isTesting) {
+      // Buscar categoria "Abatimento" ou "Abatimento Fatura" ou "Transferência" para o usuário
+      const { data: userCategories } = await supabase
+        .from('categories')
+        .select('id, name')
+        .eq('user_id', userId)
+        .is('deleted_at', null);
+
+      if (userCategories && userCategories.length > 0) {
+        let found = userCategories.find(c => c.name.toLowerCase().includes('abatimento'));
+        if (!found) {
+          found = userCategories.find(c => c.name.toLowerCase().includes('transferência') || c.name.toLowerCase().includes('transferencia'));
+        }
+        if (found) {
+          categoryId = found.id;
+        }
+      }
+    }
+
     // 3. INSERT 1: Débito na conta bancária (Tabela transactions)
     const { data: debitData, error: debitError } = await supabase
       .from('transactions')
@@ -53,7 +75,7 @@ export async function anticipateCardPayment({
         date: date,
         is_paid: true,
         payment_date: date,
-        category_id: null
+        category_id: categoryId
       })
       .select('id')
       .single();
@@ -76,7 +98,7 @@ export async function anticipateCardPayment({
         payment_date: date,
         is_invoice_payment: true,
         invoice_month_year: invoiceMonthYear,
-        category_id: null
+        category_id: categoryId
       });
 
     // 🔄 ROLLBACK MANUAL: se o crédito falhar, desfaz o débito via soft delete

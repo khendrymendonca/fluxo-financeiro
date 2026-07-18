@@ -618,6 +618,7 @@ describe('BillsManager - contas pendentes', () => {
           cardId: null,
           invoiceMonthYear: null,
           amount: 110,
+          description: 'Conta 110',
         },
       });
     });
@@ -672,6 +673,7 @@ describe('BillsManager - contas pendentes', () => {
           cardId: null,
           invoiceMonthYear: null,
           amount: 130,
+          description: 'Conta 130',
         },
       });
     });
@@ -708,6 +710,7 @@ describe('BillsManager - contas pendentes', () => {
           cardId: null,
           invoiceMonthYear: null,
           amount: 180,
+          description: 'Acordo banco (1/3)',
         },
       });
     });
@@ -768,6 +771,7 @@ describe('BillsManager - contas pendentes', () => {
           cardId: 'card-1',
           invoiceMonthYear: '2026-04',
           amount: 180,
+          description: 'Acordo banco (1/3)',
         },
       });
     });

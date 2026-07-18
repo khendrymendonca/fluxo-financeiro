@@ -161,9 +161,8 @@ export default function CardsDashboard() {
         .filter((t) => {
           // 🛡️ REGRA DE ABATIMENTO: Só excluímos se for PAGAMENTO real (despesa), não estorno/abatimento (income)
           if (t.cardId !== selectedCardId || t.isVirtual || (t.isInvoicePayment && t.type === 'expense')) return false;
-          // 🛡️ REGRA DE COMPETÊNCIA: Filtra pela data da transação (date) e não pela fatura (invoiceMonthYear)
-          const tDateStr = t.date.slice(0, 7); // Pega 'YYYY-MM' da string ISO
-          return tDateStr === mStr;
+          // 🛡️ REGRA DE VENCIMENTO: Filtra pela fatura (invoiceMonthYear) e não pela data da transação
+          return t.invoiceMonthYear === mStr;
         })
         .reduce((s, t) => s + (t.type === "income" ? -t.amount : t.amount), 0);
       return { label, total: Math.max(0, total) };
@@ -796,6 +795,8 @@ export default function CardsDashboard() {
           />
         </Portal>
       )}
+
+
 
     </div>
   );

@@ -33,6 +33,48 @@ export function useTransactions(viewDate: Date) {
     queryKey: ['transactions', viewDate.getFullYear(), viewDate.getMonth(), user?.id],
     queryFn: async () => {
       if (!user) throw new Error("Usuário não autenticado");
+
+      // Auto-fix assíncrono para corrigir categoria de transações de abatimento antigas
+      if (typeof import.meta !== 'undefined' && import.meta.env?.MODE !== 'test') {
+        (async () => {
+          try {
+            const { data: cats } = await supabase
+              .from('categories')
+              .select('id, name')
+              .eq('user_id', user.id);
+            
+            if (cats && cats.length > 0) {
+              const abatementCat = cats.find(c => c.name.toLowerCase().includes('abatimento'));
+              if (abatementCat) {
+                const transferCat = cats.find(c => c.name.toLowerCase().includes('transferência') || c.name.toLowerCase().includes('transferencia'));
+                const { data: txsToFix } = await supabase
+                  .from('transactions')
+                  .select('id, category_id')
+                  .eq('user_id', user.id)
+                  .eq('type', 'expense')
+                  .ilike('description', '%abatimento%')
+                  .is('deleted_at', null);
+
+                if (txsToFix && txsToFix.length > 0) {
+                  const idsToFix = txsToFix
+                    .filter(t => !t.category_id || (transferCat && t.category_id === transferCat.id))
+                    .map(t => t.id);
+
+                  if (idsToFix.length > 0) {
+                    await supabase
+                      .from('transactions')
+                      .update({ category_id: abatementCat.id })
+                      .in('id', idsToFix);
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.error('[useTransactions] Auto-fix categories error:', e);
+          }
+        })();
+      }
+
       // Janela anual: garante relatórios completos e comparativos por meses no mesmo ano
       const windowStart = format(startOfYear(viewDate), 'yyyy-MM-dd');
       const windowEnd = format(endOfYear(viewDate), 'yyyy-MM-dd');
@@ -121,15 +163,28 @@ export function useCategories() {
         .eq('user_id', user.id);
 
       if (error) throw error;
-      return (data || []).map((c: any) => ({
-        ...c,
-        userId: c.user_id,
-        groupId: c.group_id,
-        isActive: c.is_active,
-        budgetGroup: c.budget_group,
-        isFixed: c.is_fixed,
-        budgetLimit: c.budget_limit
-      })) as Category[];
+      return (data || []).map((c: any) => {
+        let finalType = c.type;
+        // Auto-fix: muda categoria de abatimento para despesa (lógica nova)
+        if ((c.name === 'Abatimento Fatura' || c.name === 'Abatimento') && c.type === 'income') {
+          finalType = 'expense';
+          supabase
+            .from('categories')
+            .update({ type: 'expense' })
+            .eq('id', c.id)
+            .then(() => {}); // fogo-e-esqueça silencioso
+        }
+        return {
+          ...c,
+          type: finalType,
+          userId: c.user_id,
+          groupId: c.group_id,
+          isActive: c.is_active,
+          budgetGroup: c.budget_group,
+          isFixed: c.is_fixed,
+          budgetLimit: c.budget_limit
+        };
+      }) as Category[];
     },
     enabled: !!user,
     staleTime: 1000 * 60 * 5, // 5 minutos

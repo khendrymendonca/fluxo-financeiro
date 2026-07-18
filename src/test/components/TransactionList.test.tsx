@@ -7,15 +7,34 @@ import { todayLocalString } from '@/utils/dateUtils';
 
 vi.mock('@/components/ui/select', () => {
   return {
-    Select: ({ children, value, onValueChange }: any) => (
-      <select 
-        aria-label="Categoria" 
-        value={value} 
-        onChange={(e) => onValueChange(e.target.value)}
-      >
-        {children}
-      </select>
-    ),
+    Select: ({ children, value, onValueChange }: any) => {
+      let isSub = false;
+      const traverse = (node: any) => {
+        if (!node) return;
+        if (Array.isArray(node)) {
+          node.forEach(traverse);
+          return;
+        }
+        if (node.props) {
+          if (node.props.placeholder && String(node.props.placeholder).toLowerCase().includes('subcategoria')) {
+            isSub = true;
+          }
+          if (node.props.children) {
+            traverse(node.props.children);
+          }
+        }
+      };
+      traverse(children);
+      return (
+        <select 
+          aria-label={isSub ? "Subcategoria" : "Categoria"} 
+          value={value} 
+          onChange={(e) => onValueChange(e.target.value)}
+        >
+          {children}
+        </select>
+      );
+    },
     SelectTrigger: ({ children }: any) => children,
     SelectValue: ({ placeholder }: any) => <option value="">{placeholder}</option>,
     SelectContent: ({ children }: any) => children,
