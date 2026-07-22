@@ -75,8 +75,7 @@ export function usePushNotification() {
           user_id: user.id,
           endpoint,
           p256dh,
-          auth,
-          updated_at: new Date().toISOString()
+          auth
         }, {
           onConflict: 'endpoint'
         });
