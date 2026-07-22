@@ -216,6 +216,13 @@ export function usePushNotification() {
     }
   }, [subscription, removeSubscriptionFromSupabase, toast]);
 
+  // Garante que a assinatura local do navegador esteja sempre sincronizada com o Supabase
+  useEffect(() => {
+    if (subscription && user) {
+      saveSubscriptionToSupabase(subscription);
+    }
+  }, [subscription, user, saveSubscriptionToSupabase]);
+
   return {
     isSupported,
     permission,
@@ -225,3 +232,4 @@ export function usePushNotification() {
     unsubscribeUser
   };
 }
+

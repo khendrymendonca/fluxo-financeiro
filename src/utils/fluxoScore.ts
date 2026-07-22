@@ -82,14 +82,18 @@ export function calculateFluxoScore(
   debts: Debt[] = [],
   referenceDate = new Date()
 ): FluxoScoreBreakdown {
-  console.log('=== [DEBUG SCORE] INÍCIO DO RECALCULO ===');
-  console.log('[DEBUG SCORE] Analisando todos os acordos recebidos:', debts.map(d => ({
-    nome: d.name,
-    status: d.status,
-    remainingAmount: d.remainingAmount,
-    typeofRemaining: typeof d.remainingAmount,
-    isDebtActive: isDebtActive(d)
-  })));
+  const DEBUG = false; // Mude para true para ativar logs detalhados do score localmente
+  
+  if (DEBUG) {
+    console.log('=== [DEBUG SCORE] INÍCIO DO RECALCULO ===');
+    console.log('[DEBUG SCORE] Analisando todos os acordos recebidos:', debts.map(d => ({
+      nome: d.name,
+      status: d.status,
+      remainingAmount: d.remainingAmount,
+      typeofRemaining: typeof d.remainingAmount,
+      isDebtActive: isDebtActive(d)
+    })));
+  }
   
   const accountsPenalties: any[] = [];
   const accountsDelta = transactions.reduce((sum, tx) => {
@@ -187,19 +191,21 @@ export function calculateFluxoScore(
     )
   );
 
-  console.log('[DEBUG SCORE] Contas com Penalidade:', accountsPenalties);
-  console.log('[DEBUG SCORE] Acordos Ativos Computados:', activeDebts);
-  console.log('[DEBUG SCORE] Resumo do Cálculo:', {
-    baseline: SCORE_BASELINE,
-    totalAcordosRecebidos: debts.length,
-    deltaContasOriginal: accountsDelta,
-    deltaContasClamped: clampedAccountsDelta,
-    deltaAcordos: agreementsDelta,
-    bonusMensal: monthlyBonus,
-    scoreBruto: rawScore,
-    scoreFinalLimitado: score
-  });
-  console.log('=== [DEBUG SCORE] FIM DO RECALCULO ===');
+  if (DEBUG) {
+    console.log('[DEBUG SCORE] Contas com Penalidade:', accountsPenalties);
+    console.log('[DEBUG SCORE] Acordos Ativos Computados:', activeDebts);
+    console.log('[DEBUG SCORE] Resumo do Cálculo:', {
+      baseline: SCORE_BASELINE,
+      totalAcordosRecebidos: debts.length,
+      deltaContasOriginal: accountsDelta,
+      deltaContasClamped: clampedAccountsDelta,
+      deltaAcordos: agreementsDelta,
+      bonusMensal: monthlyBonus,
+      scoreBruto: rawScore,
+      scoreFinalLimitado: score
+    });
+    console.log('=== [DEBUG SCORE] FIM DO RECALCULO ===');
+  }
 
   return {
     score,
