@@ -46,12 +46,12 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'prompt',
       includeAssets: ['favicon-v2.svg', 'fluxo-logo-v2.svg', 'robots.txt'],
-      workbox: {
-        cleanupOutdatedCaches: true,
-        skipWaiting: true,
-        clientsClaim: true,
+      injectManifest: {
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // 4 MB
       },
       manifest: {
@@ -82,6 +82,10 @@ export default defineConfig(({ mode }) => ({
             purpose: 'maskable'
           }
         ]
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module'
       }
     })
   ],

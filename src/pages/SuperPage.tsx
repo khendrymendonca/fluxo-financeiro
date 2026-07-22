@@ -15,7 +15,10 @@ import {
   UserPlus,
   Mail,
   Lock,
-  User
+  User,
+  Bell,
+  Send,
+  MessageSquare
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -91,7 +94,7 @@ export default function SuperPage() {
 
         {/* Abas */}
         <Tabs defaultValue="users">
-          <TabsList className="w-full grid grid-cols-3 rounded-2xl h-11">
+          <TabsList className="w-full grid grid-cols-4 rounded-2xl h-11">
             <TabsTrigger
               value="users"
               className="rounded-xl text-xs font-black uppercase tracking-widest"
@@ -113,6 +116,13 @@ export default function SuperPage() {
               <Sparkles className="w-3.5 h-3.5 mr-1.5" />
               Temas
             </TabsTrigger>
+            <TabsTrigger
+              value="notifications"
+              className="rounded-xl text-xs font-black uppercase tracking-widest"
+            >
+              <Bell className="w-3.5 h-3.5 mr-1.5" />
+              Notificações
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="mt-6">
@@ -125,6 +135,10 @@ export default function SuperPage() {
 
           <TabsContent value="themes" className="mt-6">
             <SuperThemesTab />
+          </TabsContent>
+
+          <TabsContent value="notifications" className="mt-6">
+            <SuperNotificationsTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -1265,6 +1279,345 @@ function SuperThemesTab() {
             ))}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function SuperNotificationsTab() {
+  const [broadcastBody, setBroadcastBody] = useState('');
+  const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
+
+  // Estados para edição/criação de templates
+  const [isEditing, setIsEditing] = useState<string | null>(null);
+  const [tempType, setTempType] = useState('daily_reminder');
+  const [tempBody, setTempBody] = useState('');
+  const [tempSendTime, setTempSendTime] = useState('');
+
+  // Query: Carregar templates
+  const { data: templates = [], refetch: refetchTemplates, isLoading: loadingTemplates, error: queryError } = useQuery({
+    queryKey: ['super_push_templates'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('push_notification_templates')
+        .select('*')
+        .order('type', { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+    retry: false
+  });
+
+  // Mutation: Criar/Editar template
+  const { mutate: upsertTemplate, isPending: isSaving } = useMutation({
+    mutationFn: async (temp: { id?: string; type: string; title: string; body: string; send_time: string | null }) => {
+      const { error } = await supabase
+        .from('push_notification_templates')
+        .upsert({
+          id: temp.id || undefined,
+          type: temp.type,
+          title: temp.title,
+          body: temp.body,
+          send_time: temp.send_time
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Template de notificação salvo com sucesso!');
+      refetchTemplates();
+      setIsEditing(null);
+      resetForm();
+    },
+    onError: (err: any) => {
+      toast.error('Erro ao salvar template: ' + err.message);
+    }
+  });
+
+  // Mutation: Excluir template
+  const { mutate: deleteTemplate } = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('push_notification_templates')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Template excluído com sucesso!');
+      refetchTemplates();
+    },
+    onError: (err: any) => {
+      toast.error('Erro ao excluir template: ' + err.message);
+    }
+  });
+
+  const resetForm = () => {
+    setTempBody('');
+    setTempType('daily_reminder');
+    setTempSendTime('');
+    setIsEditing(null);
+  };
+
+  const handleEdit = (template: any) => {
+    setIsEditing(template.id);
+    setTempType(template.type);
+    setTempBody(template.body);
+    setTempSendTime(template.send_time || '');
+  };
+
+  const handleSaveTemplate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tempBody) {
+      toast.error('A frase do template é obrigatória');
+      return;
+    }
+    
+    // Metas e Limites de Orçamento são em tempo real, portanto send_time deve ser nulo
+    const isRealTime = tempType === 'goals_reached' || tempType === 'budget_limits';
+    
+    upsertTemplate({
+      id: isEditing || undefined,
+      type: tempType,
+      title: 'Fluxo',
+      body: tempBody,
+      send_time: isRealTime ? null : (tempSendTime || null)
+    });
+  };
+
+  const handleSendBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastBody) {
+      toast.error('A mensagem é obrigatória');
+      return;
+    }
+
+    setIsSendingBroadcast(true);
+    try {
+      // Dispara a Edge Function passando broadcast: true
+      const { data, error } = await supabase.functions.invoke('send-push', {
+        body: {
+          userId: 'all',
+          broadcast: true,
+          title: 'Fluxo',
+          body: broadcastBody,
+          type: 'daily_reminder',
+          url: '/'
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success('Notificação em massa disparada com sucesso!');
+      setBroadcastBody('');
+    } catch (err: any) {
+      console.error('Erro ao disparar broadcast:', err);
+      toast.error('Erro ao disparar: ' + err.message);
+    } finally {
+      setIsSendingBroadcast(false);
+    }
+  };
+
+  const notificationTypesLabels: Record<string, string> = {
+    bills_due: 'Contas a Vencer',
+    goals_reached: 'Metas Conquistadas',
+    budget_limits: 'Limites de Orçamento',
+    card_closing: 'Fechamento de Faturas',
+    daily_reminder: 'Lembrete de Lançamentos'
+  };
+
+  return (
+    <div className="space-y-8 pb-10">
+      {/* SEÇÃO 1: ENVIO EM MASSA */}
+      <div className="bg-gradient-to-br from-indigo-500/5 via-blue-500/5 to-transparent border border-indigo-500/10 rounded-[2.5rem] p-8 shadow-sm space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+            <Send className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">Disparo em Massa (Notificação Global)</h2>
+            <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">
+              Envia um aviso em tempo real para todos os usuários inscritos
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSendBroadcast} className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-xs font-black uppercase tracking-widest text-zinc-500 ml-1">Mensagem da Notificação</label>
+            <Input
+              value={broadcastBody}
+              onChange={(e) => setBroadcastBody(e.target.value)}
+              placeholder="Ex: Já lançou suas despesas hoje? Não perca tempo! 🫣"
+              className="h-12 rounded-2xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 font-bold"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            disabled={isSendingBroadcast}
+            className="w-full h-14 rounded-3xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-indigo-500/20"
+          >
+            {isSendingBroadcast ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                Enviando Notificação Global...
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4 mr-2" />
+                Disparar para Todos os Dispositivos
+              </>
+            )}
+          </Button>
+        </form>
+      </div>
+
+      {/* SEÇÃO 2: FORMULÁRIO DE TEMPLATE (CRIAR/EDITAR) */}
+      <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-[2.5rem] p-8 shadow-sm space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+            <MessageSquare className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">{isEditing ? 'Editar Template de Mensagem' : 'Novo Template de Mensagem'}</h2>
+            <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">
+              Gerencie as frases de avisos automáticos do sistema
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSaveTemplate} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-widest text-zinc-500 ml-1">Tipo da Notificação</label>
+              <select
+                value={tempType}
+                onChange={(e) => setTempType(e.target.value)}
+                className="w-full h-12 px-4 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                {Object.entries(notificationTypesLabels).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-widest text-zinc-500 ml-1">Hora de Envio</label>
+              <Input
+                type="time"
+                value={tempSendTime}
+                onChange={(e) => setTempSendTime(e.target.value)}
+                disabled={tempType === 'goals_reached' || tempType === 'budget_limits'}
+                placeholder="Ex: 09:00"
+                className="h-12 rounded-2xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 font-bold text-center cursor-pointer disabled:opacity-50"
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-xs font-black uppercase tracking-widest text-zinc-500 ml-1">Frase da Notificação (Curta)</label>
+              <Input
+                value={tempBody}
+                onChange={(e) => setTempBody(e.target.value)}
+                placeholder="Ex: Já lançou suas despesas hoje? Não perca tempo! 🫣"
+                className="h-12 rounded-2xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 font-bold"
+              />
+            </div>
+          </div>
+          <p className="text-[10px] text-zinc-400 font-bold italic ml-1">
+            Dica: Use variáveis como {"{description}"}, {"{amount}"}, {"{category}"} ou {"{name}"} nos tipos automáticos para o backend substituir.
+          </p>
+
+          <div className="flex gap-2">
+            <Button
+              type="submit"
+              disabled={isSaving}
+              className="flex-1 h-12 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-teal-500/20"
+            >
+              {isSaving ? 'Salvando...' : 'Salvar Template'}
+            </Button>
+            {isEditing && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={resetForm}
+                className="h-12 rounded-2xl font-bold px-6 border border-zinc-200 dark:border-zinc-800"
+              >
+                Cancelar
+              </Button>
+            )}
+          </div>
+        </form>
+      </div>
+
+      {/* SEÇÃO 3: LISTAGEM DE TEMPLATES */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground ml-1">Templates Salvos</h3>
+
+        {queryError ? (
+          <div className="text-center py-8 bg-amber-500/5 dark:bg-amber-500/5 border border-dashed border-amber-500/20 rounded-[2rem] p-6 space-y-2">
+            <p className="text-xs font-black uppercase tracking-widest text-amber-500">Tabela Não Encontrada</p>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
+              A tabela <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-[10px]">push_notification_templates</code> ainda não existe no seu banco de dados remoto.
+            </p>
+            <p className="text-[10px] text-zinc-400 font-bold max-w-sm mx-auto leading-relaxed">
+              Copie o código SQL da migração 0043 e execute-o no SQL Editor do painel do Supabase.
+            </p>
+          </div>
+        ) : loadingTemplates ? (
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : templates.length === 0 ? (
+          <div className="text-center py-10 bg-muted/5 border border-dashed rounded-3xl">
+            <p className="text-sm text-muted-foreground font-bold">Nenhum template cadastrado no momento.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {templates.map((temp: any) => (
+              <div
+                key={temp.id}
+                className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl p-5 flex flex-col justify-between gap-4 shadow-sm"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="secondary" className="font-bold text-[9px] uppercase tracking-wider bg-teal-500/10 text-teal-600 dark:text-teal-400">
+                      {notificationTypesLabels[temp.type] || temp.type}
+                    </Badge>
+                    {temp.send_time ? (
+                      <span className="text-[10px] font-black text-zinc-500 tracking-widest bg-zinc-100 dark:bg-zinc-800/80 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                        🕒 {temp.send_time}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-black text-zinc-500 tracking-widest bg-zinc-100 dark:bg-zinc-800/80 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                        ⚡ Tempo Real
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-bold text-sm text-foreground leading-relaxed">"{temp.body}"</p>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-gray-50 dark:border-zinc-800/50">
+                  <button
+                    onClick={() => handleEdit(temp)}
+                    className="p-2 text-zinc-500 hover:text-primary hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl transition-colors"
+                    title="Editar"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm('Tem certeza que deseja deletar este template?')) {
+                        deleteTemplate(temp.id);
+                      }
+                    }}
+                    className="p-2 text-zinc-500 hover:text-danger hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl transition-colors"
+                    title="Deletar"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { useMobileShortcuts, ShortcutId } from '@/hooks/useMobileShortcuts';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useDeleteUserAccount } from '@/hooks/useAccountMutations';
 import { useFeatureFlag, useUserProfile, useGlobalFlag } from '@/hooks/useFeatureFlags';
+import { usePushNotification } from '@/hooks/usePushNotification';
 import { BandeiraBrasil } from '@/components/branding/BandeiraBrasil';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +38,8 @@ import {
     AlertCircle,
     Loader2,
     HelpCircle,
-    Plus
+    Plus,
+    Bell
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
@@ -73,6 +75,14 @@ export function ProfileSettings() {
     const themeCustomizationTemporarilyUnlocked = true;
     const canCustomizeTheme = themeCustomizationTemporarilyUnlocked || hasThemeCustomizationAccess;
     const { data: profile } = useUserProfile();
+    const {
+        isSupported,
+        permission,
+        subscription,
+        loading: pushLoading,
+        subscribeUser,
+        unsubscribeUser
+    } = usePushNotification();
 
     // Estados para o formulário
     const [name, setName] = useState(user?.user_metadata?.full_name || '');
@@ -88,6 +98,33 @@ export function ProfileSettings() {
             return true;
         }
     });
+
+    const [prefs, setPrefs] = useState({
+        bills_due: user?.user_metadata?.notification_preferences?.bills_due ?? true,
+        bills_due_time: user?.user_metadata?.notification_preferences?.bills_due_time ?? '09:00',
+        goals_reached: user?.user_metadata?.notification_preferences?.goals_reached ?? true,
+        budget_limits: user?.user_metadata?.notification_preferences?.budget_limits ?? true,
+        card_closing: user?.user_metadata?.notification_preferences?.card_closing ?? true,
+        daily_reminder: user?.user_metadata?.notification_preferences?.daily_reminder ?? true,
+    });
+
+    const updatePreference = async (key: string, value: any) => {
+        const newPrefs = { ...prefs, [key]: value };
+        setPrefs(newPrefs);
+        
+        try {
+            const { error } = await supabase.auth.updateUser({
+                data: {
+                    ...user?.user_metadata,
+                    notification_preferences: newPrefs
+                }
+            });
+            if (error) throw error;
+            toast.success('Preferências de notificação atualizadas!');
+        } catch (e: any) {
+            toast.error('Erro ao salvar preferências: ' + e.message);
+        }
+    };
 
     // LGPD — Estados de exclusão de conta
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -572,6 +609,143 @@ export function ProfileSettings() {
                             </div>
                         )}
                     </div>
+                </div>
+
+                {/* Card: Notificações */}
+                <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-gray-100 dark:border-zinc-800 shadow-sm space-y-6 md:col-span-2">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                            <Bell className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold">Notificações Push</h2>
+                            <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider">
+                                Receba lembretes de contas a pagar e avisos importantes
+                            </p>
+                        </div>
+                    </div>
+
+                    {!isSupported ? (
+                        <div className="bg-amber-500/10 text-amber-600 dark:text-amber-500 p-5 rounded-3xl border border-amber-500/20 flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                            <div className="space-y-1">
+                                <p className="text-sm font-bold">Não suportado neste navegador</p>
+                                <p className="text-xs leading-relaxed opacity-90">
+                                    Seu navegador atual ou plataforma não oferece suporte direto a notificações web. 
+                                    Se você está no **iPhone/iPad (iOS)**, é necessário adicionar este aplicativo à sua 
+                                    **Tela de Início** (pelo menu de Compartilhar do Safari) e abri-lo por lá para habilitar as notificações.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div className="rounded-3xl border border-gray-100 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-950/40 p-6 flex items-center justify-between gap-4">
+                                <div className="space-y-1">
+                                    <p className="text-sm font-bold text-foreground">Alertas do Aplicativo</p>
+                                    <p className="text-xs text-muted-foreground leading-relaxed max-w-[280px]">
+                                        Ative para permitir que o Fluxo envie notificações mesmo quando o app estiver fechado.
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    {pushLoading && <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />}
+                                    <Switch
+                                        disabled={pushLoading}
+                                        checked={!!subscription}
+                                        onCheckedChange={(checked) => {
+                                            if (checked) {
+                                                subscribeUser();
+                                            } else {
+                                                unsubscribeUser();
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            {permission === 'denied' && (
+                                <div className="bg-rose-500/10 text-rose-600 dark:text-rose-400 p-4 rounded-2xl border border-rose-500/20 flex items-start gap-3">
+                                    <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-xs font-bold">Permissão bloqueada no navegador</p>
+                                        <p className="text-[11px] mt-0.5 opacity-90 leading-relaxed">
+                                            Você bloqueou as notificações para este site. Para ativá-las novamente, acesse as configurações 
+                                            de permissões do site no seu navegador (geralmente clicando no ícone de cadeado ou ajustes ao lado da URL) 
+                                            e mude a permissão de Notificações para 'Permitir'.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {permission === 'granted' && subscription && (
+                                <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl border border-emerald-500/20 flex items-center gap-3">
+                                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+                                    <span className="text-xs font-bold">Notificações configuradas e ativas neste dispositivo!</span>
+                                </div>
+                            )}
+
+                            {subscription && (
+                                <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-zinc-800 animate-in fade-in slide-in-from-top-4 duration-300">
+                                    <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400">Escolha o que deseja receber</h3>
+                                    
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {/* Preferência 1: Contas a Vencer */}
+                                        <div className="flex flex-col p-5 rounded-2xl bg-gray-50/50 dark:bg-zinc-950/30 border border-gray-100 dark:border-zinc-800/80 gap-4 col-span-1 sm:col-span-2">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="flex gap-3">
+                                                    <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+                                                        <Receipt className="w-5 h-5" />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <p className="text-sm font-bold">Contas a Vencer</p>
+                                                        <p className="text-xs text-muted-foreground leading-relaxed">
+                                                            Receba um alerta sobre despesas e contas pendentes no dia anterior ao vencimento.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Switch
+                                                    checked={prefs.bills_due}
+                                                    onCheckedChange={(checked) => updatePreference('bills_due', checked)}
+                                                />
+                                            </div>
+                                            
+                                            {prefs.bills_due && (
+                                                <div className="flex items-center gap-3 pl-13 pt-3 border-t border-gray-100/50 dark:border-zinc-800/50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                    <span className="text-xs font-bold text-zinc-500">Horário preferido:</span>
+                                                    <input
+                                                        type="time"
+                                                        value={prefs.bills_due_time}
+                                                        onChange={(e) => updatePreference('bills_due_time', e.target.value)}
+                                                        className="h-9 px-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-black tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Preferência 2: Fechamento de Faturas */}
+                                        <div className="flex flex-col p-5 rounded-2xl bg-gray-50/50 dark:bg-zinc-950/30 border border-gray-100 dark:border-zinc-800/80 gap-3 col-span-1 sm:col-span-2">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="flex gap-3">
+                                                    <div className="w-10 h-10 rounded-2xl bg-purple-500/10 text-purple-500 flex items-center justify-center shrink-0">
+                                                        <CreditCard className="w-5 h-5" />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <p className="text-sm font-bold">Fechamento de Fatura</p>
+                                                        <p className="text-xs text-muted-foreground leading-relaxed">
+                                                            Avisa você na manhã do dia de fechamento da fatura configurada para cada um dos seus cartões de crédito.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Switch
+                                                    checked={prefs.card_closing}
+                                                    onCheckedChange={(checked) => updatePreference('card_closing', checked)}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Card 4: Central de Ajuda */}
