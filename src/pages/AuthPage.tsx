@@ -73,7 +73,7 @@ export default function AuthPage() {
             }
 
             if (isSignUp) {
-                const { error } = await supabase.auth.signUp({
+                const { data, error } = await supabase.auth.signUp({
                     email,
                     password,
                     options: {
@@ -84,10 +84,18 @@ export default function AuthPage() {
                     }
                 });
                 if (error) throw error;
-                toast({
-                    title: "Verifique seu email",
-                    description: "Enviamos um link de confirmação para você.",
-                });
+                
+                if (data?.session) {
+                    toast({
+                        title: "Cadastro realizado com sucesso!",
+                        description: "Seja bem-vindo ao Fluxo! Entrando...",
+                    });
+                } else {
+                    toast({
+                        title: "Verifique seu e-mail",
+                        description: "Enviamos um link de confirmação para você.",
+                    });
+                }
             } else {
                 const { error } = await supabase.auth.signInWithPassword({
                     email,
