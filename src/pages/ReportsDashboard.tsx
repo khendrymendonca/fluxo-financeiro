@@ -126,6 +126,13 @@ type ConsumptionTrendPoint = {
   isCurrent: boolean;
 };
 
+function getEffectiveTransactionDate(t: Transaction): string {
+  if (t.type === 'expense' && !t.cardId && t.isPaid && t.paymentDate) {
+    return t.paymentDate;
+  }
+  return t.date;
+}
+
 function getReportPeriodKey(transaction: Transaction) {
   if (transaction.isInvoicePayment && transaction.invoiceMonthYear) {
     if (transaction.isPaid) {
@@ -134,7 +141,7 @@ function getReportPeriodKey(transaction: Transaction) {
     return transaction.invoiceMonthYear;
   }
 
-  return format(parseLocalDate(transaction.date), 'yyyy-MM');
+  return format(parseLocalDate(getEffectiveTransactionDate(transaction)), 'yyyy-MM');
 }
 
 function isTransferToCard(transaction: Transaction, allTransactions: Transaction[]) {
@@ -184,7 +191,7 @@ function isProjectedReportExpense(transaction: Transaction, allTransactions: Tra
 }
 
 function getCategoryConsumptionPeriodKey(transaction: Transaction) {
-  return format(parseLocalDate(transaction.date), 'yyyy-MM');
+  return format(parseLocalDate(getEffectiveTransactionDate(transaction)), 'yyyy-MM');
 }
 
 function isRealizedCategoryConsumptionExpense(transaction: Transaction, allTransactions: Transaction[]) {
@@ -228,7 +235,7 @@ function getMonthTransactionsForReport({
     if (transaction.isVirtual) return false;
     if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return false;
 
-    const transactionDate = parseLocalDate(transaction.date);
+    const transactionDate = parseLocalDate(getEffectiveTransactionDate(transaction));
     const matchesDate = transactionDate.getMonth() === targetMonth && transactionDate.getFullYear() === targetYear;
 
     if (transaction.isInvoicePayment && transaction.invoiceMonthYear) {
@@ -254,12 +261,12 @@ function getMonthTransactionsForReport({
     if (!transaction.isRecurring || transaction.isVirtual || transaction.deleted_at) return [];
     if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return [];
 
-    const transactionDate = parseLocalDate(transaction.date);
+    const transactionDate = parseLocalDate(getEffectiveTransactionDate(transaction));
     if (!isBefore(startOfMonth(transactionDate), addMonths(startOfMonth(month), 1))) return [];
 
     const hasReal = monthReal.some((real) =>
       real.originalId === transaction.id ||
-      (real.id === transaction.id && isSameMonth(parseLocalDate(real.date), month))
+      (real.id === transaction.id && isSameMonth(parseLocalDate(getEffectiveTransactionDate(real)), month))
     );
 
     if (hasReal) return [];
@@ -309,7 +316,7 @@ function getMonthTransactionsForReport({
     const hasGroupInTargetMonth = monthReal.some((real) => real.installmentGroupId === transaction.installmentGroupId);
     const hasRealEquivalent = monthReal.some((real) =>
       real.originalId === transaction.id ||
-      (real.id === transaction.id && isSameMonth(parseLocalDate(real.date), month))
+      (real.id === transaction.id && isSameMonth(parseLocalDate(getEffectiveTransactionDate(real)), month))
     );
 
     if (hasGroupInTargetMonth || hasRealEquivalent) return [];
@@ -390,7 +397,7 @@ export function buildCategoryExpenseRanking({
       ? (transaction.isPaid ? format(parseLocalDate(transaction.date), 'yyyy-MM') : transaction.invoiceMonthYear)
       : (viewRegime === 'caixa' && transaction.cardId && transaction.invoiceMonthYear
           ? transaction.invoiceMonthYear
-          : format(parseLocalDate(transaction.date), 'yyyy-MM'));
+          : format(parseLocalDate(getEffectiveTransactionDate(transaction)), 'yyyy-MM'));
       
     if (!periodKeys.has(periodKey)) return;
 
@@ -811,7 +818,7 @@ function getCategoryTransactionsForPeriod({
   return scopedTransactions
     .filter((transaction) => {
       const isToCard = isTransferToCard(transaction, transactions);
-      const txDate = parseLocalDate(transaction.date);
+      const txDate = parseLocalDate(getEffectiveTransactionDate(transaction));
       const isPast = !isTesting && startOfMonth(txDate) < todayStart;
 
       const isAllowed = isPast
@@ -841,7 +848,7 @@ function getCategoryTransactionsForPeriod({
           ? (transaction.isPaid ? format(parseLocalDate(transaction.date), 'yyyy-MM') : transaction.invoiceMonthYear)
           : (viewRegime === 'caixa' && transaction.cardId && transaction.invoiceMonthYear
               ? transaction.invoiceMonthYear
-              : format(parseLocalDate(transaction.date), 'yyyy-MM'));
+              : format(parseLocalDate(getEffectiveTransactionDate(transaction)), 'yyyy-MM'));
         if (!periodKeys.has(periodKey)) return false;
       }
 
@@ -866,7 +873,7 @@ function buildCategoryPeriodItems(params: {
     .map((transaction) => ({
       id: transaction.id,
       description: transaction.description,
-      date: transaction.date,
+      date: getEffectiveTransactionDate(transaction),
       amount: Number(transaction.amount),
       isPaid: Boolean(transaction.isPaid),
     }))
@@ -1168,7 +1175,7 @@ export default function ReportsDashboard() {
     const years = new Set<number>([new Date().getFullYear(), viewDate.getFullYear()]);
 
     transactions.forEach((transaction) => {
-      years.add(parseLocalDate(transaction.date).getFullYear());
+      years.add(parseLocalDate(getEffectiveTransactionDate(transaction)).getFullYear());
       if (transaction.invoiceMonthYear) {
         years.add(Number(transaction.invoiceMonthYear.split('-')[0]));
       }
@@ -1362,7 +1369,7 @@ export default function ReportsDashboard() {
             if (transaction.isVirtual) return false;
             if (selectedAccountId !== 'all' && transaction.accountId !== selectedAccountId) return false;
 
-            const transactionDate = parseLocalDate(transaction.date);
+            const transactionDate = parseLocalDate(getEffectiveTransactionDate(transaction));
             const matchesDate = isSameMonth(transactionDate, month);
 
             if (transaction.isInvoicePayment && transaction.invoiceMonthYear) {
