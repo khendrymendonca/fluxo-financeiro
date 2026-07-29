@@ -116,6 +116,8 @@ type CategoryAnalysisItem = {
   date: string;
   amount: number;
   isPaid: boolean;
+  dueDate?: string;
+  paymentDate?: string;
 };
 
 type ConsumptionTrendPoint = {
@@ -876,6 +878,8 @@ function buildCategoryPeriodItems(params: {
       date: getEffectiveTransactionDate(transaction),
       amount: Number(transaction.amount),
       isPaid: Boolean(transaction.isPaid),
+      dueDate: transaction.date,
+      paymentDate: transaction.paymentDate,
     }))
     .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime());
 }
@@ -2285,7 +2289,13 @@ export default function ReportsDashboard() {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-bold text-foreground">{item.description}</p>
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                          <span>{format(parseLocalDate(item.date), 'dd/MM/yyyy')}</span>
+                          {item.isPaid && item.paymentDate && item.dueDate && item.dueDate !== item.paymentDate ? (
+                            <span>
+                              Venc. {format(parseLocalDate(item.dueDate), 'dd/MM/yyyy')} • Pag. {format(parseLocalDate(item.paymentDate), 'dd/MM/yyyy')}
+                            </span>
+                          ) : (
+                            <span>{format(parseLocalDate(item.date), 'dd/MM/yyyy')}</span>
+                          )}
                           <span>{item.isPaid ? 'Pago' : 'Pendente'}</span>
                         </div>
                       </div>
