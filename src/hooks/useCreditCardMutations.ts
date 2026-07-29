@@ -34,7 +34,7 @@ export function useAddCreditCard() {
         user_id: user.id,
         name: card.name,
         bank: card.bank,
-        limit: card.limit,
+        limit: Math.round(Number(card.limit || 0) * 100) / 100,
         color: card.color,
         texture: card.texture || 'solid',
         progresscolor: card.progressColor ?? null,
@@ -76,7 +76,7 @@ export function useUpdateCreditCard() {
 
       if (updates.name !== undefined) dbPayload.name = updates.name;
       if (updates.bank !== undefined) dbPayload.bank = updates.bank;
-      if (updates.limit !== undefined) dbPayload.limit = updates.limit;
+      if (updates.limit !== undefined) dbPayload.limit = Math.round(Number(updates.limit || 0) * 100) / 100;
       if (updates.color !== undefined) dbPayload.color = updates.color;
       if (updates.texture !== undefined) dbPayload.texture = updates.texture;
       if (updates.progressColor !== undefined) dbPayload.progresscolor = updates.progressColor;
@@ -137,8 +137,10 @@ export function useAnticipateCardPayment() {
     mutationFn: async (params: { cardId: string, accountId: string, amount: number, date: string }) => {
       if (!user) throw new Error('Utilizador não autenticado');
       
+      const roundedAmount = Math.round(params.amount * 100) / 100;
       const result = await anticipateCardPayment({
         ...params,
+        amount: roundedAmount,
         userId: user.id
       });
       

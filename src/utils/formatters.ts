@@ -34,6 +34,7 @@ export const normalizeDateForInput = (dateStr: string | null | undefined): strin
     if (!dateStr) return '';
     return dateStr.split('T')[0];
 };
+
 export const formatCurrencyCompact = (value: number | string | null | undefined): string => {
     if (value === null || value === undefined) return 'R$\u00A00';
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
@@ -46,4 +47,10 @@ export const formatCurrencyCompact = (value: number | string | null | undefined)
         maximumFractionDigits: 1
     }).format(roundedValue);
     return formatted.replace(/\s/g, '\u00A0');
+};
+
+export const roundToTwoDecimals = (value: number | string | null | undefined): number => {
+    if (value === null || value === undefined) return 0;
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    return isNaN(num) ? 0 : Math.round(num * 100) / 100;
 };

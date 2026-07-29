@@ -211,6 +211,7 @@ export function useAddTransaction() {
 
         const mapped: any = {
           ...tx,
+          amount: Math.round(Number(tx.amount || 0) * 100) / 100,
           description: safeDescription,
           user_id: user.id,
           category_id: tx.categoryId || tx.category_id,
@@ -578,7 +579,7 @@ export function useUpdateTransaction() {
 
       const dbUpdates: any = {
         description: updates.description,
-        amount: updates.amount,
+        amount: updates.amount !== undefined ? Math.round(Number(updates.amount) * 100) / 100 : undefined,
         date: updates.date ? updates.date.slice(0, 10) : undefined,
         type: updates.type,
         category_id: updates.categoryId,
@@ -649,7 +650,7 @@ export function useUpdateTransaction() {
         const { error } = await supabase.from('transactions').insert({
           ...currentTx,
           id: undefined,
-          amount: updates.amount ?? currentTx.amount,
+          amount: updates.amount !== undefined ? Math.round(Number(updates.amount) * 100) / 100 : currentTx.amount,
           description: updates.description ?? currentTx.description,
           category_id: updates.categoryId ?? currentTx.category_id,
           subcategory_id: updates.subcategoryId ?? currentTx.subcategory_id ?? null,

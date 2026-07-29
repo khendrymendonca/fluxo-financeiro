@@ -21,8 +21,8 @@ export function useAddGoal() {
       const payload: any = {
         user_id: user.id,
         name: safeName,
-        target_amount: goal.targetAmount,
-        current_amount: goal.currentAmount || 0,
+        target_amount: Math.round(Number(goal.targetAmount || 0) * 100) / 100,
+        current_amount: Math.round(Number(goal.currentAmount || 0) * 100) / 100,
         deadline: goal.deadline,
         color: goal.color,
         icon: goal.icon,
@@ -60,11 +60,11 @@ export function useUpdateGoal() {
       if (updates.purpose !== undefined) payload.purpose = updates.purpose.trim().slice(0, 500);
 
       if (updates.targetAmount !== undefined) {
-        payload.target_amount = updates.targetAmount;
+        payload.target_amount = Math.round(Number(updates.targetAmount) * 100) / 100;
         delete (payload as any).targetAmount;
       }
       if (updates.currentAmount !== undefined) {
-        payload.current_amount = updates.currentAmount;
+        payload.current_amount = Math.round(Number(updates.currentAmount) * 100) / 100;
         delete (payload as any).currentAmount;
       }
       if (updates.projectType !== undefined) {
@@ -121,6 +121,8 @@ export function useDepositToGoal() {
     mutationFn: async ({ id, amount, accountId, goalName }: { id: string, amount: number, accountId: string, goalName: string }) => {
       if (!user) throw new Error('Utilizador não autenticado');
 
+      const roundedAmount = Math.round(amount * 100) / 100;
+
       // 1. Busca o valor atual da meta
       const { data: goal, error: fetchError } = await supabase
         .from('savings_goals')
@@ -131,14 +133,14 @@ export function useDepositToGoal() {
       if (fetchError) throw fetchError;
 
       const finalGoalName = goalName || goal.name;
-      const isWithdrawal = amount < 0;
+      const isWithdrawal = roundedAmount < 0;
 
       // 2. Cria a transação PRIMEIRO (Débito se for depósito, Crédito se for retirada)
       const today = todayLocalString();
       const { data: txData, error: txError } = await supabase.from('transactions').insert({
         user_id: user.id,
         description: isWithdrawal ? `Retirada: Meta ${finalGoalName}` : `Depósito: Meta ${finalGoalName}`,
-        amount: Math.abs(amount), // Valor absoluto
+        amount: Math.abs(roundedAmount), // Valor absoluto
         type: isWithdrawal ? 'income' : 'expense', // Entrada/Saída na contabilidade principal
         transaction_type: 'adjustment', // Tipo correto para movimentações de meta
         date: today,
@@ -152,7 +154,7 @@ export function useDepositToGoal() {
       // 3. Atualiza o valor da meta
       const { error: updateError } = await supabase
         .from('savings_goals')
-        .update({ current_amount: Number(goal.current_amount) + amount })
+        .update({ current_amount: Math.round((Number(goal.current_amount) + roundedAmount) * 100) / 100 })
         .eq('id', id);
 
       // 🔄 ROLLBACK MANUAL

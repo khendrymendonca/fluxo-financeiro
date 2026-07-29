@@ -18,7 +18,7 @@ export function useAddAccount() {
 
       const supabasePayload: any = {
         name: safeName,
-        balance: account.balance,
+        balance: Math.round(Number(account.balance || 0) * 100) / 100,
         color: account.color,
         icon: account.icon,
         user_id: user.id,
@@ -27,7 +27,7 @@ export function useAddAccount() {
 
       if (account.accountType !== undefined) supabasePayload.account_type = account.accountType;
       if (account.hasOverdraft !== undefined) supabasePayload.has_overdraft = account.hasOverdraft;
-      if (account.overdraftLimit !== undefined) supabasePayload.overdraft_limit = account.overdraftLimit;
+      if (account.overdraftLimit !== undefined) supabasePayload.overdraft_limit = Math.round(Number(account.overdraftLimit || 0) * 100) / 100;
 
       const { data, error } = await supabase.from('accounts').insert(supabasePayload).select();
 
@@ -63,6 +63,9 @@ export function useUpdateAccount() {
       }
 
       // 1. Conversão de camelCase para snake_case (Padrão do Postgres)
+      if (supabasePayload.balance !== undefined) {
+        supabasePayload.balance = Math.round(Number(supabasePayload.balance || 0) * 100) / 100;
+      }
       if (supabasePayload.accountType !== undefined) {
         supabasePayload.account_type = supabasePayload.accountType;
       }
@@ -70,7 +73,7 @@ export function useUpdateAccount() {
         supabasePayload.has_overdraft = supabasePayload.hasOverdraft;
       }
       if (supabasePayload.overdraftLimit !== undefined) {
-        supabasePayload.overdraft_limit = supabasePayload.overdraftLimit;
+        supabasePayload.overdraft_limit = Math.round(Number(supabasePayload.overdraftLimit || 0) * 100) / 100;
       }
 
       // 2. Extermínio de colunas camelCase e colunas fantasmas que causam o Erro 400
@@ -171,6 +174,7 @@ export function useTransferBetweenAccounts() {
 
       const transferGroupId = crypto.randomUUID();
       const isCardOrigin = fromType === 'card';
+      const roundedAmount = Math.round(amount * 100) / 100;
 
       // Garantir categoria "Transferência" para Despesa
       let expenseCategoryId = null;
@@ -237,7 +241,7 @@ export function useTransferBetweenAccounts() {
       const expenseBody = {
         user_id: user.id,
         description: `[Saída] ${description}`,
-        amount: amount,
+        amount: roundedAmount,
         type: 'expense',
         account_id: isCardOrigin ? null : from,
         card_id: isCardOrigin ? from : null,
@@ -253,7 +257,7 @@ export function useTransferBetweenAccounts() {
       const incomeBody = {
         user_id: user.id,
         description: `[Entrada] ${description}`,
-        amount: amount,
+        amount: roundedAmount,
         type: 'income',
         account_id: type === 'account' ? to : null,
         card_id: type === 'card' ? to : null,

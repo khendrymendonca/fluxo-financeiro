@@ -441,14 +441,14 @@ export function useAddDebt() {
       const payload = {
         user_id: user.id,
         name: safeName,
-        total_amount: calculateAgreementTotal(debt.entryAmount || 0, debt.installmentAmount, debt.totalInstallments || 1),
-        remaining_amount: calculateAgreementRemaining(
+        total_amount: roundCurrency(calculateAgreementTotal(debt.entryAmount || 0, debt.installmentAmount, debt.totalInstallments || 1)),
+        remaining_amount: roundCurrency(calculateAgreementRemaining(
           debt.entryAmount || 0,
           debt.installmentAmount,
           debt.totalInstallments || 1,
           Boolean(debt.entryIsPaid),
-        ),
-        installment_amount: debt.installmentAmount,
+        )),
+        installment_amount: roundCurrency(debt.installmentAmount),
         interest_rate_monthly: debt.interestRateMonthly,
         due_day: debt.dueDay,
         strategy_priority: debt.strategyPriority,
@@ -514,11 +514,11 @@ export function useUpdateDebt(deps: DebtMutationDeps = {}) {
       const payload: DebtDbPayload = {};
 
       if (updates.name !== undefined) payload.name = updates.name;
-      if (updates.totalAmount !== undefined) payload.total_amount = updates.totalAmount;
-      if (updates.remainingAmount !== undefined) payload.remaining_amount = updates.remainingAmount;
-      if (updates.installmentAmount !== undefined) payload.installment_amount = updates.installmentAmount;
+      if (updates.totalAmount !== undefined) payload.total_amount = updates.totalAmount !== null ? roundCurrency(updates.totalAmount) : null;
+      if (updates.remainingAmount !== undefined) payload.remaining_amount = updates.remainingAmount !== null ? roundCurrency(updates.remainingAmount) : null;
+      if (updates.installmentAmount !== undefined) payload.installment_amount = updates.installmentAmount !== null ? roundCurrency(updates.installmentAmount) : null;
       if (updates.interestRateMonthly !== undefined) payload.interest_rate_monthly = updates.interestRateMonthly;
-      if (updates.minimumPayment !== undefined) payload.minimum_payment = updates.minimumPayment;
+      if (updates.minimumPayment !== undefined) payload.minimum_payment = updates.minimumPayment !== null ? roundCurrency(updates.minimumPayment) : null;
       if (updates.dueDay !== undefined) payload.due_day = updates.dueDay;
       if (updates.strategyPriority !== undefined) payload.strategy_priority = updates.strategyPriority;
       if (updates.status !== undefined) payload.status = updates.status;
