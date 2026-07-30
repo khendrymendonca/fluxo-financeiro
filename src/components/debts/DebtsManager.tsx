@@ -279,16 +279,22 @@ export function DebtsManager({
   const parsedTotalInstallments = parseInt(totalInstallments || '0', 10) || 0;
   const computedAgreementTotal = calculateAgreementTotal(parsedEntryAmount, parsedInstallmentAmount, parsedTotalInstallments);
 
-  const toNegotiate = debts.filter(d => d.status !== 'renegotiated');
-  const inPayment = debts.filter(d => {
-    if (d.status !== 'renegotiated') return false;
+  const toNegotiate = debts.filter(d => {
     const summary = debtSummaries[d.id];
+    const isRenegotiated = d.status === 'renegotiated' || summary?.hasDerivedInstallments;
+    return !isRenegotiated;
+  });
+  const inPayment = debts.filter(d => {
+    const summary = debtSummaries[d.id];
+    const isRenegotiated = d.status === 'renegotiated' || summary?.hasDerivedInstallments;
+    if (!isRenegotiated) return false;
     const remAmt = summary ? summary.remainingAmount : d.remainingAmount;
     return remAmt > 0;
   });
   const finishedAgreements = debts.filter(d => {
-    if (d.status !== 'renegotiated') return false;
     const summary = debtSummaries[d.id];
+    const isRenegotiated = d.status === 'renegotiated' || summary?.hasDerivedInstallments;
+    if (!isRenegotiated) return false;
     const remAmt = summary ? summary.remainingAmount : d.remainingAmount;
     return remAmt <= 0;
   });
@@ -724,12 +730,17 @@ export function DebtsManager({
                   <Button type="button" variant="outline" className="rounded-xl" onClick={handleCloseForm} disabled={isSubmitting}>
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={isSubmitting} className={cn(
-                    'w-full rounded-xl sm:w-auto sm:min-w-[220px]',
-                    editingDebt?.status === 'renegotiated' ? 'bg-success hover:bg-success/90' : 'bg-danger hover:bg-danger/90'
-                  )}>
-                    {editingDebt?.status === 'renegotiated' ? 'Atualizar Acordo' : editingDebt ? 'Atualizar Acordo' : 'Adicionar Acordo'}
-                  </Button>
+                  {(() => {
+                    const isRenegotiated = editingDebt?.status === 'renegotiated' || debtSummaries[editingDebt?.id || '']?.hasDerivedInstallments;
+                    return (
+                      <Button type="submit" disabled={isSubmitting} className={cn(
+                        'w-full rounded-xl sm:w-auto sm:min-w-[220px]',
+                        isRenegotiated ? 'bg-success hover:bg-success/90' : 'bg-danger hover:bg-danger/90'
+                      )}>
+                        {isRenegotiated ? 'Atualizar Acordo' : editingDebt ? 'Atualizar Acordo' : 'Adicionar Acordo'}
+                      </Button>
+                    );
+                  })()}
                 </div>
               </div>
             </form>
