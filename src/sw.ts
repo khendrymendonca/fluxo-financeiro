@@ -5,9 +5,15 @@ import { clientsClaim } from 'workbox-core';
 
 declare let self: ServiceWorkerGlobalScope;
 
-// Ativa o SW imediatamente e toma controle dos clientes existentes
-self.skipWaiting();
+// Toma controle dos clientes existentes imediatamente
 clientsClaim();
+
+// Ouvinte para forçar a atualização (skipWaiting) somente quando requisitado pelo prompt na UI
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
 
 // Limpa caches antigos e realiza o precache dos assets do build
 cleanupOutdatedCaches();
