@@ -13,8 +13,11 @@ export function useAddAccount() {
     mutationFn: async (account: Omit<Account, 'id' | 'userId'>) => {
       if (!user) throw new Error('Utilizador não autenticado');
 
-      const safeName = (account.name ?? '').trim().slice(0, 100);
-      const safeBank = ((account as any).bank ?? account.institution ?? '').trim().slice(0, 100);
+      let safeBank = ((account as any).bank ?? account.institution ?? '').trim().slice(0, 100);
+      if (account.accountType === 'carteira' && !safeBank) {
+        safeBank = 'Carteira';
+      }
+      const safeName = (account.name ?? '').trim().slice(0, 100) || (account.accountType === 'carteira' ? 'Carteira' : safeBank);
 
       const supabasePayload: any = {
         name: safeName,
@@ -59,7 +62,11 @@ export function useUpdateAccount() {
       }
       if (updates.institution !== undefined || (updates as any).bank !== undefined) {
         const rawInst = updates.institution || (updates as any).bank || '';
-        supabasePayload.bank = rawInst.trim().slice(0, 100);
+        let safeBank = rawInst.trim().slice(0, 100);
+        if (updates.accountType === 'carteira' && !safeBank) {
+          safeBank = 'Carteira';
+        }
+        supabasePayload.bank = safeBank;
       }
 
       // 1. Conversão de camelCase para snake_case (Padrão do Postgres)
@@ -68,6 +75,9 @@ export function useUpdateAccount() {
       }
       if (supabasePayload.accountType !== undefined) {
         supabasePayload.account_type = supabasePayload.accountType;
+        if (supabasePayload.accountType === 'carteira' && (!supabasePayload.bank || !supabasePayload.bank.trim())) {
+          supabasePayload.bank = 'Carteira';
+        }
       }
       if (supabasePayload.hasOverdraft !== undefined) {
         supabasePayload.has_overdraft = supabasePayload.hasOverdraft;
@@ -84,7 +94,7 @@ export function useUpdateAccount() {
 
       // 3. Trava anti-string vazia (Se o usuário apagar o apelido)
       if (supabasePayload.name !== undefined && supabasePayload.name.trim() === '') {
-        supabasePayload.name = supabasePayload.bank || 'Conta Principal';
+        supabasePayload.name = supabasePayload.bank || (updates.accountType === 'carteira' ? 'Carteira' : 'Conta Principal');
       }
 
       const { error } = await supabase.from('accounts').update(supabasePayload).eq('id', id);

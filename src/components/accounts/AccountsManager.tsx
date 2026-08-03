@@ -137,7 +137,8 @@ export function AccountsManager({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: string[] = [];
-    if (!accountInstitution) errors.push('Instituição');
+    const isWallet = accountType === 'carteira';
+    if (!isWallet && !accountInstitution) errors.push('Instituição');
     if (!accountBalance || parseFloat(accountBalance) < 0) errors.push('Saldo');
 
     if (errors.length > 0) {
@@ -150,7 +151,8 @@ export function AccountsManager({
     }
 
     const parsedNewBalance = parseFloat(accountBalance);
-    const finalName = accountName.trim() ? accountName : accountInstitution;
+    const finalInstitution = isWallet && !accountInstitution.trim() ? 'Carteira' : accountInstitution;
+    const finalName = accountName.trim() ? accountName : finalInstitution;
 
     if (editingAccount) {
       const currentRealBalance = Number(editingAccount.balance);
@@ -201,8 +203,8 @@ export function AccountsManager({
       }
 
       const accountDataToUpdate = {
-        name: accountName,
-        bank: accountInstitution,
+        name: finalName,
+        bank: finalInstitution,
         color: accountColor,
         accountType: accountType as AccountType,
         hasOverdraft: hasOverdraft,
@@ -222,12 +224,12 @@ export function AccountsManager({
       }
 
       // Check if institution already exists to inherit color if not explicitly changed
-      const existingInst = accounts.find(a => (a.bank || a.institution) === accountInstitution);
+      const existingInst = accounts.find(a => (a.bank || a.institution) === finalInstitution);
       const finalColor = existingInst ? existingInst.color : accountColor;
 
       const accountData = {
         name: finalName,
-        bank: accountInstitution,
+        bank: finalInstitution,
         balance: parsedNewBalance,
         color: finalColor,
         accountType: accountType as AccountType,
@@ -296,6 +298,7 @@ export function AccountsManager({
       benefit_va: 'Vale Alimentação',
       benefit_flex: 'Benefício Flexível',
       corrente: 'Conta Corrente',
+      carteira: 'Carteira (Dinheiro)',
     };
     return labels[type] || 'Outro';
   };
@@ -482,8 +485,14 @@ export function AccountsManager({
                     <Input value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="Ex: Principal" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4" />
                   </div>
                   <div className="space-y-1.5 col-span-2 md:col-span-1">
-                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Instituição (Banco)</Label>
-                    <Input value={accountInstitution} onChange={(e) => setAccountInstitution(e.target.value)} placeholder="Ex: Itaú, Nubank" className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4" required />
+                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Instituição (Banco) {accountType === 'carteira' && '(Opcional)'}</Label>
+                    <Input 
+                      value={accountInstitution} 
+                      onChange={(e) => setAccountInstitution(e.target.value)} 
+                      placeholder={accountType === 'carteira' ? "Opcional (Ex: Gaveta, Cofre)" : "Ex: Itaú, Nubank"} 
+                      className="h-10 rounded-xl border-2 focus:border-primary/50 transition-colors px-4" 
+                      required={accountType !== 'carteira'} 
+                    />
                   </div>
                 </div>
 
@@ -509,6 +518,7 @@ export function AccountsManager({
                       <option value="benefit_va">VA (Ali.)</option>
                       <option value="benefit_vr">VR (Ref.)</option>
                       <option value="benefit_flex">Flexível</option>
+                      <option value="carteira">Carteira (Dinheiro Físico)</option>
                     </select>
                   </div>
                 </div>
