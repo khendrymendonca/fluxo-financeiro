@@ -7,6 +7,7 @@ interface BuildInvoiceObligationsInput {
   transactions: Transaction[];
   viewDate: Date;
   settledTransactionIds?: ReadonlySet<string>;
+  includeOverdue?: boolean;
 }
 
 export function buildCardInvoiceObligations({
@@ -14,6 +15,7 @@ export function buildCardInvoiceObligations({
   transactions,
   viewDate,
   settledTransactionIds = new Set(),
+  includeOverdue = false,
 }: BuildInvoiceObligationsInput): Transaction[] {
   const viewDateStr = format(viewDate, 'yyyy-MM');
   const invoiceObligations: Transaction[] = [];
@@ -24,9 +26,11 @@ export function buildCardInvoiceObligations({
     // Sempre incluir o mês visualizado
     cardMonths.add(viewDateStr);
 
-    for (const t of transactions) {
-      if (t.cardId === card.id && t.invoiceMonthYear && !t.deleted_at) {
-        cardMonths.add(t.invoiceMonthYear);
+    if (includeOverdue) {
+      for (const t of transactions) {
+        if (t.cardId === card.id && t.invoiceMonthYear && !t.deleted_at) {
+          cardMonths.add(t.invoiceMonthYear);
+        }
       }
     }
 

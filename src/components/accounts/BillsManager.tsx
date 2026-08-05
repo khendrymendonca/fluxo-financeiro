@@ -351,6 +351,7 @@ export function BillsManager() {
             transactions,
             viewDate,
             settledTransactionIds,
+            includeOverdue: true,
         });
     }, [creditCards, transactions, viewDate, settledTransactionIds]);
 
