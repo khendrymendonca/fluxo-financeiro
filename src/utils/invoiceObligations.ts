@@ -16,12 +16,30 @@ export function buildCardInvoiceObligations({
   settledTransactionIds = new Set(),
 }: BuildInvoiceObligationsInput): Transaction[] {
   const viewDateStr = format(viewDate, 'yyyy-MM');
+  const invoiceObligations: Transaction[] = [];
 
-  return creditCards
-    .map((card) => {
-      const invoiceId = `fat-virtual-${card.id}`;
+  for (const card of creditCards) {
+    // 1. Encontrar todos os meses/anos únicos em que há transações para este cartão
+    const cardMonths = new Set<string>();
+    // Sempre incluir o mês visualizado
+    cardMonths.add(viewDateStr);
 
-      if (settledTransactionIds.has(invoiceId)) return null;
+    for (const t of transactions) {
+      if (t.cardId === card.id && t.invoiceMonthYear && !t.deleted_at) {
+        cardMonths.add(t.invoiceMonthYear);
+      }
+    }
+
+    // 2. Para cada mês encontrado, calcular a fatura se for menor ou igual ao mês atual (viewDateStr)
+    for (const monthStr of cardMonths) {
+      // Ignorar faturas futuras em relação ao mês de visualização
+      if (monthStr > viewDateStr) continue;
+
+      const invoiceId = `fat-virtual-${card.id}-${monthStr}`;
+
+      if (settledTransactionIds.has(invoiceId)) continue;
+      // Compatibilidade retroativa caso algum id antigo sem mês esteja no set
+      if (settledTransactionIds.has(`fat-virtual-${card.id}`) && monthStr === viewDateStr) continue;
 
       const invoicePurchasesTotal = transactions
         .filter((transaction) =>
@@ -29,7 +47,7 @@ export function buildCardInvoiceObligations({
           !transaction.isVirtual &&
           !transaction.isInvoicePayment &&
           !transaction.deleted_at &&
-          transaction.invoiceMonthYear === viewDateStr
+          transaction.invoiceMonthYear === monthStr
         )
         .reduce((sum, transaction) => sum + (transaction.type === 'expense' ? transaction.amount : -transaction.amount), 0);
 
@@ -39,17 +57,19 @@ export function buildCardInvoiceObligations({
           !transaction.isVirtual &&
           transaction.isInvoicePayment &&
           !transaction.deleted_at &&
-          transaction.invoiceMonthYear === viewDateStr
+          transaction.invoiceMonthYear === monthStr
         )
         .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
 
       const remainingAmount = Number((invoicePurchasesTotal - invoicePaymentsTotal).toFixed(2));
-      if (remainingAmount <= 0) return null;
+      if (remainingAmount <= 0) continue;
 
-      const { dueDay } = getCardSettingsForDate(card, viewDate);
-      const cardDueDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), dueDay);
+      const [year, monthVal] = monthStr.split('-').map(Number);
+      const invoiceDate = new Date(year, monthVal - 1, 1);
+      const { dueDay } = getCardSettingsForDate(card, invoiceDate);
+      const cardDueDate = new Date(year, monthVal - 1, dueDay);
 
-      return {
+      invoiceObligations.push({
         id: invoiceId,
         description: `Fatura ${card.name}`,
         amount: remainingAmount,
@@ -62,8 +82,10 @@ export function buildCardInvoiceObligations({
         isVirtual: true,
         isInvoicePayment: true,
         userId: '',
-        invoiceMonthYear: viewDateStr,
-      } as Transaction;
-    })
-    .filter((invoice): invoice is Transaction => Boolean(invoice));
+        invoiceMonthYear: monthStr,
+      } as Transaction);
+    }
+  }
+
+  return invoiceObligations;
 }
