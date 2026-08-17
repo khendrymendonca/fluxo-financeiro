@@ -25,8 +25,8 @@ export default function InviteUserPage() {
             return 'A confirmação da senha é obrigatória.';
         }
 
-        if (password.length < 6) {
-            return 'A senha deve ter pelo menos 6 caracteres.';
+        if (password.length < 8) {
+            return 'A senha deve ter pelo menos 8 caracteres.';
         }
 
         if (password !== confirmPassword) {
@@ -111,7 +111,7 @@ export default function InviteUserPage() {
                     <Input
                         id="invite-password"
                         type="password"
-                        minLength={6}
+                        minLength={8}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="********"
@@ -125,7 +125,7 @@ export default function InviteUserPage() {
                     <Input
                         id="invite-confirm-password"
                         type="password"
-                        minLength={6}
+                        minLength={8}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="********"

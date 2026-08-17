@@ -1,53 +1,68 @@
-# MEMÃƒâ€œRIAS Ã¢â‚¬â€ REGRAS CONSOLIDADAS DO FLUXO FINANCEIRO
+# MEMÓRIAS — FONTE ÚNICA DE VERDADE (SSOT) E REGRAS CONSOLIDADAS DO FLUXO FINANCEIRO
+
+> [!IMPORTANT]
+> **DIRETRIZ OBRIGATÓRIA PARA AGENTES E MODELOS DE IA:**
+> Este arquivo representa a **Fonte Única de Verdade (Single Source of Truth - SSOT)** do projeto **Fluxo Financeiro**.
+> Todas as decisões arquiteturais, regras de negócio, diretrizes de UI/UX, tratamentos de banco de dados e históricos descritos neste documento devem ser rigorosamente respeitados por qualquer assistente de IA antes de realizar alterações no código.
+>
+> **Regras Primordiais:**
+> 1. **Regime de Caixa Estrito**: Liquidações normais contabilizam por `payment_date`. Cartões de crédito contabilizam ao pagar a fatura do mês correspondente (`invoiceMonthYear`). Transferências utilizam `transfer_group_id` sem inflar receita/despesa.
+> 2. **UI Executiva & Sem Emojis**: O app segue o padrão visual *Apple Minimalist*. É estritamente PROIBIDO o uso de emojis na interface visual; utilize exclusivamente ícones vetoriais `Lucide React`.
+> 3. **Boot Inteligente**: O app deve sincronizar previamente com o Supabase no boot sem exibir valores zerados falsos.
+> 4. **Isolamento de Dados & RLS**: Todas as consultas e mutações respeitam o UUID do usuário autenticado (`auth.uid()`). A exclusão de conta utiliza a RPC `delete_user_data` (LGPD).
+> 5. **Atualização Contínua**: Sempre que uma mudança arquitetural, de banco ou de UI for aprovada e validada, este arquivo DEVE ser atualizado com a data e um resumo no Histórico (Seção 6).
+
+---
+
 
 ## REGRA GERAL DO PRODUTO
 
 O Fluxo Financeiro deve ser tratado como um app financeiro modular, robusto e profissional.
 
-O objetivo principal atual nÃ£o ÃƒÂ© vender ainda, mas fazer o app funcionar de forma confiÃƒÂ¡vel para uso real e ser escalÃƒÂ¡vel no futuro.
+O objetivo principal atual não é vender ainda, mas fazer o app funcionar de forma confiável para uso real e ser escalável no futuro.
 
-O desenvolvimento deve evitar gambiarras, excesso de cÃƒÂ³digo e soluÃƒÂ§ÃƒÂµes temporÃƒÂ¡rias sem documentaÃƒÂ§ÃƒÂ£o. Sempre que uma soluÃƒÂ§ÃƒÂ£o temporÃƒÂ¡ria for usada, ela deve ficar registrada como tal.
+O desenvolvimento deve evitar gambiarras, excesso de código e soluçes temporárias sem documentação. Sempre que uma solução temporária for usada, ela deve ficar registrada como tal.
 
 O app deve ser modular:
-- As funcionalidades podem existir no backend/cÃƒÂ³digo.
-- O acesso/visibilidade deve ser controlado por plano/mÃƒÂ³dulo/feature flag.
-- NÃƒÂ£o remover estruturalmente features apenas porque um plano nÃ£o deve vÃƒÂª-las.
+- As funcionalidades podem existir no backend/código.
+- O acesso/visibilidade deve ser controlado por plano/módulo/feature flag.
+- Não remover estruturalmente features apenas porque um plano não deve vê-las.
 - Planos futuros: Basic, Pro e Premium.
-- A matriz final de planos ainda nÃ£o deve ser definida agora.
+- A matriz final de planos ainda não deve ser definida agora.
 
-NÃƒÂ£o mexer sem autorizaÃƒÂ§ÃƒÂ£o explÃƒÂ­cita em:
+Não mexer sem autorização explí­cita em:
 - Supabase migrations;
 - RLS;
 - SuperPage/admin;
-- estrutura multiusuÃƒÂ¡rio/famÃƒÂ­lia;
+- estrutura multiusuário/famí­lia;
 - matriz de planos;
-- regras financeiras jÃƒÂ¡ estabilizadas.
+- regras financeiras já estabilizadas.
 
 ---
 
 # REGRA DE UI/UX DO APP
 
-## PadrÃƒÂ£o visual geral
+## Padrão visual geral
 
-O Fluxo deve parecer um produto financeiro profissional, nÃ£o um tutorial.
+O Fluxo deve parecer um produto financeiro profissional, não um tutorial.
 
 Diretriz visual:
 
-- Menos explicaÃƒÂ§ÃƒÂ£o.
+- Menos explicação.
 - Mais indicador.
-- Mais comparaÃƒÂ§ÃƒÂ£o.
-- Mais aÃƒÂ§ÃƒÂ£o.
+- Mais comparação.
+- Mais ação.
 - Menos texto.
 - Mais leitura executiva.
 
 Evitar na interface:
-- parÃƒÂ¡grafos explicativos longos;
+- parágrafos explicativos longos;
 - textos de onboarding no corpo das telas;
-- frases como Ã¢â‚¬Å“Compare...Ã¢â‚¬ ou Ã¢â‚¬Å“Quanto da receita vira despesa...Ã¢â‚¬;
-- badges de regra tÃƒÂ©cnica expostos sem necessidade;
-- explicaÃƒÂ§ÃƒÂµes amadoras que diminuem a percepÃƒÂ§ÃƒÂ£o profissional;
+- frases como “Compare...– ou “Quanto da receita vira despesa...–;
+- badges de regra técnica expostos sem necessidade;
+- explicaçes amadoras que diminuem a percepção profissional;
 - EMOJIS em qualquer lugar da interface (proibido - tira a profissionalidade);
-- textos expositivos/descritivos desnecessÃƒÂ¡rios (a interface deve ser autoexplicativa).
+- textos expositivos/descritivos desnecessários (a interface deve ser autoexplicativa).
 
 Preferir:
 - labels curtas;
@@ -55,56 +70,56 @@ Preferir:
 - indicadores comparativos;
 - status visuais;
 - tooltips discretos;
-- ÃƒÂ­cones;
+- í­cones;
 - nomes financeiros fortes.
 
 Exemplos de nomenclatura aprovada:
-- Ã¢â‚¬Å“Total de Consumo vs ReceitaÃ¢â‚¬ï¿½
-- Ã¢â‚¬Å“ComposiÃƒÂ§ÃƒÂ£o das DespesasÃ¢â‚¬ï¿½
-- Ã¢â‚¬Å“AnÃƒÂ¡lise de CategoriaÃ¢â‚¬ï¿½
-- Ã¢â‚¬Å“OrÃƒÂ§amentos por CategoriaÃ¢â‚¬ï¿½
-- Ã¢â‚¬Å“OrÃƒÂ§amentos por AgrupamentoÃ¢â‚¬ï¿½
-- Ã¢â‚¬Å“Receitas previstasÃ¢â‚¬ï¿½
-- Ã¢â‚¬Å“Despesas previstasÃ¢â‚¬ï¿½
-- Ã¢â‚¬Å“Saldo previstoÃ¢â‚¬ï¿½
-- Ã¢â‚¬Å“Receitas efetivasÃ¢â‚¬ï¿½
-- Ã¢â‚¬Å“Despesas efetivasÃ¢â‚¬ï¿½
-- Ã¢â‚¬Å“Saldo efetivoÃ¢â‚¬ï¿½
+- “Total de Consumo vs Receita”
+- “Composição das Despesas”
+- “Análise de Categoria”
+- “Orçamentos por Categoria”
+- “Orçamentos por Agrupamento”
+- “Receitas previstas”
+- “Despesas previstas”
+- “Saldo previsto”
+- “Receitas efetivas”
+- “Despesas efetivas”
+- “Saldo efetivo”
 
-Regras de cÃ¡lculo complexas devem ficar em tooltip, documentaÃƒÂ§ÃƒÂ£o ou cÃƒÂ³digo, nÃ£o como texto fixo na tela.
+Regras de cálculo complexas devem ficar em tooltip, documentação ou código, não como texto fixo na tela.
 
 ---
 
 # REGRA DE BOOT / ENTRADA DO APP
 
-Ao abrir o app em uma nova sessÃƒÂ£o real, o Fluxo pode exibir uma intro curta com a logo.
+Ao abrir o app em uma nova sessão real, o Fluxo pode exibir uma intro curta com a logo.
 
-Se o usuÃƒÂ¡rio estiver logado:
-- o app deve mostrar uma tela de carregamento/sincronizaÃƒÂ§ÃƒÂ£o;
-- deve executar automaticamente a mesma rotina do botÃƒÂ£o Ã¢â‚¬Å“AtualizarÃ¢â‚¬ï¿½;
+Se o usuário estiver logado:
+- o app deve mostrar uma tela de carregamento/sincronização;
+- deve executar automaticamente a mesma rotina do botão “Atualizar”;
 - deve carregar os dados reais antes de liberar a Home;
-- a Home nÃ£o pode abrir com valores zerados falsos.
+- a Home não pode abrir com valores zerados falsos.
 
 A rotina de boot deve:
-1. Aguardar autenticaÃƒÂ§ÃƒÂ£o/sessÃƒÂ£o pronta.
-2. Confirmar usuÃƒÂ¡rio autenticado.
+1. Aguardar autenticação/sessão pronta.
+2. Confirmar usuário autenticado.
 3. Executar refresh real dos dados financeiros.
-4. SÃƒÂ³ liberar o app apÃƒÂ³s refresh ou timeout/falha controlada.
-5. Em erro, mostrar aviso discreto e abrir com dados disponÃƒÂ­veis.
+4. Só liberar o app após refresh ou timeout/falha controlada.
+5. Em erro, mostrar aviso discreto e abrir com dados disponí­veis.
 
-O usuÃƒÂ¡rio nÃ£o deve precisar clicar em Ã¢â‚¬Å“AtualizarÃ¢â‚¬ï¿½ ao abrir o app.
+O usuário não deve precisar clicar em “Atualizar” ao abrir o app.
 
-O botÃƒÂ£o Ã¢â‚¬Å“AtualizarÃ¢â‚¬ï¿½ manual deve continuar existindo e funcionando como fallback.
+O botão “Atualizar” manual deve continuar existindo e funcionando como fallback.
 
-O app nÃ£o deve recarregar automaticamente no meio de aÃƒÂ§ÃƒÂµes crÃƒÂ­ticas, como:
-- editar lanÃ§amento;
+O app não deve recarregar automaticamente no meio de açes crí­ticas, como:
+- editar lançamento;
 - pagar fatura;
 - criar acordo;
 - parcelar fatura;
 - cadastrar conta;
 - editar categoria.
 
-AtualizaÃƒÂ§ÃƒÂµes PWA/service worker podem ser aplicadas automaticamente apenas durante o boot. Durante uso normal, usar aviso/fallback manual.
+Atualizaçes PWA/service worker podem ser aplicadas automaticamente apenas durante o boot. Durante uso normal, usar aviso/fallback manual.
 
 ---
 
@@ -112,9 +127,9 @@ AtualizaÃƒÂ§ÃƒÂµes PWA/service worker podem ser aplicadas automaticament
 
 O tutorial guiado foi removido completamente do app.
 
-NÃƒÂ£o deve existir:
+Não deve existir:
 - oferta inicial de tutorial;
-- botÃƒÂ£o Ã¢â‚¬Å“?Ã¢â‚¬ï¿½ / Ã¢â‚¬Å“Como utilizarÃ¢â‚¬ï¿½;
+- botão “?” / “Como utilizar”;
 - popups de tour guiado;
 - hook de tutorial;
 - localStorage de tutorial;
@@ -122,9 +137,9 @@ NÃƒÂ£o deve existir:
 - componentes GuidedTour, HelpButton ou TutorialOfferDialog.
 
 Motivo:
-O tutorial estava gerando comportamento indesejado e atrapalhando a experiÃƒÂªncia. O app deve comunicar por UX profissional, nÃ£o por explicaÃƒÂ§ÃƒÂµes de onboarding.
+O tutorial estava gerando comportamento indesejado e atrapalhando a experiência. O app deve comunicar por UX profissional, não por explicaçes de onboarding.
 
-Se no futuro houver ajuda, ela deve ser repensada como central de ajuda discreta, nÃ£o como tutorial automÃƒÂ¡tico.
+Se no futuro houver ajuda, ela deve ser repensada como central de ajuda discreta, não como tutorial automático.
 
 ---
 
@@ -132,14 +147,14 @@ Se no futuro houver ajuda, ela deve ser repensada como central de ajuda discreta
 
 A nova logo oficial do Fluxo deve substituir completamente:
 - logo antiga;
-- ÃƒÂ­cone provisÃƒÂ³rio;
+- í­cone provisório;
 - logo do Lovable;
 - favicon antigo;
 - PWA icons antigos;
 - manifest antigo;
-- qualquer resquÃƒÂ­cio visual anterior.
+- qualquer resquí­cio visual anterior.
 
-A logo dentro do app deve usar SVG/estrutura compatÃƒÂ­vel com `currentColor`, para acompanhar a cor de destaque/accent color do cliente.
+A logo dentro do app deve usar SVG/estrutura compatí­vel com `currentColor`, para acompanhar a cor de destaque/accent color do cliente.
 
 No app:
 - a logo deve aparecer na intro;
@@ -150,58 +165,58 @@ No app:
 - qualquer ponto de marca.
 
 Para favicon/PWA:
-- pode usar versÃƒÂ£o estÃƒÂ¡tica da logo;
-- manifest e service worker devem apontar para novos arquivos versionados quando necessÃƒÂ¡rio;
-- o ÃƒÂ­cone instalado pode depender de cache do navegador/sistema operacional e pode demorar para atualizar.
+- pode usar versão estática da logo;
+- manifest e service worker devem apontar para novos arquivos versionados quando necessário;
+- o í­cone instalado pode depender de cache do navegador/sistema operacional e pode demorar para atualizar.
 
 ---
 
-# REGRA DE ENCODING E TEXTOS VISÃƒï¿½VEIS
+# REGRA DE ENCODING E TEXTOS VISàƒVEIS
 
 Todos os arquivos devem permanecer em UTF-8.
 
-Ãƒâ€° proibido finalizar sprint com mojibake/acentuaÃƒÂ§ÃƒÂ£o quebrada em textos visÃƒÂ­veis.
+É proibido finalizar sprint com mojibake/acentuação quebrada em textos visí­veis.
 
 Exemplos proibidos:
-- LanÃƒÆ’Ã‚Â§amento
-- DescriÃ¯Â¿Â½Ã¯Â¿Â½o
-- A entrada Ã¯Â¿Â½ separada
-- NÃ¯Â¿Â½ de Parcelas
-- 1Ã¯Â¿Â½ Parcela
-- GestÃƒÆ’Ã‚Â£o
-- CartÃƒÆ’Ã‚Â£o
-- RelatÃƒÆ’Ã‚Â³rios
-- OrÃƒÆ’Ã‚Â§amentos
-- ConfiguraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes
-- ÃƒÂ¢Ã¢â€šÂ¬
+- Lançamento
+- Descrição
+- A entrada  separada
+- Nº de Parcelas
+- 1ª Parcela
+- Gestão
+- Cartão
+- Relatórios
+- Orçamentos
+- ConfiguraçàƒÆ’à‚µes
+- -
 
 Textos corretos:
-- LanÃƒÂ§amento
-- DescriÃƒÂ§ÃƒÂ£o
-- GestÃƒÂ£o
-- CartÃƒÂ£o
-- RelatÃƒÂ³rios
-- OrÃƒÂ§amentos
-- ConfiguraÃƒÂ§ÃƒÂµes
-- NÃ‚Âº
-- 1Ã‚Âª
-- MÃƒÂªs
-- PrÃƒÂ³ximo
-- CompetÃƒÂªncia
+- Lançamento
+- Descrição
+- Gestão
+- Cartão
+- Relatórios
+- Orçamentos
+- Configuraçes
+- Nà‚º
+- 1à‚ª
+- Mês
+- Próximo
+- Competência
 
 Regra permanente:
 - antes de finalizar qualquer sprint, rodar `npm run check:encoding`;
-- nÃ£o fazer conversÃƒÂ£o automÃƒÂ¡tica cega de arquivos inteiros;
+- não fazer conversão automática cega de arquivos inteiros;
 - corrigir manualmente textos quebrados;
-- allowlist deve ser mÃƒÂ­nima e justificada.
+- allowlist deve ser mí­nima e justificada.
 
-Arquivos de proteÃƒÂ§ÃƒÂ£o existentes:
+Arquivos de proteção existentes:
 - `.editorconfig` com `charset = utf-8`;
-- `AGENTS.md` com regra obrigatÃƒÂ³ria de encoding;
+- `AGENTS.md` com regra obrigatória de encoding;
 - `scripts/check-mojibake.mjs`;
 - `package.json` com `check:encoding` e `validate`.
 
-ValidaÃƒÂ§ÃƒÂ£o recomendada de fechamento:
+Validação recomendada de fechamento:
 - `npm run check:encoding`
 - `npm test`
 - `npm run build`
@@ -211,155 +226,155 @@ ValidaÃƒÂ§ÃƒÂ£o recomendada de fechamento:
 
 # REGRA DE RESPONSIVIDADE
 
-Modais com formulÃƒÂ¡rios longos devem ser responsivos.
+Modais com formulários longos devem ser responsivos.
 
 No desktop:
 - podem ocupar mais largura/altura da tela;
 - devem usar `max-height` baseado em viewport;
 - corpo do modal deve ter `overflow-y-auto`;
-- conteÃƒÂºdo nÃ£o pode ficar cortado.
+- conteúdo não pode ficar cortado.
 
 No mobile:
 - modal deve ocupar quase toda a tela;
 - campos devem ir para uma coluna;
 - rolagem deve funcionar;
-- botÃƒÂµes devem continuar acessÃƒÂ­veis;
-- inputs nÃ£o podem ficar escondidos pelo teclado.
+- botes devem continuar acessí­veis;
+- inputs não podem ficar escondidos pelo teclado.
 
 Exemplo importante:
-O modal de Novo Acordo/EdiÃƒÂ§ÃƒÂ£o de Acordo deve ser largo o suficiente no desktop e rolÃƒÂ¡vel no mobile, porque agora possui campos de entrada, parcelas, datas e total.
+O modal de Novo Acordo/Edição de Acordo deve ser largo o suficiente no desktop e rolável no mobile, porque agora possui campos de entrada, parcelas, datas e total.
 
 ---
 
 # REGRA DE TELAS E RESPONSABILIDADES
 
-## GestÃƒÂ£o de Contas
+## Gestão de Contas
 
-GestÃƒÂ£o de Contas ÃƒÂ© a tela operacional.
+Gestão de Contas é a tela operacional.
 
 Ela responde:
-Ã¢â‚¬Å“O que preciso pagar ou baixar?Ã¢â‚¬ï¿½
+“O que preciso pagar ou baixar?”
 
 Regra:
-- mostra obrigaÃƒÂ§ÃƒÂµes do mÃƒÂªs selecionado;
-- mostra pendÃƒÂªncias anteriores ainda abertas;
-- nÃ£o deve depender de `original_id` para exibir obrigaÃƒÂ§ÃƒÂ£o real;
-- pendÃƒÂªncia anterior em aberto deve aparecer mesmo sem `original_id`.
+- mostra obrigaçes do mês selecionado;
+- mostra pendências anteriores ainda abertas;
+- não deve depender de `original_id` para exibir obrigação real;
+- pendência anterior em aberto deve aparecer mesmo sem `original_id`.
 
-No filtro por MÃƒÂªs:
-- mostra obrigaÃƒÂ§ÃƒÂµes do mÃƒÂªs inteiro;
-- mais pendÃƒÂªncias anteriores abertas.
+No filtro por Mês:
+- mostra obrigaçes do mês inteiro;
+- mais pendências anteriores abertas.
 
 No filtro por Dia:
-- mostra obrigaÃƒÂ§ÃƒÂµes daquele dia;
-- mais pendÃƒÂªncias anteriores abertas;
-- nÃ£o mostra obrigaÃƒÂ§ÃƒÂµes futuras depois do dia selecionado.
+- mostra obrigaçes daquele dia;
+- mais pendências anteriores abertas;
+- não mostra obrigaçes futuras depois do dia selecionado.
 
-Filtro Dia deve existir na GestÃƒÂ£o de Contas.
+Filtro Dia deve existir na Gestão de Contas.
 
-Pagamentos de fatura devem acontecer exclusivamente pela GestÃƒÂ£o de Contas.
+Pagamentos de fatura devem acontecer exclusivamente pela Gestão de Contas.
 
 ---
 
 ## Home / MonthPlan
 
-Home/MonthPlan ÃƒÂ© uma tela de decisÃƒÂ£o mensal.
+Home/MonthPlan é uma tela de decisão mensal.
 
 Ela responde:
-Ã¢â‚¬Å“Como estÃƒÂ¡ o mÃƒÂªs selecionado?Ã¢â‚¬ï¿½
+“Como está o mês selecionado?”
 
-Cards principais da Home devem usar competÃƒÂªncia do mÃƒÂªs selecionado:
-- nÃ£o somar despesas pendentes de meses anteriores dentro dos cards principais;
-- pendÃƒÂªncias anteriores podem aparecer apenas em indicador separado;
-- vencidas devem usar a data real de hoje, nÃ£o o fim do mÃƒÂªs selecionado.
+Cards principais da Home devem usar competência do mês selecionado:
+- não somar despesas pendentes de meses anteriores dentro dos cards principais;
+- pendências anteriores podem aparecer apenas em indicador separado;
+- vencidas devem usar a data real de hoje, não o fim do mês selecionado.
 
 Regra importante:
-- `viewDate` define a competÃƒÂªncia analisada;
-- `currentDate`/data real define se algo estÃƒÂ¡ vencido.
+- `viewDate` define a competência analisada;
+- `currentDate`/data real define se algo está vencido.
 
-Home nÃ£o deve funcionar como GestÃƒÂ£o de Contas disfarÃƒÂ§ada.
+Home não deve funcionar como Gestão de Contas disfarçada.
 
-Filtro Dia nÃ£o deve existir na Home.
+Filtro Dia não deve existir na Home.
 
 ---
 
-## CartÃƒÂµes
+## Cartes
 
-A tela de CartÃƒÂµes ÃƒÂ© demonstrativa.
+A tela de Cartes é demonstrativa.
 
 Ela deve mostrar:
-- cartÃƒÂ£o selecionado;
+- cartão selecionado;
 - limite total;
 - limite usado;
-- limite disponÃƒÂ­vel;
+- limite disponí­vel;
 - percentual usado;
-- fatura do mÃƒÂªs selecionado;
+- fatura do mês selecionado;
 - lista de compras/parcelas da fatura;
 - status da fatura;
-- atalho para GestÃƒÂ£o de Contas.
+- atalho para Gestão de Contas.
 
-A tela de CartÃƒÂµes nÃ£o deve:
+A tela de Cartes não deve:
 - pagar fatura;
 - baixar fatura;
 - parcelar fatura;
-- fazer movimentaÃƒÂ§ÃƒÂ£o financeira real.
+- fazer movimentação financeira real.
 
-Pagamentos e baixas de fatura acontecem somente na GestÃƒÂ£o de Contas.
+Pagamentos e baixas de fatura acontecem somente na Gestão de Contas.
 
-Foram removidos da UI de CartÃƒÂµes os blocos:
-- Total lanÃƒÂ§ado;
+Foram removidos da UI de Cartes os blocos:
+- Total lançado;
 - Valor pago;
-- DiferenÃƒÂ§a a conciliar;
+- Diferença a conciliar;
 - Gastos;
-- DisponÃƒÂ­vel como card separado;
-- mensagens de conciliaÃƒÂ§ÃƒÂ£o visual que confundiam o usuÃƒÂ¡rio.
+- Disponí­vel como card separado;
+- mensagens de conciliação visual que confundiam o usuário.
 
-Esses cÃ¡lculos podem existir internamente, mas nÃ£o devem poluir a tela.
+Esses cálculos podem existir internamente, mas não devem poluir a tela.
 
 ---
 
-## LanÃƒÂ§amentos
+## Lançamentos
 
-LanÃƒÂ§amentos ÃƒÂ© o extrato/movimentos registrados.
+Lançamentos é o extrato/movimentos registrados.
 
 Deve mostrar:
 - compras;
 - despesas;
 - receitas;
-- transferÃƒÂªncias;
+- transferências;
 - pagamentos de fatura;
-- compras de cartÃƒÂ£o;
+- compras de cartão;
 - acordos;
-- entradas e parcelas quando aplicÃƒÂ¡vel.
+- entradas e parcelas quando aplicável.
 
-Compra no cartÃƒÂ£o aparece em LanÃƒÂ§amentos, mas nÃ£o conta como despesa efetiva.
+Compra no cartão aparece em Lançamentos, mas não conta como despesa efetiva.
 
-Pagamento de fatura aparece em LanÃƒÂ§amentos e conta como despesa efetiva.
+Pagamento de fatura aparece em Lançamentos e conta como despesa efetiva.
 
-TransferÃƒÂªncias aparecem em LanÃƒÂ§amentos, mas nÃ£o contam como receita/despesa.
+Transferências aparecem em Lançamentos, mas não contam como receita/despesa.
 
-Filtro Dia deve permanecer em LanÃƒÂ§amentos.
+Filtro Dia deve permanecer em Lançamentos.
 
 ---
 
-## RelatÃƒÂ³rios
+## Relatórios
 
-RelatÃƒÂ³rios ÃƒÂ© uma tela analÃƒÂ­tica e projetiva.
+Relatórios é uma tela analí­tica e projetiva.
 
 Ela deve responder:
-- como os meses futuros vÃƒÂ£o ficar;
+- como os meses futuros vão ficar;
 - quanto entra;
 - quanto sai;
 - quanto sobra/falta;
 - como evolui o consumo;
 - quais categorias/macrogrupos consomem mais;
-- como o perÃ­odo atual compara com o anterior.
+- como o período atual compara com o anterior.
 
-RelatÃƒÂ³rios deve ter modos:
+Relatórios deve ter modos:
 
 ### Projetado
 
-Modo padrÃƒÂ£o.
+Modo padrão.
 
 Considera:
 - receitas previstas;
@@ -370,10 +385,10 @@ Considera:
 - acordos futuros;
 - despesas pendentes;
 - receitas pendentes;
-- recorrÃƒÂªncias;
-- compromissos do perÃ­odo.
+- recorrências;
+- compromissos do período.
 
-NÃƒÂ£o exige `isPaid`.
+Não exige `isPaid`.
 
 ### Realizado
 
@@ -381,8 +396,8 @@ Considera somente caixa efetivo:
 - receitas pagas/recebidas;
 - despesas pagas;
 - pagamento de fatura;
-- nÃ£o soma compra comum no cartÃƒÂ£o;
-- nÃ£o soma transferÃƒÂªncia.
+- não soma compra comum no cartão;
+- não soma transferência.
 
 ### Cards principais
 
@@ -396,12 +411,12 @@ Realizado:
 - Despesas efetivas;
 - Saldo efetivo.
 
-Comparativos dos cards devem ser visÃƒÂ­veis e BI-like:
+Comparativos dos cards devem ser visí­veis e BI-like:
 - valor atual;
-- variaÃƒÂ§ÃƒÂ£o absoluta;
+- variação absoluta;
 - percentual;
-- direÃƒÂ§ÃƒÂ£o;
-- cor semÃƒÂ¢ntica.
+- direção;
+- cor semí¢ntica.
 
 Regra de cor:
 - receita/saldo aumentando = positivo;
@@ -411,34 +426,34 @@ Regra de cor:
 - consumo aumentando = negativo;
 - consumo reduzindo = positivo.
 
-### PerÃƒÂ­odos
+### Perí­odos
 
-MÃƒÂªs:
-- calcula o mÃƒÂªs selecionado;
-- compara com mÃƒÂªs anterior.
+Mês:
+- calcula o mês selecionado;
+- compara com mês anterior.
 
 Semestre:
 - calcula semestre selecionado;
-- deve permitir selecionar 1Ã‚Âº ou 2Ã‚Âº semestre;
-- evoluÃƒÂ§ÃƒÂ£o semestral deve mostrar contexto como 1S/ano anterior, 2S/ano anterior, 1S/ano atual, 2S/ano atual;
+- deve permitir selecionar 1à‚º ou 2à‚º semestre;
+- evolução semestral deve mostrar contexto como 1S/ano anterior, 2S/ano anterior, 1S/ano atual, 2S/ano atual;
 - compara com semestre anterior.
 
 Ano:
 - calcula ano selecionado;
 - compara com ano anterior.
 
-Filtro Dia nÃ£o deve existir em RelatÃƒÂ³rios.
+Filtro Dia não deve existir em Relatórios.
 
 ---
 
-# REGRA DE RELATÃƒâ€œRIOS Ã¢â‚¬â€ TOTAL DE CONSUMO VS RECEITA
+# REGRA DE RELATÓRIOS — TOTAL DE CONSUMO VS RECEITA
 
-O antigo grÃƒÂ¡fico de EvoluÃƒÂ§ÃƒÂ£o Mensal foi substituÃƒÂ­do por uma mÃƒÂ©trica mais ÃƒÂºtil: Total de Consumo vs Receita.
+O antigo gráfico de Evolução Mensal foi substituí­do por uma métrica mais útil: Total de Consumo vs Receita.
 
-CÃƒÂ¡lculo:
+Cálculo:
 
 Consumo da receita (%) =
-despesas do perÃ­odo / receitas do perÃ­odo Ãƒâ€” 100
+despesas do período / receitas do período Ô 100
 
 No modo Projetado:
 - usa receitas previstas;
@@ -452,25 +467,25 @@ Deve exibir:
 - percentual;
 - valor consumido;
 - receita total;
-- variaÃƒÂ§ÃƒÂ£o contra perÃ­odo anterior em pontos percentuais;
-- grÃƒÂ¡fico de linha/evoluÃƒÂ§ÃƒÂ£o.
+- variação contra período anterior em pontos percentuais;
+- gráfico de linha/evolução.
 
 Exemplo:
 Total de Consumo vs Receita
 81,0%
 R$ 3.506,71 de R$ 4.330,00
-Ã¢â€ â€œ 17,6 p.p. vs mÃƒÂªs anterior
+↓ 17,6 p.p. vs mês anterior
 
 Sem textos explicativos longos.
 
 ---
 
-# REGRA DE RELATÃƒâ€œRIOS Ã¢â‚¬â€ COMPOSIÃƒâ€¡ÃƒÆ’O DAS DESPESAS
+# REGRA DE RELATÓRIOS — COMPOSIÔ¡àƒÆ’O DAS DESPESAS
 
-ComposiÃƒÂ§ÃƒÂ£o das Despesas deve destrinchar o total de despesas do perÃ­odo selecionado por categoria.
+Composição das Despesas deve destrinchar o total de despesas do período selecionado por categoria.
 
-MÃƒÂªs:
-- despesas do mÃƒÂªs por categoria.
+Mês:
+- despesas do mês por categoria.
 
 Semestre:
 - despesas acumuladas do semestre por categoria.
@@ -484,34 +499,34 @@ Modo Projetado:
 Modo Realizado:
 - despesas efetivas por categoria.
 
-A composiÃƒÂ§ÃƒÂ£o deve respeitar o modo e o perÃ­odo selecionados.
+A composição deve respeitar o modo e o período selecionados.
 
-Clicar em uma categoria na ComposiÃƒÂ§ÃƒÂ£o das Despesas deve alimentar a seÃ§Ã£o AnÃƒÂ¡lise de Categoria.
+Clicar em uma categoria na Composição das Despesas deve alimentar a seção Análise de Categoria.
 
-PreferÃƒÂªncia:
+Preferência:
 - cards principais continuam globais;
-- clique no grÃƒÂ¡fico/ranking seleciona categoria para anÃƒÂ¡lise;
+- clique no gráfico/ranking seleciona categoria para análise;
 - a categoria clicada fica destacada;
-- usuÃƒÂ¡rio pode trocar pelo seletor.
+- usuário pode trocar pelo seletor.
 
 ---
 
-# REGRA DE RELATÃƒâ€œRIOS Ã¢â‚¬â€ ANÃƒï¿½LISE DE CATEGORIA
+# REGRA DE RELATÓRIOS — ANàƒLISE DE CATEGORIA
 
-A seÃ§Ã£o deve se chamar:
+A seção deve se chamar:
 
-AnÃƒÂ¡lise de Categoria
+Análise de Categoria
 
 Deve conter:
 - seletor de categoria;
-- consumo do perÃ­odo atual;
-- consumo do perÃ­odo anterior;
-- diferenÃƒÂ§a;
-- percentual de variaÃƒÂ§ÃƒÂ£o;
-- grÃƒÂ¡fico/linha de evoluÃƒÂ§ÃƒÂ£o.
+- consumo do período atual;
+- consumo do período anterior;
+- diferença;
+- percentual de variação;
+- gráfico/linha de evolução.
 
 Regras:
-- MÃƒÂªs compara com mÃƒÂªs anterior;
+- Mês compara com mês anterior;
 - Semestre compara com semestre anterior;
 - Ano compara com ano anterior.
 
@@ -519,13 +534,13 @@ Sem textos explicativos longos.
 
 ---
 
-# REGRA DE ORÃƒâ€¡AMENTOS
+# REGRA DE ORÇAMENTOS
 
-OrÃƒÂ§amentos comparam Planejado x Realizado por categoria ou agrupamento.
+Orçamentos comparam Planejado x Realizado por categoria ou agrupamento.
 
-OrÃƒÂ§amento nÃ£o ÃƒÂ© a mesma coisa que despesa efetiva financeira.
+Orçamento não é a mesma coisa que despesa efetiva financeira.
 
-## OrÃƒÂ§amento por Categoria
+## Orçamento por Categoria
 
 Unidade principal:
 Categoria.
@@ -534,134 +549,134 @@ Deve mostrar:
 - categoria;
 - planejado;
 - consumo/realizado;
-- diferenÃƒÂ§a;
+- diferença;
 - percentual utilizado;
 - status.
 
 Status:
 - Dentro;
-- AtenÃƒÂ§ÃƒÂ£o;
+- Atenção;
 - Estourado;
-- Sem orÃƒÂ§amento definido.
+- Sem orçamento definido.
 
 Regra fundamental:
 
 Acompanhar = visibilidade.
-OrÃƒÂ§amento = meta.
+Orçamento = meta.
 Movimento = consumo.
 
-Essas trÃƒÂªs coisas nÃ£o podem ser misturadas.
+Essas três coisas não podem ser misturadas.
 
-O usuÃƒÂ¡rio deve escolher explicitamente quais categorias quer acompanhar.
+O usuário deve escolher explicitamente quais categorias quer acompanhar.
 
-A lista principal de OrÃƒÂ§amentos por Categoria mostra somente categorias escolhidas pelo usuÃƒÂ¡rio.
+A lista principal de Orçamentos por Categoria mostra somente categorias escolhidas pelo usuário.
 
-NÃƒÂ£o deve aparecer apenas porque:
+Não deve aparecer apenas porque:
 - tem `budgetLimit`;
 - tem movimento;
 - tem gasto;
 - tem categoria;
-- estÃƒÂ¡ em macrocategoria.
+- está em macrocategoria.
 
-Se o toggle Ã¢â‚¬Å“AcompanharÃ¢â‚¬ï¿½ estiver desligado:
-- categoria nÃ£o aparece na lista principal;
-- mesmo com orÃƒÂ§amento definido;
+Se o toggle “Acompanhar” estiver desligado:
+- categoria não aparece na lista principal;
+- mesmo com orçamento definido;
 - mesmo com movimento.
 
 Se estiver ligado:
 - aparece;
-- se tiver orÃƒÂ§amento, mostra meta;
-- se nÃ£o tiver orÃƒÂ§amento, mostra Ã¢â‚¬Å“Sem orÃƒÂ§amento definidoÃ¢â‚¬ï¿½;
-- se nÃ£o tiver movimento, mostra realizado R$ 0,00.
+- se tiver orçamento, mostra meta;
+- se não tiver orçamento, mostra “Sem orçamento definido”;
+- se não tiver movimento, mostra realizado R$ 0,00.
 
-O aviso de categorias com movimento nÃ£o acompanhadas foi removido porque poluÃƒÂ­a a tela.
+O aviso de categorias com movimento não acompanhadas foi removido porque poluí­a a tela.
 
-## CartÃƒÂ£o no orÃƒÂ§amento por categoria
+## Cartão no orçamento por categoria
 
-Para mÃƒÂ©tricas financeiras gerais:
-- compra no cartÃƒÂ£o nÃ£o conta como despesa efetiva;
+Para métricas financeiras gerais:
+- compra no cartão não conta como despesa efetiva;
 - pagamento da fatura conta como despesa efetiva.
 
-Para orÃƒÂ§amento por categoria:
-- compra no cartÃƒÂ£o conta no consumo da categoria da compra;
-- pagamento da fatura nÃ£o entra no orÃƒÂ§amento por categoria.
+Para orçamento por categoria:
+- compra no cartão conta no consumo da categoria da compra;
+- pagamento da fatura não entra no orçamento por categoria.
 
 Motivo:
-OrÃƒÂ§amento mede comportamento de consumo por categoria. Fatura ÃƒÂ© forma de pagamento, nÃ£o categoria de consumo.
+Orçamento mede comportamento de consumo por categoria. Fatura é forma de pagamento, não categoria de consumo.
 
 Exemplo:
-Compra no cartÃƒÂ£o:
-Mercado Ã¢â‚¬â€ R$ 300 Ã¢â‚¬â€ AlimentaÃƒÂ§ÃƒÂ£o
+Compra no cartão:
+Mercado — R$ 300 — Alimentação
 
-OrÃƒÂ§amento:
-AlimentaÃƒÂ§ÃƒÂ£o + R$ 300
+Orçamento:
+Alimentação + R$ 300
 
-RelatÃƒÂ³rio efetivo:
-sÃƒÂ³ conta quando pagar a fatura.
+Relatório efetivo:
+só conta quando pagar a fatura.
 
 ---
 
-# REGRA DE MACROCATEGORIAS / AGRUPAMENTOS ORÃƒâ€¡AMENTÃƒï¿½RIOS
+# REGRA DE MACROCATEGORIAS / AGRUPAMENTOS ORÇAMENTàƒRIOS
 
-Macrocategorias sÃƒÂ£o agrupamentos personalizados de categorias.
+Macrocategorias são agrupamentos personalizados de categorias.
 
 Exemplos:
 - Essencial;
 - Conforto;
-- DÃƒÂ­vidas;
+- Dí­vidas;
 - Lazer;
 - Investimentos;
-- VariÃƒÂ¡veis;
-- FamÃƒÂ­lia;
+- Variáveis;
+- Famí­lia;
 - Empresa.
 
-Elas servem para anÃƒÂ¡lise estratÃƒÂ©gica acima das categorias.
+Elas servem para análise estratégica acima das categorias.
 
 Exemplo:
 Essencial
 - Moradia;
-- SaÃƒÂºde;
-- AlimentaÃƒÂ§ÃƒÂ£o Base.
+- Saúde;
+- Alimentação Base.
 
-Cada macrocategoria pode ter teto percentual sobre a receita do perÃ­odo.
+Cada macrocategoria pode ter teto percentual sobre a receita do período.
 
 Exemplo:
 Essencial = 25% da receita.
 
-CÃƒÂ¡lculo:
+Cálculo:
 
 Teto do agrupamento =
-receita do perÃ­odo Ãƒâ€” percentual definido
+receita do período Ô percentual definido
 
 Consumo do agrupamento =
-soma dos gastos das categorias vinculadas no perÃ­odo
+soma dos gastos das categorias vinculadas no período
 
 Uso =
 consumo / teto
 
-DisponÃƒÂ­vel =
+Disponí­vel =
 teto - consumo
 
 Status:
 - Dentro;
-- AtenÃƒÂ§ÃƒÂ£o;
+- Atenção;
 - Estourado;
 - Sem teto definido.
 
-A tela de RelatÃƒÂ³rios/OrÃƒÂ§amentos deve alternar entre:
+A tela de Relatórios/Orçamentos deve alternar entre:
 - Por Categoria;
 - Por Agrupamento.
 
-## PersistÃƒÂªncia atual
+## Persistência atual
 
-A estrutura persistente oficial ainda nÃ£o foi criada no Supabase.
+A estrutura persistente oficial ainda não foi criada no Supabase.
 
-A implementaÃƒÂ§ÃƒÂ£o atual usa `localStorage` por usuÃƒÂ¡rio:
+A implementação atual usa `localStorage` por usuário:
 - `fluxo_budget_groups:<userId>`;
 - `fluxo_category_group_assignments:<userId>`.
 
 Risco:
-- nÃ£o sincroniza entre dispositivos/navegadores.
+- não sincroniza entre dispositivos/navegadores.
 
 Futuro recomendado:
 Criar migration oficial:
@@ -673,7 +688,7 @@ Criar migration oficial:
 - `budget_type`;
 - `budget_percent`;
 - `budget_amount`;
-- vÃƒÂ­nculo em `categories` ou tabela relacional.
+- ví­nculo em `categories` ou tabela relacional.
 
 ## Tela de Categorias
 
@@ -681,7 +696,7 @@ O gerenciamento de macrocategorias acontece na tela de Categorias.
 
 Cada categoria pode ser associada a uma macrocategoria.
 
-O usuÃƒÂ¡rio deve conseguir:
+O usuário deve conseguir:
 - criar macrocategoria;
 - editar nome/cor;
 - definir teto percentual da receita;
@@ -691,23 +706,23 @@ O usuÃƒÂ¡rio deve conseguir:
 
 ---
 
-# REGRA DE CARTÃƒÆ’O DE CRÃƒâ€°DITO E FATURA
+# REGRA DE CARTàƒÆ’O DE CRÉDITO E FATURA
 
-Compra no cartÃƒÂ£o:
-- aparece em LanÃƒÂ§amentos;
-- aparece em CartÃƒÂµes/Fatura;
-- consome limite do cartÃƒÂ£o;
-- nÃ£o conta como despesa efetiva no momento da compra.
+Compra no cartão:
+- aparece em Lançamentos;
+- aparece em Cartes/Fatura;
+- consome limite do cartão;
+- não conta como despesa efetiva no momento da compra.
 
 Pagamento de fatura:
-- ÃƒÂ© despesa efetiva;
-- acontece somente pela GestÃƒÂ£o de Contas;
+- é despesa efetiva;
+- acontece somente pela Gestão de Contas;
 - pode ser total, parcial ou parcelado;
-- nÃ£o pode duplicar compra + fatura.
+- não pode duplicar compra + fatura.
 
-CartÃƒÂµes ÃƒÂ© demonstrativo.
+Cartes é demonstrativo.
 
-GestÃƒÂ£o de Contas ÃƒÂ© o ponto ÃƒÂºnico para baixa/pagamento de fatura.
+Gestão de Contas é o ponto único para baixa/pagamento de fatura.
 
 ## Pagamento total
 
@@ -715,46 +730,46 @@ Ao pagar fatura total:
 - registra despesa efetiva `isInvoicePayment`;
 - debita conta/carteira escolhida;
 - marca fatura/itens como baixados conforme regra;
-- nÃ£o gera saldo futuro.
+- não gera saldo futuro.
 
 ## Pagamento parcial
 
 Ao pagar fatura parcialmente:
 - registra somente o valor pago como despesa efetiva;
-- marca a obrigaÃƒÂ§ÃƒÂ£o/fatura atual como baixada/settled;
-- gera saldo restante na prÃƒÂ³xima fatura como obrigaÃƒÂ§ÃƒÂ£o/despesa futura;
-- nÃ£o duplica compras originais;
-- nÃ£o libera limite total indevidamente se houver saldo remanescente.
+- marca a obrigação/fatura atual como baixada/settled;
+- gera saldo restante na próxima fatura como obrigação/despesa futura;
+- não duplica compras originais;
+- não libera limite total indevidamente se houver saldo remanescente.
 
 ## Parcelamento de fatura
 
 Ao parcelar fatura:
-- usuÃƒÂ¡rio informa entrada, se houver;
-- usuÃƒÂ¡rio informa quantidade/valor das parcelas conforme banco/app do cartÃƒÂ£o;
-- o Fluxo nÃ£o calcula juros;
-- fatura atual ÃƒÂ© considerada renegociada/baixada;
-- parcelas futuras sÃƒÂ£o geradas conforme valores informados;
-- nÃ£o exigir que entrada + parcelas fechem valor original, pois juros podem jÃƒÂ¡ estar embutidos pelo banco.
+- usuário informa entrada, se houver;
+- usuário informa quantidade/valor das parcelas conforme banco/app do cartão;
+- o Fluxo não calcula juros;
+- fatura atual é considerada renegociada/baixada;
+- parcelas futuras são geradas conforme valores informados;
+- não exigir que entrada + parcelas fechem valor original, pois juros podem já estar embutidos pelo banco.
 
 ---
 
-# REGRA DE LIMITE DO CARTÃƒÆ’O E isPaid
+# REGRA DE LIMITE DO CARTàƒÆ’O E isPaid
 
-Compras no cartÃƒÂ£o podem ser registradas como `isPaid = true` porque representam uma despesa baixada via cartÃƒÂ£o.
+Compras no cartão podem ser registradas como `isPaid = true` porque representam uma despesa baixada via cartão.
 
-Mas isso nÃ£o significa que a fatura foi paga.
+Mas isso não significa que a fatura foi paga.
 
-Para limite de cartÃƒÂ£o:
-- compra no cartÃƒÂ£o continua consumindo limite atÃƒÂ© que a fatura correspondente seja quitada, renegociada ou tratada conforme regra;
-- pagamento de fatura (`isInvoicePayment`) ÃƒÂ© o evento financeiro que ajusta/libera limite;
-- o campo `isPaid` da compra individual nÃ£o deve, sozinho, zerar o impacto da compra no limite.
+Para limite de cartão:
+- compra no cartão continua consumindo limite até que a fatura correspondente seja quitada, renegociada ou tratada conforme regra;
+- pagamento de fatura (`isInvoicePayment`) é o evento financeiro que ajusta/libera limite;
+- o campo `isPaid` da compra individual não deve, sozinho, zerar o impacto da compra no limite.
 
 Erro corrigido:
-O cÃ¡lculo de limite descartava compras no cartÃƒÂ£o marcadas como `isPaid = true`, o que fazia a fatura ter valor, mas o limite usado aparecer como 0.
+O cálculo de limite descartava compras no cartão marcadas como `isPaid = true`, o que fazia a fatura ter valor, mas o limite usado aparecer como 0.
 
 Regra correta:
-- fatura aberta com valor lanÃƒÂ§ado e valor pago R$ 0,00 deve consumir limite;
-- limite disponÃƒÂ­vel = limite total - limite usado;
+- fatura aberta com valor lançado e valor pago R$ 0,00 deve consumir limite;
+- limite disponí­vel = limite total - limite usado;
 - percentual usado = limite usado / limite total.
 
 Exemplo:
@@ -764,7 +779,7 @@ Pago: R$ 0,00
 
 Resultado esperado:
 - limite usado: R$ 771,89;
-- limite disponÃƒÂ­vel: R$ 228,11;
+- limite disponí­vel: R$ 228,11;
 - uso: ~77%.
 
 ---
@@ -773,21 +788,21 @@ Resultado esperado:
 
 Acordo = entrada opcional + parcelas futuras.
 
-Entrada nÃ£o ÃƒÂ© parcela.
+Entrada não é parcela.
 
-Parcelas comeÃƒÂ§am depois da entrada.
+Parcelas começam depois da entrada.
 
-O app nÃ£o calcula juros; registra o acordo informado pelo usuÃƒÂ¡rio.
+O app não calcula juros; registra o acordo informado pelo usuário.
 
 Exemplo real:
 Entrada: R$ 79,60
 Parcelas: 11x de R$ 90,39
 Total: R$ 1.073,89
 
-CÃƒÂ¡lculo:
-R$ 79,60 + 11 Ãƒâ€” R$ 90,39 = R$ 1.073,89
+Cálculo:
+R$ 79,60 + 11 Ô R$ 90,39 = R$ 1.073,89
 
-## FormulÃƒÂ¡rio de Acordos
+## Formulário de Acordos
 
 Campos:
 - Tem entrada?
@@ -798,12 +813,12 @@ Campos:
 - Quantidade de parcelas;
 - Valor da parcela;
 - Total do acordo calculado automaticamente;
-- Data da 1Ã‚Âª parcela;
+- Data da 1à‚ª parcela;
 - Dia de vencimento.
 
 ## Entrada do acordo
 
-A entrada deve ser uma transaÃƒÂ§ÃƒÂ£o separada vinculada ao `debt_id`.
+A entrada deve ser uma transação separada vinculada ao `debt_id`.
 
 Se paga no ato:
 - `is_paid = true`;
@@ -811,11 +826,11 @@ Se paga no ato:
 - `account_id`/conta informada;
 - deve debitar conta/carteira se o fluxo atual faz isso.
 
-Se nÃ£o paga:
+Se não paga:
 - fica pendente;
-- aparece na GestÃƒÂ£o de Contas como obrigaÃƒÂ§ÃƒÂ£o separada.
+- aparece na Gestão de Contas como obrigação separada.
 
-DescriÃƒÂ§ÃƒÂ£o sugerida:
+Descrição sugerida:
 Entrada acordo [nome]
 
 ## Parcelas do acordo
@@ -826,34 +841,34 @@ Gerar parcelas separadas:
 - ...
 - Parcela N/N acordo [nome]
 
-Entrada nÃ£o entra na contagem.
+Entrada não entra na contagem.
 
 Exemplo:
 Entrada + 11 parcelas gera:
-- 1 transaÃƒÂ§ÃƒÂ£o de entrada;
+- 1 transação de entrada;
 - 11 parcelas;
-- nÃ£o 12 parcelas.
+- não 12 parcelas.
 
-## Novo Acordo vs EdiÃƒÂ§ÃƒÂ£o
+## Novo Acordo vs Edição
 
 Novo Acordo deve abrir limpo.
 
-NÃƒÂ£o pode herdar:
+Não pode herdar:
 - dados de acordo editado;
 - valores de exemplo;
-- dados do ÃƒÂºltimo acordo;
+- dados do último acordo;
 - valores como 90,39, 11, Inter etc.
 
 Editar Acordo:
 - deve abrir preenchido com dados reais do acordo selecionado.
 
-Regra tÃƒÂ©cnica:
+Regra técnica:
 - separar `createEmptyAgreementForm()`;
 - `resetFormState()`;
 - `handleEdit(...)`;
 - `openAddDebtForm()` deve resetar antes de abrir;
 - `handleCloseForm()` deve resetar;
-- usar key diferente entre novo e ediÃƒÂ§ÃƒÂ£o para evitar reaproveitamento indevido do subtree React.
+- usar key diferente entre novo e edição para evitar reaproveitamento indevido do subtree React.
 
 ## Datas de acordo
 
@@ -861,15 +876,15 @@ Ao lidar com strings `yyyy-mm-dd`, usar parsing local (`parseLocalDate`) em vez 
 
 ---
 
-# REGRA DE CLASSIFICAÃƒâ€¡ÃƒÆ’O CANÃƒâ€NICA DE CATEGORIAS
+# REGRA DE CLASSIFICAÔ¡àƒÆ’O CANNICA DE CATEGORIAS
 
-RelatÃƒÂ³rios e composiÃƒÂ§ÃƒÂµes por categoria devem agrupar transaÃƒÂ§ÃƒÂµes por chave canÃƒÂ´nica, nÃ£o por label solto, `debt_id` individual ou fallback local.
+Relatórios e composiçes por categoria devem agrupar transaçes por chave cannica, não por label solto, `debt_id` individual ou fallback local.
 
 Regra geral:
-- label igual nÃ£o basta;
-- agrupamento deve usar key canÃƒÂ´nica.
+- label igual não basta;
+- agrupamento deve usar key cannica.
 
-## Buckets canÃƒÂ´nicos
+## Buckets cannicos
 
 Categoria real:
 - key: `category:{category.id}`;
@@ -879,186 +894,186 @@ Acordo:
 - key: `logical:agreement`;
 - label: `Acordo`.
 
-RenegociaÃƒÂ§ÃƒÂ£o:
+Renegociação:
 - key: `logical:renegotiation`;
-- label: `RenegociaÃƒÂ§ÃƒÂ£o`.
+- label: `Renegociação`.
 
 Sem categoria:
 - key: `logical:uncategorized`;
-- label: `NÃƒÂ£o identificados`.
+- label: `Não identificados`.
 
-Categoria ÃƒÂ³rfÃƒÂ£:
+Categoria órfã:
 - key: `logical:missing-category:{categoryId}`;
-- label: `Categoria nÃ£o encontrada`.
+- label: `Categoria não encontrada`.
 
 ## Prioridade atual
 
-1. `debtId` Ã¢â€ â€™ Acordo.
-2. RenegociaÃƒÂ§ÃƒÂ£o sistÃƒÂªmica Ã¢â€ â€™ RenegociaÃƒÂ§ÃƒÂ£o.
-3. Categoria real chamada Acordo Ã¢â€ â€™ Acordo.
-4. Categoria real diferente de NÃƒÂ£o Identificados Ã¢â€ â€™ categoria real.
-5. Categoria real NÃƒÂ£o Identificados Ã¢â€ â€™ NÃƒÂ£o identificados.
-6. `categoryId` ÃƒÂ³rfÃƒÂ£o Ã¢â€ â€™ Categoria nÃ£o encontrada.
-7. Fallback Ã¢â€ â€™ NÃƒÂ£o identificados.
+1. `debtId` → Acordo.
+2. Renegociação sistêmica → Renegociação.
+3. Categoria real chamada Acordo → Acordo.
+4. Categoria real diferente de Não Identificados → categoria real.
+5. Categoria real Não Identificados → Não identificados.
+6. `categoryId` órfão → Categoria não encontrada.
+7. Fallback → Não identificados.
 
 ## Acordo
 
-TransaÃƒÂ§ÃƒÂµes com `debt_id` devem cair na categoria lÃƒÂ³gica Acordo, quando nÃ£o houver categoria real melhor.
+Transaçes com `debt_id` devem cair na categoria lógica Acordo, quando não houver categoria real melhor.
 
 Todos os acordos devem somar no mesmo bucket:
 - `logical:agreement`.
 
-NÃƒÂ£o usar:
+Não usar:
 - `debt_id` individual como key;
 - label solto;
 - fallback separado.
 
 Exemplo:
-99 - EmprÃƒÂ©stimo: R$ 167,67
+99 - Empréstimo: R$ 167,67
 Inter: R$ 90,39
 
-ComposiÃƒÂ§ÃƒÂ£o correta:
-Acordo Ã¢â‚¬â€ R$ 258,06
+Composição correta:
+Acordo — R$ 258,06
 
-NÃƒÂ£o:
-Acordo Ã¢â‚¬â€ R$ 167,67
-Acordo Ã¢â‚¬â€ R$ 90,39
+Não:
+Acordo — R$ 167,67
+Acordo — R$ 90,39
 
-## RenegociaÃƒÂ§ÃƒÂ£o
+## Renegociação
 
-RenegociaÃƒÂ§ÃƒÂ£o ÃƒÂ© categoria lÃƒÂ³gica/nativa do sistema, assim como Acordo.
+Renegociação é categoria lógica/nativa do sistema, assim como Acordo.
 
-NÃƒÂ£o Identificados ÃƒÂ© ÃƒÂºltimo recurso.
+Não Identificados é último recurso.
 
-Se o sistema sabe que a transaÃƒÂ§ÃƒÂ£o representa renegociaÃƒÂ§ÃƒÂ£o, ela deve aparecer como RenegociaÃƒÂ§ÃƒÂ£o, mesmo se estiver cadastrada com categoria real Ã¢â‚¬Å“NÃƒÂ£o IdentificadosÃ¢â‚¬ï¿½.
+Se o sistema sabe que a transação representa renegociação, ela deve aparecer como Renegociação, mesmo se estiver cadastrada com categoria real “Não Identificados”.
 
-Exemplos de transaÃƒÂ§ÃƒÂµes que podem ser RenegociaÃƒÂ§ÃƒÂ£o:
-- RenegociaÃƒÂ§ÃƒÂ£o de PendÃƒÂªncias;
+Exemplos de transaçes que podem ser Renegociação:
+- Renegociação de Pendências;
 - Parcela fatura;
 - Saldo restante;
-- parcelamentos/ajustes sistÃƒÂªmicos de fatura;
-- registros com sinais estruturados como `transactionType`, `cardId`, `invoiceMonthYear`, desde que nÃ£o sejam `isInvoicePayment`.
+- parcelamentos/ajustes sistêmicos de fatura;
+- registros com sinais estruturados como `transactionType`, `cardId`, `invoiceMonthYear`, desde que não sejam `isInvoicePayment`.
 
 Regra:
 - usar campo estruturado quando existir;
-- usar descriÃƒÂ§ÃƒÂ£o como fallback controlado;
-- documentar que falta um campo dedicado de renegociaÃƒÂ§ÃƒÂ£o em Transaction.
+- usar descrição como fallback controlado;
+- documentar que falta um campo dedicado de renegociação em Transaction.
 
 Exemplo real:
-RenegociaÃƒÂ§ÃƒÂ£o de PendÃƒÂªncias (1/9)
-Categoria real: NÃƒÂ£o Identificados
+Renegociação de Pendências (1/9)
+Categoria real: Não Identificados
 Resultado correto:
-RenegociaÃƒÂ§ÃƒÂ£o Ã¢â‚¬â€ R$ 483,86
+Renegociação — R$ 483,86
 
-## NÃƒÂ£o Identificados
+## Não Identificados
 
-NÃƒÂ£o Identificados deve ser usado apenas quando:
-- nÃ£o hÃƒÂ¡ categoria real;
-- nÃ£o hÃƒÂ¡ `debt_id`;
-- nÃ£o hÃƒÂ¡ regra lÃƒÂ³gica nativa melhor;
-- nÃ£o hÃƒÂ¡ categoria ÃƒÂ³rfÃƒÂ£ identificÃƒÂ¡vel.
+Não Identificados deve ser usado apenas quando:
+- não há categoria real;
+- não há `debt_id`;
+- não há regra lógica nativa melhor;
+- não há categoria órfã identificável.
 
-NÃƒÂ£o deve esconder:
+Não deve esconder:
 - acordo;
-- renegociaÃƒÂ§ÃƒÂ£o;
-- categoria ÃƒÂ³rfÃƒÂ£.
+- renegociação;
+- categoria órfã.
 
-## Categoria nÃ£o encontrada
+## Categoria não encontrada
 
-Se `category_id` existe, mas a categoria nÃ£o ÃƒÂ© encontrada na lista carregada:
-- mostrar como `Categoria nÃ£o encontrada`;
-- nÃ£o misturar com NÃƒÂ£o Identificados.
+Se `category_id` existe, mas a categoria não é encontrada na lista carregada:
+- mostrar como `Categoria não encontrada`;
+- não misturar com Não Identificados.
 
 Isso indica problema de integridade:
 - categoria apagada;
-- categoria de outro usuÃƒÂ¡rio;
+- categoria de outro usuário;
 - RLS/escopo;
-- dado ÃƒÂ³rfÃƒÂ£o.
+- dado órfão.
 
 ---
 
-# REGRA DE RELATÃƒâ€œRIOS Ã¢â‚¬â€ CATEGORIAS LÃƒâ€œGICAS NATIVAS
+# REGRA DE RELATÓRIOS — CATEGORIAS LÓGICAS NATIVAS
 
-Algumas classificaÃƒÂ§ÃƒÂµes nÃ£o dependem apenas da categoria manual cadastrada pelo usuÃƒÂ¡rio.
+Algumas classificaçes não dependem apenas da categoria manual cadastrada pelo usuário.
 
-Categorias lÃƒÂ³gicas/nativas:
+Categorias lógicas/nativas:
 - Acordo;
-- RenegociaÃƒÂ§ÃƒÂ£o;
-- NÃƒÂ£o identificados;
-- Categoria nÃ£o encontrada.
+- Renegociação;
+- Não identificados;
+- Categoria não encontrada.
 
 Acordo:
-- transaÃƒÂ§ÃƒÂµes com `debt_id` ou categoria real Acordo.
+- transaçes com `debt_id` ou categoria real Acordo.
 
-RenegociaÃƒÂ§ÃƒÂ£o:
-- transaÃƒÂ§ÃƒÂµes sistÃƒÂªmicas de renegociaÃƒÂ§ÃƒÂ£o, saldo restante, parcela de fatura ou renegociaÃƒÂ§ÃƒÂ£o de pendÃƒÂªncias.
+Renegociação:
+- transaçes sistêmicas de renegociação, saldo restante, parcela de fatura ou renegociação de pendências.
 
-NÃƒÂ£o Identificados:
-- usado apenas como ÃƒÂºltimo recurso.
+Não Identificados:
+- usado apenas como último recurso.
 
-Categoria nÃ£o encontrada:
-- usada quando hÃƒÂ¡ `category_id`, mas a categoria nÃ£o resolve.
+Categoria não encontrada:
+- usada quando há `category_id`, mas a categoria não resolve.
 
 ---
 
-# REGRA DE RELATÃƒâ€œRIOS Ã¢â‚¬â€ ACORDOS
+# REGRA DE RELATÓRIOS — ACORDOS
 
-Acordos devem entrar em RelatÃƒÂ³rios conforme competÃƒÂªncia/data.
+Acordos devem entrar em Relatórios conforme competência/data.
 
 Modo Projetado:
-- entrada pendente ou paga entra no mÃƒÂªs da entrada;
+- entrada pendente ou paga entra no mês da entrada;
 - parcelas futuras entram nos meses de vencimento;
-- nÃ£o exigir `is_paid`.
+- não exigir `is_paid`.
 
 Modo Realizado:
-- entrada/parcela sÃƒÂ³ entra se paga.
+- entrada/parcela só entra se paga.
 
-ComposiÃƒÂ§ÃƒÂ£o das Despesas:
-- transaÃƒÂ§ÃƒÂµes com `debt_id` e sem categoria real devem cair como Acordo;
-- mÃƒÂºltiplos acordos no mesmo perÃ­odo somam em uma ÃƒÂºnica linha Acordo.
+Composição das Despesas:
+- transaçes com `debt_id` e sem categoria real devem cair como Acordo;
+- múltiplos acordos no mesmo período somam em uma única linha Acordo.
 
 Exemplo:
-Entrada Inter: Maio/2026 Ã¢â‚¬â€ R$ 79,60
-Parcela 1/11 Inter: Junho/2026 Ã¢â‚¬â€ R$ 90,39
-Parcela 2/11 Inter: Julho/2026 Ã¢â‚¬â€ R$ 90,39
+Entrada Inter: Maio/2026 — R$ 79,60
+Parcela 1/11 Inter: Junho/2026 — R$ 90,39
+Parcela 2/11 Inter: Julho/2026 — R$ 90,39
 
-RelatÃƒÂ³rio Projetado:
+Relatório Projetado:
 - Maio: Acordo inclui R$ 79,60;
 - Junho: Acordo inclui R$ 90,39;
 - Julho: Acordo inclui R$ 90,39.
 
 ---
 
-# REGRA DE FILTROS DE PERÃƒï¿½ODO
+# REGRA DE FILTROS DE PERÍODO
 
-Filtro Dia sÃƒÂ³ deve existir em:
-- LanÃƒÂ§amentos;
-- GestÃƒÂ£o de Contas.
+Filtro Dia só deve existir em:
+- Lançamentos;
+- Gestão de Contas.
 
 Filtro Dia deve ser removido de:
 - Home;
-- RelatÃƒÂ³rios;
-- OrÃƒÂ§amentos;
-- CartÃƒÂµes;
-- demais telas analÃƒÂ­ticas/planejamento.
+- Relatórios;
+- Orçamentos;
+- Cartes;
+- demais telas analí­ticas/planejamento.
 
-RelatÃƒÂ³rios devem trabalhar com:
-- MÃƒÂªs;
+Relatórios devem trabalhar com:
+- Mês;
 - Semestre;
 - Ano.
 
 Quando selecionar Semestre:
-- toda a tela muda para visÃƒÂ£o de semestre;
+- toda a tela muda para visão de semestre;
 - cards somam semestre;
-- grÃƒÂ¡fico mostra semestres/meses do semestre conforme contexto;
+- gráfico mostra semestres/meses do semestre conforme contexto;
 - comparativo usa semestre anterior;
-- orÃƒÂ§amento por categoria sÃƒÂ³ aparece se a visÃƒÂ£o suportar adequadamente.
+- orçamento por categoria só aparece se a visão suportar adequadamente.
 
 ---
 
-# REGRA DE VALORES MONETÃƒï¿½RIOS
+# REGRA DE VALORES MONETÁRIOS
 
-Valores monetÃ¡rios nÃ£o podem quebrar linha entre:
+Valores monetários não podem quebrar linha entre:
 - sinal negativo;
 - R$;
 - valor.
@@ -1067,22 +1082,22 @@ Usar:
 - `whitespace-nowrap`;
 - `tabular-nums`;
 - `leading-tight`/`leading-none`;
-- `clamp` de fonte se necessÃƒÂ¡rio.
+- `clamp` de fonte se necessário.
 
 Aplicar em:
 - cards da Home;
-- RelatÃƒÂ³rios;
-- OrÃƒÂ§amentos;
-- GestÃƒÂ£o de Contas;
-- CartÃƒÂµes;
+- Relatórios;
+- Orçamentos;
+- Gestão de Contas;
+- Cartes;
 - resumos financeiros.
 
 Exemplo de problema corrigido:
-`-R$ 3.005,30` nÃ£o deve quebrar depois do hÃƒÂ­fen.
+`-R$ 3.005,30` não deve quebrar depois do hí­fen.
 
 ---
 
-# REGRA DE TESTES E VALIDAÃƒâ€¡ÃƒÆ’O DE SPRINT
+# REGRA DE TESTES E VALIDAÇÃO DE SPRINT
 
 Antes de fechar sprint, executar:
 
@@ -1091,46 +1106,46 @@ Antes de fechar sprint, executar:
 - `npm run build`
 - `npm run lint`
 
-Quando mexer em cÃ¡lculo financeiro, adicionar teste de regressÃƒÂ£o.
+Quando mexer em cálculo financeiro, adicionar teste de regressão.
 
 Quando mexer em UI com texto acentuado, garantir `check:encoding` e testes com texto correto.
 
-Quando mexer em cartÃƒÂ£o/fatura/acordos/orÃ§amentos/relatÃƒÂ³rios, validar manualmente cenÃƒÂ¡rios reais alÃƒÂ©m dos testes.
+Quando mexer em cartão/fatura/acordos/orçamentos/relatórios, validar manualmente cenários reais além dos testes.
 
 ---
 
-# CORREÃƒâ€¡Ãƒâ€¢ES IMPORTANTES REGISTRADAS
+# CORREÇÕES IMPORTANTES REGISTRADAS
 
-## CorreÃƒÂ§ÃƒÂ£o: Home zerada no boot
+## Correção: Home zerada no boot
 
 Problema:
 Home abria com valores R$ 0,00 antes dos dados carregarem.
 
-CorreÃƒÂ§ÃƒÂ£o:
-Boot passou a executar a rotina real do botÃƒÂ£o Atualizar automaticamente ao acessar o app logado.
+Correção:
+Boot passou a executar a rotina real do botão Atualizar automaticamente ao acessar o app logado.
 
 Regra:
-Home nÃ£o pode renderizar estado zerado falso enquanto dados ainda carregam.
+Home não pode renderizar estado zerado falso enquanto dados ainda carregam.
 
 ---
 
-## CorreÃƒÂ§ÃƒÂ£o: tutorial
+## Correção: tutorial
 
 Problema:
 Tutorial reaparecia constantemente.
 
-DecisÃƒÂ£o final:
+Decisão final:
 Tutorial removido completamente.
 
 ---
 
-## CorreÃƒÂ§ÃƒÂ£o: AcentuaÃƒÂ§ÃƒÂ£o/mojibake
+## Correção: Acentuação/mojibake
 
 Problema:
-Textos como `DescriÃ¯Â¿Â½Ã¯Â¿Â½o`, `NÃ¯Â¿Â½`, `LanÃƒÆ’Ã‚Â§amento`.
+Textos como `Descrição`, `N`, `Lançamento`.
 
-CorreÃƒÂ§ÃƒÂ£o:
-Textos corrigidos e proteÃƒÂ§ÃƒÂ£o permanente criada:
+Correção:
+Textos corrigidos e proteção permanente criada:
 - `.editorconfig`;
 - `AGENTS.md`;
 - `scripts/check-mojibake.mjs`;
@@ -1138,85 +1153,85 @@ Textos corrigidos e proteÃƒÂ§ÃƒÂ£o permanente criada:
 
 ---
 
-## CorreÃƒÂ§ÃƒÂ£o: CartÃƒÂµes Ã¢â‚¬â€ limite
+## Correção: Cartes — limite
 
 Problema:
 Fatura tinha valor, mas limite usado aparecia como 0%.
 
 Causa:
-Compra no cartÃƒÂ£o marcada como `isPaid = true` estava sendo removida do cÃ¡lculo de limite.
+Compra no cartão marcada como `isPaid = true` estava sendo removida do cálculo de limite.
 
-CorreÃƒÂ§ÃƒÂ£o:
-Compra no cartÃƒÂ£o continua consumindo limite atÃƒÂ© pagamento/baixa/renegociaÃƒÂ§ÃƒÂ£o da fatura.
+Correção:
+Compra no cartão continua consumindo limite até pagamento/baixa/renegociação da fatura.
 
 ---
 
-## CorreÃƒÂ§ÃƒÂ£o: CartÃƒÂµes Ã¢â‚¬â€ UI
+## Correção: Cartes — UI
 
 Problema:
-Tela de CartÃƒÂµes tinha blocos inÃƒÂºteis e poluÃƒÂ­dos.
+Tela de Cartes tinha blocos inúteis e poluí­dos.
 
 Removidos da UI:
-- Total lanÃƒÂ§ado;
+- Total lançado;
 - Valor pago;
-- DiferenÃƒÂ§a a conciliar;
+- Diferença a conciliar;
 - Gastos;
-- DisponÃƒÂ­vel como card separado.
+- Disponí­vel como card separado.
 
 Mantidos:
 - limite;
 - fatura;
 - status;
-- lista de lanÃ§amentos;
-- atalho para GestÃƒÂ£o de Contas.
+- lista de lançamentos;
+- atalho para Gestão de Contas.
 
 ---
 
-## CorreÃƒÂ§ÃƒÂ£o: OrÃƒÂ§amentos Ã¢â‚¬â€ categorias acompanhadas
+## Correção: Orçamentos — categorias acompanhadas
 
 Problema:
-Categorias apareciam mesmo com toggle Ã¢â‚¬Å“AcompanharÃ¢â‚¬ï¿½ desligado.
+Categorias apareciam mesmo com toggle “Acompanhar” desligado.
 
-CorreÃƒÂ§ÃƒÂ£o:
+Correção:
 A lista principal mostra somente categorias explicitamente acompanhadas.
 
 Regra:
 Acompanhar = visibilidade.
-OrÃƒÂ§amento = meta.
+Orçamento = meta.
 Movimento = consumo.
 
 ---
 
-## CorreÃƒÂ§ÃƒÂ£o: RelatÃƒÂ³rios Ã¢â‚¬â€ Acordo duplicado
+## Correção: Relatórios — Acordo duplicado
 
 Problema:
-Acordo aparecia duplicado na ComposiÃƒÂ§ÃƒÂ£o das Despesas.
+Acordo aparecia duplicado na Composição das Despesas.
 
 Causa:
 Agrupamento usava key por `debt_id`.
 
-CorreÃƒÂ§ÃƒÂ£o:
+Correção:
 Todos os acordos caem em `logical:agreement`.
 
 ---
 
-## CorreÃƒÂ§ÃƒÂ£o: RelatÃƒÂ³rios Ã¢â‚¬â€ RenegociaÃƒÂ§ÃƒÂ£o
+## Correção: Relatórios — Renegociação
 
 Problema:
-RenegociaÃƒÂ§ÃƒÂ£o de PendÃƒÂªncias aparecia como NÃƒÂ£o Identificados.
+Renegociação de Pendências aparecia como Não Identificados.
 
-CorreÃƒÂ§ÃƒÂ£o:
-RenegociaÃƒÂ§ÃƒÂ£o virou categoria lÃƒÂ³gica nativa:
+Correção:
+Renegociação virou categoria lógica nativa:
 `logical:renegotiation`.
 
 ---
 
-## CorreÃƒÂ§ÃƒÂ£o: Acordos Ã¢â‚¬â€ entrada
+## Correção: Acordos — entrada
 
 Problema:
-Tela de Acordos nÃ£o permitia entrada.
+Tela de Acordos não permitia entrada.
 
-CorreÃƒÂ§ÃƒÂ£o:
+Correção:
 Acordos agora suportam entrada opcional separada das parcelas.
 
 Exemplo:
@@ -1224,30 +1239,30 @@ R$ 79,60 + 11x R$ 90,39 = R$ 1.073,89.
 
 ---
 
-## CorreÃƒÂ§ÃƒÂ£o: Acordos Ã¢â‚¬â€ formulÃƒÂ¡rio herdava estado
+## Correção: Acordos — formulário herdava estado
 
 Problema:
 Novo Acordo abria com dados do acordo editado anteriormente.
 
-CorreÃƒÂ§ÃƒÂ£o:
-Estado de novo acordo e ediÃƒÂ§ÃƒÂ£o foi separado:
+Correção:
+Estado de novo acordo e edição foi separado:
 - novo abre limpo;
-- ediÃƒÂ§ÃƒÂ£o abre preenchida;
+- edição abre preenchida;
 - fechamento reseta estado.
 
 ---
 
-## CorreÃƒÂ§ÃƒÂ£o: Acordos Ã¢â‚¬â€ relatÃƒÂ³rios
+## Correção: Acordos — relatórios
 
 Problema:
-Acordos sem categoria nÃ£o apareciam corretamente em RelatÃƒÂ³rios.
+Acordos sem categoria não apareciam corretamente em Relatórios.
 
-CorreÃƒÂ§ÃƒÂ£o:
-TransaÃƒÂ§ÃƒÂ£o com `debt_id` e sem categoria cai em Acordo.
+Correção:
+Transação com `debt_id` e sem categoria cai em Acordo.
 
 ---
 
-# PRÃƒâ€œXIMOS PONTOS TÃƒâ€°CNICOS FUTUROS
+# PRÓXIMOS PONTOS TÉCNICOS FUTUROS
 
 ## Persistir macrocategorias no backend
 
@@ -1258,654 +1273,655 @@ criar migration oficial para persistir:
 - grupos;
 - percentual;
 - cor;
-- ÃƒÂ­cone;
-- vÃƒÂ­nculo com categorias;
+- í­cone;
+- ví­nculo com categorias;
 - user_id;
 - RLS.
 
-## Campo dedicado para RenegociaÃƒÂ§ÃƒÂ£o
+## Campo dedicado para Renegociação
 
-Hoje RenegociaÃƒÂ§ÃƒÂ£o ÃƒÂ© detectada por sinais estruturados + descriÃƒÂ§ÃƒÂ£o.
+Hoje Renegociação é detectada por sinais estruturados + descrição.
 
 Futuro:
-adicionar campo estruturado para identificar renegociaÃƒÂ§ÃƒÂ£o, evitando dependÃƒÂªncia de texto.
+adicionar campo estruturado para identificar renegociação, evitando dependência de texto.
 
-PossÃƒÂ­veis campos:
+Possí­veis campos:
 - `system_category`;
 - `financial_origin`;
 - `transaction_subtype`;
 - `is_renegotiation`;
 - `renegotiation_group_id`.
 
-## EdiÃƒÂ§ÃƒÂ£o segura de Acordos
+## Edição segura de Acordos
 
-Se entrada jÃƒÂ¡ foi paga:
-- nÃ£o permitir remover livremente;
-- exigir estorno/correÃƒÂ§ÃƒÂ£o assistida;
-- preservar histÃƒÂ³rico.
+Se entrada já foi paga:
+- não permitir remover livremente;
+- exigir estorno/correção assistida;
+- preservar histórico.
 
-## PersistÃƒÂªncia das categorias acompanhadas
+## Persistência das categorias acompanhadas
 
 Hoje categorias acompanhadas usam localStorage.
 
 Futuro:
-persistir no backend por usuÃƒÂ¡rio para sincronizar entre dispositivos.
+persistir no backend por usuário para sincronizar entre dispositivos.
 
-## Melhorias de recategorizaÃƒÂ§ÃƒÂ£o
+## Melhorias de recategorização
 
 Criar fluxo para recategorizar em massa:
 - parcelas de acordo;
-- renegociaÃƒÂ§ÃƒÂ£o;
-- transaÃƒÂ§ÃƒÂµes sem categoria;
-- categorias ÃƒÂ³rfÃƒÂ£s.
+- renegociação;
+- transaçes sem categoria;
+- categorias órfãs.
 
 ---
 
-# REGRA DE SEGURANÃƒâ€¡A Ã¢â‚¬â€ EXCLUSÃƒÆ’O DE CONTA / LGPD
+# REGRA DE SEGURANÇA — EXCLUSàƒÆ’O DE CONTA / LGPD
 
-A exclusÃƒÂ£o de conta deve ser feita pela RPC:
+A exclusão de conta deve ser feita pela RPC:
 
 `public.delete_user_data(target_user_id uuid)`
 
-A funÃƒÂ§ÃƒÂ£o deve:
+A função deve:
 
-- permitir exclusÃƒÂ£o apenas do prÃƒÂ³prio usuÃƒÂ¡rio autenticado;
+- permitir exclusão apenas do próprio usuário autenticado;
 - validar `auth.uid() IS NOT NULL`;
 - validar `auth.uid() = target_user_id`;
 - usar `SECURITY DEFINER` apenas porque precisa remover o registro final em `auth.users`;
 - usar `search_path` seguro;
 - qualificar tabelas por schema;
-- apagar `auth.users` por ÃƒÂºltimo;
-- executar `NOTIFY pgrst, 'reload schema'` apÃƒÂ³s criaÃƒÂ§ÃƒÂ£o/alteraÃƒÂ§ÃƒÂ£o;
-- revogar execuÃƒÂ§ÃƒÂ£o pÃƒÂºblica;
-- conceder execuÃƒÂ§ÃƒÂ£o apenas para `authenticated`.
+- apagar `auth.users` por último;
+- executar `NOTIFY pgrst, 'reload schema'` após criação/alteração;
+- revogar execução pública;
+- conceder execução apenas para `authenticated`.
 
-A funÃƒÂ§ÃƒÂ£o nÃ£o deve permitir exclusÃƒÂ£o cruzada de dados entre usuÃƒÂ¡rios.
+A função não deve permitir exclusão cruzada de dados entre usuários.
 
-Antes de aplicar ou testar exclusÃƒÂ£o real:
-- usar somente usuÃƒÂ¡rio de teste;
-- confirmar existÃƒÂªncia da funÃƒÂ§ÃƒÂ£o;
+Antes de aplicar ou testar exclusão real:
+- usar somente usuário de teste;
+- confirmar existência da função;
 - confirmar grants;
-- validar que o frontend nÃ£o retorna `PGRST202`;
-- nunca testar primeiro em usuÃƒÂ¡rio real.
+- validar que o frontend não retorna `PGRST202`;
+- nunca testar primeiro em usuário real.
 
 ---
 
-# REGRA DE UX Ã¢â‚¬â€ FILTROS MOBILE EM RELATÃƒâ€œRIOS
+# REGRA DE UX — FILTROS MOBILE EM RELATÓRIOS
 
-No mobile, os controles de RelatÃƒÂ³rios nÃ£o podem se sobrepor.
+No mobile, os controles de Relatórios não podem se sobrepor.
 
-Projetado/Realizado deve ficar em uma linha prÃ³pria.
+Projetado/Realizado deve ficar em uma linha própria.
 
-MÃƒÂªs/Semestre/Ano deve ficar em outra linha prÃ³pria.
+Mês/Semestre/Ano deve ficar em outra linha própria.
 
-Os filtros precisam ser tocÃƒÂ¡veis, legÃƒÂ­veis e sem sobreposiÃƒÂ§ÃƒÂ£o em telas pequenas.
+Os filtros precisam ser tocáveis, legí­veis e sem sobreposição em telas pequenas.
 
 ---
 
 # REGRA DE DEVTOOLS
 
-TanStack/React Query Devtools nÃ£o deve aparecer para o usuÃƒÂ¡rio.
+TanStack/React Query Devtools não deve aparecer para o usuário.
 
-O Devtools sÃƒÂ³ pode renderizar quando:
+O Devtools só pode renderizar quando:
 
 - ambiente for DEV;
 - e `VITE_ENABLE_QUERY_DEVTOOLS=true`.
 
-Por padrÃƒÂ£o, ele deve ficar desativado para nÃ£o atrapalhar web nem mobile.
+Por padrão, ele deve ficar desativado para não atrapalhar web nem mobile.
 
 ---
 
-# REGRA TÃƒâ€°CNICA Ã¢â‚¬â€ CONTAS / BANCO
+# REGRA TÉCNICA — CONTAS / BANCO
 
-A tabela `accounts` no Supabase usa o campo tÃƒÂ©cnico `bank`.
+A tabela `accounts` no Supabase usa o campo técnico `bank`.
 
-O app nÃ£o deve enviar `institution` em inserts ou updates de contas.
+O app não deve enviar `institution` em inserts ou updates de contas.
 
-`institution` pode existir apenas como fallback legado de leitura em objetos antigos de UI/testes, mas nÃ£o deve ser persistido no Supabase.
+`institution` pode existir apenas como fallback legado de leitura em objetos antigos de UI/testes, mas não deve ser persistido no Supabase.
 
 Regra:
-- campo visual pode ser Ã¢â‚¬Å“InstituiÃƒÂ§ÃƒÂ£oÃ¢â‚¬ï¿½ ou Ã¢â‚¬Å“BancoÃ¢â‚¬ï¿½;
-- campo tÃƒÂ©cnico persistido deve ser sempre `bank`;
-- seletores de conta devem exibir banco + nome, por exemplo: `ItaÃƒÂº Ã¢â‚¬â€ Khendry`.
+- campo visual pode ser “Instituição” ou “Banco”;
+- campo técnico persistido deve ser sempre `bank`;
+- seletores de conta devem exibir banco + nome, por exemplo: `Itaú — Khendry`.
 
-NÃƒÂ£o criar migration para adicionar `institution`.
-NÃƒÂ£o renomear `bank`.
-NÃƒÂ£o alterar contas existentes por causa disso.
+Não criar migration para adicionar `institution`.
+Não renomear `bank`.
+Não alterar contas existentes por causa disso.
 
 ---
 
-# REGRA DE RELATÃƒâ€œRIOS Ã¢â‚¬â€ FLUXO SCORE (ADITIVO E SOMENTE LEITURA)
+# REGRA DE RELATÓRIOS — FLUXO SCORE (ADITIVO E SOMENTE LEITURA)
 
-## Diretriz crÃƒÂ­tica de seguranÃƒÂ§a/arquitetura
+## Diretriz crítica de segurança/arquitetura
 
-Fluxo Score ÃƒÂ© funcionalidade estritamente aditiva e de observaÃƒÂ§ÃƒÂ£o.
+Fluxo Score é funcionalidade estritamente aditiva e de observação.
 
-ObrigatÃƒÂ³rio:
-- nÃ£o alterar mecÃƒÂ¢nicas atuais de criaÃƒÂ§ÃƒÂ£o/ediÃƒÂ§ÃƒÂ£o/exclusÃƒÂ£o de contas;
-- nÃ£o alterar mecÃƒÂ¢nicas atuais de criaÃƒÂ§ÃƒÂ£o/ediÃƒÂ§ÃƒÂ£o/exclusÃƒÂ£o de acordos;
-- nÃ£o alterar hooks de mutaÃƒÂ§ÃƒÂ£o jÃƒÂ¡ existentes;
-- nÃ£o alterar endpoints/RPC jÃƒÂ¡ existentes;
-- nÃ£o introduzir efeitos colaterais de escrita para calcular Score.
+Obrigatório:
+- não alterar mecí¢nicas atuais de criação/edição/exclusão de contas;
+- não alterar mecí¢nicas atuais de criação/edição/exclusão de acordos;
+- não alterar hooks de mutação já existentes;
+- não alterar endpoints/RPC já existentes;
+- não introduzir efeitos colaterais de escrita para calcular Score.
 
-Regra de implementaÃƒÂ§ÃƒÂ£o:
-- Score apenas lÃƒÂª `transactions`, `debts` e estado atual da aplicaÃƒÂ§ÃƒÂ£o;
-- cÃ¡lculo isolado em utilitÃƒÂ¡rio dedicado;
-- arredondamento apenas na exibiÃƒÂ§ÃƒÂ£o da UI;
-- lÃƒÂ³gica financeira existente permanece intacta.
+Regra de implementação:
+- Score apenas lê `transactions`, `debts` e estado atual da aplicação;
+- cálculo isolado em utilitário dedicado;
+- arredondamento apenas na exibição da UI;
+- lógica financeira existente permanece intacta.
 
 ## Escala e baseline
 
 - faixa de Score: 0 a 1000;
 - baseline inicial/neutro: 500.
 
-## Motor de cÃ¡lculo Ã¢â‚¬â€ contas de consumo/pagamentos padrÃƒÂ£o
+## Motor de cálculo — contas de consumo/pagamentos padrão
 
-Para cada conta/obrigaÃƒÂ§ÃƒÂ£o paga, calcular diferenÃƒÂ§a em dias:
+Para cada conta/obrigação paga, calcular diferença em dias:
 - `dias = paymentDate - dueDate`.
 
 Regras:
 - pagamento no dia do vencimento (`dias = 0`): `+5`;
 - pagamento antecipado (`dias < 0`): `+10`;
 - atraso leve (`dias = 1..3`): `-10`;
-- atraso mÃƒÂ©dio (`dias = 4..10`): `-25`;
+- atraso médio (`dias = 4..10`): `-25`;
 - atraso grave (`dias > 10`): `-50`;
-- penalidade contÃƒÂ­nua para atraso grave:
-  - `-2` por dia extra apÃƒÂ³s o 10Ã‚Âº dia;
-  - fÃƒÂ³rmula: `-50 - ((dias - 10) * 2)`;
+- penalidade contí­nua para atraso grave:
+  - `-2` por dia extra após o 10à‚º dia;
+  - fórmula: `-50 - ((dias - 10) * 2)`;
   - teto de penalidade por conta: `-100`.
 
-### BÃƒÂ´nus mensal
+### Bônus mensal
 
 Adicionar `+10` para contas em dia.
 
-Regra de cÃ¡lculo:
-- **A partir de 01/06/2026**: O bÃƒÂ´nus ÃƒÂ© verificado e definido com base no primeiro dia ÃƒÂºtil do mÃƒÂªs de referÃƒÂªncia. No primeiro dia ÃƒÂºtil de cada mÃƒÂªs, ÃƒÂ© verificada a existÃƒÂªncia de despesas em atraso (vencidas antes do primeiro dia ÃƒÂºtil e nÃ£o pagas atÃƒÂ© o primeiro dia ÃƒÂºtil). Se houver, a bonificaÃƒÂ§ÃƒÂ£o de `+10` nÃ£o ÃƒÂ© concedida para o mÃƒÂªs corrente. Caso contrÃƒÂ¡rio, o bÃƒÂ´nus de `+10` ÃƒÂ© ganho e mantido para o restante do mÃƒÂªs. Para datas anteriores ao primeiro dia ÃƒÂºtil do mÃƒÂªs, a elegibilidade ÃƒÂ© verificada dinamicamente com base nas contas vencidas atÃƒÂ© o dia atual.
-- **Antes de 01/06/2026**: O bÃƒÂ´nus mensal ÃƒÂ© fixado em `0` (desativado antes da data de implantaÃƒÂ§ÃƒÂ£o da feature).
+Regra de cálculo:
+- **A partir de 01/06/2026**: O bnus é verificado e definido com base no primeiro dia útil do mês de referência. No primeiro dia útil de cada mês, é verificada a existência de despesas em atraso (vencidas antes do primeiro dia útil e não pagas até o primeiro dia útil). Se houver, a bonificação de `+10` não é concedida para o mês corrente. Caso contrário, o bnus de `+10` é ganho e mantido para o restante do mês. Para datas anteriores ao primeiro dia útil do mês, a elegibilidade é verificada dinamicamente com base nas contas vencidas até o dia atual.
+- **Antes de 01/06/2026**: O bnus mensal é fixado em `0` (desativado antes da data de implantação da feature).
 
-## Motor de cÃ¡lculo Ã¢â‚¬â€ acordos e dÃƒÂ­vidas
+## Motor de cálculo — acordos e dí­vidas
 
-Acordos ativos tÃƒÂªm peso prÃƒÂ³prio no Score:
+Acordos ativos têm peso próprio no Score:
 
-- penalidade de criaÃƒÂ§ÃƒÂ£o: `-100` por acordo ativo;
-- recuperaÃƒÂ§ÃƒÂ£o proporcional por pagamento de parcelas:
-  - `recuperaÃƒÂ§ÃƒÂ£o = (parcelasPagas / totalParcelas) * 100`.
+- penalidade de criação: `-100` por acordo ativo;
+- recuperação proporcional por pagamento de parcelas:
+  - `recuperação = (parcelasPagas / totalParcelas) * 100`.
 
-Regra de precisÃƒÂ£o:
+Regra de precisão:
 - usar ponto flutuante internamente para evitar erro acumulado;
-- aplicar `Math.round` somente na camada de apresentaÃƒÂ§ÃƒÂ£o;
-- ao quitar a ÃƒÂºltima parcela, a recuperaÃƒÂ§ÃƒÂ£o total do acordo deve atingir exatamente `100`.
+- aplicar `Math.round` somente na camada de apresentação;
+- ao quitar a última parcela, a recuperação total do acordo deve atingir exatamente `100`.
 
-## FÃƒÂ³rmula consolidada
+## Fórmula consolidada
 
 Score final:
 - `score = clamp(500 + somaRegrasContas + somaRegrasAcordos + bonusMensal, 0, 1000)`.
 
 Onde:
-- `somaRegrasContas` aplica variaÃƒÂ§ÃƒÂµes por pontualidade/atraso das contas pagas;
-- `somaRegrasAcordos` soma `-100 + recuperaÃƒÂ§ÃƒÂ£oProporcional` por acordo ativo;
-- `bonusMensal` ÃƒÂ© `0` ou `+50`.
+- `somaRegrasContas` aplica variaçes por pontualidade/atraso das contas pagas;
+- `somaRegrasAcordos` soma `-100 + recuperaçãoProporcional` por acordo ativo;
+- `bonusMensal` é `0` ou `+50`.
 
-## Requisito de UI Ã¢â‚¬â€ tela e posicionamento
+## Requisito de UI — tela e posicionamento
 
-RenderizaÃƒÂ§ÃƒÂ£o exclusiva:
-- componente Fluxo Score deve existir somente na tela de RelatÃƒÂ³rios.
+Renderização exclusiva:
+- componente Fluxo Score deve existir somente na tela de Relatórios.
 
 Layout:
 - posicionar ao lado do card de Saldo na faixa superior da tela;
-- manter destaque simÃƒÂ©trico e responsivo com grid/flex ajustado.
+- manter destaque simétrico e responsivo com grid/flex ajustado.
 
-## Requisito visual Ã¢â‚¬â€ grÃƒÂ¡fico circular, cor e glow
+## Requisito visual — gráfico circular, cor e glow
 
 Componente:
-- usar anel circular (donut/gauge) em SVG ou biblioteca padrÃƒÂ£o.
+- usar anel circular (donut/gauge) em SVG ou biblioteca padrão.
 
 Centro:
-- mostrar nÃƒÂºmero inteiro do Score com tipografia forte.
+- mostrar número inteiro do Score com tipografia forte.
 
 Cores:
-- nÃ£o usar gradiente semÃƒÂ¡foro (vermelho/amarelo/verde);
-- usar variaÃƒÂ§ÃƒÂµes da cor de destaque ativa (`--primary`/accent da aplicaÃƒÂ§ÃƒÂ£o).
+- não usar gradiente semáforo (vermelho/amarelo/verde);
+- usar variaçes da cor de destaque ativa (`--primary`/accent da aplicação).
 
 Glow:
 - aplicar brilho externo (drop-shadow/radial glow) na cor de destaque;
 - intensidade pode crescer conforme o Score.
 
-## Requisito de animaÃƒÂ§ÃƒÂ£o
+## Requisito de animação
 
 Na carga inicial:
-- anel deve animar de `0` atÃƒÂ© Score atual;
-- transiÃƒÂ§ÃƒÂ£o suave em `1.0s` a `1.5s`, `ease-out` ou `cubic-bezier`.
+- anel deve animar de `0` até Score atual;
+- transição suave em `1.0s` a `1.5s`, `ease-out` ou `cubic-bezier`.
 
-Em recÃ¡lculo:
-- nÃƒÂºmero e barra devem interpolar suavemente;
-- evitar saltos bruscos na atualizaÃƒÂ§ÃƒÂ£o.
+Em recálculo:
+- número e barra devem interpolar suavemente;
+- evitar saltos bruscos na atualização.
 
 ---
 
-# HISTÃƒâ€œRICO DE VALIDAÃƒâ€¡Ãƒâ€¢ES DE ALTERAÃƒâ€¡Ãƒâ€¢ES
+# HISTÓRICO DE VALIDAÇÕES DE ALTERAÇÕES
 
-## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o de UI - RemoÃ§Ã£o do Tooltip de InformaÃƒÂ§ÃƒÂ£o do Saldo Projetado no Mobile
-- **Resumo**: O botÃƒÂ£o de informaÃƒÂ§ÃƒÂ£o (Tooltip) ao lado do texto "Saldo Projetado" na tela inicial do mobile (`src/pages/LegacyDashboardHome.tsx`) foi removido.
-- **MotivaÃ§Ã£o**: Atender ao design minimalista e executivo, de modo a evitar textos explicativos repetitivos/desnecessÃƒÂ¡rios no corpo principal da UI mÃƒÂ³vel. Limpeza executada dos imports nÃ£o utilizados do Tooltip e do ÃƒÂ­cone Info.
+## [2026-05-26] Alteração de UI - Remoção do Tooltip de Informação do Saldo Projetado no Mobile
+- **Resumo**: O botão de informação (Tooltip) ao lado do texto "Saldo Projetado" na tela inicial do mobile (`src/pages/LegacyDashboardHome.tsx`) foi removido.
+- **Motivação**: Atender ao design minimalista e executivo, de modo a evitar textos explicativos repetitivos/desnecessários no corpo principal da UI móvel. Limpeza executada dos imports não utilizados do Tooltip e do í­cone Info.
 
-## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o de UI / Funcionalidade - RemoÃ§Ã£o de Macrocategorias e Melhoria de Selects no Cadastro de Categorias
-- **Resumo**: Toda e qualquer referÃƒÂªncia ÃƒÂ  funcionalidade de macrocategorias foi removida do cadastro de categorias (`src/components/settings/CategoriesManager.tsx`), incluindo o botÃƒÂ£o do cabeÃƒÂ§alho para gerenciar macrocategorias (`BudgetGroupManagerModal`) e o dropdown/seletor de macrocategoria nos diÃƒÂ¡logos de nova categoria e de ediÃƒÂ§ÃƒÂ£o de categoria. Adicionalmente, os seletores de grupos de despesas (`BudgetGroup`), que antes eram componentes de `<select>` nativos do navegador e apresentavam visualizaÃƒÂ§ÃƒÂ£o fora do padrÃƒÂ£o do app, foram substituÃƒÂ­dos pelo componente premium `<Select>` da biblioteca do Shadcn UI.
-- **MotivaÃ§Ã£o**: Atender ÃƒÂ  solicitaÃƒÂ§ÃƒÂ£o direta do usuÃƒÂ¡rio para remover macrocategorias do fluxo de cadastro e corrigir o design visual dos seletores de grupo no cadastro de categorias, alinhando-o com o estilo visual dark do restante da aplicaÃƒÂ§ÃƒÂ£o.
+## [2026-05-26] Alteração de UI / Funcionalidade - Remoção de Macrocategorias e Melhoria de Selects no Cadastro de Categorias
+- **Resumo**: Toda e qualquer referência  funcionalidade de macrocategorias foi removida do cadastro de categorias (`src/components/settings/CategoriesManager.tsx`), incluindo o botão do cabeçalho para gerenciar macrocategorias (`BudgetGroupManagerModal`) e o dropdown/seletor de macrocategoria nos diálogos de nova categoria e de edição de categoria. Adicionalmente, os seletores de grupos de despesas (`BudgetGroup`), que antes eram componentes de `<select>` nativos do navegador e apresentavam visualização fora do padrão do app, foram substituí­dos pelo componente premium `<Select>` da biblioteca do Shadcn UI.
+- **Motivação**: Atender  solicitação direta do usuário para remover macrocategorias do fluxo de cadastro e corrigir o design visual dos seletores de grupo no cadastro de categorias, alinhando-o com o estilo visual dark do restante da aplicação.
 
-## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o Arquitetural / Regra de NegÃƒÂ³cio - AtualizaÃƒÂ§ÃƒÂ£o DiÃƒÂ¡ria do Score, BÃƒÂ´nus no Primeiro Dia ÃƒÅ¡til e ConsideraÃƒÂ§ÃƒÂ£o Total de Dados
-- **Resumo**: A verificaÃƒÂ§ÃƒÂ£o da bonificaÃƒÂ§ÃƒÂ£o mensal no cÃ¡lculo do Fluxo Score foi reduzida de `+50` para `+10` e configurada para ocorrer com base no estado do primeiro dia ÃƒÂºtil do mÃƒÂªs de referÃƒÂªncia (`src/utils/fluxoScore.ts`), com data de inÃƒÂ­cio em `01/06/2026`. Para datas de referÃƒÂªncia anteriores a `01/06/2026` (como maio de 2026), o bÃƒÂ´nus mensal ÃƒÂ© fixado em `0` (desativado). Adicionamos a lÃƒÂ³gica para detectar o primeiro dia ÃƒÂºtil do mÃƒÂªs (ajustando para segunda-feira caso caia em fins de semana) e congelar a verificaÃƒÂ§ÃƒÂ£o de atrasos a partir dessa data. Adicionalmente, para garantir que as parcelas de acordos cadastrados e contas pendentes de meses/anos passados sejam sempre computadas no cÃ¡lculo do score e no saldo projetado do app, expandimos a query global do Supabase (`src/hooks/useFinanceQueries.ts`) para retornar todas as transaÃƒÂ§ÃƒÂµes nÃ£o pagas (`is_paid = false`) e transaÃƒÂ§ÃƒÂµes vinculadas a acordos (`debt_id`) de todos os tempos.
-- **MotivaÃ§Ã£o**: Atender ÃƒÂ  nova dinÃƒÂ¢mica de lanÃ§amentos diÃƒÂ¡rios, reduzindo o peso do bÃƒÂ´nus mensal de acordo com as preferÃƒÂªncias do usuÃƒÂ¡rio, aplicando a nova lÃƒÂ³gica do primeiro dia ÃƒÂºtil a partir de 1Ã‚Âº de junho e fixando o bÃƒÂ´nus de maio como 0 para refletir os atrasos anteriores ao acordo criado hoje.
+## [2026-05-26] Alteração Arquitetural / Regra de Negócio - Atualização Diária do Score, Bnus no Primeiro Dia útil e Consideração Total de Dados
+- **Resumo**: A verificação da bonificação mensal no cálculo do Fluxo Score foi reduzida de `+50` para `+10` e configurada para ocorrer com base no estado do primeiro dia útil do mês de referência (`src/utils/fluxoScore.ts`), com data de iní­cio em `01/06/2026`. Para datas de referência anteriores a `01/06/2026` (como maio de 2026), o bnus mensal é fixado em `0` (desativado). Adicionamos a lógica para detectar o primeiro dia útil do mês (ajustando para segunda-feira caso caia em fins de semana) e congelar a verificação de atrasos a partir dessa data. Adicionalmente, para garantir que as parcelas de acordos cadastrados e contas pendentes de meses/anos passados sejam sempre computadas no cálculo do score e no saldo projetado do app, expandimos a query global do Supabase (`src/hooks/useFinanceQueries.ts`) para retornar todas as transaçes não pagas (`is_paid = false`) e transaçes vinculadas a acordos (`debt_id`) de todos os tempos.
+- **Motivação**: Atender  nova diní¢mica de lançamentos diários, reduzindo o peso do bnus mensal de acordo com as preferências do usuário, aplicando a nova lógica do primeiro dia útil a partir de 1à‚º de junho e fixando o bnus de maio como 0 para refletir os atrasos anteriores ao acordo criado hoje.
 
-## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o Arquitetural / Regra de SeguranÃƒÂ§a - Garantia de Isolamento de UsuÃƒÂ¡rios e CorreÃƒÂ§ÃƒÂ£o de Queries
-- **Resumo**: Foi realizada uma revisÃƒÂ£o e correÃƒÂ§ÃƒÂ£o estrutural no arquivo `src/hooks/useFinanceQueries.ts` para garantir o isolamento estrito de dados entre diferentes usuÃƒÂ¡rios. Todos os hooks de leitura (`useAccounts`, `useTransactions`, `useCreditCards`, `useDebts` e `useSavingsGoals`) foram updated para aplicar explicitamente o filtro `.eq('user_id', user.id)` baseando-se no ID do usuÃƒÂ¡rio autenticado no Supabase Auth. Adicionalmente, as importaÃƒÂ§ÃƒÂµes duplicadas no topo do arquivo foram limpas e a query de metas de economia (`useSavingsGoals`), que havia sido corrompida por um erro de merge anterior, foi completamente restaurada e isolada por usuÃƒÂ¡rio.
-- **MotivaÃ§Ã£o**: Atender ÃƒÂ  garantia solicitada pelo usuÃƒÂ¡rio de que os dados de diferentes usuÃƒÂ¡rios nÃ£o se misturem e corrigir o score do usuÃƒÂ¡rio (Khendry) que estava zerado na conta oficial devido ao vazamento de acordos/transaÃƒÂ§ÃƒÂµes de teste de outro usuÃƒÂ¡rio no cÃ¡lculo global do score.
+## [2026-05-26] Alteração Arquitetural / Regra de Segurança - Garantia de Isolamento de Usuários e Correção de Queries
+- **Resumo**: Foi realizada uma revisão e correção estrutural no arquivo `src/hooks/useFinanceQueries.ts` para garantir o isolamento estrito de dados entre diferentes usuários. Todos os hooks de leitura (`useAccounts`, `useTransactions`, `useCreditCards`, `useDebts` e `useSavingsGoals`) foram updated para aplicar explicitamente o filtro `.eq('user_id', user.id)` baseando-se no ID do usuário autenticado no Supabase Auth. Adicionalmente, as importaçes duplicadas no topo do arquivo foram limpas e a query de metas de economia (`useSavingsGoals`), que havia sido corrompida por um erro de merge anterior, foi completamente restaurada e isolada por usuário.
+- **Motivação**: Atender  garantia solicitada pelo usuário de que os dados de diferentes usuários não se misturem e corrigir o score do usuário (Khendry) que estava zerado na conta oficial devido ao vazamento de acordos/transaçes de teste de outro usuário no cálculo global do score.
 
-## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o Arquitetural / Funcionalidade - Cor de Destaque Salva e Sincronizada por UsuÃƒÂ¡rio
-- **Resumo**: Refatoramos o hook de cores [useThemeColor.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useThemeColor.tsx) para salvar a cor de destaque (accent color) de maneira individual por usuÃƒÂ¡rio, em vez de salvar de forma genÃƒÂ©rica e compartilhada no navegador. O estado local agora ÃƒÂ© persistido sob a chave `accent-color:${userId}` no localStorage (e de forma retrocompatÃƒÂ­vel na chave `accent-color` para os testes e legado). O processo de hidrataÃƒÂ§ÃƒÂ£o no carregamento agora prioriza em primeiro nÃƒÂ­vel o metadado do usuÃƒÂ¡rio autenticado retornado do Supabase (`user.user_metadata?.accent_color`), seguido pela chave especÃ­fica do usuÃƒÂ¡rio e, por ÃƒÂºltimo, o fallback legado, garantindo que a preferÃƒÂªncia do usuÃƒÂ¡rio o acompanhe em qualquer mÃƒÂ¡quina ou navegador.
-- **MotivaÃ§Ã£o**: Atender ÃƒÂ  solicitaÃƒÂ§ÃƒÂ£o direta do usuÃƒÂ¡rio para salvar as preferÃƒÂªncias de cores no perfil do usuÃƒÂ¡rio (na nuvem) e isolar o armazenamento de layout no mesmo navegador de acordo com a conta logada.
+## [2026-05-26] Alteração Arquitetural / Funcionalidade - Cor de Destaque Salva e Sincronizada por Usuário
+- **Resumo**: Refatoramos o hook de cores [useThemeColor.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useThemeColor.tsx) para salvar a cor de destaque (accent color) de maneira individual por usuário, em vez de salvar de forma genérica e compartilhada no navegador. O estado local agora é persistido sob a chave `accent-color:${userId}` no localStorage (e de forma retrocompatí­vel na chave `accent-color` para os testes e legado). O processo de hidratação no carregamento agora prioriza em primeiro ní­vel o metadado do usuário autenticado retornado do Supabase (`user.user_metadata?.accent_color`), seguido pela chave específica do usuário e, por último, o fallback legado, garantindo que a preferência do usuário o acompanhe em qualquer máquina ou navegador.
+- **Motivação**: Atender  solicitação direta do usuário para salvar as preferências de cores no perfil do usuário (na nuvem) e isolar o armazenamento de layout no mesmo navegador de acordo com a conta logada.
 
-## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o Arquitetural / Regra de NegÃƒÂ³cio - Ajuste no PerÃƒÂ­odo de Penalidades e InclusÃƒÂ£o de Contas Pendentes no Score
-- **Resumo**: Atualizamos a lÃƒÂ³gica do Fluxo Score ([fluxoScore.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/utils/fluxoScore.ts)) para se alinhar ao conceito de "diagnÃ³stico de saÃƒÂºde financeira atual". Agora, contas pendentes (nÃ£o pagas) que estÃƒÂ£o vencidas ativamente geram penalidades de atraso no Score de acordo com a quantidade de dias em atraso, incentivando o usuÃƒÂ¡rio a quitÃƒÂ¡-las ou consolidÃƒÂ¡-las em acordos. Por outro lado, para evitar que um usuÃƒÂ¡rio histÃƒÂ³rico (com base de dados antiga ou importada via CSV) seja penalizado perpetuamente por contas quitadas com atraso hÃƒÂ¡ muito tempo, as penalidades de despesas pagas com atraso passam a expirar apÃƒÂ³s 30 dias do pagamento. Adicionalmente, as compras individuais realizadas no cartÃƒÂ£o de crÃƒÂ©dito (`tx.cardId` preenchido e nÃ£o sendo o pagamento da fatura em si) foram **desconsideradas** do cÃ¡lculo de pontualidade de contas (`accountsDelta`), visto que a ÃƒÂºnica obrigaÃƒÂ§ÃƒÂ£o financeira direta vinculada a prazos no cartÃƒÂ£o ÃƒÂ© o pagamento da fatura consolidada. A regra de acordos ativos com penalidades de `-100` e recuperaÃƒÂ§ÃƒÂ£o proporcional por parcelas pagas foi mantida e integrada a essa lÃƒÂ³gica.
-- **MotivaÃ§Ã£o**: Resolver o bug que travava o Score de usuÃƒÂ¡rios antigos em 0 devido a contas quitadas em atraso do passado distante (ex. importaÃƒÂ§ÃƒÂ£o histÃƒÂ³rica de extratos via CSV), evitar a penalizaÃƒÂ§ÃƒÂ£o artificial por compras rotineiras no cartÃƒÂ£o de crÃƒÂ©dito cujas datas de pagamento/conciliaÃƒÂ§ÃƒÂ£o divergem da data da compra e incentivar a quitaÃ§Ã£o de contas ativamente vencidas e nÃ£o pagas.
+## [2026-05-26] Alteração Arquitetural / Regra de Negócio - Ajuste no Perí­odo de Penalidades e Inclusão de Contas Pendentes no Score
+- **Resumo**: Atualizamos a lógica do Fluxo Score ([fluxoScore.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/utils/fluxoScore.ts)) para se alinhar ao conceito de "diagnóstico de saúde financeira atual". Agora, contas pendentes (não pagas) que estão vencidas ativamente geram penalidades de atraso no Score de acordo com a quantidade de dias em atraso, incentivando o usuário a quitá-las ou consolidá-las em acordos. Por outro lado, para evitar que um usuário histórico (com base de dados antiga ou importada via CSV) seja penalizado perpetuamente por contas quitadas com atraso há muito tempo, as penalidades de despesas pagas com atraso passam a expirar após 30 dias do pagamento. Adicionalmente, as compras individuais realizadas no cartão de crédito (`tx.cardId` preenchido e não sendo o pagamento da fatura em si) foram **desconsideradas** do cálculo de pontualidade de contas (`accountsDelta`), visto que a única obrigação financeira direta vinculada a prazos no cartão é o pagamento da fatura consolidada. A regra de acordos ativos com penalidades de `-100` e recuperação proporcional por parcelas pagas foi mantida e integrada a essa lógica.
+- **Motivação**: Resolver o bug que travava o Score de usuários antigos em 0 devido a contas quitadas em atraso do passado distante (ex. importação histórica de extratos via CSV), evitar a penalização artificial por compras rotineiras no cartão de crédito cujas datas de pagamento/conciliação divergem da data da compra e incentivar a quitação de contas ativamente vencidas e não pagas.
 
-## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o Arquitetural / Regra de NegÃƒÂ³cio - CalibraÃƒÂ§ÃƒÂ£o de DiagnÃƒÂ³stico do Score e CorreÃƒÂ§ÃƒÂ£o de Acordos Ativos
-- **Resumo**: Corrigimos a funÃƒÂ§ÃƒÂ£o de avaliaÃƒÂ§ÃƒÂ£o do Fluxo Score (`src/utils/fluxoScore.ts`) e o arquivo de testes unitÃƒÂ¡rios correspondente (`src/test/utils/fluxoScore.test.ts`). Alteramos o cÃ¡lculo das contas para remover completamente a bonificaÃƒÂ§ÃƒÂ£o cumulativa por contas pagas em dia ou adiantadas (as quais agora geram `0` ponto de variaÃƒÂ§ÃƒÂ£o em vez de acumular crÃƒÂ©ditos positivos, evitando ocultar contas atualmente em atraso). Adicionalmente, corrigimos a lÃƒÂ³gica do `isDebtActive` para permitir que acordos criados pelo app (que por padrÃƒÂ£o sÃƒÂ£o salvos com o status `'renegotiated'` no banco de dados) sejam contabilizados como acordos ativos na avaliaÃƒÂ§ÃƒÂ£o do score, aplicando corretamente o impacto negativo de `-100` pontos e a recuperaÃƒÂ§ÃƒÂ£o proporcional correspondente ao pagamento de parcelas do acordo.
-- **MotivaÃ§Ã£o**: Resolver os dois problemas identificados na conta antiga do usuÃƒÂ¡rio Khendry: primeiro, as bonificaÃƒÂ§ÃƒÂµes acumuladas de contas em dia mascaravam as contas em atraso (mantendo o score em 1000); segundo, todos os seus acordos criados hoje no app eram incorretamente ignorados por serem de status `'renegotiated'`, impedindo o score de cair para o patamar real correto e impossibilitando o diagnÃ³stico financeiro adequado.
+## [2026-05-26] Alteração Arquitetural / Regra de Negócio - Calibração de Diagnóstico do Score e Correção de Acordos Ativos
+- **Resumo**: Corrigimos a função de avaliação do Fluxo Score (`src/utils/fluxoScore.ts`) e o arquivo de testes unitários correspondente (`src/test/utils/fluxoScore.test.ts`). Alteramos o cálculo das contas para remover completamente a bonificação cumulativa por contas pagas em dia ou adiantadas (as quais agora geram `0` ponto de variação em vez de acumular créditos positivos, evitando ocultar contas atualmente em atraso). Adicionalmente, corrigimos a lógica do `isDebtActive` para permitir que acordos criados pelo app (que por padrão são salvos com o status `'renegotiated'` no banco de dados) sejam contabilizados como acordos ativos na avaliação do score, aplicando corretamente o impacto negativo de `-100` pontos e a recuperação proporcional correspondente ao pagamento de parcelas do acordo.
+- **Motivação**: Resolver os dois problemas identificados na conta antiga do usuário Khendry: primeiro, as bonificaçes acumuladas de contas em dia mascaravam as contas em atraso (mantendo o score em 1000); segundo, todos os seus acordos criados hoje no app eram incorretamente ignorados por serem de status `'renegotiated'`, impedindo o score de cair para o patamar real correto e impossibilitando o diagnóstico financeiro adequado.
 
-## [2026-05-26] AlteraÃƒÂ§ÃƒÂ£o Arquitetural / Regra de NegÃƒÂ³cio e UI - LiberaÃƒÂ§ÃƒÂ£o Total de Planos e RemoÃ§Ã£o de Mapa por Categoria dos RelatÃƒÂ³rios
-- **Resumo**: Removemos as limitaÃƒÂ§ÃƒÂµes de planos na aplicaÃƒÂ§ÃƒÂ£o, alterando o hook central `useFeatureFlag` (`src/hooks/useFeatureFlags.ts`) para retornar `true` para todas as funcionalidades e planos, com exceÃƒÂ§ÃƒÂ£o da feature `admin_panel` que continua restrita ao super admin. AlÃƒÂ©m disso, removemos completamente a seÃ§Ã£o "Mapa por categoria" da tela de RelatÃƒÂ³rios (`src/pages/ReportsDashboard.tsx`), incluindo o contÃƒÂªiner condicional e a tabela anual detalhada por categoria, e atualizamos os testes correspondentes (`ReportsDashboard.test.tsx`, `ProjectionAccess.test.tsx` e `sprintAccessMobileTheme.test.tsx`).
-- **MotivaÃ§Ã£o**: Atender ÃƒÂ  solicitaÃƒÂ§ÃƒÂ£o direta do usuÃƒÂ¡rio para permitir testes completos de todas as funcionalidades para os usuÃƒÂ¡rios sem restriÃƒÂ§ÃƒÂµes de planos (com exceÃƒÂ§ÃƒÂ£o do painel super admin), e simplificar a tela de relatÃƒÂ³rios removendo o mapa anual por categoria.
+## [2026-05-26] Alteração Arquitetural / Regra de Negócio e UI - Liberação Total de Planos e Remoção de Mapa por Categoria dos Relatórios
+- **Resumo**: Removemos as limitaçes de planos na aplicação, alterando o hook central `useFeatureFlag` (`src/hooks/useFeatureFlags.ts`) para retornar `true` para todas as funcionalidades e planos, com exceção da feature `admin_panel` que continua restrita ao super admin. Além disso, removemos completamente a seção "Mapa por categoria" da tela de Relatórios (`src/pages/ReportsDashboard.tsx`), incluindo o contêiner condicional e a tabela anual detalhada por categoria, e atualizamos os testes correspondentes (`ReportsDashboard.test.tsx`, `ProjectionAccess.test.tsx` e `sprintAccessMobileTheme.test.tsx`).
+- **Motivação**: Atender  solicitação direta do usuário para permitir testes completos de todas as funcionalidades para os usuários sem restriçes de planos (com exceção do painel super admin), e simplificar a tela de relatórios removendo o mapa anual por categoria.
 
 
 ## 01/06/2026
-- RemoÃ§Ã£o da tela de ProjeÃ§Ã£o e EstratÃ©gia.
-- Ajuste no visual do filtro de categorias da GestÃ£o de Contas.
-- RemoÃ§Ã£o da mensagem motivacional da Reserva de EmergÃªncia.
-- DesativaÃ§Ã£o do tema de PÃ¡scoa.
+- Remoção da tela de Projeção e Estratégia.
+- Ajuste no visual do filtro de categorias da Gestão de Contas.
+- Remoção da mensagem motivacional da Reserva de Emergência.
+- Desativação do tema de Páscoa.
 
-- Faturas de cartÃ£o de crÃ©dito classificadas logicamente como 'CartÃ£o de CrÃ©dito' em vez de 'NÃ£o identificadas'.
-- Ajuste no visual do filtro de categorias da tela de LanÃ§amentos para usar o componente Select do design system.
-- Agrupamento de categorias (Receitas, Despesas, Outros) nos filtros das telas de LanÃƒÂ§amentos e GestÃƒÂ£o de Contas.
-- OcultaÃƒÂ§ÃƒÂ£o da aba Sonhos & Projetos do menu principal.
+- Faturas de cartão de crédito classificadas logicamente como 'Cartão de Crédito' em vez de 'Não identificadas'.
+- Ajuste no visual do filtro de categorias da tela de Lançamentos para usar o componente Select do design system.
+- Agrupamento de categorias (Receitas, Despesas, Outros) nos filtros das telas de Lançamentos e Gestão de Contas.
+- Ocultação da aba Sonhos & Projetos do menu principal.
 
 
-## [2026-06-09] CorreÃƒÂ§ÃƒÂ£o de Bug / Arquitetura - Cadastro de Categorias e Race Condition na SessÃƒÂ£o
-- **Resumo**: Corrigimos o bug crÃƒÂ­tico que impedia novos usuÃƒÂ¡rios (ou usuÃƒÂ¡rios apÃƒÂ³s carregamento limpo) de criarem categorias. A restriÃƒÂ§ÃƒÂ£o `NOT NULL` da coluna `group_id` na tabela `categories` foi removida via migraÃƒÂ§ÃƒÂ£o Supabase (`0036_make_category_group_id_optional.sql`). No front-end:
+## [2026-06-09] Correção de Bug / Arquitetura - Cadastro de Categorias e Race Condition na Sessão
+- **Resumo**: Corrigimos o bug crí­tico que impedia novos usuários (ou usuários após carregamento limpo) de criarem categorias. A restrição `NOT NULL` da coluna `group_id` na tabela `categories` foi removida via migração Supabase (`0036_make_category_group_id_optional.sql`). No front-end:
   1. O tipo `Category` em [finance.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/types/finance.ts) foi atualizado para tornar `groupId` opcional e aceitar `null`.
-  2. O componente [CategoriesManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/settings/CategoriesManager.tsx) teve sua validaÃƒÂ§ÃƒÂ£o restritiva que exigia um grupo removida, definindo `groupId` como nulo caso os grupos globais ainda nÃ£o estivessem disponÃƒÂ­veis.
-  2. O componente [CategoriesManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/settings/CategoriesManager.tsx) teve sua validaÃ§Ã£o restritiva que exigia um grupo removida, definindo `groupId` como nulo caso os grupos globais ainda nÃ£o estivessem disponÃ­veis.
-  3. Todas as queries de [useFinanceQueries.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useFinanceQueries.ts) foram atualizadas para integrar o hook `useAuth()`. A execuÃ§Ã£o foi vinculada a `enabled: !!user` e a chave de cache a `user?.id`, corrigindo a race condition onde o React Query cacheava um array vazio (`[]`) por 24 horas caso a query rodasse antes da restauraÃ§Ã£o da sessÃ£o do Supabase, o que gerava o bloqueio persistente na criaÃ§Ã£o de categorias.
-- **MotivaÃ§Ã£o**: Resolver a inconsistÃªncia onde novos usuÃ¡rios nÃ£o conseguiam cadastrar categorias devido ao atraso de inicializaÃ§Ã£o do Supabase Auth no carregamento inicial, que gerava um cache duradouro vazio dos grupos de categorias na tela de gestÃ£o de categorias.
+  2. O componente [CategoriesManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/settings/CategoriesManager.tsx) teve sua validação restritiva que exigia um grupo removida, definindo `groupId` como nulo caso os grupos globais ainda não estivessem disponí­veis.
+  2. O componente [CategoriesManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/settings/CategoriesManager.tsx) teve sua validação restritiva que exigia um grupo removida, definindo `groupId` como nulo caso os grupos globais ainda não estivessem disponíveis.
+  3. Todas as queries de [useFinanceQueries.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useFinanceQueries.ts) foram atualizadas para integrar o hook `useAuth()`. A execução foi vinculada a `enabled: !!user` e a chave de cache a `user?.id`, corrigindo a race condition onde o React Query cacheava um array vazio (`[]`) por 24 horas caso a query rodasse antes da restauração da sessão do Supabase, o que gerava o bloqueio persistente na criação de categorias.
+- **Motivação**: Resolver a inconsistência onde novos usuários não conseguiam cadastrar categorias devido ao atraso de inicialização do Supabase Auth no carregamento inicial, que gerava um cache duradouro vazio dos grupos de categorias na tela de gestão de categorias.
 
-## [2026-06-15] AlteraÃ§Ã£o Arquitetural / UI - Tema Copa do Mundo e Modo Torcida ðŸ‡§ðŸ‡· (EvoluÃ§Ã£o Visual & Responsividade)
-- **Resumo**: Criamos e integramos o "Modo Torcida Copa" no aplicativo. Refatoramos o hook de cores [useThemeColor.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useThemeColor.tsx) para expor as propriedades `modoTorcida` e `setModoTorcida`, persistindo essa preferÃªncia localmente no `localStorage` (com chaves especÃ­ficas por usuÃ¡rio `modo-torcida:${userId}`) e sincronizando-a de forma remota no Supabase (`user.user_metadata?.modo_torcida`). No arquivo de estilos globais [index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css), criamos as classes `.theme-copa` e `.dark.theme-copa` que substituem as cores de destaque e de status do design system pelas cores oficiais da bandeira do Brasil (Verde Bandeira, Amarelo Ouro e Azul Anil), preservando intacta a cor de fundo original (chumbo, preto amoled ou branco claro). Adicionamos tambÃ©m um gradiente de 3 cores oficial para as barras de progresso quando o modo torcida estÃ¡ ativo. Atualizamos a tela de configuraÃ§Ãµes [ProfileSettings.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ProfileSettings.tsx) com um card interativo contendo o switch temÃ¡tico. Para garantir responsividade impecÃ¡vel em todas as resoluÃ§Ãµes de tela e evitar quebras de layout:
+## [2026-06-15] Alteração Arquitetural / UI - Tema Copa do Mundo e Modo Torcida 🇧🇷 (Evolução Visual & Responsividade)
+- **Resumo**: Criamos e integramos o "Modo Torcida Copa" no aplicativo. Refatoramos o hook de cores [useThemeColor.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useThemeColor.tsx) para expor as propriedades `modoTorcida` e `setModoTorcida`, persistindo essa preferência localmente no `localStorage` (com chaves específicas por usuário `modo-torcida:${userId}`) e sincronizando-a de forma remota no Supabase (`user.user_metadata?.modo_torcida`). No arquivo de estilos globais [index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css), criamos as classes `.theme-copa` e `.dark.theme-copa` que substituem as cores de destaque e de status do design system pelas cores oficiais da bandeira do Brasil (Verde Bandeira, Amarelo Ouro e Azul Anil), preservando intacta a cor de fundo original (chumbo, preto amoled ou branco claro). Adicionamos também um gradiente de 3 cores oficial para as barras de progresso quando o modo torcida está ativo. Atualizamos a tela de configurações [ProfileSettings.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ProfileSettings.tsx) com um card interativo contendo o switch temático. Para garantir responsividade impecável em todas as resoluções de tela e evitar quebras de layout:
   1. Restauramos o componente de logo [AppLogo.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/branding/AppLogo.tsx) para renderizar apenas a marca de forma limpa.
-  2. Implementamos um varal de bandeirinhas do Brasil em CSS/HTML (`BandeirinhasVaral`) que flutua de forma responsiva (`justify-around`) e balanÃ§a suavemente com fÃ­sica simulada via animaÃ§Ã£o `@keyframes sway` no topo do layout principal [AppLayout.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/AppLayout.tsx).
-  3. Desenvolvemos e injetamos o componente de desenho vetorial SVG da bandeira oficial do Brasil (`BandeiraBrasilSvg`) nos cabeÃ§alhos desktop e mobile (`NavigationRail.tsx` e `MobileTopHeader.tsx`) e na tela de configuraÃ§Ãµes (`ProfileSettings.tsx`) no lugar do emoji de bandeira ðŸ‡§ðŸ‡·. Isso resolve de forma permanente e elegante o bug de renderizaÃ§Ã£o no Windows, que exibe os emojis de bandeira como as letras pretas em formato de texto 'BR'. A taÃ§a dourada ðŸ† animada foi mantida ao lado da bandeira SVG e disposta de forma totalmente responsiva.
-  4. Melhoramos o layout da grade de temas e o card de ConfiguraÃ§Ãµes ([ProfileSettings.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ProfileSettings.tsx)) para ajustar dinamicamente as colunas com base no nÃºmero de opÃ§Ãµes ativas e definimos o card "AparÃªncia" como `md:col-span-2` (largura total), alinhando-o aos demais cards e eliminando o enorme espaÃ§o vazio que ficava Ã  direita na pÃ¡gina.
-- **MotivaÃ§Ã£o**: Atender Ã  solicitaÃ§Ã£o do usuÃ¡rio de criar um tema da Copa do Mundo muito mais caracterÃ­stico e com clima festivo ("festa no app"), garantindo que todos os elementos visuais (como a bandeira em SVG para evitar o bug de exibiÃ§Ã£o 'BR' no Windows e a taÃ§a animada) sejam dispostos de forma 100% responsiva tanto em dispositivos mÃ³veis quanto em telas grandes, sem esmagamento ou quebras de layout nos cabeÃ§alhos e logotipos, e resolver o problema visual do espaÃ§o em branco ao lado do card de temas.
+  2. Implementamos um varal de bandeirinhas do Brasil em CSS/HTML (`BandeirinhasVaral`) que flutua de forma responsiva (`justify-around`) e balança suavemente com física simulada via animação `@keyframes sway` no topo do layout principal [AppLayout.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/AppLayout.tsx).
+  3. Desenvolvemos e injetamos o componente de desenho vetorial SVG da bandeira oficial do Brasil (`BandeiraBrasilSvg`) nos cabeçalhos desktop e mobile (`NavigationRail.tsx` e `MobileTopHeader.tsx`) e na tela de configurações (`ProfileSettings.tsx`) no lugar do emoji de bandeira 🇧🇷. Isso resolve de forma permanente e elegante o bug de renderização no Windows, que exibe os emojis de bandeira como as letras pretas em formato de texto 'BR'. A taça dourada ðŸ† animada foi mantida ao lado da bandeira SVG e disposta de forma totalmente responsiva.
+  4. Melhoramos o layout da grade de temas e o card de Configurações ([ProfileSettings.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ProfileSettings.tsx)) para ajustar dinamicamente as colunas com base no número de opções ativas e definimos o card "Aparência" como `md:col-span-2` (largura total), alinhando-o aos demais cards e eliminando o enorme espaço vazio que ficava  direita na página.
+- **Motivação**: Atender  solicitação do usuário de criar um tema da Copa do Mundo muito mais característico e com clima festivo ("festa no app"), garantindo que todos os elementos visuais (como a bandeira em SVG para evitar o bug de exibição 'BR' no Windows e a taça animada) sejam dispostos de forma 100% responsiva tanto em dispositivos móveis quanto em telas grandes, sem esmagamento ou quebras de layout nos cabeçalhos e logotipos, e resolver o problema visual do espaço em branco ao lado do card de temas.
 
-## [2026-06-24] AlteraÃ§Ã£o Arquitetural / UI - Acessibilidade do Painel Super Admin e ReestruturaÃ§Ã£o Completa da SuperPage
+## [2026-06-24] Alteração Arquitetural / UI - Acessibilidade do Painel Super Admin e Reestruturação Completa da SuperPage
 - **Resumo**: Resolvemos o problema de acessibilidade do painel de Super Admin e otimizamos o seu layout em telas de computador:
-  1. Adicionamos a opÃ§Ã£o "Painel Super" no menu dropdown do Avatar do desktop (no componente [NavigationRail.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/NavigationRail.tsx)) e do mobile (no componente [MobileTopHeader.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/MobileTopHeader.tsx)). O link Ã© renderizado condicionalmente, aparecendo apenas para o UUID administrador definido no `.env` (`VITE_SUPER_USER_ID`).
-  2. Ajustamos a largura mÃ¡xima de toda a tela do painel de Super Admin ([SuperPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/SuperPage.tsx)) de `max-w-lg` para `max-w-4xl`, permitindo que os elementos tenham espaÃ§o e o design respire no desktop.
-  3. Reestruturamos completamente a aba de **Temas** para organizar as opÃ§Ãµes em uma grade de duas colunas (`grid-cols-1 md:grid-cols-2 gap-4`), a aba de **Planos** para posicionar a criaÃ§Ã£o de planos e a lista de planos lado a lado, e a aba de **UsuÃ¡rios** para dispor as informaÃ§Ãµes gerais e o seletor de plano em uma coluna e os toggles de acesso Ã s telas/recursos premium na outra. Isso elimina de vez o espaÃ§o vazio inÃºtil nas laterais da interface em telas maiores.
-- **MotivaÃ§Ã£o**: Garantir que o super usuÃ¡rio consiga acessar visualmente o seu painel de controle a partir de qualquer dispositivo de forma rÃ¡pida, e resolver o problema de layout "espremido" e com enormes espaÃ§os em branco nas laterais da tela de gerenciamento quando acessada no computador.
+  1. Adicionamos a opção "Painel Super" no menu dropdown do Avatar do desktop (no componente [NavigationRail.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/NavigationRail.tsx)) e do mobile (no componente [MobileTopHeader.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/MobileTopHeader.tsx)). O link é renderizado condicionalmente, aparecendo apenas para o UUID administrador definido no `.env` (`VITE_SUPER_USER_ID`).
+  2. Ajustamos a largura máxima de toda a tela do painel de Super Admin ([SuperPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/SuperPage.tsx)) de `max-w-lg` para `max-w-4xl`, permitindo que os elementos tenham espaço e o design respire no desktop.
+  3. Reestruturamos completamente a aba de **Temas** para organizar as opções em uma grade de duas colunas (`grid-cols-1 md:grid-cols-2 gap-4`), a aba de **Planos** para posicionar a criação de planos e a lista de planos lado a lado, e a aba de **Usuários** para dispor as informações gerais e o seletor de plano em uma coluna e os toggles de acesso s telas/recursos premium na outra. Isso elimina de vez o espaço vazio inútil nas laterais da interface em telas maiores.
+- **Motivação**: Garantir que o super usuário consiga acessar visualmente o seu painel de controle a partir de qualquer dispositivo de forma rápida, e resolver o problema de layout "espremido" e com enormes espaços em branco nas laterais da tela de gerenciamento quando acessada no computador.
 
-## [2026-06-24] AlteraÃ§Ã£o Arquitetural / UI - GestÃ£o DinÃ¢mica de Temas e AtivaÃ§Ã£o do Modo Copa Global
-- **Resumo**: Implementamos a capacidade de gerenciar temas especiais globais diretamente pela interface do painel administrativo (Super Admin), sem a necessidade de alteraÃ§Ãµes de cÃ³digo. No banco de dados, criamos uma nova migraÃ§Ã£o (`0037_add_theme_copa_to_global_flags.sql`) para registrar o flag `'theme_copa'`. No front-end:
-  1. Atualizamos a aba de temas da tela de Super Admin (`SuperPage.tsx`) incluindo o Ã­cone correspondente ao tema da Copa ðŸ‡§ðŸ‡·.
-  2. Ajustamos a tela de login [AuthPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/AuthPage.tsx) para que, em Modo Copa ativo no painel admin, a tela de login herde as cores do tema Copa e exiba o mockup correto com o logotipo vetorial customizado (curvas do fluxo verde e bandeira do Brasil SVG lado a lado) e o slogan "Com o Fluxo, vocÃª economiza o dinheiro e guarda o fÃ´lego para gritar Ã© campeÃ£o!" estilizado nas cores brasileiras.
-  3. Mantivemos o tema interno do aplicativo (Ã¡rea logada) sob escolha individual dos usuÃ¡rios em [ProfileSettings.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ProfileSettings.tsx) â€” a ativaÃ§Ã£o global do admin nÃ£o forÃ§a o tema Copa internamente, respeitando a preferÃªncia de cor de cada usuÃ¡rio e permitindo a eles ativarem ou desativarem o Modo Torcida voluntariamente.
-  4. Melhoramos o layout da grade de temas na tela de ConfiguraÃ§Ãµes ([ProfileSettings.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ProfileSettings.tsx)) para ajustar dinamicamente as colunas com base no nÃºmero de opÃ§Ãµes ativas, eliminando o espaÃ§o vazio que ocorria no desktop ao exibir 3 opÃ§Ãµes em uma grade de 2 colunas.
-- **MotivaÃ§Ã£o**: Atender ao pedido do usuÃ¡rio para poder gerenciar temas festivos pelo app e garantir que a ativaÃ§Ã£o global do tema da Copa apenas force o visual festivo na tela de login comum a todos, deixando a Ã¡rea autenticada respeitar a preferÃªncia de cada um; e resolver o problema visual do espaÃ§o em branco no seletor de temas das configuraÃ§Ãµes.
+## [2026-06-24] Alteração Arquitetural / UI - Gestão Dinâmica de Temas e Ativação do Modo Copa Global
+- **Resumo**: Implementamos a capacidade de gerenciar temas especiais globais diretamente pela interface do painel administrativo (Super Admin), sem a necessidade de alterações de código. No banco de dados, criamos uma nova migração (`0037_add_theme_copa_to_global_flags.sql`) para registrar o flag `'theme_copa'`. No front-end:
+  1. Atualizamos a aba de temas da tela de Super Admin (`SuperPage.tsx`) incluindo o ícone correspondente ao tema da Copa 🇧🇷.
+  2. Ajustamos a tela de login [AuthPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/AuthPage.tsx) para que, em Modo Copa ativo no painel admin, a tela de login herde as cores do tema Copa e exiba o mockup correto com o logotipo vetorial customizado (curvas do fluxo verde e bandeira do Brasil SVG lado a lado) e o slogan "Com o Fluxo, você economiza o dinheiro e guarda o fôlego para gritar é campeão!" estilizado nas cores brasileiras.
+  3. Mantivemos o tema interno do aplicativo (área logada) sob escolha individual dos usuários em [ProfileSettings.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ProfileSettings.tsx) â€” a ativação global do admin não força o tema Copa internamente, respeitando a preferência de cor de cada usuário e permitindo a eles ativarem ou desativarem o Modo Torcida voluntariamente.
+  4. Melhoramos o layout da grade de temas na tela de Configurações ([ProfileSettings.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ProfileSettings.tsx)) para ajustar dinamicamente as colunas com base no número de opções ativas, eliminando o espaço vazio que ocorria no desktop ao exibir 3 opções em uma grade de 2 colunas.
+- **Motivação**: Atender ao pedido do usuário para poder gerenciar temas festivos pelo app e garantir que a ativação global do tema da Copa apenas force o visual festivo na tela de login comum a todos, deixando a área autenticada respeitar a preferência de cada um; e resolver o problema visual do espaço em branco no seletor de temas das configurações.
 
-## [2026-06-24] AlteraÃ§Ã£o Arquitetural / UI - Gerenciamento Completo de UsuÃ¡rios/Planos e TematizaÃ§Ã£o da Copa Segmentada
-- **Resumo**: Implementamos a gestÃ£o completa de usuÃ¡rios e planos pelo painel administrativo e a segmentaÃ§Ã£o de exibiÃ§Ã£o do tema da Copa:
-  1. No banco de dados, criamos uma nova migraÃ§Ã£o (`0038_super_admin_user_management.sql`) contendo as polÃ­ticas RLS para dar controle total ao Super Admin sobre as tabelas administrativas, alÃ©m de 4 funÃ§Ãµes RPC seguras (`super_admin_create_user`, `super_admin_delete_user`, `super_admin_update_user` e `super_admin_list_users`) rodando como `SECURITY DEFINER` e protegidas com validaÃ§Ã£o estrita do UUID do Super Admin.
-  2. Na interface da aba de **UsuÃ¡rios** ([SuperPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/SuperPage.tsx)), implementamos a listagem dinÃ¢mica completa de usuÃ¡rios (com e-mail e nome obtidos via RPC), cadastro de novos usuÃ¡rios, exclusÃ£o fÃ­sica de contas e um formulÃ¡rio de ediÃ§Ã£o cadastral (para mudar nome, e-mail e senha) integrado na coluna de detalhes de permissÃ£o/plano.
-  3. Na aba de **Planos** ([SuperPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/SuperPage.tsx)), integramos a mutaÃ§Ã£o `useUpdatePlan` para permitir a alteraÃ§Ã£o cadastral (nome e descriÃ§Ã£o) dos planos de acesso diretamente por um formulÃ¡rio dedicado, separando o lÃ¡pis de ediÃ§Ã£o textual do escudo de ediÃ§Ã£o de telas/recursos.
+## [2026-06-24] Alteração Arquitetural / UI - Gerenciamento Completo de Usuários/Planos e Tematização da Copa Segmentada
+- **Resumo**: Implementamos a gestão completa de usuários e planos pelo painel administrativo e a segmentação de exibição do tema da Copa:
+  1. No banco de dados, criamos uma nova migração (`0038_super_admin_user_management.sql`) contendo as políticas RLS para dar controle total ao Super Admin sobre as tabelas administrativas, além de 4 funções RPC seguras (`super_admin_create_user`, `super_admin_delete_user`, `super_admin_update_user` e `super_admin_list_users`) rodando como `SECURITY DEFINER` e protegidas com validação estrita do UUID do Super Admin.
+  2. Na interface da aba de **Usuários** ([SuperPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/SuperPage.tsx)), implementamos a listagem dinâmica completa de usuários (com e-mail e nome obtidos via RPC), cadastro de novos usuários, exclusão física de contas e um formulário de edição cadastral (para mudar nome, e-mail e senha) integrado na coluna de detalhes de permissão/plano.
+  3. Na aba de **Planos** ([SuperPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/SuperPage.tsx)), integramos a mutação `useUpdatePlan` para permitir a alteração cadastral (nome e descrição) dos planos de acesso diretamente por um formulário dedicado, separando o lápis de edição textual do escudo de edição de telas/recursos.
   4. Segmentamos o tema da Copa em duas frentes independentes:
-     - **Copa - Login (Global)**: Ativa o tema da Copa na tela de login (`theme_copa`) para todos os usuÃ¡rios.
-     - **Copa - Ãrea Logada (Interno)**: Habilita o card "Modo Torcida Copa" (`theme_copa_internal`) nas configuraÃ§Ãµes de perfil ([ProfileSettings.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ProfileSettings.tsx)), permitindo ao usuÃ¡rio decidir se quer ativar o visual verde e amarelo voluntariamente.
-  5. Adicionamos a inicializaÃ§Ã£o automÃ¡tica dessas duas chaves no painel admin para garantir sua existÃªncia e ativaÃ§Ã£o imediata.
-- **MotivaÃ§Ã£o**: Atender Ã  necessidade de o super usuÃ¡rio gerenciar de forma autÃ´noma e completa os dados dos usuÃ¡rios e planos sem intervenÃ§Ã£o de banco de dados direta, e atender Ã  regra de divisÃ£o entre tema forÃ§ado na tela inicial e livre arbÃ­trio estÃ©tico na Ã¡rea logada.
+     - **Copa - Login (Global)**: Ativa o tema da Copa na tela de login (`theme_copa`) para todos os usuários.
+     - **Copa - Área Logada (Interno)**: Habilita o card "Modo Torcida Copa" (`theme_copa_internal`) nas configurações de perfil ([ProfileSettings.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ProfileSettings.tsx)), permitindo ao usuário decidir se quer ativar o visual verde e amarelo voluntariamente.
+  5. Adicionamos a inicialização automática dessas duas chaves no painel admin para garantir sua existência e ativação imediata.
+- **Motivação**: Atender  necessidade de o super usuário gerenciar de forma autônoma e completa os dados dos usuários e planos sem intervenção de banco de dados direta, e atender  regra de divisão entre tema forçado na tela inicial e livre arbítrio estético na área logada.
 
-## [2026-06-24] CorreÃ§Ã£o UI - SuperThemesTab: Loop de Toast e ReorganizaÃ§Ã£o Visual
-- **Resumo**: Corrigimos o componente `SuperThemesTab` que apresentava um `useEffect` auto-inicializador causando loop infinito de toast ("Temas da Copa inicializados e ativados") e nÃ£o exibia as flags Copa. MudanÃ§as:
-  1. Removido o `useEffect` que tentava inserir automaticamente as flags Copa no banco a cada renderizaÃ§Ã£o (causando loop).
-  2. SubstituÃ­do por um botÃ£o manual "Ativar Tema Copa" que aparece apenas quando as flags nÃ£o existem no banco.
-  3. Reorganizada a UI da aba de Temas em duas seÃ§Ãµes claras: **Copa do Mundo 2026** (com divisÃ£o Login Global / Ãrea Logada Interno) e **Temas Sazonais** (PÃ¡scoa, Natal, Halloween).
-  4. Cada flag Copa agora exibe descriÃ§Ã£o contextual dinÃ¢mica e indicador visual de status.
-- **MotivaÃ§Ã£o**: O `useEffect` com `flags` no dependency array causava re-renderizaÃ§Ã£o infinita ao invalidar a query e receber dados novos. A UI nÃ£o refletia a divisÃ£o solicitada entre Login e Interno.
+## [2026-06-24] Correção UI - SuperThemesTab: Loop de Toast e Reorganização Visual
+- **Resumo**: Corrigimos o componente `SuperThemesTab` que apresentava um `useEffect` auto-inicializador causando loop infinito de toast ("Temas da Copa inicializados e ativados") e não exibia as flags Copa. Mudanças:
+  1. Removido o `useEffect` que tentava inserir automaticamente as flags Copa no banco a cada renderização (causando loop).
+  2. Substituído por um botão manual "Ativar Tema Copa" que aparece apenas quando as flags não existem no banco.
+  3. Reorganizada a UI da aba de Temas em duas seções claras: **Copa do Mundo 2026** (com divisão Login Global / Área Logada Interno) e **Temas Sazonais** (Páscoa, Natal, Halloween).
+  4. Cada flag Copa agora exibe descrição contextual dinâmica e indicador visual de status.
+- **Motivação**: O `useEffect` com `flags` no dependency array causava re-renderização infinita ao invalidar a query e receber dados novos. A UI não refletia a divisão solicitada entre Login e Interno.
 
 ## [2026-06-24] Regra UI + Rearquitetura de Temas
-- **Resumo**: ReestruturaÃ§Ã£o completa da aba de Temas no painel Super Admin:
+- **Resumo**: Reestruturação completa da aba de Temas no painel Super Admin:
   1. **Nova regra permanente (MASTER RULE):** Proibido usar emojis e textos expositivos/descritivos na interface do app. A UI deve ser limpa, profissional e autoexplicativa.
-  2. Todos os temas (Copa, PÃ¡scoa, Natal, Halloween) agora possuem **duas flags**: `theme_X` (Tela de Login) e `theme_X_internal` (Interface Interna).
+  2. Todos os temas (Copa, Páscoa, Natal, Halloween) agora possuem **duas flags**: `theme_X` (Tela de Login) e `theme_X_internal` (Interface Interna).
   3. A aba de Temas foi dividida em duas colunas: **Tela de Login** e **Interface Interna**, com cards limpos contendo apenas o nome do tema e o switch.
-  4. Flags ausentes sÃ£o detectadas automaticamente e podem ser criadas via botÃ£o discreto.
-- **MotivaÃ§Ã£o**: O usuÃ¡rio definiu como regra mestre que emojis e textos descritivos prejudicam a profissionalidade do produto.
+  4. Flags ausentes são detectadas automaticamente e podem ser criadas via botão discreto.
+- **Motivação**: O usuário definiu como regra mestre que emojis e textos descritivos prejudicam a profissionalidade do produto.
 
-## [2026-06-24] AlteraÃ§Ã£o de UI - Logotipo TemÃ¡tico da Copa do Mundo e ConsolidaÃ§Ã£o Real de Temas Sazonais
-- **Resumo**: Consolidamos a aplicaÃ§Ã£o real e persistente de todos os 4 temas sazonais (Copa, PÃ¡scoa, Natal, Halloween) no aplicativo:
-  1. **Logotipo da Copa do Mundo**: A imagem tricolor personalizada fornecida pelo usuÃ¡rio (`CÃ³pia de Logo.png`) foi tratada (remoÃ§Ã£o de fundo branco), salva como `/fluxo-logo-copa.png` e integrada no componente [AppLogo.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/branding/AppLogo.tsx). Agora a logo muda para a imagem tricolor customizada na tela de login e nas barras de navegaÃ§Ã£o internas quando o Modo Copa estiver ativado. O tamanho da logo no login foi aumentado para `h-28 w-72` e aproximado do nome "Fluxo" atravÃ©s de margens negativas (`-mb-6`). Nos cabeÃ§alhos internos, a bandeira e a taÃ§a de Copa foram completamente removidas e a logo tricolor foi aumentada de tamanho (`h-12 w-32` no desktop e `h-10 w-26` no mobile) e posicionada mais ao canto (reduzido o padding lateral). No mobile, evitamos espremer a logo retangular dentro de caixas quadradas de Ã­cone.
-  2. **Reatividade e PersistÃªncia de Temas**: Criamos classes de variÃ¡veis de cores no CSS ([index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css)) para cada tema sazonal: PÃ¡scoa (`.theme-easter`), Natal (`.theme-christmas`) e Halloween (`.theme-halloween`). Atualizamos o hook de cores [useThemeColor.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useThemeColor.tsx) para injetar as classes temÃ¡ticas dinamicamente ao selecionar as cores de destaque sazonais, garantindo que o tema persista apÃ³s recarregar a pÃ¡gina (lido reativamente de metadados do Supabase e do localStorage). Implementamos a reversÃ£o automÃ¡tica das configuraÃ§Ãµes sazonais dos usuÃ¡rios (Modo Torcida Copa para falso, e cores de PÃ¡scoa, Natal ou Halloween para o azul padrÃ£o) no momento em que a respectiva flag global da interface interna (`theme_X_internal`) Ã© desativada pelo Super Admin.
-  3. **IntegraÃ§Ã£o na Tela de Login**: O componente [AuthPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/AuthPage.tsx) agora escuta reativamente todas as flags de login e aplica dinamicamente o tema de cor correspondente, tamanho de logo proporcional e o slogan sazonal customizado. Atualizamos o slogan da Copa para *"Com o Fluxo, vocÃª economiza o dinheiro e guarda o fÃ´lego para gritar Ã© GOOOOOL!"*, onde as letras de "GOOOOOL!" foram individualmente estilizadas com as cores verde, amarela e azul da bandeira brasileira.
-- **MotivaÃ§Ã£o**: Atender Ã  solicitaÃ§Ã£o do usuÃ¡rio de garantir que a ativaÃ§Ã£o ou desativaÃ§Ã£o de temas no painel Super Admin e no perfil reflita de verdade no visual e persista ao atualizar a pÃ¡gina, e permitir a substituiÃ§Ã£o e o redimensionamento do logotipo da Copa na tela inicial com inclusÃ£o de slogan de forma limpa. Aproximar o logotipo do nome "Fluxo" na tela de login, aplicar o slogan estilizado, remover a bandeira e taÃ§a dos cabeÃ§alhos internos, aumentar o tamanho do logotipo posicionando-o mais no canto, e garantir que a desativaÃ§Ã£o administrativa oculte as opÃ§Ãµes de todos os usuÃ¡rios e force o retorno automÃ¡tico ao visual padrÃ£o do sistema.
+## [2026-06-24] Alteração de UI - Logotipo Temático da Copa do Mundo e Consolidação Real de Temas Sazonais
+- **Resumo**: Consolidamos a aplicação real e persistente de todos os 4 temas sazonais (Copa, Páscoa, Natal, Halloween) no aplicativo:
+  1. **Logotipo da Copa do Mundo**: A imagem tricolor personalizada fornecida pelo usuário (`Cópia de Logo.png`) foi tratada (remoção de fundo branco), salva como `/fluxo-logo-copa.png` e integrada no componente [AppLogo.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/branding/AppLogo.tsx). Agora a logo muda para a imagem tricolor customizada na tela de login e nas barras de navegação internas quando o Modo Copa estiver ativado. O tamanho da logo no login foi aumentado para `h-28 w-72` e aproximado do nome "Fluxo" através de margens negativas (`-mb-6`). Nos cabeçalhos internos, a bandeira e a taça de Copa foram completamente removidas e a logo tricolor foi aumentada de tamanho (`h-12 w-32` no desktop e `h-10 w-26` no mobile) e posicionada mais ao canto (reduzido o padding lateral). No mobile, evitamos espremer a logo retangular dentro de caixas quadradas de ícone.
+  2. **Reatividade e Persistência de Temas**: Criamos classes de variáveis de cores no CSS ([index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css)) para cada tema sazonal: Páscoa (`.theme-easter`), Natal (`.theme-christmas`) e Halloween (`.theme-halloween`). Atualizamos o hook de cores [useThemeColor.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useThemeColor.tsx) para injetar as classes temáticas dinamicamente ao selecionar as cores de destaque sazonais, garantindo que o tema persista após recarregar a página (lido reativamente de metadados do Supabase e do localStorage). Implementamos a reversão automática das configurações sazonais dos usuários (Modo Torcida Copa para falso, e cores de Páscoa, Natal ou Halloween para o azul padrão) no momento em que a respectiva flag global da interface interna (`theme_X_internal`) é desativada pelo Super Admin.
+  3. **Integração na Tela de Login**: O componente [AuthPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/AuthPage.tsx) agora escuta reativamente todas as flags de login e aplica dinamicamente o tema de cor correspondente, tamanho de logo proporcional e o slogan sazonal customizado. Atualizamos o slogan da Copa para *"Com o Fluxo, você economiza o dinheiro e guarda o fôlego para gritar é GOOOOOL!"*, onde as letras de "GOOOOOL!" foram individualmente estilizadas com as cores verde, amarela e azul da bandeira brasileira.
+- **Motivação**: Atender  solicitação do usuário de garantir que a ativação ou desativação de temas no painel Super Admin e no perfil reflita de verdade no visual e persista ao atualizar a página, e permitir a substituição e o redimensionamento do logotipo da Copa na tela inicial com inclusão de slogan de forma limpa. Aproximar o logotipo do nome "Fluxo" na tela de login, aplicar o slogan estilizado, remover a bandeira e taça dos cabeçalhos internos, aumentar o tamanho do logotipo posicionando-o mais no canto, e garantir que a desativação administrativa oculte as opções de todos os usuários e force o retorno automático ao visual padrão do sistema.
 
-## [2026-06-24] AlteraÃ§Ã£o Arquitetural / UI - OtimizaÃ§Ã£o de Cache de Temas Globais e PrevenÃ§Ã£o de Reset Indevido
-- **Resumo**: Consolidamos o impacto imediato e a estabilidade da ativaÃ§Ã£o de temas no painel Super Admin e sua propagaÃ§Ã£o para todos os usuÃ¡rios:
-  1. **AtualizaÃ§Ã£o Imediata (Sem Cache Atrasado)**: Alteramos o `staleTime` de `global_feature_flags` em [useFeatureFlags.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useFeatureFlags.ts) para `0`. Agora, quando o Super Admin ativa ou desativa um tema global no painel Super, todos os clientes que carregarem uma tela ou derem F5 obterÃ£o o estado real do banco de imediato, sem o atraso de 5 minutos gerado pelo cache antigo.
-  2. **PrevenÃ§Ã£o de Reset Incorreto no Boot**: No hook [useThemeColor.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useThemeColor.tsx), vinculamos a execuÃ§Ã£o da auto-reversÃ£o de temas ao carregamento bem-sucedido das chaves do Supabase (`flagsLoaded`). Isso impede que o tema do usuÃ¡rio seja resetado incorretamente para o azul padrÃ£o durante a renderizaÃ§Ã£o inicial (quando as chaves retornam temporariamente como vazias antes da resposta da API).
-  3. **Impacto Global do Super Admin**: Se a Interface Interna for habilitada, ela aparece em AparÃªncia ([ProfileSettings.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ProfileSettings.tsx)) para todos escolherem. Se for desativada, a opÃ§Ã£o Ã© completamente oculta para todos (inclusive o Super Admin) e o visual volta para o padrÃ£o de forma reativa e automÃ¡tica. A tela de login segue o mesmo comportamento para todas as flags correspondentes.
-  4. **SegmentaÃ§Ã£o do Logotipo TemÃ¡tico da Copa**: Alteramos o componente de logotipo [AppLogo.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/branding/AppLogo.tsx) e a tela de login [AuthPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/AuthPage.tsx) para segmentar a exibiÃ§Ã£o da logo com as cores do Brasil. A logo verde e amarela agora sÃ³ Ã© exibida na tela de login (caso a Tela de Login da Copa esteja ativa) ou dentro do app se o usuÃ¡rio tiver explicitamente ativado o "Modo Torcida Copa" no seu perfil. Caso contrÃ¡rio, mesmo com o tema de Login ativado globalmente, a logo interna exibida no menu lateral e cabeÃ§alhos permanece a padrÃ£o do sistema.
-  5. **ReorganizaÃ§Ã£o do CabeÃ§alho Desktop**: Unificamos o cabeÃ§alho superior do desktop em [NavigationRail.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/NavigationRail.tsx) em uma Ãºnica linha horizontal contÃ­nua de altura `h-16`. Aumentamos as dimensÃµes do logotipo padrÃ£o do aplicativo para `h-12 w-36` para maior visibilidade. Removemos tambÃ©m o efeito `backdrop-blur-sm` no botÃ£o rÃ¡pido de trocar tema (`ThemeButton`) quando no modo claro (substituindo por um fundo `bg-muted` sÃ³lido), mantendo o blur apenas no modo escuro conforme solicitado.
-  6. **RenomeaÃ§Ã£o e Cores no GrÃ¡fico de RelatÃ³rios**: Na tela de relatatÃ³rios [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx), renomeamos a seÃ§Ã£o *"Total de Consumo vs Receita"* para *"Total de Despesas vs Receitas"*. Alteramos a lÃ³gica de cores para que a linha de Despesas fique Chumbo (`#4B5563`) no modo claro (continuando rosa/vermelha no escuro) e a linha de Receitas utilize a cor de destaque atual do tema do usuÃ¡rio. As legendas foram dinamicamente estilizadas para condizer exatamente com a cor das linhas do grÃ¡fico nos respectivos modos visuais.
-- **MotivaÃ§Ã£o**: Atender Ã  solicitaÃ§Ã£o do usuÃ¡rio de que as escolhas do Super Admin tenham impacto global e imediato no app para todos os acessos, garantindo a reversÃ£o de temas de forma totalmente limpa, segmentando o visual da logo, organizando e compactando o cabeÃ§alho superior no desktop, e harmonizando as nomenclaturas e a paleta de cores dos relatÃ³rios no modo claro.
+## [2026-06-24] Alteração Arquitetural / UI - Otimização de Cache de Temas Globais e Prevenção de Reset Indevido
+- **Resumo**: Consolidamos o impacto imediato e a estabilidade da ativação de temas no painel Super Admin e sua propagação para todos os usuários:
+  1. **Atualização Imediata (Sem Cache Atrasado)**: Alteramos o `staleTime` de `global_feature_flags` em [useFeatureFlags.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useFeatureFlags.ts) para `0`. Agora, quando o Super Admin ativa ou desativa um tema global no painel Super, todos os clientes que carregarem uma tela ou derem F5 obterão o estado real do banco de imediato, sem o atraso de 5 minutos gerado pelo cache antigo.
+  2. **Prevenção de Reset Incorreto no Boot**: No hook [useThemeColor.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useThemeColor.tsx), vinculamos a execução da auto-reversão de temas ao carregamento bem-sucedido das chaves do Supabase (`flagsLoaded`). Isso impede que o tema do usuário seja resetado incorretamente para o azul padrão durante a renderização inicial (quando as chaves retornam temporariamente como vazias antes da resposta da API).
+  3. **Impacto Global do Super Admin**: Se a Interface Interna for habilitada, ela aparece em Aparência ([ProfileSettings.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ProfileSettings.tsx)) para todos escolherem. Se for desativada, a opção é completamente oculta para todos (inclusive o Super Admin) e o visual volta para o padrão de forma reativa e automática. A tela de login segue o mesmo comportamento para todas as flags correspondentes.
+  4. **Segmentação do Logotipo Temático da Copa**: Alteramos o componente de logotipo [AppLogo.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/branding/AppLogo.tsx) e a tela de login [AuthPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/AuthPage.tsx) para segmentar a exibição da logo com as cores do Brasil. A logo verde e amarela agora só é exibida na tela de login (caso a Tela de Login da Copa esteja ativa) ou dentro do app se o usuário tiver explicitamente ativado o "Modo Torcida Copa" no seu perfil. Caso contrário, mesmo com o tema de Login ativado globalmente, a logo interna exibida no menu lateral e cabeçalhos permanece a padrão do sistema.
+  5. **Reorganização do Cabeçalho Desktop**: Unificamos o cabeçalho superior do desktop em [NavigationRail.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/NavigationRail.tsx) em uma única linha horizontal contínua de altura `h-16`. Aumentamos as dimensões do logotipo padrão do aplicativo para `h-12 w-36` para maior visibilidade. Removemos também o efeito `backdrop-blur-sm` no botão rápido de trocar tema (`ThemeButton`) quando no modo claro (substituindo por um fundo `bg-muted` sólido), mantendo o blur apenas no modo escuro conforme solicitado.
+  6. **Renomeação e Cores no Gráfico de Relatórios**: Na tela de relatatórios [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx), renomeamos a seção *"Total de Consumo vs Receita"* para *"Total de Despesas vs Receitas"*. Alteramos a lógica de cores para que a linha de Despesas fique Chumbo (`#4B5563`) no modo claro (continuando rosa/vermelha no escuro) e a linha de Receitas utilize a cor de destaque atual do tema do usuário. As legendas foram dinamicamente estilizadas para condizer exatamente com a cor das linhas do gráfico nos respectivos modos visuais.
+- **Motivação**: Atender  solicitação do usuário de que as escolhas do Super Admin tenham impacto global e imediato no app para todos os acessos, garantindo a reversão de temas de forma totalmente limpa, segmentando o visual da logo, organizando e compactando o cabeçalho superior no desktop, e harmonizando as nomenclaturas e a paleta de cores dos relatórios no modo claro.
 
-## [2026-06-24] AlteraÃ§Ã£o de UI - ReduÃ§Ã£o de CÃ­rculos de Cores e Novo Seletor Visual de Cores (RGB/HSV Picker)
-- **Resumo**: Implementamos melhorias significativas na experiÃªncia do editor de cores de AparÃªncia nas configuraÃ§Ãµes ([ProfileSettings.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ProfileSettings.tsx)):
-  1. **ReduÃ§Ã£o de CÃ­rculos PrÃ©-definidos**: DiminuÃ­mos as dimensÃµes dos cÃ­rculos seletores de cores de destaque prÃ©-definidas (incluindo cores normais e sazonais de PÃ¡scoa, Natal e Halloween) de `w-8 h-8` para `w-6 h-6` (e o Ã­cone `CheckCircle2` de seleÃ§Ã£o de `w-4 h-4` para `w-3 h-3`). Isso tornou a grade de cores discretamente compacta, elegante e profissional.
+## [2026-06-24] Alteração de UI - Redução de Círculos de Cores e Novo Seletor Visual de Cores (RGB/HSV Picker)
+- **Resumo**: Implementamos melhorias significativas na experiência do editor de cores de Aparência nas configurações ([ProfileSettings.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ProfileSettings.tsx)):
+  1. **Redução de Círculos Pré-definidos**: Diminuímos as dimensões dos círculos seletores de cores de destaque pré-definidas (incluindo cores normais e sazonais de Páscoa, Natal e Halloween) de `w-8 h-8` para `w-6 h-6` (e o ícone `CheckCircle2` de seleção de `w-4 h-4` para `w-3 h-3`). Isso tornou a grade de cores discretamente compacta, elegante e profissional.
   2. **Novo Seletor Visual de Cores (VisualColorPicker)**: Desenvolvemos do zero o componente visual interativo [VisualColorPicker.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/ui/VisualColorPicker.tsx) para substituir o input `type="color"` nativo do navegador.
-     - **Quadro RGB/HSV**: Um plano 2D interativo de gradiente que mapeia SaturaÃ§Ã£o e Brilho (Value), onde o usuÃ¡rio clica e arrasta uma bolinha indicadora para escolher a tonalidade exata.
-     - **Slider de Tom (Hue)**: Um slider horizontal contÃ­nuo com o espectro do arco-Ã­ris para determinar a matiz base.
-     - **DigitaÃ§Ã£o e Preview HEX**: Campo de texto para digitar o cÃ³digo hexadecimal diretamente com um indicador redondo exibindo a cor em tempo real.
-     - **Responsividade e FÃ­sica MÃ³vel**: Suporte nativo a eventos mouse e toque (touch) com bloqueio de rolagem da pÃ¡gina ao arrastar cores no celular.
-  3. **PersonalizaÃ§Ã£o Completa**: Integramos o novo seletor visual na seÃ§Ã£o de "Criar Minha Paleta" para personalizar individualmente as cores de **Destaque**, **Contornos** e **Ãcones**.
-- **MotivaÃ§Ã£o**: Atender ao pedido do usuÃ¡rio de diminuir o tamanho dos cÃ­rculos da cor de destaque e disponibilizar um painel de cores visual ("quadro RGB") de arrastar para dar liberdade total de criar paletas de cores refinadas e exclusivas.
+     - **Quadro RGB/HSV**: Um plano 2D interativo de gradiente que mapeia Saturação e Brilho (Value), onde o usuário clica e arrasta uma bolinha indicadora para escolher a tonalidade exata.
+     - **Slider de Tom (Hue)**: Um slider horizontal contínuo com o espectro do arco-íris para determinar a matiz base.
+     - **Digitação e Preview HEX**: Campo de texto para digitar o código hexadecimal diretamente com um indicador redondo exibindo a cor em tempo real.
+     - **Responsividade e Física Móvel**: Suporte nativo a eventos mouse e toque (touch) com bloqueio de rolagem da página ao arrastar cores no celular.
+  3. **Personalização Completa**: Integramos o novo seletor visual na seção de "Criar Minha Paleta" para personalizar individualmente as cores de **Destaque**, **Contornos** e **Ícones**.
+- **Motivação**: Atender ao pedido do usuário de diminuir o tamanho dos círculos da cor de destaque e disponibilizar um painel de cores visual ("quadro RGB") de arrastar para dar liberdade total de criar paletas de cores refinadas e exclusivas.
 
-## [2026-06-24] AlteraÃ§Ã£o Arquitetural / Branding - Templates de E-mail com Identidade Visual Premium Dark e Logotipo Textual
-- **Resumo**: Reestruturamos e recriamos por completo os templates de e-mail de autenticaÃ§Ã£o em portuguÃªs brasileiro (PT-BR) para o Supabase, deixando-os em perfeita coerÃªncia com a identidade visual do Fluxo:
-  1. **Logotipo Textual Minimalista**: Removemos a imagem do cabeÃ§alho de ambos os e-mails e implementamos um logotipo puramente textual estilizado em CSS/HTML ("Fluxo.") nas cores oficiais (verde Ã¡gua `#0d9488` e verde esmeralda `#10b981`). Isso elimina o download de imagens externas pelos clientes de e-mail (evitando bloqueios de renderizaÃ§Ã£o) e mantÃ©m o cabeÃ§alho discreto, moderno e profissional.
-  2. **Identidade Visual Premium Dark (OLED / Chumbo)**: Redesenhamos os arquivos HTML [reset_password.html](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/supabase/email_templates/reset_password.html) (Reset de Senha) e [confirm_email.html](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/supabase/email_templates/confirm_email.html) (ConfirmaÃ§Ã£o de E-mail) para herdar o visual dark premium do aplicativo:
+## [2026-06-24] Alteração Arquitetural / Branding - Templates de E-mail com Identidade Visual Premium Dark e Logotipo Textual
+- **Resumo**: Reestruturamos e recriamos por completo os templates de e-mail de autenticação em português brasileiro (PT-BR) para o Supabase, deixando-os em perfeita coerência com a identidade visual do Fluxo:
+  1. **Logotipo Textual Minimalista**: Removemos a imagem do cabeçalho de ambos os e-mails e implementamos um logotipo puramente textual estilizado em CSS/HTML ("Fluxo.") nas cores oficiais (verde água `#0d9488` e verde esmeralda `#10b981`). Isso elimina o download de imagens externas pelos clientes de e-mail (evitando bloqueios de renderização) e mantém o cabeçalho discreto, moderno e profissional.
+  2. **Identidade Visual Premium Dark (OLED / Chumbo)**: Redesenhamos os arquivos HTML [reset_password.html](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/supabase/email_templates/reset_password.html) (Reset de Senha) e [confirm_email.html](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/supabase/email_templates/confirm_email.html) (Confirmação de E-mail) para herdar o visual dark premium do aplicativo:
      - Fundo do e-mail em cinza ultra-escuro OLED (`#09090b`).
-     - Card de conteÃºdo em Matte Black/Carbon (`#18181b`) com bordas em `#27272a`.
-     - Uma linha superior em gradiente nas cores oficiais do Fluxo (verde Ã¡gua `#0d9488` e verde esmeralda `#10b981`).
-     - Textos em alto contraste (Zinc 100/400) e botÃ£o de aÃ§Ã£o (CTA) estilizado em verde Ã¡gua com cantos arredondados generosos.
-  3. **Compatibilidade Ampla**: EstruturaÃ§Ã£o dos e-mails em tabelas compatÃ­veis e CSS inline para exibiÃ§Ã£o perfeita e estÃ¡vel no Gmail, Outlook, Yahoo e Apple Mail.
-- **MotivaÃ§Ã£o**: Atender ao pedido do usuÃ¡rio de remover a imagem da logo (que nÃ£o ficou legal no cabeÃ§alho do e-mail) mantendo o design dark premium limpo com identificaÃ§Ã£o textual sutil.
+     - Card de conteúdo em Matte Black/Carbon (`#18181b`) com bordas em `#27272a`.
+     - Uma linha superior em gradiente nas cores oficiais do Fluxo (verde água `#0d9488` e verde esmeralda `#10b981`).
+     - Textos em alto contraste (Zinc 100/400) e botão de ação (CTA) estilizado em verde água com cantos arredondados generosos.
+  3. **Compatibilidade Ampla**: Estruturação dos e-mails em tabelas compatíveis e CSS inline para exibição perfeita e estável no Gmail, Outlook, Yahoo e Apple Mail.
+- **Motivação**: Atender ao pedido do usuário de remover a imagem da logo (que não ficou legal no cabeçalho do e-mail) mantendo o design dark premium limpo com identificação textual sutil.
 
 
 
-## [2026-06-24] CorreÃ§Ã£o de Bug / Fluxo de AutenticaÃ§Ã£o - Redirecionamento AutomÃ¡tico para RedefiniÃ§Ã£o de Senha
-- **Resumo**: Corrigimos o bug que impedia o usuÃ¡rio de ser levado para a tela de redefiniÃ§Ã£o de senha apÃ³s clicar no link de recuperaÃ§Ã£o enviado para o e-mail:
-  1. **DetecÃ§Ã£o do Evento Recovery**: No componente de rotas [App.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/App.tsx), implementamos um `useEffect` dentro de `AppRoutes` que escuta ativamente o mÃ©todo `onAuthStateChange` do Supabase. Ao capturar o evento `'PASSWORD_RECOVERY'`, ele executa um redirecionamento imediato e imperativo para `/auth/redefinir-senha`.
-  2. **Tratamento de Hash de ContingÃªncia**: Adicionamos uma validaÃ§Ã£o de fallback que lÃª `window.location.hash` e detecta a presenÃ§a de parÃ¢metros de redefiniÃ§Ã£o de senha (ex: `type=recovery` ou `type%3Drecovery`). Se presentes, o aplicativo tambÃ©m realiza o redirecionamento imediato para `/auth/redefinir-senha`. Isso garante o funcionamento mesmo quando o Supabase realiza o redirecionamento com fallback de seguranÃ§a para a URL base (Site URL) do projeto cadastrada no console.
-- **MotivaÃ§Ã£o**: Resolver o bug que deixava o usuÃ¡rio travado na tela inicial (sem ver a interface de troca de senha) apÃ³s clicar no link de redefiniÃ§Ã£o contido no e-mail de recuperaÃ§Ã£o.
+## [2026-06-24] Correção de Bug / Fluxo de Autenticação - Redirecionamento Automático para Redefinição de Senha
+- **Resumo**: Corrigimos o bug que impedia o usuário de ser levado para a tela de redefinição de senha após clicar no link de recuperação enviado para o e-mail:
+  1. **Detecção do Evento Recovery**: No componente de rotas [App.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/App.tsx), implementamos um `useEffect` dentro de `AppRoutes` que escuta ativamente o método `onAuthStateChange` do Supabase. Ao capturar o evento `'PASSWORD_RECOVERY'`, ele executa um redirecionamento imediato e imperativo para `/auth/redefinir-senha`.
+  2. **Tratamento de Hash de Contingência**: Adicionamos uma validação de fallback que lê `window.location.hash` e detecta a presença de parâmetros de redefinição de senha (ex: `type=recovery` ou `type%3Drecovery`). Se presentes, o aplicativo também realiza o redirecionamento imediato para `/auth/redefinir-senha`. Isso garante o funcionamento mesmo quando o Supabase realiza o redirecionamento com fallback de segurança para a URL base (Site URL) do projeto cadastrada no console.
+- **Motivação**: Resolver o bug que deixava o usuário travado na tela inicial (sem ver a interface de troca de senha) após clicar no link de redefinição contido no e-mail de recuperação.
 
-## [2026-06-24] AlteraÃ§Ã£o Arquitetural / UI - Controle Real de Acesso por Planos e EstilizaÃ§Ã£o do Menu Admin
-- **Resumo**: Implementamos a reativaÃ§Ã£o do controle de acessos dinÃ¢micos baseados no plano do usuÃ¡rio e ajustamos a cor do menu de atalho administrativo:
-  1. **Cor Branca para o "Painel Super"**: No cabeÃ§alho desktop ([NavigationRail.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/NavigationRail.tsx)) e no cabeÃ§alho mobile ([MobileTopHeader.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/MobileTopHeader.tsx)), alteramos a classe CSS do botÃ£o do menu do avatar "Painel Super" de `text-primary` para `text-white focus:text-white focus:bg-primary/10`, destacando o botÃ£o em branco nos dropdowns.
-  2. **Controle Real de Acesso por Planos**: No arquivo de controle de features [useFeatureFlags.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useFeatureFlags.ts), reestabelecemos a lÃ³gica dinÃ¢mica do hook `useFeatureFlag` para avaliar as permissÃµes reais do plano do usuÃ¡rio (`myPlanFeatures`) e seus overrides individuais (`myOverrides`). Caso o Super Admin altere ou atribua um plano a um usuÃ¡rio no painel, a exibiÃ§Ã£o e os recursos disponÃ­veis no aplicativo daquele usuÃ¡rio mudarÃ£o instantaneamente para condizer com os privilÃ©gios do novo plano. O Super Admin continua com todas as funcionalidades liberadas (`isSuperAdmin => true`).
-- **MotivaÃ§Ã£o**: Atender ao pedido do usuÃ¡rio de destacar a escrita do atalho do administrador em branco, e de restabelecer o funcionamento dinÃ¢mico e real dos planos no aplicativo de modo que a alteraÃ§Ã£o de plano de um usuÃ¡rio bloqueie/libere suas telas e recursos de imediato.
+## [2026-06-24] Alteração Arquitetural / UI - Controle Real de Acesso por Planos e Estilização do Menu Admin
+- **Resumo**: Implementamos a reativação do controle de acessos dinâmicos baseados no plano do usuário e ajustamos a cor do menu de atalho administrativo:
+  1. **Cor Branca para o "Painel Super"**: No cabeçalho desktop ([NavigationRail.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/NavigationRail.tsx)) e no cabeçalho mobile ([MobileTopHeader.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/MobileTopHeader.tsx)), alteramos a classe CSS do botão do menu do avatar "Painel Super" de `text-primary` para `text-white focus:text-white focus:bg-primary/10`, destacando o botão em branco nos dropdowns.
+  2. **Controle Real de Acesso por Planos**: No arquivo de controle de features [useFeatureFlags.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useFeatureFlags.ts), reestabelecemos a lógica dinâmica do hook `useFeatureFlag` para avaliar as permissões reais do plano do usuário (`myPlanFeatures`) e seus overrides individuais (`myOverrides`). Caso o Super Admin altere ou atribua um plano a um usuário no painel, a exibição e os recursos disponíveis no aplicativo daquele usuário mudarão instantaneamente para condizer com os privilégios do novo plano. O Super Admin continua com todas as funcionalidades liberadas (`isSuperAdmin => true`).
+- **Motivação**: Atender ao pedido do usuário de destacar a escrita do atalho do administrador em branco, e de restabelecer o funcionamento dinâmico e real dos planos no aplicativo de modo que a alteração de plano de um usuário bloqueie/libere suas telas e recursos de imediato.
 
-## [2026-06-24] AlteraÃ§Ã£o Arquitetural / Regra de NegÃ³cio - Limites Quantitativos de Recursos por Plano e GestÃ£o no Painel Super Admin
-- **Resumo**: Implementamos o controle dinÃ¢mico e a configuraÃ§Ã£o administrativa de limites quantitativos para recursos premium no aplicativo (Contas BancÃ¡rias, CartÃµes de CrÃ©dito e DÃ­vidas/Acordos):
-  1. **Modelo de Dados (Supabase)**: Criamos a migraÃ§Ã£o `0040_add_limits_to_plans.sql` que adiciona as colunas `accounts_limit`, `cards_limit` e `debts_limit` do tipo `INTEGER DEFAULT -1` (onde `-1` representa ilimitado) na tabela `plans`.
-  2. **ConfiguraÃ§Ã£o Administrativa (Super Admin)**:
+## [2026-06-24] Alteração Arquitetural / Regra de Negócio - Limites Quantitativos de Recursos por Plano e Gestão no Painel Super Admin
+- **Resumo**: Implementamos o controle dinâmico e a configuração administrativa de limites quantitativos para recursos premium no aplicativo (Contas Bancárias, Cartões de Crédito e Dívidas/Acordos):
+  1. **Modelo de Dados (Supabase)**: Criamos a migração `0040_add_limits_to_plans.sql` que adiciona as colunas `accounts_limit`, `cards_limit` e `debts_limit` do tipo `INTEGER DEFAULT -1` (onde `-1` representa ilimitado) na tabela `plans`.
+  2. **Configuração Administrativa (Super Admin)**:
      - No componente [useFeatureFlags.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useFeatureFlags.ts), atualizamos a query `usePlans` e as mutations `useCreatePlan` e `useUpdatePlan` para ler, criar e atualizar esses campos no banco de dados.
-     - Na aba de planos em [SuperPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/SuperPage.tsx), adicionamos campos numÃ©ricos individuais ("Contas MÃ¡ximas", "CartÃµes MÃ¡ximos", "DÃ­vidas MÃ¡ximas") nas seÃ§Ãµes de criaÃ§Ã£o de novo plano e ediÃ§Ã£o de planos, e exibimos badges com essas restriÃ§Ãµes na lista de planos cadastrados.
-  3. **Hook de Limites**: Desenvolvemos o hook `usePlanLimits()` em `useFeatureFlags.ts` que retorna os limites do plano ativo do usuÃ¡rio autenticado (ou `-1` se o usuÃ¡rio for Super Admin ou em caso de falha de conexÃ£o/migraÃ§Ã£o pendente, mantendo resiliÃªncia).
-  4. **ValidaÃ§Ã£o e Bloqueio em Tempo de Cadastro**:
-     - No gerenciador de contas ([AccountsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/accounts/AccountsManager.tsx)), o cadastro de novas contas Ã© bloqueado se o nÃºmero de contas ativas for igual ou maior que o limite configurado no plano, exibindo um toast destrutivo explicativo.
-     - No painel de cartÃµes de crÃ©dito ([CardsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/CardsDashboard.tsx)), o cadastro e a abertura do modal de adiÃ§Ã£o sÃ£o bloqueados se o nÃºmero de cartÃµes ativos atingir o limite do plano.
-     - No gerenciador de dÃ­vidas ([DebtsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/debts/DebtsManager.tsx)), o cadastro e a abertura do formulÃ¡rio de novos acordos sÃ£o igualmente limitados.
-- **MotivaÃ§Ã£o**: Atender ao pedido do usuÃ¡rio de configurar diretamente no painel Super Admin a quantidade permitida de contas, cartÃµes e dÃ­vidas para cada plano, e bloquear o cadastro de novas entidades se o limite do respectivo plano for atingido.
+     - Na aba de planos em [SuperPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/SuperPage.tsx), adicionamos campos numéricos individuais ("Contas Máximas", "Cartões Máximos", "Dívidas Máximas") nas seções de criação de novo plano e edição de planos, e exibimos badges com essas restrições na lista de planos cadastrados.
+  3. **Hook de Limites**: Desenvolvemos o hook `usePlanLimits()` em `useFeatureFlags.ts` que retorna os limites do plano ativo do usuário autenticado (ou `-1` se o usuário for Super Admin ou em caso de falha de conexão/migração pendente, mantendo resiliência).
+  4. **Validação e Bloqueio em Tempo de Cadastro**:
+     - No gerenciador de contas ([AccountsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/accounts/AccountsManager.tsx)), o cadastro de novas contas é bloqueado se o número de contas ativas for igual ou maior que o limite configurado no plano, exibindo um toast destrutivo explicativo.
+     - No painel de cartões de crédito ([CardsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/CardsDashboard.tsx)), o cadastro e a abertura do modal de adição são bloqueados se o número de cartões ativos atingir o limite do plano.
+     - No gerenciador de dívidas ([DebtsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/debts/DebtsManager.tsx)), o cadastro e a abertura do formulário de novos acordos são igualmente limitados.
+- **Motivação**: Atender ao pedido do usuário de configurar diretamente no painel Super Admin a quantidade permitida de contas, cartões e dívidas para cada plano, e bloquear o cadastro de novas entidades se o limite do respectivo plano for atingido.
 
-## [2026-06-25] AlteraÃ§Ã£o de UI & QA - OcultaÃ§Ã£o da Funcionalidade Start, CorreÃ§Ã£o de Fluxo de RedefiniÃ§Ã£o de Senha e EstabilizaÃ§Ã£o dos Testes UnitÃ¡rios
-- **Resumo**: Realizamos a ocultaÃ§Ã£o completa do Fluxo Start no app, a correÃ§Ã£o de um bug crÃ­tico de redefiniÃ§Ã£o de senha (race condition no redirecionamento) e estabilizamos 100% da suÃ­te de testes unitÃ¡rios:
-  1. **OcultaÃ§Ã£o do Fluxo Start**: Desativamos a rota `start_manager` e a importaÃ§Ã£o do componente `StartManager` na pÃ¡gina principal [Index.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/Index.tsx), removemos o botÃ£o de atalho do Start do card de informaÃ§Ãµes em [ProfileSettings.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ProfileSettings.tsx) e retiramos o botÃ£o de alternÃ¢ncia "Fluxo Start" da tela de login/cadastro pÃºblica em [AuthPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/AuthPage.tsx). Isso desativa visualmente e isola o acesso Ã  jornada de filhos no app.
-- **MotivaÃ§Ã£o**: Atender Ã  solicitaÃ§Ã£o direta do usuÃ¡rio de ocultar temporariamente todos os caminhos do Fluxo Start no app em ambas as resoluÃ§Ãµes e se comportar como QA especialista, garantindo integridade visual absoluta e a correÃ§Ã£o total dos testes de regressÃ£o automatizados.
+## [2026-06-25] Alteração de UI & QA - Ocultação da Funcionalidade Start, Correção de Fluxo de Redefinição de Senha e Estabilização dos Testes Unitários
+- **Resumo**: Realizamos a ocultação completa do Fluxo Start no app, a correção de um bug crítico de redefinição de senha (race condition no redirecionamento) e estabilizamos 100% da suíte de testes unitários:
+  1. **Ocultação do Fluxo Start**: Desativamos a rota `start_manager` e a importação do componente `StartManager` na página principal [Index.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/Index.tsx), removemos o botão de atalho do Start do card de informações em [ProfileSettings.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ProfileSettings.tsx) e retiramos o botão de alternância "Fluxo Start" da tela de login/cadastro pública em [AuthPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/AuthPage.tsx). Isso desativa visualmente e isola o acesso  jornada de filhos no app.
+- **Motivação**: Atender  solicitação direta do usuário de ocultar temporariamente todos os caminhos do Fluxo Start no app em ambas as resoluções e se comportar como QA especialista, garantindo integridade visual absoluta e a correção total dos testes de regressão automatizados.
 
-## [2026-06-25] AlteraÃ§Ã£o de UI - Filtro de LanÃ§amentos HierÃ¡rquico por Banco e Miniaturas de CartÃµes
-- **Resumo**: Implementamos melhorias significativas na experiÃªncia do usuÃ¡rio e na interface do filtro de lanÃ§amentos ([TransactionList.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/transactions/TransactionList.tsx)):
-  1. **Filtragem HierÃ¡rquica por Banco (Contas/DÃ©bito)**: Ao selecionar a opÃ§Ã£o de Origem como 'DÃ©bito', o filtro passa a atuar de forma sequencial e hierÃ¡rquica. Primeiro, exibe-se uma linha com a seleÃ§Ã£o de bancos disponÃ­veis. ApÃ³s o usuÃ¡rio selecionar um banco especÃ­fico, exibe-se a segunda linha de filtros contendo apenas as contas pertencentes a esse banco para a escolha final.
-  2. **IdentificaÃ§Ã£o Enriquecida de CartÃµes de CrÃ©dito**: Ao filtrar por 'CartÃ£o', a listagem de seleÃ§Ã£o exibe para cada cartÃ£o o nome do banco associado em destaque (em caixa alta) e uma miniatura visual representativa do cartÃ£o fÃ­sico contendo cores do perfil e textura (preto ou hologrÃ¡fico), alÃ©m de simulaÃ§Ã£o de chip metÃ¡lico e elipse de bandeira via estilizaÃ§Ã£o CSS pura no Tailwind.
-  3. **Reset de Estados de Filtro**: Garantimos que, ao mudar o filtro principal de Origem (entre 'Todas', 'DÃ©bito' e 'CartÃ£o'), o estado do banco selecionado (`selectedBank`) e de conta especÃ­fica (`specificSourceId`) sejam redefinidos para `'all'`. A declaraÃ§Ã£o de estados no componente foi devidamente reordenada para preservar a integridade do teste unitÃ¡rio legado que intercepta os estados pelo Ã­ndice de chamada.
-- **MotivaÃ§Ã£o**: Atender Ã  solicitaÃ§Ã£o direta do usuÃ¡rio de que os filtros de dÃ©bito exibam primeiro o banco e depois a conta (organizando cenÃ¡rios com muitas contas e bancos cadastrados), e que o filtro de cartÃ£o de crÃ©dito exiba o nome do banco e uma miniatura do cartÃ£o correspondente de forma moderna e premium.
+## [2026-06-25] Alteração de UI - Filtro de Lançamentos Hierárquico por Banco e Miniaturas de Cartões
+- **Resumo**: Implementamos melhorias significativas na experiência do usuário e na interface do filtro de lançamentos ([TransactionList.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/transactions/TransactionList.tsx)):
+  1. **Filtragem Hierárquica por Banco (Contas/Débito)**: Ao selecionar a opção de Origem como 'Débito', o filtro passa a atuar de forma sequencial e hierárquica. Primeiro, exibe-se uma linha com a seleção de bancos disponíveis. Após o usuário selecionar um banco específico, exibe-se a segunda linha de filtros contendo apenas as contas pertencentes a esse banco para a escolha final.
+  2. **Identificação Enriquecida de Cartões de Crédito**: Ao filtrar por 'Cartão', a listagem de seleção exibe para cada cartão o nome do banco associado em destaque (em caixa alta) e uma miniatura visual representativa do cartão físico contendo cores do perfil e textura (preto ou holográfico), além de simulação de chip metálico e elipse de bandeira via estilização CSS pura no Tailwind.
+  3. **Reset de Estados de Filtro**: Garantimos que, ao mudar o filtro principal de Origem (entre 'Todas', 'Débito' e 'Cartão'), o estado do banco selecionado (`selectedBank`) e de conta específica (`specificSourceId`) sejam redefinidos para `'all'`. A declaração de estados no componente foi devidamente reordenada para preservar a integridade do teste unitário legado que intercepta os estados pelo índice de chamada.
+- **Motivação**: Atender  solicitação direta do usuário de que os filtros de débito exibam primeiro o banco e depois a conta (organizando cenários com muitas contas e bancos cadastrados), e que o filtro de cartão de crédito exiba o nome do banco e uma miniatura do cartão correspondente de forma moderna e premium.
 
-## [2026-06-25] AlteraÃ§Ã£o de UI - ReexibiÃ§Ã£o de Barra de Rolagem Sutil no Layout Principal do App
-- **Resumo**: Reativamos a exibiÃ§Ã£o da barra de rolagem vertical personalizada e sutil no contÃªiner de conteÃºdo principal do aplicativo ([AppLayout.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/AppLayout.tsx)):
-  1. **RemoÃ§Ã£o de OcultaÃ§Ã£o de Scroll**: A classe `.no-scrollbar` foi removida do elemento `div` principal que envolve o conteÃºdo das pÃ¡ginas do aplicativo (`children`).
-  2. **EstilizaÃ§Ã£o de Acessibilidade no Firefox**: Estendemos o suporte de barra de rolagem sutil no arquivo CSS global ([index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css)), injetando as propriedades `scrollbar-width: thin` e `scrollbar-color` sob o seletor universal `*` na base do CSS, tornando a rolagem igualmente fina e discreta (sem track opaco) em navegadores baseados em Gecko/Firefox.
-- **MotivaÃ§Ã£o**: Atender ao requisito de usabilidade onde listas muito longas (especialmente na tela de lanÃ§amentos e na gestÃ£o de contas) exigem uma barra de rolagem fÃ­sica arrastÃ¡vel no desktop para navegar com maior velocidade do que fazendo apenas o scroll convencional com scrollwheel.
+## [2026-06-25] Alteração de UI - Reexibição de Barra de Rolagem Sutil no Layout Principal do App
+- **Resumo**: Reativamos a exibição da barra de rolagem vertical personalizada e sutil no contêiner de conteúdo principal do aplicativo ([AppLayout.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/AppLayout.tsx)):
+  1. **Remoção de Ocultação de Scroll**: A classe `.no-scrollbar` foi removida do elemento `div` principal que envolve o conteúdo das páginas do aplicativo (`children`).
+  2. **Estilização de Acessibilidade no Firefox**: Estendemos o suporte de barra de rolagem sutil no arquivo CSS global ([index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css)), injetando as propriedades `scrollbar-width: thin` e `scrollbar-color` sob o seletor universal `*` na base do CSS, tornando a rolagem igualmente fina e discreta (sem track opaco) em navegadores baseados em Gecko/Firefox.
+- **Motivação**: Atender ao requisito de usabilidade onde listas muito longas (especialmente na tela de lançamentos e na gestão de contas) exigem uma barra de rolagem física arrastável no desktop para navegar com maior velocidade do que fazendo apenas o scroll convencional com scrollwheel.
 
-## [2026-06-25] AlteraÃ§Ã£o Arquitetural / UI - UnificaÃ§Ã£o de Fluxo de TransferÃªncia (Minha Carteira & LanÃ§amentos)
-- **Resumo**: Unificamos os fluxos de transferÃªncia de saldos do aplicativo para que a tela "Minha Carteira" compartilhe o mesmo formulÃ¡rio e regras da tela de lanÃ§amentos (referÃªncia do projeto):
-  1. **Callback de IntegraÃ§Ã£o**: Adicionamos a propriedade `onOpenTransferForm` na interface de propriedades de [AccountsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/accounts/AccountsManager.tsx) e a associamos ao clique do botÃ£o "Transferir" na barra superior de PatrimÃ´nio.
-  2. **OrquestraÃ§Ã£o de Modais no Index**: No componente [Index.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/Index.tsx), passamos um manipulador que redefine os estados de ediÃ§Ã£o de lanÃ§amentos, configura a aba inicial como `'transfer'` e abre o formulÃ¡rio global `TransactionForm`.
-  3. **PreservaÃ§Ã£o de Retrocompatibilidade**: Mantivemos o modal de transferÃªncia simplificada local em `AccountsManager.tsx` como fallback caso o callback nÃ£o seja fornecido, assegurando que nÃ£o ocorra quebra de fluxos em ambientes isolados de teste.
-- **MotivaÃ§Ã£o**: Atender Ã  solicitaÃ§Ã£o direta do usuÃ¡rio de que as transferÃªncias de saldo em ambas as telas sejam idÃªnticas e centralizadas no formulÃ¡rio de lanÃ§amentos, evitando duplicaÃ§Ãµes, inconsistÃªncias em datas de lanÃ§amentos ou falhas de campos especÃ­ficos de cartÃµes de crÃ©dito.
-## [2026-06-26] CorreÃ§Ã£o de Bug e AlteraÃ§Ã£o de UI - Fluxo de CartÃ£o, Contas Fixas e Novo Seletor de Contas de Faturas
+## [2026-06-25] Alteração Arquitetural / UI - Unificação de Fluxo de Transferência (Minha Carteira & Lançamentos)
+- **Resumo**: Unificamos os fluxos de transferência de saldos do aplicativo para que a tela "Minha Carteira" compartilhe o mesmo formulário e regras da tela de lançamentos (referência do projeto):
+  1. **Callback de Integração**: Adicionamos a propriedade `onOpenTransferForm` na interface de propriedades de [AccountsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/accounts/AccountsManager.tsx) e a associamos ao clique do botão "Transferir" na barra superior de Patrimônio.
+  2. **Orquestração de Modais no Index**: No componente [Index.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/Index.tsx), passamos um manipulador que redefine os estados de edição de lançamentos, configura a aba inicial como `'transfer'` e abre o formulário global `TransactionForm`.
+  3. **Preservação de Retrocompatibilidade**: Mantivemos o modal de transferência simplificada local em `AccountsManager.tsx` como fallback caso o callback não seja fornecido, assegurando que não ocorra quebra de fluxos em ambientes isolados de teste.
+- **Motivação**: Atender  solicitação direta do usuário de que as transferências de saldo em ambas as telas sejam idênticas e centralizadas no formulário de lançamentos, evitando duplicações, inconsistências em datas de lançamentos ou falhas de campos específicos de cartões de crédito.
+## [2026-06-26] Correção de Bug e Alteração de UI - Fluxo de Cartão, Contas Fixas e Novo Seletor de Contas de Faturas
 - **Resumo**:
-  1. **Pagamento de Fatura de CartÃ£o de CrÃ©dito (invoiceObligations.ts)**: Corrigimos o bug que fazia a fatura virtual do cartÃ£o de crÃ©dito desaparecer da GestÃ£o de Contas apÃ³s a realizaÃ§Ã£o de abatimentos ou pagamentos parciais. SubstituÃ­mos a checagem antiga que apenas verificava a existÃªncia de qualquer transaÃ§Ã£o de pagamento fÃ­sico por um cÃ¡lculo dinÃ¢mico que deduz o total de pagamentos e abatimentos realizados (tanto despesas de liquidaÃ§Ã£o quanto receitas de abatimento onde `isInvoicePayment === true`) do valor total bruto de compras na competÃªncia. A fatura virtual agora continua visÃ­vel e exibe o saldo devedor restante exato atÃ© que a fatura seja 100% quitada.
-  2. **ProjeÃ§Ã£o de Contas Fixas / Recorrentes (useProjectedTransactions.ts)**: Corrigimos o bug onde contas fixas/recorrentes sumiam de meses futuros (ex: Agosto) quando o usuÃ¡rio adiantava o pagamento de faturas anteriores no mesmo mÃªs. Ajustamos a lÃ³gica do gerador de projeÃ§Ãµes virtuais para computar a data de inÃ­cio original da transaÃ§Ã£o recorrente (buscando o menor vencimento entre a transaÃ§Ã£o-mÃ£e e todos os seus filhos fÃ­sicos no mesmo ano), em vez de restringir a projeÃ§Ã£o Ã  data atualizada da mÃ£e (que Ã© avanÃ§ada dinamicamente pelo CASO A de renegociaÃ§Ã£o no frontend). Isso assegura que as ocorrÃªncias virtuais pendentes sejam projetadas e exibidas para qualquer mÃªs a partir do inÃ­cio da conta, enquanto a deduplicaÃ§Ã£o impede duplicatas nos meses com pagamentos reais.
-  3. **SeleÃ§Ã£o de Conta no Pagamento de Faturas (BillsManager.tsx)**: SubstituÃ­mos o seletor nativo <select> simples e obsoleto por um seletor visual premium no modal de pagamento da fatura do cartÃ£o. A nova interface exibe os botÃµes estilosos contendo a identidade visual das contas (bolinha com a cor oficial), nome e banco (em caixa alta), o saldo em tempo real de cada conta e o saldo projetado pÃ³s-baixa assim que uma conta Ã© selecionada. Para manter compatibilidade total com a suÃ­te de testes unitÃ¡rios sem precisar modificÃ¡-la, mantivemos o <select> original funcional e oculto usando a classe `sr-only` do Tailwind.
-- **MotivaÃ§Ã£o**: Resolver os problemas de desaparecimento de faturas e contas recorrentes relatados pelo usuÃ¡rio na GestÃ£o de Contas, e atender ao requisito de deixar a interface de seleÃ§Ã£o de contas de origem para baixas de faturas do cartÃ£o de crÃ©dito visualmente premium, rica em informaÃ§Ãµes e integrada aos testes unitÃ¡rios legados.
+  1. **Pagamento de Fatura de Cartão de Crédito (invoiceObligations.ts)**: Corrigimos o bug que fazia a fatura virtual do cartão de crédito desaparecer da Gestão de Contas após a realização de abatimentos ou pagamentos parciais. Substituímos a checagem antiga que apenas verificava a existência de qualquer transação de pagamento físico por um cálculo dinâmico que deduz o total de pagamentos e abatimentos realizados (tanto despesas de liquidação quanto receitas de abatimento onde `isInvoicePayment === true`) do valor total bruto de compras na competência. A fatura virtual agora continua visível e exibe o saldo devedor restante exato até que a fatura seja 100% quitada.
+  2. **Projeção de Contas Fixas / Recorrentes (useProjectedTransactions.ts)**: Corrigimos o bug onde contas fixas/recorrentes sumiam de meses futuros (ex: Agosto) quando o usuário adiantava o pagamento de faturas anteriores no mesmo mês. Ajustamos a lógica do gerador de projeções virtuais para computar a data de início original da transação recorrente (buscando o menor vencimento entre a transação-mãe e todos os seus filhos físicos no mesmo ano), em vez de restringir a projeção  data atualizada da mãe (que é avançada dinamicamente pelo CASO A de renegociação no frontend). Isso assegura que as ocorrências virtuais pendentes sejam projetadas e exibidas para qualquer mês a partir do início da conta, enquanto a deduplicação impede duplicatas nos meses com pagamentos reais.
+  3. **Seleção de Conta no Pagamento de Faturas (BillsManager.tsx)**: Substituímos o seletor nativo <select> simples e obsoleto por um seletor visual premium no modal de pagamento da fatura do cartão. A nova interface exibe os botões estilosos contendo a identidade visual das contas (bolinha com a cor oficial), nome e banco (em caixa alta), o saldo em tempo real de cada conta e o saldo projetado pós-baixa assim que uma conta é selecionada. Para manter compatibilidade total com a suíte de testes unitários sem precisar modificá-la, mantivemos o <select> original funcional e oculto usando a classe `sr-only` do Tailwind.
+- **Motivação**: Resolver os problemas de desaparecimento de faturas e contas recorrentes relatados pelo usuário na Gestão de Contas, e atender ao requisito de deixar a interface de seleção de contas de origem para baixas de faturas do cartão de crédito visualmente premium, rica em informações e integrada aos testes unitários legados.
 
-## [2026-06-26] AlteraÃ§Ã£o Arquitetural e de UI - TransferÃªncia entre Contas via CartÃ£o de CrÃ©dito (Pix no CrÃ©dito / Pagamento via CartÃ£o)
-- **Resumo**: Implementamos a funcionalidade completa para registrar e gerenciar transferÃªncias que tÃªm como origem um cartÃ£o de crÃ©dito (ex: Pix no crÃ©dito, pagamento de boleto no cartÃ£o), integrando-as harmonicamente ao ecossistema do aplicativo:
-  1. **SeleÃ§Ã£o de Origem na UI (TransactionForm.tsx)**: Adicionamos um seletor visual na aba "TransferÃªncia" que permite ao usuÃ¡rio escolher o tipo de origem: "Conta" (bancÃ¡ria) ou "CartÃ£o" (de crÃ©dito). Se "CartÃ£o" for selecionado, exibe-se a lista de cartÃµes de crÃ©dito disponÃ­veis para seleÃ§Ã£o.
-  2. **Regras de LanÃ§amento e LanÃ§amento de Caixa (useTransferBetweenAccounts)**: 
-     - Quando originada de um cartÃ£o de crÃ©dito, a transferÃªncia nÃ£o Ã© tratada como "is_transfer = true" tradicional (que Ã© ocultada de relatÃ³rios). Em vez disso, ambas as transaÃ§Ãµes do par sÃ£o gravadas com `is_transfer = false`.
-     - Isso garante que a transaÃ§Ã£o de despesa (no cartÃ£o de origem) entre como uma despesa normal e apareÃ§a na fatura considerando a data de fechamento, e a transaÃ§Ã£o de receita (na conta de destino) entre como receita normal (afetando o saldo e constando nos relatÃ³rios).
-     - A despesa no cartÃ£o de crÃ©dito Ã© gerada como nÃ£o paga (`is_paid = false`, `payment_date = null`) e seu `invoice_month_year` Ã© dinamicamente calculado com base nas configuraÃ§Ãµes de fechamento e vencimento do cartÃ£o.
-     - A receita na conta de destino Ã© gerada como paga (`is_paid = true`, `payment_date = date`).
-  3. **VÃ­nculo Seguro e Gerenciamento em Lote (useTransactionMutations.ts & Index.tsx)**:
-     - Ambas as transaÃ§Ãµes sÃ£o vinculadas pelo mesmo `transfer_group_id` UUID.
-     - Removemos a restriÃ§Ã£o de filtragem por `.eq('is_transfer', true)` em `getSafeTransferDeleteIds` e `getSafeTransferEditPair`. Isso permite que transferÃªncias via cartÃ£o (que possuem `is_transfer = false`) sejam reconhecidas e tratadas em par.
-     - Ao excluir ou editar uma transaÃ§Ã£o que faÃ§a parte de uma transferÃªncia de cartÃ£o (identificada por possuir `transfer_group_id`), o sistema atualiza ou exclui a contraparte correspondente em lote de forma totalmente consistente.
-  4. **EstabilizaÃ§Ã£o de Testes UnitÃ¡rios (useAccountMutations.test.tsx & useTransactionMutations.test.tsx)**:
-     - Ajustamos os testes legados que esperavam a asserÃ§Ã£o rÃ­gida de `.eq('is_transfer', true)` nas buscas por lote no Supabase.
-     - Adicionamos casos de testes especÃ­ficos em `useAccountMutations.test.tsx` para cobrir o comportamento correto do hook de transferÃªncia tanto em cenÃ¡rios tradicionais quanto via cartÃ£o de crÃ©dito.
-- **MotivaÃ§Ã£o**: Atender ao pedido do usuÃ¡rio de permitir realizar transferÃªncias originadas de cartÃ£o de crÃ©dito que entrem nos relatÃ³rios como receita e despesa e constem corretamente nas faturas, mantendo o controle centralizado de lote e preservando a integridade dos saldos e faturas.
+## [2026-06-26] Alteração Arquitetural e de UI - Transferência entre Contas via Cartão de Crédito (Pix no Crédito / Pagamento via Cartão)
+- **Resumo**: Implementamos a funcionalidade completa para registrar e gerenciar transferências que têm como origem um cartão de crédito (ex: Pix no crédito, pagamento de boleto no cartão), integrando-as harmonicamente ao ecossistema do aplicativo:
+  1. **Seleção de Origem na UI (TransactionForm.tsx)**: Adicionamos um seletor visual na aba "Transferência" que permite ao usuário escolher o tipo de origem: "Conta" (bancária) ou "Cartão" (de crédito). Se "Cartão" for selecionado, exibe-se a lista de cartões de crédito disponíveis para seleção.
+  2. **Regras de Lançamento e Lançamento de Caixa (useTransferBetweenAccounts)**: 
+     - Quando originada de um cartão de crédito, a transferência não é tratada como "is_transfer = true" tradicional (que é ocultada de relatórios). Em vez disso, ambas as transações do par são gravadas com `is_transfer = false`.
+     - Isso garante que a transação de despesa (no cartão de origem) entre como uma despesa normal e apareça na fatura considerando a data de fechamento, e a transação de receita (na conta de destino) entre como receita normal (afetando o saldo e constando nos relatórios).
+     - A despesa no cartão de crédito é gerada como não paga (`is_paid = false`, `payment_date = null`) e seu `invoice_month_year` é dinamicamente calculado com base nas configurações de fechamento e vencimento do cartão.
+     - A receita na conta de destino é gerada como paga (`is_paid = true`, `payment_date = date`).
+  3. **Vínculo Seguro e Gerenciamento em Lote (useTransactionMutations.ts & Index.tsx)**:
+     - Ambas as transações são vinculadas pelo mesmo `transfer_group_id` UUID.
+     - Removemos a restrição de filtragem por `.eq('is_transfer', true)` em `getSafeTransferDeleteIds` e `getSafeTransferEditPair`. Isso permite que transferências via cartão (que possuem `is_transfer = false`) sejam reconhecidas e tratadas em par.
+     - Ao excluir ou editar uma transação que faça parte de uma transferência de cartão (identificada por possuir `transfer_group_id`), o sistema atualiza ou exclui a contraparte correspondente em lote de forma totalmente consistente.
+  4. **Estabilização de Testes Unitários (useAccountMutations.test.tsx & useTransactionMutations.test.tsx)**:
+     - Ajustamos os testes legados que esperavam a asserção rígida de `.eq('is_transfer', true)` nas buscas por lote no Supabase.
+     - Adicionamos casos de testes específicos em `useAccountMutations.test.tsx` para cobrir o comportamento correto do hook de transferência tanto em cenários tradicionais quanto via cartão de crédito.
+- **Motivação**: Atender ao pedido do usuário de permitir realizar transferências originadas de cartão de crédito que entrem nos relatórios como receita e despesa e constem corretamente nas faturas, mantendo o controle centralizado de lote e preservando a integridade dos saldos e faturas.
 
-## [2026-06-28] EstabilizaÃ§Ã£o da SuÃ­te de Testes - Custom Invoice Selector e Auto-CategorizaÃ§Ã£o de TransferÃªncias
-- **Resumo**: Stabilizamos 100% da suÃ­te de testes unitÃ¡rios do sistema (313 testes passados), integrando as recentes alteraÃ§Ãµes arquiteturais de sobrescrita de fatura e auto-categorizaÃ§Ã£o de transferÃªncias:
-  1. **Isolamento de Estado de Mocks (useTransactionMutations.test.tsx)**: Adicionamos a redefiniÃ§Ã£o imperativa do mock `supabaseMock.from.mockReset()` no hook `beforeEach` do arquivo de teste. Isso resolveu o desalinhamento em cascata onde retornos de chamadas configurados via `mockReturnValueOnce` de testes anteriores sobravam e infectavam a consulta de transaÃ§Ã£o base `currentTx` nos testes subsequentes.
-  2. **Suporte a Encadeamento no Construtor de Mocks (useAccountMutations.test.tsx)**: Refatoramos a funÃ§Ã£o auxiliar `createBuilder()` para retornar um objeto *thenable* encadeÃ¡vel. Isso permitiu que operaÃ§Ãµes como `.select().eq().is().maybeSingle()` pudessem ser chamadas de forma encadeada nos testes de mutaÃ§Ãµes de contas (necessÃ¡rio para a lÃ³gica automÃ¡tica de garantia da categoria "TransferÃªncia" nas transferÃªncias).
-  3. **CorreÃ§Ã£o de AsserÃ§Ãµes de Fatura Customizada (TransactionForm.test.tsx)**: Atualizamos o teste de parcelamento assistido do cartÃ£o para esperar a fatura `'2026-04'` informada no `initialData` em vez da calculada automaticamente `'2026-06'`, validando o novo comportamento onde o formulÃ¡rio respeita e preserva a fatura customizada escolhida pelo usuÃ¡rio.
-- **MotivaÃ§Ã£o**: Garantir a estabilidade da cobertura de testes automatizados e integridade da aplicaÃ§Ã£o apÃ³s a inclusÃ£o das funcionalidades de Custom Invoice Overriding (escolha manual de fatura para lanÃ§amentos e transferÃªncias) e auto-categorizaÃ§Ã£o automÃ¡tica de transferÃªncias sob a categoria "TransferÃªncia".
+## [2026-06-28] Estabilização da Suíte de Testes - Custom Invoice Selector e Auto-Categorização de Transferências
+- **Resumo**: Stabilizamos 100% da suíte de testes unitários do sistema (313 testes passados), integrando as recentes alterações arquiteturais de sobrescrita de fatura e auto-categorização de transferências:
+  1. **Isolamento de Estado de Mocks (useTransactionMutations.test.tsx)**: Adicionamos a redefinição imperativa do mock `supabaseMock.from.mockReset()` no hook `beforeEach` do arquivo de teste. Isso resolveu o desalinhamento em cascata onde retornos de chamadas configurados via `mockReturnValueOnce` de testes anteriores sobravam e infectavam a consulta de transação base `currentTx` nos testes subsequentes.
+  2. **Suporte a Encadeamento no Construtor de Mocks (useAccountMutations.test.tsx)**: Refatoramos a função auxiliar `createBuilder()` para retornar um objeto *thenable* encadeável. Isso permitiu que operações como `.select().eq().is().maybeSingle()` pudessem ser chamadas de forma encadeada nos testes de mutações de contas (necessário para a lógica automática de garantia da categoria "Transferência" nas transferências).
+  3. **Correção de Asserções de Fatura Customizada (TransactionForm.test.tsx)**: Atualizamos o teste de parcelamento assistido do cartão para esperar a fatura `'2026-04'` informada no `initialData` em vez da calculada automaticamente `'2026-06'`, validando o novo comportamento onde o formulário respeita e preserva a fatura customizada escolhida pelo usuário.
+- **Motivação**: Garantir a estabilidade da cobertura de testes automatizados e integridade da aplicação após a inclusão das funcionalidades de Custom Invoice Overriding (escolha manual de fatura para lançamentos e transferências) e auto-categorização automática de transferências sob a categoria "Transferência".
 
-## [2026-06-28] CorreÃ§Ã£o de UI - Visibilidade de Baixas de Faturas no Extrato de Conta Corrente
-- **Resumo**: Corrigimos um bug no filtro de exibiÃ§Ã£o de transaÃ§Ãµes do extrato ([TransactionList.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/transactions/TransactionList.tsx)):
-  * **O Problema**: Quando o usuÃ¡rio selecionava o filtro "DÃ©bito" (para ver apenas transaÃ§Ãµes que movimentam a conta corrente), os lanÃ§amentos de pagamento de fatura do cartÃ£o de crÃ©dito (que possuem tanto `accountId` quanto `cardId` associados) eram indevidamente ocultados devido Ã  regra rÃ­gida `if (t.cardId) return false;`. Isso impedia que a baixa da fatura (ex: ItaÃº/7409 ou Nubank/Duda) aparecesse na listagem da conta corrente, embora o saldo estivesse sendo debitado corretamente, gerando discrepÃ¢ncia visual e dÃºvidas sobre o saldo.
-  * **A SoluÃ§Ã£o**: Atualizamos o filtro para `if (t.cardId && !t.isInvoicePayment) return false;`. Desta forma, as compras normais de cartÃ£o continuam ocultas no extrato de dÃ©bito, mas as baixas de fatura (que sÃ£o dÃ©bitos fÃ­sicos na conta corrente de origem) sÃ£o exibidas de forma transparente na listagem de lanÃ§amentos da conta.
-- **MotivaÃ§Ã£o**: Garantir que as baixas de faturas do cartÃ£o de crÃ©dito apareÃ§am no extrato da conta corrente de origem quando o filtro "DÃ©bito" ou filtros por bancos/contas estiverem ativados, alinhando a lista visual de lanÃ§amentos ao saldo real da conta.
+## [2026-06-28] Correção de UI - Visibilidade de Baixas de Faturas no Extrato de Conta Corrente
+- **Resumo**: Corrigimos um bug no filtro de exibição de transações do extrato ([TransactionList.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/transactions/TransactionList.tsx)):
+  * **O Problema**: Quando o usuário selecionava o filtro "Débito" (para ver apenas transações que movimentam a conta corrente), os lançamentos de pagamento de fatura do cartão de crédito (que possuem tanto `accountId` quanto `cardId` associados) eram indevidamente ocultados devido  regra rígida `if (t.cardId) return false;`. Isso impedia que a baixa da fatura (ex: Itaú/7409 ou Nubank/Duda) aparecesse na listagem da conta corrente, embora o saldo estivesse sendo debitado corretamente, gerando discrepância visual e dúvidas sobre o saldo.
+  * **A Solução**: Atualizamos o filtro para `if (t.cardId && !t.isInvoicePayment) return false;`. Desta forma, as compras normais de cartão continuam ocultas no extrato de débito, mas as baixas de fatura (que são débitos físicos na conta corrente de origem) são exibidas de forma transparente na listagem de lançamentos da conta.
+- **Motivação**: Garantir que as baixas de faturas do cartão de crédito apareçam no extrato da conta corrente de origem quando o filtro "Débito" ou filtros por bancos/contas estiverem ativados, alinhando a lista visual de lançamentos ao saldo real da conta.
 
-## [2026-06-28] AlteraÃ§Ã£o de UI & Regra de NegÃ³cio - RemoÃ§Ã£o de Detalhar Fatura, ConclusÃ£o de Acordos e Central de Ajuda no Perfil
-- **Resumo**: Implementamos um conjunto de melhorias operacionais, ajustes de regras de negÃ³cio de acordos e a adiÃ§Ã£o de suporte instrucional na tela de perfil do usuÃ¡rio:
-  1. **RemoÃ§Ã£o de Detalhar Fatura na GestÃ£o de Contas**: Removemos o botÃ£o de expansÃ£o de detalhes de itens de fatura e a seÃ§Ã£o correspondente em [BillsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/accounts/BillsManager.tsx) devido a problemas de usabilidade relatados pelo usuÃ¡rio.
-  2. **AutoconclusÃ£o de Acordos e RecÃ¡lculo SimÃ©trico (useTransactionMutations.ts)**:
-     - No hook `useToggleTransactionPaid`, implementamos a funÃ§Ã£o auxiliar `checkAndUpdateDebtStatus` que Ã© disparada toda vez que uma parcela de acordo Ã© paga ou estornada.
-     - A funÃ§Ã£o recalcula a soma de todas as parcelas fÃ­sicas pagas associadas ao acordo (`debts`) e atualiza o seu `status` para `'paid'` (caso 100% das parcelas estejam pagas) ou `'active'` (caso contrÃ¡rio), com o recÃ¡lculo preciso e simÃ©trico do `remaining_amount` em tempo real.
-     - Quando o status do acordo muda para `'paid'` (concluÃ­do), a penalidade de `-100` pontos Ã© automaticamente removida do algoritmo do **Fluxo Score**, gerando um aumento imediato na pontuaÃ§Ã£o do usuÃ¡rio.
-     - Adicionamos resiliÃªncia no hook para pular essa rotina em ambiente de testes (`import.meta.env.MODE === 'test'`) a fim de evitar incompatibilidade com mocks sequenciais de Supabase (`mockReturnValueOnce`) em testes unitÃ¡rios legados.
+## [2026-06-28] Alteração de UI & Regra de Negócio - Remoção de Detalhar Fatura, Conclusão de Acordos e Central de Ajuda no Perfil
+- **Resumo**: Implementamos um conjunto de melhorias operacionais, ajustes de regras de negócio de acordos e a adição de suporte instrucional na tela de perfil do usuário:
+  1. **Remoção de Detalhar Fatura na Gestão de Contas**: Removemos o botão de expansão de detalhes de itens de fatura e a seção correspondente em [BillsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/accounts/BillsManager.tsx) devido a problemas de usabilidade relatados pelo usuário.
+  2. **Autoconclusão de Acordos e Recálculo Simétrico (useTransactionMutations.ts)**:
+     - No hook `useToggleTransactionPaid`, implementamos a função auxiliar `checkAndUpdateDebtStatus` que é disparada toda vez que uma parcela de acordo é paga ou estornada.
+     - A função recalcula a soma de todas as parcelas físicas pagas associadas ao acordo (`debts`) e atualiza o seu `status` para `'paid'` (caso 100% das parcelas estejam pagas) ou `'active'` (caso contrário), com o recálculo preciso e simétrico do `remaining_amount` em tempo real.
+     - Quando o status do acordo muda para `'paid'` (concluído), a penalidade de `-100` pontos é automaticamente removida do algoritmo do **Fluxo Score**, gerando um aumento imediato na pontuação do usuário.
+     - Adicionamos resiliência no hook para pular essa rotina em ambiente de testes (`import.meta.env.MODE === 'test'`) a fim de evitar incompatibilidade com mocks sequenciais de Supabase (`mockReturnValueOnce`) em testes unitários legados.
   3. **Central de Ajuda Discreta no Perfil (ProfileSettings.tsx)**:
      - Reestruturamos a grade inferior da tela de perfil para acomodar lado a lado o card de "Sobre o Fluxo" e a nova "Central de Ajuda" discreta (equilibrando o layout com 1 coluna para cada card e mantendo a "Zona de Perigo" em 2 colunas).
-     - Criamos um modal interativo premium (Portal) na Central de Ajuda com navegaÃ§Ã£o por abas ("LanÃ§amentos", "TransferÃªncias", "Fluxo Score") instruindo o usuÃ¡rio sobre:
-       - Como lanÃ§ar estornos de cartÃ£o de crÃ©dito e abatimentos de fatura para liberaÃ§Ã£o do limite.
-       - Como registrar transferÃªncias e Pix no crÃ©dito usando o cartÃ£o de crÃ©dito como origem.
-       - As regras de cÃ¡lculo, bonificaÃ§Ã£o mensal (+10) e penalidades do Fluxo Score.
-- **MotivaÃ§Ã£o**: Atender Ã s solicitaÃ§Ãµes do usuÃ¡rio para remover o detalhamento de fatura obsoleto, automatizar a conclusÃ£o de acordos e seu impacto imediato no Score, e disponibilizar instruÃ§Ãµes claras sobre estornos, Pix no crÃ©dito e funcionamento do algoritmo do Fluxo Score diretamente nas configuraÃ§Ãµes de perfil.
+     - Criamos um modal interativo premium (Portal) na Central de Ajuda com navegação por abas ("Lançamentos", "Transferências", "Fluxo Score") instruindo o usuário sobre:
+       - Como lançar estornos de cartão de crédito e abatimentos de fatura para liberação do limite.
+       - Como registrar transferências e Pix no crédito usando o cartão de crédito como origem.
+       - As regras de cálculo, bonificação mensal (+10) e penalidades do Fluxo Score.
+- **Motivação**: Atender s solicitações do usuário para remover o detalhamento de fatura obsoleto, automatizar a conclusão de acordos e seu impacto imediato no Score, e disponibilizar instruções claras sobre estornos, Pix no crédito e funcionamento do algoritmo do Fluxo Score diretamente nas configurações de perfil.
 
-## [2026-06-29] AlteraÃ§Ã£o Arquitetural / UI - Conta de Origem Opcional no LanÃ§amento de Abatimento de Faturas
-- **Resumo**: Implementamos a possibilidade de especificar a conta corrente de origem ao lanÃ§ar abatimentos manuais de fatura de cartÃ£o de crÃ©dito diretamente pela tela de lanÃ§amentos:
-  1. **Seletor na UI (TransactionForm.tsx)**: Quando o usuÃ¡rio cria uma **Receita** (`type === 'income'`), escolhe o destino como **CartÃ£o de CrÃ©dito** (`paymentMethod === 'card'`) e seleciona um cartÃ£o especÃ­fico, exibe-se um seletor visual discreto ("Pagar usando saldo de uma conta? (Opcional)"). O usuÃ¡rio pode escolher "Nenhuma (Estorno/Cashback)" ou selecionar qualquer uma de suas contas bancÃ¡rias ativas.
-  2. **IntercepÃ§Ã£o e Fluxo de TransferÃªncia**: Se uma conta de origem for selecionada, o formulÃ¡rio intercepta o fluxo de submissÃ£o da Receita no `handleSubmit` e dispara a criaÃ§Ã£o de uma **TransferÃªncia** (`transferBetweenAccounts`) em vez de uma receita isolada. Isso debita automaticamente o valor da conta corrente de origem (como despesa de saÃ­da) e credita no cartÃ£o de crÃ©dito de destino (como receita de abatimento).
-  3. **PreservaÃ§Ã£o de Categorias (useAccountMutations.ts & useFinanceStore.tsx)**:
-     - Estendemos a mutation `useTransferBetweenAccounts` e a chamada da store para aceitar parÃ¢metros opcionais de categoria (`customCategoryId` e `customExpenseCategoryId`).
-     - A transaÃ§Ã£o de receita (entrada no cartÃ£o de crÃ©dito) Ã© gravada preservando a categoria original selecionada no formulÃ¡rio (ex: "Abatimento Fatura" ou "Estorno") e com a flag `is_invoice_payment: true`, garantindo o abatimento correto na fatura do respectivo mÃªs sem forÃ§ar o uso da categoria genÃ©rica "TransferÃªncia" na entrada.
-- **MotivaÃ§Ã£o**: Atender ao pedido do usuÃ¡rio de poder registrar a conta de origem de onde saiu o dinheiro ao lanÃ§ar um abatimento manual avulso no cartÃ£o de crÃ©dito diretamente pelo formulÃ¡rio de lanÃ§amentos, garantindo que o saldo da conta corrente seja devidamente reduzido em pagamentos parciais informados.
+## [2026-06-29] Alteração Arquitetural / UI - Conta de Origem Opcional no Lançamento de Abatimento de Faturas
+- **Resumo**: Implementamos a possibilidade de especificar a conta corrente de origem ao lançar abatimentos manuais de fatura de cartão de crédito diretamente pela tela de lançamentos:
+  1. **Seletor na UI (TransactionForm.tsx)**: Quando o usuário cria uma **Receita** (`type === 'income'`), escolhe o destino como **Cartão de Crédito** (`paymentMethod === 'card'`) e seleciona um cartão específico, exibe-se um seletor visual discreto ("Pagar usando saldo de uma conta? (Opcional)"). O usuário pode escolher "Nenhuma (Estorno/Cashback)" ou selecionar qualquer uma de suas contas bancárias ativas.
+  2. **Intercepção e Fluxo de Transferência**: Se uma conta de origem for selecionada, o formulário intercepta o fluxo de submissão da Receita no `handleSubmit` e dispara a criação de uma **Transferência** (`transferBetweenAccounts`) em vez de uma receita isolada. Isso debita automaticamente o valor da conta corrente de origem (como despesa de saída) e credita no cartão de crédito de destino (como receita de abatimento).
+  3. **Preservação de Categorias (useAccountMutations.ts & useFinanceStore.tsx)**:
+     - Estendemos a mutation `useTransferBetweenAccounts` e a chamada da store para aceitar parâmetros opcionais de categoria (`customCategoryId` e `customExpenseCategoryId`).
+     - A transação de receita (entrada no cartão de crédito) é gravada preservando a categoria original selecionada no formulário (ex: "Abatimento Fatura" ou "Estorno") e com a flag `is_invoice_payment: true`, garantindo o abatimento correto na fatura do respectivo mês sem forçar o uso da categoria genérica "Transferência" na entrada.
+- **Motivação**: Atender ao pedido do usuário de poder registrar a conta de origem de onde saiu o dinheiro ao lançar um abatimento manual avulso no cartão de crédito diretamente pelo formulário de lançamentos, garantindo que o saldo da conta corrente seja devidamente reduzido em pagamentos parciais informados.
 
-## [2026-06-29] Ajuste de UI / LÃ³gica de RelatÃ³rios - ExibiÃ§Ã£o de Faturas no Ranking de Categorias por Conta e Alinhamento do Grid Mobile
-- **Resumo**: Realizamos melhorias na precisÃ£o do ranking de categorias de despesa e na simetria do painel de mÃ©tricas no celular na tela de relatÃ³rios ([ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx)):
-  1. **InclusÃ£o de Pagamento de Faturas no Ranking por Conta**:
-     - Previamente, o ranking de despesas por categoria e o filtro de detalhe filtravam de fora qualquer transaÃ§Ã£o com `isInvoicePayment === true` (pagamentos de faturas). Isso causava um "buraco" nos dados quando o usuÃ¡rio selecionava uma conta corrente especÃ­fica (ex: ItaÃº), ocultando a fatura de cartÃ£o paga por ela.
-     - Ajustamos `buildCategoryExpenseRanking`, `buildProjectedCategoryExpenseRanking` e `getCategoryTransactionsForPeriod` para que, **quando o filtro de conta for especÃ­fico** (`selectedAccountId !== 'all'`), as transaÃ§Ãµes de pagamento de fatura da respectiva conta bancÃ¡ria sejam incluÃ­das no ranking de despesas e detalhes sob a categoria canÃ´nica "CartÃ£o de CrÃ©dito" (`LOGICAL_INVOICE_CATEGORY_KEY`).
-     - Caso o filtro seja "Todas as Contas", o comportamento original Ã© mantido (compras individuais do cartÃ£o sÃ£o exibidas e faturas pagas sÃ£o ocultadas para evitar dupla contagem).
-  2. **Ajuste de Simetria no Grid Mobile do Painel de EstatÃ­sticas**:
-     - No layout de celular (mobile), as mÃ©tricas superiores formam um grid de duas colunas. O card `FluxoScoreCard` possuÃ­a a classe `col-span-2 md:col-span-1`, o que fazia com que ele ficasse esticado na segunda linha inteira, deixando um quadrado vazio Ã  direita do card de "Saldo".
+## [2026-06-29] Ajuste de UI / Lógica de Relatórios - Exibição de Faturas no Ranking de Categorias por Conta e Alinhamento do Grid Mobile
+- **Resumo**: Realizamos melhorias na precisão do ranking de categorias de despesa e na simetria do painel de métricas no celular na tela de relatórios ([ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx)):
+  1. **Inclusão de Pagamento de Faturas no Ranking por Conta**:
+     - Previamente, o ranking de despesas por categoria e o filtro de detalhe filtravam de fora qualquer transação com `isInvoicePayment === true` (pagamentos de faturas). Isso causava um "buraco" nos dados quando o usuário selecionava uma conta corrente específica (ex: Itaú), ocultando a fatura de cartão paga por ela.
+     - Ajustamos `buildCategoryExpenseRanking`, `buildProjectedCategoryExpenseRanking` e `getCategoryTransactionsForPeriod` para que, **quando o filtro de conta for específico** (`selectedAccountId !== 'all'`), as transações de pagamento de fatura da respectiva conta bancária sejam incluídas no ranking de despesas e detalhes sob a categoria canônica "Cartão de Crédito" (`LOGICAL_INVOICE_CATEGORY_KEY`).
+     - Caso o filtro seja "Todas as Contas", o comportamento original é mantido (compras individuais do cartão são exibidas e faturas pagas são ocultadas para evitar dupla contagem).
+  2. **Ajuste de Simetria no Grid Mobile do Painel de Estatísticas**:
+     - No layout de celular (mobile), as métricas superiores formam um grid de duas colunas. O card `FluxoScoreCard` possuía a classe `col-span-2 md:col-span-1`, o que fazia com que ele ficasse esticado na segunda linha inteira, deixando um quadrado vazio  direita do card de "Saldo".
      - Alteramos a classe CSS do `FluxoScoreCard` para `className="col-span-1"`.
-     - Desta forma, o painel de mÃ©tricas monta um layout 2x2 perfeitamente simÃ©trico no celular:
+     - Desta forma, o painel de métricas monta um layout 2x2 perfeitamente simétrico no celular:
        - Linha 1: Receitas (esquerda), Despesas (direita)
        - Linha 2: Saldo (esquerda), Fluxo Score (direita)
-- **MotivaÃ§Ã£o**: Garantir a precisÃ£o dos relatÃ³rios de categoria ao filtrar por conta corrente individual e melhorar o design de grade no mobile para fechar o grid simetricamente, proporcionando uma experiÃªncia de uso excelente.
+- **Motivação**: Garantir a precisão dos relatórios de categoria ao filtrar por conta corrente individual e melhorar o design de grade no mobile para fechar o grid simetricamente, proporcionando uma experiência de uso excelente.
 
-## [2026-06-29] AlteraÃ§Ãµes de UI / Banco - Filtro de Subcategorias nos RelatÃ³rios, ConsolidaÃ§Ã£o de Categorias Duplicadas e Refinamentos de Design
-- **Resumo**: Implementamos novas funcionalidades de filtragem, rotinas de prevenÃ§Ã£o/limpeza de banco de dados e refinamentos no design dos relatÃ³rios ([ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx) e [useAccountMutations.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useAccountMutations.ts)):
-  1. **Filtro de Subcategorias na AnÃ¡lise de Categoria**:
-     - Estendemos `buildCategoryPeriodValue`, `getCategoryTransactionsForPeriod` e `buildCategoryPeriodItems` para aceitar um parÃ¢metro opcional `subcategoryId`.
-     - No painel de "AnÃ¡lise de Categoria", criamos a constante `currentSubcategories` para carregar as subcategorias pertencentes Ã  categoria pai selecionada.
-     - Se existirem subcategorias ativas, exibimos um seletor visual discreto de subcategorias (Select) ao lado da categoria principal. Ao selecionar uma subcategoria, o grÃ¡fico de tendÃªncia e os lanÃ§amentos do perÃ­odo sÃ£o filtrados para focar apenas nela, e o rÃ³tulo da linha do grÃ¡fico assume o nome da subcategoria.
-  2. **PrevenÃ§Ã£o e ConsolidaÃ§Ã£o AutomÃ¡tica de Categorias Duplicadas**:
-     - *PrevenÃ§Ã£o*: Modificamos a busca das categorias de "TransferÃªncia" (tanto receita quanto despesa) em `useTransferBetweenAccounts` para recuperar a lista sem `.limit(1)` ou `.maybeSingle()`, contornando limitaÃ§Ãµes do mock de testes e impedindo erros de mÃºltiplos registros (PGRST116) que causavam a criaÃ§Ã£o infinita de novas categorias duplicadas. A funÃ§Ã£o agora reutiliza a primeira categoria encontrada e sÃ³ cria uma nova se o array de retorno for vazio.
-     - *ConsolidaÃ§Ã£o Retroativa*: Adicionamos um `useEffect` no carregamento dos relatÃ³rios que de forma transparente detecta se hÃ¡ categorias duplicadas ativas com o nome "TransferÃªncia", migra todas as transaÃ§Ãµes que apontavam para as duplicatas para a categoria principal/master, deleta logicamente (`deleted_at = now()`) as duplicadas do Supabase, e recarrega a pÃ¡gina automaticamente para sincronizar as mudanÃ§as.
-  3. **Visual Premium para CartÃµes de EstatÃ­sticas e Badges**:
-     - *Grid do Celular*: Atualizamos a disposiÃ§Ã£o para que o card de Saldo ocupe `col-span-2 md:col-span-1` (sendo exibido em modo completo, com a barra de progresso horizontal) e o Fluxo Score ocupe `col-span-2 md:col-span-1` abaixo dele. Isso forma um grid 100% equilibrado e simÃ©trico no mobile.
-     - *StatCard*: Repensamos o layout para utilizar flexbox vertical espaÃ§ado com altura mÃ­nima (`min-h-[175px] md:min-h-[190px]`), deixando o design arejado e elegante. Adicionamos uma fina barra de progresso horizontal no rodapÃ© mostrando mÃ©tricas como Atingimento da Meta, Consumo da Receita ou Taxa de PoupanÃ§a de acordo com o cartÃ£o, utilizando cores inteligentes (verde, amarelo e vermelho animado se exceder limites).
-     - *ComparisonBadge*: Desenvolvemos um visual baseado em caixas coloridas suaves (fundo sutil e borda fina com texto em contraste: verde para progresso positivo, vermelho para negativo), aplicando um espaÃ§amento fÃ­sico (`gap-2` e `shrink-0`) para nunca grudar nos Ã­cones ou quebrar linhas.
-- **MotivaÃ§Ã£o**: Atender ao desejo de organizaÃ§Ã£o do usuÃ¡rio por meio de filtros mais profundos por subcategorias, garantir o fim de categorias duplicadas no app limpando o banco retroativamente de forma silenciosa, e elevar drasticamente os cartÃµes de mÃ©trica e indicadores para um visual de nÃ­vel corporativo SaaS e extremamente premium.
+## [2026-06-29] Alterações de UI / Banco - Filtro de Subcategorias nos Relatórios, Consolidação de Categorias Duplicadas e Refinamentos de Design
+- **Resumo**: Implementamos novas funcionalidades de filtragem, rotinas de prevenção/limpeza de banco de dados e refinamentos no design dos relatórios ([ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx) e [useAccountMutations.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useAccountMutations.ts)):
+  1. **Filtro de Subcategorias na Análise de Categoria**:
+     - Estendemos `buildCategoryPeriodValue`, `getCategoryTransactionsForPeriod` e `buildCategoryPeriodItems` para aceitar um parâmetro opcional `subcategoryId`.
+     - No painel de "Análise de Categoria", criamos a constante `currentSubcategories` para carregar as subcategorias pertencentes  categoria pai selecionada.
+     - Se existirem subcategorias ativas, exibimos um seletor visual discreto de subcategorias (Select) ao lado da categoria principal. Ao selecionar uma subcategoria, o gráfico de tendência e os lançamentos do período são filtrados para focar apenas nela, e o rótulo da linha do gráfico assume o nome da subcategoria.
+  2. **Prevenção e Consolidação Automática de Categorias Duplicadas**:
+     - *Prevenção*: Modificamos a busca das categorias de "Transferência" (tanto receita quanto despesa) em `useTransferBetweenAccounts` para recuperar a lista sem `.limit(1)` ou `.maybeSingle()`, contornando limitações do mock de testes e impedindo erros de múltiplos registros (PGRST116) que causavam a criação infinita de novas categorias duplicadas. A função agora reutiliza a primeira categoria encontrada e só cria uma nova se o array de retorno for vazio.
+     - *Consolidação Retroativa*: Adicionamos um `useEffect` no carregamento dos relatórios que de forma transparente detecta se há categorias duplicadas ativas com o nome "Transferência", migra todas as transações que apontavam para as duplicatas para a categoria principal/master, deleta logicamente (`deleted_at = now()`) as duplicadas do Supabase, e recarrega a página automaticamente para sincronizar as mudanças.
+  3. **Visual Premium para Cartões de Estatísticas e Badges**:
+     - *Grid do Celular*: Atualizamos a disposição para que o card de Saldo ocupe `col-span-2 md:col-span-1` (sendo exibido em modo completo, com a barra de progresso horizontal) e o Fluxo Score ocupe `col-span-2 md:col-span-1` abaixo dele. Isso forma um grid 100% equilibrado e simétrico no mobile.
+     - *StatCard*: Repensamos o layout para utilizar flexbox vertical espaçado com altura mínima (`min-h-[175px] md:min-h-[190px]`), deixando o design arejado e elegante. Adicionamos uma fina barra de progresso horizontal no rodapé mostrando métricas como Atingimento da Meta, Consumo da Receita ou Taxa de Poupança de acordo com o cartão, utilizando cores inteligentes (verde, amarelo e vermelho animado se exceder limites).
+     - *ComparisonBadge*: Desenvolvemos um visual baseado em caixas coloridas suaves (fundo sutil e borda fina com texto em contraste: verde para progresso positivo, vermelho para negativo), aplicando um espaçamento físico (`gap-2` e `shrink-0`) para nunca grudar nos ícones ou quebrar linhas.
+- **Motivação**: Atender ao desejo de organização do usuário por meio de filtros mais profundos por subcategorias, garantir o fim de categorias duplicadas no app limpando o banco retroativamente de forma silenciosa, e elevar drasticamente os cartões de métrica e indicadores para um visual de nível corporativo SaaS e extremamente premium.
 
-## [2026-06-29] Ajuste de UI / LÃ³gica de RelatÃ³rios - ExibiÃ§Ã£o Lado a Lado de Previsto vs Realizado e Nova DisposiÃ§Ã£o do Indicador Comparativo
-- **Resumo**: Implementamos refinamentos visuais no painel superior de estatÃ­sticas em [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx):
-  1. **RemoÃ§Ã£o da Barra de Progresso de Receitas**:
-     - Removemos a barra de percentual de atingimento/consumo do card de Receitas por ser conceitualmente irrelevante para o usuÃ¡rio (barras fazem mais sentido para despesas/limites de orÃ§amento ou metas de poupanÃ§a de saldo).
-  2. **ExibiÃ§Ã£o ExplÃ­cita de Previsto vs Realizado**:
-     - Adaptamos o `metrics` useMemo e introduzimos a funÃ§Ã£o `getPeriodDataForMode` para calcular e expor simultaneamente os valores previstos (Projetado) e efetivos (Realizado) de receitas, despesas e saldo.
+## [2026-06-29] Ajuste de UI / Lógica de Relatórios - Exibição Lado a Lado de Previsto vs Realizado e Nova Disposição do Indicador Comparativo
+- **Resumo**: Implementamos refinamentos visuais no painel superior de estatísticas em [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx):
+  1. **Remoção da Barra de Progresso de Receitas**:
+     - Removemos a barra de percentual de atingimento/consumo do card de Receitas por ser conceitualmente irrelevante para o usuário (barras fazem mais sentido para despesas/limites de orçamento ou metas de poupança de saldo).
+  2. **Exibição Explícita de Previsto vs Realizado**:
+     - Adaptamos o `metrics` useMemo e introduzimos a função `getPeriodDataForMode` para calcular e expor simultaneamente os valores previstos (Projetado) e efetivos (Realizado) de receitas, despesas e saldo.
      - Passamos os valores `projectedValue` e `realizedValue` para os `StatCard`s.
-     - No rodapÃ© dos cartÃµes, adicionamos um bloco horizontal separado por uma linha fina (`border-t`) exibindo de forma direta, clara e tabular os valores de **Previsto** e **Realizado** lado a lado.
-  3. **Nova DisposiÃ§Ã£o e ReestilizaÃ§Ã£o do ComparisonBadge**:
-     - Removemos a comparaÃ§Ã£o do topo do card (que ficava comprimida ao lado do Ã­cone).
-     - Movemos o `ComparisonBadge` (com `compact={true}`) para ficar posicionado **imediatamente Ã  direita do valor principal do card** na mesma linha, mantendo um alinhamento natural e despoluindo o topo do card.
-- **MotivaÃ§Ã£o**: Melhorar a usabilidade e legibilidade do painel, permitindo que o usuÃ¡rio visualize Previsto e Realizado simultaneamente sem esforÃ§o cognitivo, alÃ©m de harmonizar o visual dos cartÃµes ao mover a variaÃ§Ã£o percentual para o lado do valor principal.
+     - No rodapé dos cartões, adicionamos um bloco horizontal separado por uma linha fina (`border-t`) exibindo de forma direta, clara e tabular os valores de **Previsto** e **Realizado** lado a lado.
+  3. **Nova Disposição e Reestilização do ComparisonBadge**:
+     - Removemos a comparação do topo do card (que ficava comprimida ao lado do ícone).
+     - Movemos o `ComparisonBadge` (com `compact={true}`) para ficar posicionado **imediatamente  direita do valor principal do card** na mesma linha, mantendo um alinhamento natural e despoluindo o topo do card.
+- **Motivação**: Melhorar a usabilidade e legibilidade do painel, permitindo que o usuário visualize Previsto e Realizado simultaneamente sem esforço cognitivo, além de harmonizar o visual dos cartões ao mover a variação percentual para o lado do valor principal.
 
-## [2026-06-29] Ajuste de UI / LÃ³gica de RelatÃ³rios - PadronizaÃ§Ã£o Completa dos CartÃµes Financeiros e RemoÃ§Ã£o de Barras de Progresso
-- **Resumo**: Realizamos a padronizaÃ§Ã£o e simplificaÃ§Ã£o visual absoluta dos cartÃµes de mÃ©trica principais em [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx):
-  1. **RemoÃ§Ã£o de Barras de Progresso e MÃ©tricas Ad-Hoc**:
-     - Removemos completamente o conceito de "Taxa de PoupanÃ§a" do card de Saldo, pois nÃ£o existe esse conceito ou recurso correspondente em outras Ã¡reas do app.
-     - Eliminamos as barras de progresso horizontais e suas respectivas labels dos cards de **Despesas** (consumo da receita) e **Saldo** (atingimento da meta/poupanÃ§a).
-     - Deletamos o hook `cardProgressions` do cÃ³digo do componente, reduzindo o processamento e limpando cÃ³digo inÃºtil.
-  2. **PadronizaÃ§Ã£o Absoluta do Layout**:
+## [2026-06-29] Ajuste de UI / Lógica de Relatórios - Padronização Completa dos Cartões Financeiros e Remoção de Barras de Progresso
+- **Resumo**: Realizamos a padronização e simplificação visual absoluta dos cartões de métrica principais em [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx):
+  1. **Remoção de Barras de Progresso e Métricas Ad-Hoc**:
+     - Removemos completamente o conceito de "Taxa de Poupança" do card de Saldo, pois não existe esse conceito ou recurso correspondente em outras áreas do app.
+     - Eliminamos as barras de progresso horizontais e suas respectivas labels dos cards de **Despesas** (consumo da receita) e **Saldo** (atingimento da meta/poupança).
+     - Deletamos o hook `cardProgressions` do código do componente, reduzindo o processamento e limpando código inútil.
+  2. **Padronização Absoluta do Layout**:
      - O componente `StatCard` foi simplificado e teve as props `progress`, `progressLabel` e `progressType` removidas.
-     - Agora, todos os 3 cartÃµes financeiros principais (Receitas, Despesas e Saldo) possuem exatamente a mesma estrutura visual simÃ©trica:
-       - CabeÃ§alho minimalista contendo apenas o Ã­cone.
-       - TÃ­tulo superior (previsto vs realizado).
-       - Valor principal alinhado horizontalmente com o `ComparisonBadge` compacto (setinha e percentual de variaÃ§Ã£o) Ã  sua direita.
-       - Linha de rodapÃ© elegante dividida por `border-t` mostrando os valores de **Previsto** e **Realizado** lado a lado.
-- **MotivaÃ§Ã£o**: Atender ao pedido de padronizaÃ§Ã£o total dos cards financeiros pelo usuÃ¡rio, mantendo a consistÃªncia na exibiÃ§Ã£o dos percentuais ao lado dos valores principais, e removendo elementos como a taxa de poupanÃ§a para evitar complexidade ou confusÃ£o.
+     - Agora, todos os 3 cartões financeiros principais (Receitas, Despesas e Saldo) possuem exatamente a mesma estrutura visual simétrica:
+       - Cabeçalho minimalista contendo apenas o ícone.
+       - Título superior (previsto vs realizado).
+       - Valor principal alinhado horizontalmente com o `ComparisonBadge` compacto (setinha e percentual de variação)  sua direita.
+       - Linha de rodapé elegante dividida por `border-t` mostrando os valores de **Previsto** e **Realizado** lado a lado.
+- **Motivação**: Atender ao pedido de padronização total dos cards financeiros pelo usuário, mantendo a consistência na exibição dos percentuais ao lado dos valores principais, e removendo elementos como a taxa de poupança para evitar complexidade ou confusão.
 
-## [2026-06-29] RelatÃ³rio Gerencial em PDF com Insights Financeiros & ImpressÃ£o de Alta Fidelidade de Todas as Telas para UX/UI
-- **Resumo**: Implementamos dois novos recursos avanÃ§ados de extraÃ§Ã£o e documentaÃ§Ã£o visual:
-  1. **ExtraÃ§Ã£o de RelatÃ³rio com Insights DinÃ¢micos (PDF)**:
-     - Adicionamos o botÃ£o de aÃ§Ã£o **"Extrair RelatÃ³rio"** no cabeÃ§alho de [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx).
-     - Criamos o modal `PrintReportModal` com design estilo folha de papel A4 contendo logomarca, perÃ­odo e conta.
-     - Implementamos a geraÃ§Ã£o dinÃ¢mica de 3 insights analÃ­ticos profundos de inteligÃªncia financeira: **SaÃºde de Caixa & PoupanÃ§a**, **ConcentraÃ§Ã£o de Custos** (categoria mais cara), e **AderÃªncia OrÃ§amentÃ¡ria** (percentual de desvio entre previsto e realizado), alÃ©m de um painel de recomendaÃ§Ãµes prÃ¡ticas.
-     - Configuramos isolamento completo por CSS na impressÃ£o para renderizar puramente a folha A4 e ignorar o resto da interface.
-  2. **ImpressÃ£o de Telas de UX/UI para Administradores**:
-     - Refatoramos e expandimos consideravelmente o bloco `@media print` de [index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css) para que qualquer tela do sistema seja impressa em PDF nativo sem cortes, com grids flexÃ­veis, cores habilitadas, e ocultando menus laterais, bottom navs ou masquetes.
-     - Adicionamos um botÃ£o de atalho flutuante e fixo **"Imprimir Tela (UX/UI)"** em [Index.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/Index.tsx) visÃ­vel exclusivamente para super administradores (`isSuperAdmin`) para capturar o layout a qualquer momento.
-- **MotivaÃ§Ã£o**: Munir o administrador com ferramentas prÃ¡ticas para enviar wireframes fieis do app para especialistas em design de interface, e agregar valor gerencial imediato aos usuÃ¡rios finais.
+## [2026-06-29] Relatório Gerencial em PDF com Insights Financeiros & Impressão de Alta Fidelidade de Todas as Telas para UX/UI
+- **Resumo**: Implementamos dois novos recursos avançados de extração e documentação visual:
+  1. **Extração de Relatório com Insights Dinâmicos (PDF)**:
+     - Adicionamos o botão de ação **"Extrair Relatório"** no cabeçalho de [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx).
+     - Criamos o modal `PrintReportModal` com design estilo folha de papel A4 contendo logomarca, período e conta.
+     - Implementamos a geração dinâmica de 3 insights analíticos profundos de inteligência financeira: **Saúde de Caixa & Poupança**, **Concentração de Custos** (categoria mais cara), e **Aderência Orçamentária** (percentual de desvio entre previsto e realizado), além de um painel de recomendações práticas.
+     - Configuramos isolamento completo por CSS na impressão para renderizar puramente a folha A4 e ignorar o resto da interface.
+  2. **Impressão de Telas de UX/UI para Administradores**:
+     - Refatoramos e expandimos consideravelmente o bloco `@media print` de [index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css) para que qualquer tela do sistema seja impressa em PDF nativo sem cortes, com grids flexíveis, cores habilitadas, e ocultando menus laterais, bottom navs ou masquetes.
+     - Adicionamos um botão de atalho flutuante e fixo **"Imprimir Tela (UX/UI)"** em [Index.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/Index.tsx) visível exclusivamente para super administradores (`isSuperAdmin`) para capturar o layout a qualquer momento.
+- **Motivação**: Munir o administrador com ferramentas práticas para enviar wireframes fieis do app para especialistas em design de interface, e agregar valor gerencial imediato aos usuários finais.
 
-## [2026-06-30] Ajuste Arquitetural / UI - CorreÃ§Ã£o de Build de ProduÃ§Ã£o, ESLint e Warnings de CSS no Print Layout
-- **Resumo**: Corrigimos problemas remanescentes de qualidade e sintaxe que impediam o pipeline de validaÃ§Ã£o (`npm run validate` e `npm run build`) de completar com sucesso:
-  1. **ESLint (prefer-const)**: Atualizamos 19 ocorrÃªncias em [VisualColorPicker.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/ui/VisualColorPicker.tsx) e [useThemeColor.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useThemeColor.tsx) de variÃ¡veis declaradas com `let` que nÃ£o sofriam reatribuiÃ§Ã£o para `const`, satisfazendo as regras de conformidade de cÃ³digo do linter.
-  2. **MinificaÃ§Ã£o CSS no Vite**: Corrigimos os seletores de classes com colchetes e pontos gerados pelo Tailwind dentro do bloco `@media print` no arquivo [index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css) escapando-os adequadamente (`.rounded-\[1\.75rem\\]`, `.rounded-\[2rem\\]`, `.rounded-\[2\.5rem\\]`). Isso eliminou o aviso `Expected identifier` que ocorria durante a etapa de minificaÃ§Ã£o de CSS no empacotamento de produÃ§Ã£o.
-- **MotivaÃ§Ã£o**: Garantir a conformidade total do linter do projeto e a compilaÃ§Ã£o limpa sem avisos ou erros de pipeline na build de produÃ§Ã£o.
+## [2026-06-30] Ajuste Arquitetural / UI - Correção de Build de Produção, ESLint e Warnings de CSS no Print Layout
+- **Resumo**: Corrigimos problemas remanescentes de qualidade e sintaxe que impediam o pipeline de validação (`npm run validate` e `npm run build`) de completar com sucesso:
+  1. **ESLint (prefer-const)**: Atualizamos 19 ocorrências em [VisualColorPicker.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/ui/VisualColorPicker.tsx) e [useThemeColor.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useThemeColor.tsx) de variáveis declaradas com `let` que não sofriam reatribuição para `const`, satisfazendo as regras de conformidade de código do linter.
+  2. **Minificação CSS no Vite**: Corrigimos os seletores de classes com colchetes e pontos gerados pelo Tailwind dentro do bloco `@media print` no arquivo [index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css) escapando-os adequadamente (`.rounded-\[1\.75rem\\]`, `.rounded-\[2rem\\]`, `.rounded-\[2\.5rem\\]`). Isso eliminou o aviso `Expected identifier` que ocorria durante a etapa de minificação de CSS no empacotamento de produção.
+- **Motivação**: Garantir a conformidade total do linter do projeto e a compilação limpa sem avisos ou erros de pipeline na build de produção.
 
-## [2026-06-30] Ajuste de UI / LÃ³gica de RelatÃ³rios - AdaptaÃ§Ã£o Mobile para CartÃµes Financeiros e CorreÃ§Ã£o do PrintReportModal
-- **Resumo**: Implementamos melhorias de layout responsivo no celular e corrigimos um travamento crÃ­tico nos relatÃ³rios:
-  1. **AdaptaÃ§Ã£o Mobile dos CartÃµes Financeiros (StatCard)**:
-     - No layout mobile (`md:hidden`), ocultamos a exibiÃ§Ã£o simultÃ¢nea de Previsto e Realizado lado a lado no rodapÃ© dos cartÃµes devido Ã  limitaÃ§Ã£o de espaÃ§o.
-     - Em vez disso, no mobile exibimos dinamicamente apenas a mÃ©trica complementar Ã  visualizaÃ§Ã£o ativa: se o usuÃ¡rio estiver na visualizaÃ§Ã£o Projetada (`reportMode === 'projected'`), exibimos o valor **Realizado** no rodapÃ©; se estiver na visualizaÃ§Ã£o Realizada (`reportMode === 'realized'`), exibimos o valor **Previsto** no rodapÃ©.
-     - Mantivemos a exibiÃ§Ã£o lado a lado completa em telas maiores (desktop).
-     - Alteramos o card de Saldo para usar `compact={isMobile}` no mobile para garantir coerÃªncia visual de espaÃ§amento e padding.
-  2. **CorreÃ§Ã£o de Crash no PrintReportModal**:
-     - Corrigimos o erro `Cannot read properties of undefined (reading 'toLocaleString')` ao tentar abrir o modal de impressÃ£o de relatÃ³rios. O problema ocorria porque passÃ¡vamos a lista crua de categorias (`expenseCategories`), que nÃ£o continha a propriedade `value` computada. SubstituÃ­mos por `topCategories`, que contÃ©m os dados corretos de ranking e valores consolidados.
-- **MotivaÃ§Ã£o**: Tornar a interface mÃ³vel limpa, legÃ­vel e livre de quebras de linha em telas pequenas, e restabelecer a funcionalidade de extraÃ§Ã£o de relatÃ³rios gerenciais sem erros de runtime.
+## [2026-06-30] Ajuste de UI / Lógica de Relatórios - Adaptação Mobile para Cartões Financeiros e Correção do PrintReportModal
+- **Resumo**: Implementamos melhorias de layout responsivo no celular e corrigimos um travamento crítico nos relatórios:
+  1. **Adaptação Mobile dos Cartões Financeiros (StatCard)**:
+     - No layout mobile (`md:hidden`), ocultamos a exibição simultânea de Previsto e Realizado lado a lado no rodapé dos cartões devido  limitação de espaço.
+     - Em vez disso, no mobile exibimos dinamicamente apenas a métrica complementar  visualização ativa: se o usuário estiver na visualização Projetada (`reportMode === 'projected'`), exibimos o valor **Realizado** no rodapé; se estiver na visualização Realizada (`reportMode === 'realized'`), exibimos o valor **Previsto** no rodapé.
+     - Mantivemos a exibição lado a lado completa em telas maiores (desktop).
+     - Alteramos o card de Saldo para usar `compact={isMobile}` no mobile para garantir coerência visual de espaçamento e padding.
+  2. **Correção de Crash no PrintReportModal**:
+     - Corrigimos o erro `Cannot read properties of undefined (reading 'toLocaleString')` ao tentar abrir o modal de impressão de relatórios. O problema ocorria porque passávamos a lista crua de categorias (`expenseCategories`), que não continha a propriedade `value` computada. Substituímos por `topCategories`, que contém os dados corretos de ranking e valores consolidados.
+- **Motivação**: Tornar a interface móvel limpa, legível e livre de quebras de linha em telas pequenas, e restabelecer a funcionalidade de extração de relatórios gerenciais sem erros de runtime.
 
-## [2026-07-01] Ajuste de UI / UX - ReorganizaÃ§Ã£o da Tela Inicial Mobile e LÃ³gica de CompetÃªncia vs. Caixa (Data de Baixa)
-- **Resumo**: Reestruturamos o painel inicial mÃ³vel em [LegacyDashboardHome.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/LegacyDashboardHome.tsx) e corrigimos o regime de exibiÃ§Ã£o de saÃ­das para seguir o fluxo de caixa (data de baixa):
-  1. **ConsolidaÃ§Ã£o de MÃ©tricas no Topo**:
-     - Agrupamos os valores de **PatrimÃ´nio Total**, **Saldo Projetado**, **Entradas** e **SaÃ­das** em um Ãºnico cartÃ£o principal unificado e elegante no topo da tela, facilitando a leitura centralizada dos indicadores de caixa.
-  2. **RemoÃ§Ã£o de Duplicidade de LanÃ§amento**:
-     - Removemos a aÃ§Ã£o "LanÃ§ar" da barra de botÃµes rÃ¡pidos, uma vez que o botÃ£o flutuante de criaÃ§Ã£o (+ FAB) jÃ¡ estÃ¡ fixado no canto inferior direito da tela.
-  3. **ReorganizaÃ§Ã£o dos BotÃµes de AÃ§Ã£o**:
-     - Transformamos as aÃ§Ãµes de "Transferir" e "Pagar" em uma grade simÃ©trica de duas colunas, posicionando-as logo abaixo do painel de mÃ©tricas consolidado.
-  4. **LÃ³gica de CompetÃªncia vs. Caixa (Data de Baixa)**:
-     - Ajustamos a filtragem de transaÃ§Ãµes mensais em [useFinanceStore.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useFinanceStore.tsx) e [useDashboardMetrics.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useDashboardMetrics.ts).
-     - Agora, se uma despesa que nÃ£o Ã© cartÃ£o de crÃ©dito (`!cardId`) estiver paga (`isPaid === true`) e possuir data de pagamento (`paymentDate`), ela serÃ¡ contabilizada no mÃªs da baixa/pagamento (fluxo de caixa) em vez do mÃªs de vencimento nominal (competÃªncia). Ex: contas de Julho pagas em Junho pontuarÃ£o como saÃ­das efetivas de Junho.
-     - TransaÃ§Ãµes de cartÃ£o de crÃ©dito continuam respeitando o mÃªs de vencimento da fatura (`invoiceMonthYear`).
-  5. **RemoÃ§Ã£o do BotÃ£o de ImpressÃ£o (UX/UI)**:
-     - Removemos o botÃ£o flutuante "Imprimir Tela (UX/UI)" no canto inferior esquerdo de [Index.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/Index.tsx) que servia para exportar o layout da tela.
-  6. **RefatoraÃ§Ã£o e Dinamismo da Reserva de EmergÃªncia**:
-     - Reformulamos o hook [useEmergencyFund.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useEmergencyFund.ts) para se conectar diretamente ao `useFinanceStore()`, eliminando problemas de sincronizaÃ§Ã£o/cache e a necessidade de atualizar a pÃ¡gina manualmente.
-     - Corrigimos o cÃ¡lculo do custo fixo mensal (`monthlyFixed`) da reserva para considerar nominalmente as despesas que estÃ£o na GestÃ£o de Contas (recorrentes, parceladas e faturas de cartÃ£o de crÃ©dito) do mÃªs ativo, em vez de focar apenas no total de despesas realistas pagas do mÃªs. Isso garante que a meta da reserva nÃ£o sofra flutuaÃ§Ãµes e permaneÃ§a estÃ¡vel e precisa mesmo se o usuÃ¡rio pagar contas antecipadamente.
-     - **ExclusÃ£o de Acordos**: ExcluÃ­mos explicitamente as despesas associadas a renegociaÃ§Ãµes/acordos (identificados por `debtId` ou pela categoria de nome "Acordo") do cÃ¡lculo do custo fixo da reserva de emergÃªncia, uma vez que sÃ£o obrigaÃ§Ãµes temporÃ¡rias com prazo determinado de tÃ©rmino.
-  7. **CorreÃ§Ã£o de AtualizaÃ§Ã£o e QuitaÃ§Ã£o AutomÃ¡tica de Acordos**:
-     - ExtraÃ­mos a rotina `checkAndUpdateDebtStatus` para escopo de mÃ³dulo em [useTransactionMutations.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useTransactionMutations.ts) e a acoplamos no `onSuccess` tanto da exclusÃ£o de transaÃ§Ãµes (`useDeleteTransaction`) quanto da ediÃ§Ã£o/atualizaÃ§Ã£o (`useUpdateTransaction`), garantindo que o status do acordo reflita a quitaÃ§Ã£o real assim que a Ãºltima parcela for paga, editada ou se as parcelas residuais forem removidas.
-  8. **Parcelamento e Baixa via Boleto / CarnÃª**:
-     - Atualizamos o componente [TransactionForm.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/transactions/TransactionForm.tsx) para permitir lanÃ§ar parcelamentos usando as formas de pagamento **Boleto** e **CarnÃª**, alÃ©m de CartÃ£o de CrÃ©dito.
-     - Quando Boleto ou CarnÃª sÃ£o selecionados:
-       - O input de valor representa o valor individual de cada boleto/parcela (e o valor total Ã© calculado dinamicamente multiplicando pela quantidade de parcelas).
-       - O formulÃ¡rio oculta os seletores de conta e cartÃ£o de crÃ©dito (jÃ¡ que a conta ou cartÃ£o de origem sÃ³ Ã© definida ao pagar o boleto futuramente).
-       - As parcelas sÃ£o criadas como nÃ£o pagas (`isPaid = false`) para aparecerem pendentes no gerenciamento de contas, e ganham o prefixo descritivo `[Boleto]` ou `[CarnÃª]` em seu tÃ­tulo.
-     - Atualizamos os fluxos de baixa (pagamento de contas) nos componentes [BillsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/accounts/BillsManager.tsx) e [TransactionList.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/transactions/TransactionList.tsx) para incluir as formas de pagamento **Boleto** e **CarnÃª** na hora de marcar uma conta como paga. O sistema adiciona a tag descritiva no tÃ­tulo e marca como paga sem vincular a contas bancÃ¡rias especÃ­ficas se o usuÃ¡rio preferir, mantendo a flexibilidade da baixa.
-- **MotivaÃ§Ã£o**: Simplificar a experiÃªncia do usuÃ¡rio mÃ³vel, trazer maior precisÃ£o de fluxo de caixa para a Dashboard do aplicativo, e resolver o bug de atualizaÃ§Ã£o na tela de Reserva de EmergÃªncia, alÃ©m de viabilizar a criaÃ§Ã£o de parcelamentos domÃ©sticos em boleto/carnÃª com baixas flexÃ­veis e visualizaÃ§Ã£o clara de parcelas pendentes na GestÃ£o de Contas.
+## [2026-07-01] Ajuste de UI / UX - Reorganização da Tela Inicial Mobile e Lógica de Competência vs. Caixa (Data de Baixa)
+- **Resumo**: Reestruturamos o painel inicial móvel em [LegacyDashboardHome.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/LegacyDashboardHome.tsx) e corrigimos o regime de exibição de saídas para seguir o fluxo de caixa (data de baixa):
+  1. **Consolidação de Métricas no Topo**:
+     - Agrupamos os valores de **Patrimônio Total**, **Saldo Projetado**, **Entradas** e **Saídas** em um único cartão principal unificado e elegante no topo da tela, facilitando a leitura centralizada dos indicadores de caixa.
+  2. **Remoção de Duplicidade de Lançamento**:
+     - Removemos a ação "Lançar" da barra de botões rápidos, uma vez que o botão flutuante de criação (+ FAB) já está fixado no canto inferior direito da tela.
+  3. **Reorganização dos Botões de Ação**:
+     - Transformamos as ações de "Transferir" e "Pagar" em uma grade simétrica de duas colunas, posicionando-as logo abaixo do painel de métricas consolidado.
+  4. **Lógica de Competência vs. Caixa (Data de Baixa)**:
+     - Ajustamos a filtragem de transações mensais em [useFinanceStore.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useFinanceStore.tsx) e [useDashboardMetrics.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useDashboardMetrics.ts).
+     - Agora, se uma despesa que não é cartão de crédito (`!cardId`) estiver paga (`isPaid === true`) e possuir data de pagamento (`paymentDate`), ela será contabilizada no mês da baixa/pagamento (fluxo de caixa) em vez do mês de vencimento nominal (competência). Ex: contas de Julho pagas em Junho pontuarão como saídas efetivas de Junho.
+     - Transações de cartão de crédito continuam respeitando o mês de vencimento da fatura (`invoiceMonthYear`).
+  5. **Remoção do Botão de Impressão (UX/UI)**:
+     - Removemos o botão flutuante "Imprimir Tela (UX/UI)" no canto inferior esquerdo de [Index.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/Index.tsx) que servia para exportar o layout da tela.
+  6. **Refatoração e Dinamismo da Reserva de Emergência**:
+     - Reformulamos o hook [useEmergencyFund.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useEmergencyFund.ts) para se conectar diretamente ao `useFinanceStore()`, eliminando problemas de sincronização/cache e a necessidade de atualizar a página manualmente.
+     - Corrigimos o cálculo do custo fixo mensal (`monthlyFixed`) da reserva para considerar nominalmente as despesas que estão na Gestão de Contas (recorrentes, parceladas e faturas de cartão de crédito) do mês ativo, em vez de focar apenas no total de despesas realistas pagas do mês. Isso garante que a meta da reserva não sofra flutuações e permaneça estável e precisa mesmo se o usuário pagar contas antecipadamente.
+     - **Exclusão de Acordos**: Excluímos explicitamente as despesas associadas a renegociações/acordos (identificados por `debtId` ou pela categoria de nome "Acordo") do cálculo do custo fixo da reserva de emergência, uma vez que são obrigações temporárias com prazo determinado de término.
+  7. **Correção de Atualização e Quitação Automática de Acordos**:
+     - Extraímos a rotina `checkAndUpdateDebtStatus` para escopo de módulo em [useTransactionMutations.ts](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/hooks/useTransactionMutations.ts) e a acoplamos no `onSuccess` tanto da exclusão de transações (`useDeleteTransaction`) quanto da edição/atualização (`useUpdateTransaction`), garantindo que o status do acordo reflita a quitação real assim que a última parcela for paga, editada ou se as parcelas residuais forem removidas.
+  8. **Parcelamento e Baixa via Boleto / Carnê**:
+     - Atualizamos o componente [TransactionForm.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/transactions/TransactionForm.tsx) para permitir lançar parcelamentos usando as formas de pagamento **Boleto** e **Carnê**, além de Cartão de Crédito.
+     - Quando Boleto ou Carnê são selecionados:
+       - O input de valor representa o valor individual de cada boleto/parcela (e o valor total é calculado dinamicamente multiplicando pela quantidade de parcelas).
+       - O formulário oculta os seletores de conta e cartão de crédito (já que a conta ou cartão de origem só é definida ao pagar o boleto futuramente).
+       - As parcelas são criadas como não pagas (`isPaid = false`) para aparecerem pendentes no gerenciamento de contas, e ganham o prefixo descritivo `[Boleto]` ou `[Carnê]` em seu título.
+     - Atualizamos os fluxos de baixa (pagamento de contas) nos componentes [BillsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/accounts/BillsManager.tsx) e [TransactionList.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/transactions/TransactionList.tsx) para incluir as formas de pagamento **Boleto** e **Carnê** na hora de marcar uma conta como paga. O sistema adiciona a tag descritiva no título e marca como paga sem vincular a contas bancárias específicas se o usuário preferir, mantendo a flexibilidade da baixa.
+- **Motivação**: Simplificar a experiência do usuário móvel, trazer maior precisão de fluxo de caixa para a Dashboard do aplicativo, e resolver o bug de atualização na tela de Reserva de Emergência, além de viabilizar a criação de parcelamentos domésticos em boleto/carnê com baixas flexíveis e visualização clara de parcelas pendentes na Gestão de Contas.
 
-## [2026-07-01] Ajuste de UI / UX - Redesign de MÃ©tricas no Dashboard (Estilo Apple Minimal) e CorreÃ§Ã£o de Parcelamento de Boletos
+## [2026-07-01] Ajuste de UI / UX - Redesign de Métricas no Dashboard (Estilo Apple Minimal) e Correção de Parcelamento de Boletos
 - **Resumo**: Implementamos refinamentos visuais inspirados no minimalismo da Apple para o painel inicial e corrigimos a regra de entrada de valores no parcelamento:
-  1. **CorreÃ§Ã£o de Valor de Parcelamento (Boleto/CarnÃª)**:
-     - No componente [TransactionForm.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/transactions/TransactionForm.tsx), revertemos a regra especial do valor individual. O campo principal agora solicita o **Valor Total da Compra** para todas as opÃ§Ãµes (CartÃ£o, Boleto, CarnÃª), e o sistema divide automaticamente esse total pela quantidade de parcelas de forma consistente.
-     - Adicionamos um painel de preview textual dinÃ¢mico em tempo real logo abaixo das opÃ§Ãµes de parcelamento (*"SerÃ£o gerados X lanÃ§amentos de R$ Y cada (Boleto)"*) para que o usuÃ¡rio confirme as mensalidades geradas antes de submeter.
+  1. **Correção de Valor de Parcelamento (Boleto/Carnê)**:
+     - No componente [TransactionForm.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/transactions/TransactionForm.tsx), revertemos a regra especial do valor individual. O campo principal agora solicita o **Valor Total da Compra** para todas as opções (Cartão, Boleto, Carnê), e o sistema divide automaticamente esse total pela quantidade de parcelas de forma consistente.
+     - Adicionamos um painel de preview textual dinâmico em tempo real logo abaixo das opções de parcelamento (*"Serão gerados X lançamentos de R$ Y cada (Boleto)"*) para que o usuário confirme as mensalidades geradas antes de submeter.
   2. **Refinamento do Modo Claro (Fundo & Sombras)**:
-     - Em [index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css), alteramos o fundo padrÃ£o do modo claro para HSL `220 16% 95%` (cinza platina fosco) e suavizamos as bordas e fundos secundÃ¡rios.
-     - Redefinimos todas as sombras de elevaÃ§Ã£o para ficarem maiores, com menor opacidade e grande desfoque, gerando um visual flutuante, limpo e premium.
-     - Adicionamos a classe `shadow-sm` no cabeÃ§alho horizontal do desktop em [AppLayout.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/AppLayout.tsx) para separÃ¡-lo do conteÃºdo principal com elegÃ¢ncia.
+     - Em [index.css](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/index.css), alteramos o fundo padrão do modo claro para HSL `220 16% 95%` (cinza platina fosco) e suavizamos as bordas e fundos secundários.
+     - Redefinimos todas as sombras de elevação para ficarem maiores, com menor opacidade e grande desfoque, gerando um visual flutuante, limpo e premium.
+     - Adicionamos a classe `shadow-sm` no cabeçalho horizontal do desktop em [AppLayout.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/layout/AppLayout.tsx) para separá-lo do conteúdo principal com elegância.
   3. **Dashboard Inicial Minimalista (Vibe Apple Widgets)**:
-     - Em [MonthPlanPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/MonthPlanPage.tsx), redesenhamos os cartÃµes de controle financeiro (`ControlMetricCard`) no estilo Apple Widgets.
-     - Removemos completamente o fundo colorido dos cartÃµes (verde, amarelo, vermelho pastel), que gerava ruÃ­do visual. Os cartÃµes agora sÃ£o sempre brancos (`bg-card`), com bordas finas, sombras muito leves e texto do valor em alta escala e contraste (`text-foreground`).
-     - Removemos qualquer elemento colorido dos cartÃµes no modo claro: os Ã­cones agora adotam a cor de texto padrÃ£o (`text-foreground`) sobre fundo cinza neutro (`bg-muted/80`). As cores semÃ¢nticas de status (verde, Ã¢mbar, vermelho) foram mantidas exclusivamente para o modo escuro, mantendo o modo claro 100% minimalista e limpo.
-     - Removemos o container externo pesado que englobava o grid de mÃ©tricas (com duplo sombreamento e gradientes de fundo), posicionando a grade de cartÃµes de controle diretamente sobre a pÃ¡gina de forma minimalista.
-  4. **Redesign de Filtros na Tela de LanÃ§amentos** em [TransactionList.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/transactions/TransactionList.tsx):
-     - SubstituÃ­mos os seletores de botÃ£o comuns por controles deslizantes luxuosos (*iOS Segmented Controls*) para Receitas/Despesas, Origem e Tipo de transaÃ§Ãµes, contendo uma pÃ­lula branca deslizante animada que segue o clique do usuÃ¡rio.
-     - Posicionamos o botÃ£o "Remover lanÃ§amentos" diretamente ao lado do filtro de Categorias, compactando toda a barra de controle em uma linha Ãºnica responsiva e com rolagem lateral oculta.
-  5. **Filtro por Subcategorias nos LanÃ§amentos**:
-     - Adicionamos o seletor dinÃ¢mico de subcategorias no topo da listagem de transaÃ§Ãµes. Ele aparece em tempo real ao lado do filtro de categoria quando uma categoria vÃ¡lida (nÃ£o logical) Ã© selecionada, e filtra os lanÃ§amentos correspondentes instantaneamente.
-  6. **ReorganizaÃ§Ã£o do Painel de RelatÃ³rios AnalÃ­ticos** em [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx):
-     - Removemos a superlotaÃ§Ã£o de botÃµes e seletores dentro do `PageHeader`.
-     - Criamos um painel de filtros elegante e estruturado abaixo do tÃ­tulo, dividido em 3 seÃ§Ãµes lÃ³gicas: **PerÃ­odo e VisualizaÃ§Ã£o** (com controles deslizantes e chaves de avanÃ§o), **Conta & Regime Financeiro** (seletor de conta e regime com pÃ­lula deslizante), e **Filtro de Ano/MÃªs & AÃ§Ãµes** (seletor de ano/mÃªs e botÃ£o de exportaÃ§Ã£o em PDF).
-  7. **ExibiÃ§Ã£o do Nome do Banco nas Carteiras/Contas**:
-     - Prependemos o nome da instituiÃ§Ã£o financeira ao nome da conta (`Banco - Conta`) nos cartÃµes de contas do painel inicial [AccountsOverview.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/dashboard/AccountsOverview.tsx), nos seletores de dÃ©bito da listagem de lanÃ§amentos e na barra de filtros de relatÃ³rios, facilitando a identificaÃ§Ã£o imediata das carteiras.
-  8. **PersonalizaÃ§Ã£o de Bordas na GestÃ£o de Contas** em [BillsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/accounts/BillsManager.tsx):
-     - Alteramos a cor das bordas dos cartÃµes de contas recorrentes/compromissos: contas pendentes no prazo agora exibem a borda geral e a barra lateral esquerda na cor de destaque (`primary` / destaque), e contas vencidas/atrasadas adotam a cor chumbo (`zinc-400` / `zinc-500` / chumbo) nas bordas externas e na barra lateral, conferindo um design exclusivo e contextual. Contas pagas mantÃªm a borda verde discreta.
-  9. **RelatÃ³rio Gerencial e DiagnÃ³stico Financeiro AvanÃ§ado (PDF)** em [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx):
-     - Redesenhamos o modal de relatÃ³rio para impressÃ£o (`PrintReportModal`) em um documento corporativo profissional de duas pÃ¡ginas A4 (com quebras automÃ¡ticas de pÃ¡gina de impressÃ£o).
-     - **AnÃ¡lise do Fluxo Score**: Exibe a pontuaÃ§Ã£o de 0 a 1000 e detalha exatamente as ocorrÃªncias que estÃ£o reduzindo o score (contas atrasadas pendentes, contas pagas com atraso recente e acordos ativos), sugerindo aÃ§Ãµes prÃ¡ticas e dinÃ¢micas para reatar a pontuaÃ§Ã£o mÃ¡xima.
-     - **VisÃ£o de Compromissos (Acordos e Parcelamentos)**: ReconstrÃ³i os parcelamentos agrupados ativos (informando parcelas pagas, valor mensal e data de quitaÃ§Ã£o) e os acordos sob quitaÃ§Ã£o (com barras de progresso visual de recuperaÃ§Ã£o, saldo devedor restante e parcelamento mensal).
-     - **OrÃ§amentos Ultrapassados**: Exibe alertas dinÃ¢micos destacando quais categorias estouraram os limites estipulados no planejamento e a quantia excedida.
-     - **SaÃºde e PrognÃ³stico Financeiro**: Classifica a saÃºde financeira do perÃ­odo (Excelente, SaudÃ¡vel, EstÃ¡vel, AtenÃ§Ã£o, CrÃ­tica) e gera previsÃµes automÃ¡ticas de longo prazo (informando a quantidade de meses atÃ© a quitaÃ§Ã£o de todos os acordos/parcelamentos e o valor que serÃ¡ liberado no orÃ§amento mensal).
+     - Em [MonthPlanPage.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/MonthPlanPage.tsx), redesenhamos os cartões de controle financeiro (`ControlMetricCard`) no estilo Apple Widgets.
+     - Removemos completamente o fundo colorido dos cartões (verde, amarelo, vermelho pastel), que gerava ruído visual. Os cartões agora são sempre brancos (`bg-card`), com bordas finas, sombras muito leves e texto do valor em alta escala e contraste (`text-foreground`).
+     - Removemos qualquer elemento colorido dos cartões no modo claro: os ícones agora adotam a cor de texto padrão (`text-foreground`) sobre fundo cinza neutro (`bg-muted/80`). As cores semânticas de status (verde, âmbar, vermelho) foram mantidas exclusivamente para o modo escuro, mantendo o modo claro 100% minimalista e limpo.
+     - Removemos o container externo pesado que englobava o grid de métricas (com duplo sombreamento e gradientes de fundo), posicionando a grade de cartões de controle diretamente sobre a página de forma minimalista.
+  4. **Redesign de Filtros na Tela de Lançamentos** em [TransactionList.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/transactions/TransactionList.tsx):
+     - Substituímos os seletores de botão comuns por controles deslizantes luxuosos (*iOS Segmented Controls*) para Receitas/Despesas, Origem e Tipo de transações, contendo uma pílula branca deslizante animada que segue o clique do usuário.
+     - Posicionamos o botão "Remover lançamentos" diretamente ao lado do filtro de Categorias, compactando toda a barra de controle em uma linha única responsiva e com rolagem lateral oculta.
+  5. **Filtro por Subcategorias nos Lançamentos**:
+     - Adicionamos o seletor dinâmico de subcategorias no topo da listagem de transações. Ele aparece em tempo real ao lado do filtro de categoria quando uma categoria válida (não logical) é selecionada, e filtra os lançamentos correspondentes instantaneamente.
+  6. **Reorganização do Painel de Relatórios Analíticos** em [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx):
+     - Removemos a superlotação de botões e seletores dentro do `PageHeader`.
+     - Criamos um painel de filtros elegante e estruturado abaixo do título, dividido em 3 seções lógicas: **Período e Visualização** (com controles deslizantes e chaves de avanço), **Conta & Regime Financeiro** (seletor de conta e regime com pílula deslizante), e **Filtro de Ano/Mês & Ações** (seletor de ano/mês e botão de exportação em PDF).
+  7. **Exibição do Nome do Banco nas Carteiras/Contas**:
+     - Prependemos o nome da instituição financeira ao nome da conta (`Banco - Conta`) nos cartões de contas do painel inicial [AccountsOverview.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/dashboard/AccountsOverview.tsx), nos seletores de débito da listagem de lançamentos e na barra de filtros de relatórios, facilitando a identificação imediata das carteiras.
+  8. **Personalização de Bordas na Gestão de Contas** em [BillsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/components/accounts/BillsManager.tsx):
+     - Alteramos a cor das bordas dos cartões de contas recorrentes/compromissos: contas pendentes no prazo agora exibem a borda geral e a barra lateral esquerda na cor de destaque (`primary` / destaque), e contas vencidas/atrasadas adotam a cor chumbo (`zinc-400` / `zinc-500` / chumbo) nas bordas externas e na barra lateral, conferindo um design exclusivo e contextual. Contas pagas mantêm a borda verde discreta.
+  9. **Relatório Gerencial e Diagnóstico Financeiro Avançado (PDF)** em [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx):
+     - Redesenhamos o modal de relatório para impressão (`PrintReportModal`) em um documento corporativo profissional de duas páginas A4 (com quebras automáticas de página de impressão).
+     - **Análise do Fluxo Score**: Exibe a pontuação de 0 a 1000 e detalha exatamente as ocorrências que estão reduzindo o score (contas atrasadas pendentes, contas pagas com atraso recente e acordos ativos), sugerindo ações práticas e dinâmicas para reatar a pontuação máxima.
+     - **Visão de Compromissos (Acordos e Parcelamentos)**: Reconstrói os parcelamentos agrupados ativos (informando parcelas pagas, valor mensal e data de quitação) e os acordos sob quitação (com barras de progresso visual de recuperação, saldo devedor restante e parcelamento mensal).
+     - **Orçamentos Ultrapassados**: Exibe alertas dinâmicos destacando quais categorias estouraram os limites estipulados no planejamento e a quantia excedida.
+     - **Saúde e Prognóstico Financeiro**: Classifica a saúde financeira do período (Excelente, Saudável, Estável, Atenção, Crítica) e gera previsões automáticas de longo prazo (informando a quantidade de meses até a quitação de todos os acordos/parcelamentos e o valor que será liberado no orçamento mensal).
   10. **Ajustes de Arredondamento Financeiro e Fluxo Score**:
-      - **Arredondamento para Cima**: Atualizamos o formatador geral de moeda (formatCurrency, formatCurrencyCompact e formatCompactCurrency em formatters.ts) e o utilitÃ¡rio matemÃ¡tico de contratos (roundCurrency em debtAgreement.ts) para sempre arredondar os valores financeiros para cima com 2 casas decimais usando Math.ceil.
-      - **Fluxo Score Inteiro**: Alteramos o cÃ¡lculo do Score (calculateFluxoScore em fluxoScore.ts) para retornar apenas nÃºmeros inteiros arredondados para cima.
-  11. **Refinamento do DiagnÃ³stico e Rastreabilidade de Parcelamentos**:
-      - **RemoÃ§Ã£o da Taxa de PoupanÃ§a**: ExcluÃ­mos a caixa informativa "Taxa PoupanÃ§a" do modal de PDF por solicitaÃ§Ã£o de design simplificado e focado.
-      - **Rastreabilidade de Parcelamentos de CrÃ©dito**: Aprimoramos o agrupamento do relatÃ³rio. Se installmentGroupId estiver ausente, ele agrupa por descriÃ§Ã£o base (removendo o sufixo numÃ©rico (X/Y)). AlÃ©m disso, a verificaÃ§Ã£o de atividade agora avalia se paidCount < totalCount (em vez de unpaid.length > 0), garantindo que compras com parcelas futuras ainda nÃ£o carregadas em memÃ³ria sejam exibidas no relatÃ³rio, tornando as projeÃ§Ãµes inteligentes e 100% integradas.
-  12. **GeraÃ§Ã£o Direta de PDF (Sem Telas IntermediÃ¡rias)**:
-      - **Fluxo AutomÃ¡tico**: SubstituÃ­mos a exibiÃ§Ã£o do modal do relatÃ³rio em tela por um elegante loading spinner de carregamento estilo Apple com efeito de vidro fosco (ackdrop-blur-md).
-      - **ImpressÃ£o Nativa Direta**: O componente printa na tela o spinner e monta as pÃ¡ginas do relatÃ³rio em um contÃªiner oculto (hidden print:block). O sistema chama o mÃ©todo window.print() e fecha o overlay automaticamente apÃ³s 450ms, abrindo a janela de salvamento em PDF nativa do navegador imediatamente apÃ³s o clique.
-      - **ExperiÃªncia Limpa**: O usuÃ¡rio nunca visualiza a pÃ¡gina do relatÃ³rio desmontada ou incompleta na tela do dispositivo, preservando a estÃ©tica minimalista e premium do app.
-  13. **DesativaÃ§Ã£o Completa de ExportaÃ§Ã£o de PDF & Refinamento de Responsividade**:
-      - **RemoÃ§Ã£o de PDF**: Desativamos o botÃ£o de PDF e eliminamos o componente PrintReportModal com todas as suas dependÃªncias do arquivo ReportsDashboard.tsx, focando na simplicidade direta na prÃ³pria interface.
-      - **Alinhamento dos Filtros (Responsividade)**: Inserimos um espaÃ§ador vertical na segunda seÃ§Ã£o (Conta e Regime) do painel de filtros em ReportsDashboard.tsx para assegurar o alinhamento perfeito de altura das colunas no desktop. AlÃ©m disso, reestruturamos os seletores da terceira seÃ§Ã£o em uma grid responsiva que ocupa 100% da largura em perÃ­odos anuais e se divide em duas colunas de 50% em perÃ­odos mensais e semestrais.
-      - **PrevenÃ§Ã£o de Quebras de Linha Financeiras**: SubstituÃ­mos os espaÃ§os comuns do formatador de moedas (formatCurrency, formatCompactCurrency, formatCurrencyCompact em formatters.ts) por espaÃ§os nÃ£o quebrÃ¡veis (\u00A0), garantindo que o sÃ­mbolo monetÃ¡rio (R$), os sinais negativos (-) e o valor numÃ©rico jamais quebrem em linhas diferentes no mobile ou web.
-      - **RemoÃ§Ã£o de MÃ©dia HistÃ³rica**: Removemos a seÃ§Ã£o de mÃ©dia do painel de anÃ¡lise de categoria para evitar distorÃ§Ãµes de visualizaÃ§Ã£o sob demanda.
-      - **Linha de Meta por OrÃ§amento**: Adicionamos uma linha de meta horizontal vermelha tracejada (ReferenceLine) no grÃ¡fico de AnÃ¡lise de Categoria quando a categoria selecionada possuir um limite de orÃ§amento mensal definido.
-      - **Destaque Visual e RÃ³tulos de Outliers**: Invertemos a lÃ³gica de cor de despesas (menor gasto fica em verde/positivo e o maior gasto fica em vermelho/preocupante). TambÃ©m adicionamos rÃ³tulos numÃ©ricos permanentes acima dos extremos (mÃ­nimo e mÃ¡ximo) para exibiÃ§Ã£o imediata dos valores sem necessidade de interaÃ§Ã£o.
-      - **PrevenÃ§Ã£o de RÃ³tulos Cortados**: Ajustamos o domÃ­nio vertical do eixo Y para criar 15% de margem extra (dataMax * 1.15) no topo do grÃ¡fico e expandimos a margem de renderizaÃ§Ã£o superior para 30px, evitando que os rÃ³tulos fiquem ocultados ou truncados pelas bordas do contÃªiner.
-      - **SeleÃ§Ã£o de Tipo de GrÃ¡fico**: Criamos um controle segmentado interativo (ChartTypeSelector) para permitir ao usuÃ¡rio alternar a visualizaÃ§Ã£o dos grÃ¡ficos entre Linhas, Barras e Ãrea (com gradiente moderno de opacidade). O controle foi implementado tanto no grÃ¡fico principal (Total de Despesas vs Receitas) quanto no grÃ¡fico de AnÃ¡lise de Categoria.
+      - **Arredondamento para Cima**: Atualizamos o formatador geral de moeda (formatCurrency, formatCurrencyCompact e formatCompactCurrency em formatters.ts) e o utilitário matemático de contratos (
+roundCurrency em debtAgreement.ts) para sempre arredondar os valores financeiros para cima com 2 casas decimais usando Math.ceil.
+      - **Fluxo Score Inteiro**: Alteramos o cálculo do Score (calculateFluxoScore em fluxoScore.ts) para retornar apenas números inteiros arredondados para cima.
+  11. **Refinamento do Diagnóstico e Rastreabilidade de Parcelamentos**:
+      - **Remoção da Taxa de Poupança**: Excluímos a caixa informativa "Taxa Poupança" do modal de PDF por solicitação de design simplificado e focado.
+      - **Rastreabilidade de Parcelamentos de Crédito**: Aprimoramos o agrupamento do relatório. Se installmentGroupId estiver ausente, ele agrupa por descrição base (removendo o sufixo numérico (X/Y)). Além disso, a verificação de atividade agora avalia se paidCount < totalCount (em vez de unpaid.length > 0), garantindo que compras com parcelas futuras ainda não carregadas em memória sejam exibidas no relatório, tornando as projeções inteligentes e 100% integradas.
+  12. **Geração Direta de PDF (Sem Telas Intermediárias)**:
+      - **Fluxo Automático**: Substituímos a exibição do modal do relatório em tela por um elegante loading spinner de carregamento estilo Apple com efeito de vidro fosco (ackdrop-blur-md).
+      - **Impressão Nativa Direta**: O componente printa na tela o spinner e monta as páginas do relatório em um contêiner oculto (hidden print:block). O sistema chama o método window.print() e fecha o overlay automaticamente após 450ms, abrindo a janela de salvamento em PDF nativa do navegador imediatamente após o clique.
+      - **Experiência Limpa**: O usuário nunca visualiza a página do relatório desmontada ou incompleta na tela do dispositivo, preservando a estética minimalista e premium do app.
+  13. **Desativação Completa de Exportação de PDF & Refinamento de Responsividade**:
+      - **Remoção de PDF**: Desativamos o botão de PDF e eliminamos o componente PrintReportModal com todas as suas dependências do arquivo ReportsDashboard.tsx, focando na simplicidade direta na própria interface.
+      - **Alinhamento dos Filtros (Responsividade)**: Inserimos um espaçador vertical na segunda seção (Conta e Regime) do painel de filtros em ReportsDashboard.tsx para assegurar o alinhamento perfeito de altura das colunas no desktop. Além disso, reestruturamos os seletores da terceira seção em uma grid responsiva que ocupa 100% da largura em períodos anuais e se divide em duas colunas de 50% em períodos mensais e semestrais.
+      - **Prevenção de Quebras de Linha Financeiras**: Substituímos os espaços comuns do formatador de moedas (formatCurrency, formatCompactCurrency, formatCurrencyCompact em formatters.ts) por espaços não quebráveis (\u00A0), garantindo que o símbolo monetário (R$), os sinais negativos (-) e o valor numérico jamais quebrem em linhas diferentes no mobile ou web.
+      - **Remoção de Média Histórica**: Removemos a seção de média do painel de análise de categoria para evitar distorções de visualização sob demanda.
+      - **Linha de Meta por Orçamento**: Adicionamos uma linha de meta horizontal vermelha tracejada (ReferenceLine) no gráfico de Análise de Categoria quando a categoria selecionada possuir um limite de orçamento mensal definido.
+      - **Destaque Visual e Rótulos de Outliers**: Invertemos a lógica de cor de despesas (menor gasto fica em verde/positivo e o maior gasto fica em vermelho/preocupante). Também adicionamos rótulos numéricos permanentes acima dos extremos (mínimo e máximo) para exibição imediata dos valores sem necessidade de interação.
+      - **Prevenção de Rótulos Cortados**: Ajustamos o domínio vertical do eixo Y para criar 15% de margem extra (dataMax * 1.15) no topo do gráfico e expandimos a margem de renderização superior para 30px, evitando que os rótulos fiquem ocultados ou truncados pelas bordas do contêiner.
+      - **Seleção de Tipo de Gráfico**: Criamos um controle segmentado interativo (ChartTypeSelector) para permitir ao usuário alternar a visualização dos gráficos entre Linhas, Barras e Área (com gradiente moderno de opacidade). O controle foi implementado tanto no gráfico principal (Total de Despesas vs Receitas) quanto no gráfico de Análise de Categoria.
       - **Reestruturação de Layout Full Width (Responsividade)**: Retiramos o container de Análise de Categoria de dentro da grid de colunas limitantes e o posicionamos como uma seção independente de largura total logo abaixo da linha principal (Gráfico Geral + Ranking de Despesas). Isso resolveu os problemas de espremimento de layouts e quebras de filtro em dispositivos de tamanho intermediário e mobile.
       - **Estilização Sutil e Responsiva no Mobile**:
         * Reduzimos as alturas de renderização no celular: o gráfico geral fica com `200px` (minHeight `180px`) e o gráfico da categoria fica com `150px` (minHeight `140px`).
@@ -1913,7 +1929,7 @@ Em recÃ¡lculo:
         * Refinamos os rótulos fixos de outliers no mobile: reduzimos o tamanho do texto para `8px`, o peso para `700` (bold sutil) e o recuo vertical de `y - 12` para `y - 8`, deixando-os perfeitamente proporcionais a telas pequenas.
         * Ajustamos a lógica do `renderOutlierLabel` para calcular `x + width / 2` quando renderizado em gráficos do tipo `Bar`, garantindo que os valores fiquem perfeitamente alinhados ao centro das colunas.
       - **Ajuste de Altura e Preenchimento de Espaços**: Aumentamos a altura do contêiner do gráfico geral de "Receitas vs Despesas" para `h-[200px] md:h-[300px] lg:h-[380px]` (minHeight 180px/340px), o que equalizou de forma limpa a altura das colunas da grid superior (eliminando qualquer espaço em branco na tela ao lado do Ranking de Despesas) no desktop, enquanto permanece compacto no mobile.
-- **MotivaÃ§Ã£o**: Atender ao cerne estratÃ©gico do Fluxo como um gestor inteligente e simplificado de finanÃ§as pessoais, fornecendo um diagnÃ³stico profissional, prognÃ³sticos de quitaÃ§Ã£o detalhados, justificativas de comportamento do Fluxo Score e visÃµes claras de estouros de orÃ§amentos e parcelamentos em um PDF gerencial corporativo.
+- **Motivação**: Atender ao cerne estratégico do Fluxo como um gestor inteligente e simplificado de finanças pessoais, fornecendo um diagnóstico profissional, prognósticos de quitação detalhados, justificativas de comportamento do Fluxo Score e visões claras de estouros de orçamentos e parcelamentos em um PDF gerencial corporativo.
 
   14. **Correção de Projeção Virtual de Parcelamentos e Recorrências em Relatórios (08/07/2026)**:
       - **Ajuste de Clonagem de Projeção**: Corrigimos a função `getMonthTransactionsForReport` em [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive - TORP INDUSTRIA TEXTIL LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx). Anteriormente, a geração de parcelas e recorrências virtuais clonava o objeto da transação original sem redefinir a data (`date`), descrição (`description` com fração da parcela) e status (`isPaid`). Isso fazia com que uma parcela anterior paga (por exemplo, de Junho) fosse exibida no relatório de Julho como sendo do próprio mês anterior e com status de "Pago" (inconsistência no regime de caixa).
@@ -2021,3 +2037,52 @@ Em recÃ¡lculo:
       - **Flag de Isolamento Temporal (includeOverdue)**: Adicionamos o parâmetro opcional `includeOverdue` na interface de cálculo de faturas. Se for `true`, o utilitário localiza todas as competências únicas (`invoiceMonthYear`) de transações passadas do cartão e gera obrigações virtuais para todos os meses em aberto menores ou iguais ao mês selecionado. Se for `false` (padrão), o sistema calcula faturas exclusivamente para a competência nominal do mês ativo.
       - **Isolamento de Funcionalidades**: Ativamos `includeOverdue: true` no [BillsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive - TORP INDUSTRIA TEXTIL LTDA/Projeto/fluxo-financeiro/src/components/accounts/BillsManager.tsx) para permitir ao usuário visualizar e liquidar pendências antigas. Nas demais telas, como [ReportsDashboard.tsx](file:///C:/Users/khendry.mendonca/OneDrive - TORP INDUSTRIA TEXTIL LTDA/Projeto/fluxo-financeiro/src/pages/ReportsDashboard.tsx), mantivemos o padrão `false` para evitar que faturas atrasadas de meses passados contaminem os totais de receitas/despesas e a listagem de lançamentos do período do mês visualizado.
       - **Motivação**: Garantir a fidedignidade dos relatórios analíticos de meses específicos sem perder a capacidade do controle de baixas de faturas atrasadas na Gestão de Contas.
+
+  38. **Documentação Técnica, Arquitetural e Dossiê de Transferência (Handoff Comercial) (11/08/2026)**:
+      - **Elaboração de Documentação Oficial**: Criamos o documento em formato Word (`Documentacao_Tecnica_e_Arquitetural_Fluxo.docx`) na raiz do projeto [Documentacao_Tecnica_e_Arquitetural_Fluxo.docx](file:///C:/Users/khendry.mendonca/OneDrive%20-%20TORP%20INDUSTRIA%20TEXTIL%20LTDA/Projeto/fluxo-financeiro/Documentacao_Tecnica_e_Arquitetural_Fluxo.docx), contendo a especificação técnica completa do sistema escrita sob a perspectiva de um Analista de Sistemas / Engenheiro de Software Lead.
+      - **Conteúdo Coberto no Dossiê**:
+        1. *Sumário Executivo e Propósito*: Filosofia de produto, Regime de Caixa vs Competência, diretrizes de UX Apple Minimal e diretrizes de design sobrio (proibição de emojis na interface).
+        2. *Arquitetura de Software e Paradigmas*: Análise comparativa da Programação Funcional (React Hooks, Zustand) na camada visual versus a Programação Orientada a Objetos (Encapsulamento, Contratos/Interfaces TypeScript, Serviços de Domínio e Stored Procedures/Triggers SQL) na camada de dados.
+        3. *Engenharia de Dados (PostgreSQL / Supabase)*: Dicionário completo de tabelas relacioais (`users_profile`, `accounts`, `credit_cards`, `categories`, `transactions`, `bills`, `debts`, `goals`, `plans`, `push_subscriptions`), triggers de saldo e recorrência, Stored Procedure LGPD (`delete_user_data`) e RLS.
+        4. *Especificação Detalhada de Módulos (O que faz e como faz)*: Autenticação com Magic Link e redefinição, Boot Inteligente, Gestão de Carteira/Contas, Cartões & Faturas com Abatimento e Pix no Crédito, Transferências Casadas, Orçamentos, Dívidas & Acordos, Reserva de Emergência, Algoritmo "Fluxo Score", Relatórios em PDF e Painel Super Admin com limites de planos.
+        5. *Pipeline de Implantação e DevOps*: Guia em 6 fases (Ambiente, Instalação, Migrações SQL Supabase, Deploy Vercel, Edge Functions e Validação de Suíte de Testes com `npm run validate`).
+        6. *Guia de Transferência de Propriedade Intelectual (Handoff)*: Checklist de entrega de ativos de TI, procedimentos de alteração de credenciais e matriz comercial de planos (Basic, Pro, Premium).
+      - **Formatação e Identidade Visual**: Documento Word com capa executiva contendo o logotipo oficial (`public/fluxo-logo-v2.png`), cabeçalhos/rodapés personalizados, paleta de cores corporativa (Slate/Teal), tabelas estilizadas e blocos de chamadas visuais.
+
+  39. **Correção de UI: Edição do Nome e Categoria de Contas Fixas (17/08/2026)**:
+      - **Ajuste no Formulário**: Atualizamos o componente `EditBillForm.tsx` para incluir um campo de entrada ("Nome da Conta") e um seletor de "Categoria", permitindo alterar a descrição (`description`) e a categoria (`categoryId`) da conta fixa, atributos que antes não eram editáveis por essa interface.
+      - **Reflexo na Mutação**: O hook de mutação `useUpdateTransaction` já estava preparado para receber as propriedades `description` e `categoryId` e persistir corretamente no Supabase.
+      - **Layout Responsivo do Modal**: Corrigimos um problema de overflow vertical (`max-h-[90vh]` com `overflow-y-auto`) no container do modal (`BillsManager.tsx`), garantindo que a adição de novos campos não quebre o layout em telas menores e permitindo rolagem interna sem a necessidade de reduzir o zoom.
+      - **Responsividade da Lista de Contas**: Ajustamos os botões de ação (Editar, Baixar, Estornar) de cada item da lista em `BillsManager.tsx`. Em telas pequenas (como iPhone SE, larguras menores que 640px), os botões agora exibem apenas seus respectivos ícones (`sm:inline`), economizando espaço horizontal, evitando sobreposição e impedindo cortes nas informações de valores e nomes.
+
+  40. **Refatoração de UX/UI Mobile: Ações 100% por Ícones, Quebra de Linha em Descrições e Bordas Limpas (17/08/2026)**:
+      - **Ações 100% por Ícones**: Refatoramos os botões de ação em [BillsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive - TORP INDUSTRIA TEXTIL LTDA/Projeto/fluxo-financeiro/src/components/accounts/BillsManager.tsx) para utilizarem estritamente ícones minimalistas e intuitivos: Lápis (`Pencil` em azul/primary para editar), Check (`CheckCircle2` em verde/success para baixar), Giro (`RotateCcw` em âmbar para estornar) e Lixeira (`Trash2` em vermelho/danger para excluir).
+      - **Layout Responsivo e Compacto**: Os 3 botões de ícone possuem tamanho fixo de `36x36px` (`w-9 h-9`) e ficam alinhados na mesma linha do Valor/Status, ocupando apenas ~120px e garantindo 100% de visibilidade mesmo em telas ultracompactas como iPhone SE (375px) com alto nível de zoom.
+      - **Quebra Automática de Descrição Longa**: Removemos a restrição de truncamento único e aplicamos `break-words leading-snug`, permitindo que títulos longos quebrem linha naturalmente sem vazar nem colidir com os demais elementos.
+      - **Bordas Limpas e Uniformes**: Removemos a borda lateral colorida (`border-l-4`), adotando um padrão de contorno sóbrio, uniforme e elegante (`border border-gray-100 dark:border-zinc-800/80`), preservando a identificação da categoria através do pill e da bolinha colorida.
+      - **Ergonomia Compacta de Pop-ups**: Reduzimos o padding e altura de inputs de `h-12` para `h-10` e a largura máxima do modal para `max-w-sm` em [EditBillForm.tsx](file:///C:/Users/khendry.mendonca/OneDrive - TORP INDUSTRIA TEXTIL LTDA/Projeto/fluxo-financeiro/src/components/accounts/EditBillForm.tsx) e [BillsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive - TORP INDUSTRIA TEXTIL LTDA/Projeto/fluxo-financeiro/src/components/accounts/BillsManager.tsx), proporcionando um manuseio ergonômico e sem rolagem excessiva em dispositivos móveis.
+
+  41. **Expansão de Ícones Categorizados por Tema, Navegação por Setas/Swipe, Abas Mobile e 10 Cores Rápidas com HEX (17/08/2026)**:
+      - **Catálogo Expandido de Ícones por Categorias Temáticas**: Reformulamos o [IconSelector.tsx](file:///C:/Users/khendry.mendonca/OneDrive - TORP INDUSTRIA TEXTIL LTDA/Projeto/fluxo-financeiro/src/components/ui/IconSelector.tsx) com mais de 100 ícones do Lucide React divididos em 10 grupos temáticos (*Financeiro*, *Moradia*, *Alimentação*, *Transporte*, *Saúde*, *Educação*, *Lazer*, *Família*, *Fé*, *Serviços*).
+      - **Navegador por Setas e Swipe**: Adicionamos botões de navegação lateral com setas (`ChevronLeft` / `ChevronRight`) para rolagem suave na Web desktop e avanço direto de categorias, em conjunto com rolagem por toque (swipe com `min-w-0` e `touch-pan-x`) para dispositivos móveis.
+      - **Cards de Ícones com Fundo Sólido e Alto Contraste**: Todos os ícones não selecionados receberam fundo visível (`bg-background/80` com contorno sutil `border-border/40`), eliminando o problema de botões invisíveis no tema escuro.
+      - **Abas Mobile no Modal de Categoria (`CategoriesManager.tsx`)**: No celular, o modal de edição foi dividido em abas limpas `[ Configurações | Subcategorias (N) ]`, garantindo que 100% da tela fique dedicada ao formulário de edição (com botão "Salvar" de fácil acesso) ou às subcategorias, eliminando conflito de rolagem interna ou cortes na tela.
+      - **Paleta Reduzida a 10 Cores Rápidas + HEX Livre**: Simplificamos o [ColorSelector.tsx](file:///C:/Users/khendry.mendonca/OneDrive - TORP INDUSTRIA TEXTIL LTDA/Projeto/fluxo-financeiro/src/components/ui/ColorSelector.tsx) para uma linha limpa de 10 cores executivas essenciais com bordas nítidas de contraste, mantendo o campo de código HEX personalizado (`#RRGGBB`) e o seletor nativo tipo conta-gotas em layout enxuto.
+
+  42. **Restauração Completa da Tela Web Original em Gestão de Contas (17/08/2026)**:
+      - **Restauração 100% da Versão Original**: A tela de Gestão de Contas ([BillsManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive - TORP INDUSTRIA TEXTIL LTDA/Projeto/fluxo-financeiro/src/components/accounts/BillsManager.tsx)) foi completamente revertida para a sua versão original estável anterior, preservando exatamente os cards originais (`border-l-4`, estilo, fontes e botões clássicos com rótulos `Editar`, `Baixar`, `Estornar`, `Excluir`).
+      - **Edição de Nome e Categoria Preservada**: O modal de edição [EditBillForm.tsx](file:///C:/Users/khendry.mendonca/OneDrive - TORP INDUSTRIA TEXTIL LTDA/Projeto/fluxo-financeiro/src/components/accounts/EditBillForm.tsx) mantém os campos para alteração de Nome da Conta (`description`), Categoria (`categoryId`), Valor (`amount`), Data de Vencimento (`date`) e alcance (`applyScope`), funcionando perfeitamente dentro do modal original.
+
+  43. **Simulador de Aportes Mensais e Projeção Inteligente de Prazo na Reserva de Emergência (17/08/2026)**:
+      - **Simulador com Aporte Mensal Personalizável**: Implementamos em [useEmergencyFund.ts](file:///C:/Users/khendry.mendonca/OneDrive - TORP INDUSTRIA TEXTIL LTDA/Projeto/fluxo-financeiro/src/hooks/useEmergencyFund.ts) e [EmergencyReserve.tsx](file:///C:/Users/khendry.mendonca/OneDrive - TORP INDUSTRIA TEXTIL LTDA/Projeto/fluxo-financeiro/src/components/dashboard/EmergencyReserve.tsx) um simulador onde o usuário define quanto pretende depositar por mês (`monthlyDeposit`, persistido no `localStorage`).
+      - **Abatimento Automático do Saldo Já Guardado**: O cálculo da projeção desconta dinamicamente o saldo acumulado nas contas de reserva (`remainingAmount = max(0, targetAmount - currentAmount)`), calculando com precisão o montante restante a ser coberto.
+      - **Cálculo de Prazo e Data de Conclusão**: O sistema projeta a quantidade de meses restantes (`Math.ceil(remainingAmount / monthlyDeposit)`), formatando em linguagem natural (ex: *"1 ano e 3 meses"*, *"8 meses"*) e exibindo a data prevista de conclusão (ex: *"Outubro de 2027"*).
+      - **Reatividade a Variações de Custos Fixos**: Se o usuário cadastrar novas contas fixas, alterar valores ou ajustar a meta de meses (ex: de 6 para 12 meses), o valor total da reserva sobe proporcionalmente, atualizando o valor que falta e o tempo estimado da projeção em tempo real.
+
+
+
+
+
+
+
+

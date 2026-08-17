@@ -72,7 +72,7 @@ self.addEventListener('notificationclick', (event) => {
         if ('focus' in client) {
           // Se puder, redireciona o cliente para a url correta
           if (client.url !== urlToOpen && 'navigate' in client) {
-            // @ts-ignore
+            // @ts-expect-error - TS DOM WindowClient navigate method typing workaround
             client.navigate(urlToOpen);
           }
           return client.focus();

@@ -115,7 +115,7 @@ describe('useAccountMutations', () => {
       'utf8'
     );
 
-    expect(source).toContain('bank: accountInstitution');
+    expect(source).toContain('bank: finalInstitution');
     expect(source).not.toContain('institution: accountInstitution');
     expect(source).toContain('{a.bank} - {a.name}');
   });

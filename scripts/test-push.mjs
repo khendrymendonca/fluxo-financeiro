@@ -24,10 +24,13 @@ try {
 const supabaseUrl = env.VITE_SUPABASE_URL;
 const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY;
 const vapidPublicKey = env.VITE_WEBPUSH_PUBLIC_KEY;
-const vapidPrivateKey = 'PWrzHZ9_VBBdvZhJ1nuHS9-OkgIbb-5ZpfNfbasEH-I';
+// A chave privada NUNCA deve ficar hardcoded aqui (já vazou uma vez no
+// histórico do Git). Defina WEBPUSH_PRIVATE_KEY no seu .env local antes
+// de rodar este script — ele não é lido pelo Vite, só por este script.
+const vapidPrivateKey = env.WEBPUSH_PRIVATE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey || !vapidPublicKey) {
-  console.error('❌ Faltam variáveis de ambiente no .env (SUPABASE_URL, ANON_KEY ou PUBLIC_KEY).');
+if (!supabaseUrl || !supabaseAnonKey || !vapidPublicKey || !vapidPrivateKey) {
+  console.error('❌ Faltam variáveis de ambiente no .env (SUPABASE_URL, ANON_KEY, PUBLIC_KEY ou WEBPUSH_PRIVATE_KEY).');
   process.exit(1);
 }
 

@@ -289,7 +289,11 @@ export default function AuthPage() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
-                                minLength={6}
+                                // minLength só se aplica ao cadastro: este mesmo campo é
+                                // reaproveitado no login, e usuários já existentes em
+                                // produção podem ter senhas com menos de 8 caracteres —
+                                // aplicar minLength ali bloquearia o login deles.
+                                minLength={isSignUp ? 8 : undefined}
                                 className={cn("rounded-xl pr-10", isStartMode ? "bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-700 focus-visible:ring-[#00FF5F]" : "")}
                             />
                             <button

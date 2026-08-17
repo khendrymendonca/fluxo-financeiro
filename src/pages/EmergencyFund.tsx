@@ -21,10 +21,15 @@ export default function EmergencyFund() {
         monthlyFixed,
         targetAmount,
         currentAmount,
+        remainingAmount,
         progress,
         months,
+        monthlyDeposit,
+        estimatedMonths,
+        estimatedTargetDate,
         reserveAccounts,
-        setEmergencyMonths
+        setEmergencyMonths,
+        setMonthlyDeposit
     } = useEmergencyFund(currentMonthTransactions);
 
     const handleTransfer = async (fromId: string, toId: string, amount: number, description: string) => {
@@ -46,8 +51,12 @@ export default function EmergencyFund() {
         monthlyFixed,
         targetAmount,
         currentAmount,
+        remainingAmount,
         progress,
         months,
+        monthlyDeposit,
+        estimatedMonths,
+        estimatedTargetDate,
         reserveAccounts
     };
 
@@ -60,11 +69,10 @@ export default function EmergencyFund() {
                     data={reserveData}
                     accounts={accounts}
                     onMonthsChange={setEmergencyMonths}
+                    onMonthlyDepositChange={setMonthlyDeposit}
                     onTransfer={handleTransfer}
                 />
             </div>
-
-
         </div>
     );
 }

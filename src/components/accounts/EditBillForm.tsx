@@ -7,12 +7,13 @@ import { RotateCw, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { parseLocalDate } from '@/utils/dateUtils';
+import { useFinanceStore } from '@/hooks/useFinanceStore';
 
 interface EditBillFormProps {
   bill: Transaction;
   onClose: () => void;
   onSave: (
-    updates: { amount?: number; date?: string },
+    updates: { amount?: number; date?: string; description?: string; categoryId?: string | null },
     applyScope: 'this' | 'future' | 'all',
     realId: string,
     referenceDate: string
@@ -20,6 +21,9 @@ interface EditBillFormProps {
 }
 
 export function EditBillForm({ bill, onClose, onSave }: EditBillFormProps) {
+  const { categories } = useFinanceStore();
+  const [description, setDescription] = useState(bill.description ?? '');
+  const [categoryId, setCategoryId] = useState<string | null>(bill.categoryId ?? null);
   const [amount, setAmount] = useState(bill.amount.toFixed(2));
   const [date, setDate] = useState(bill.date?.slice(0, 10) ?? '');
   const [applyScope, setApplyScope] = useState<'this' | 'future' | 'all'>('future');
@@ -33,11 +37,13 @@ export function EditBillForm({ bill, onClose, onSave }: EditBillFormProps) {
     const parsedAmount = parseFloat(amount);
     if (!parsedAmount || parsedAmount <= 0) return;
 
-    const updates: { amount?: number; date?: string } = {};
+    const updates: { amount?: number; date?: string; description?: string; categoryId?: string | null } = {};
 
     // Só envia o campo se mudou
     if (parsedAmount !== bill.amount) updates.amount = parsedAmount;
     if (date && date !== bill.date?.slice(0, 10)) updates.date = date;
+    if (description && description !== bill.description) updates.description = description;
+    if (categoryId !== bill.categoryId) updates.categoryId = categoryId;
 
     if (Object.keys(updates).length === 0) {
       onClose();
@@ -63,9 +69,42 @@ export function EditBillForm({ bill, onClose, onSave }: EditBillFormProps) {
         </div>
       )}
 
+      {/* Nome */}
+      <div className="space-y-1">
+        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          Nome da Conta
+        </Label>
+        <Input
+          type="text"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="h-10 rounded-xl border-2 font-bold"
+          required
+        />
+      </div>
+
+      {/* Categoria */}
+      <div className="space-y-1">
+        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          Categoria
+        </Label>
+        <select
+          className="h-10 w-full rounded-xl border-2 font-bold px-3 focus:ring-2 focus:ring-primary outline-none transition-all cursor-pointer bg-background"
+          value={categoryId || ''}
+          onChange={(e) => setCategoryId(e.target.value || null)}
+        >
+          <option value="">Sem categoria</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* Valor */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+      <div className="space-y-1">
+        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
           Novo Valor (R$)
         </Label>
         <Input
@@ -74,60 +113,52 @@ export function EditBillForm({ bill, onClose, onSave }: EditBillFormProps) {
           min="0.01"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="h-12 rounded-2xl border-2 font-black text-xl"
+          className="h-10 rounded-xl border-2 font-black text-lg"
           required
         />
       </div>
 
       {/* Data de vencimento */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-          Nova Data de Vencimento
+      <div className="space-y-1">
+        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          Nova Data
         </Label>
         <Input
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="h-12 rounded-2xl border-2 font-bold"
+          className="h-10 rounded-xl border-2 font-bold"
         />
-        <p className="text-[11px] text-muted-foreground font-medium px-1">
-          Altere apenas o dia se quiser mudar o vencimento. O mês será preservado conforme a projeção futura.
-        </p>
       </div>
 
       {/* Alcance da alteração */}
-      <div className="space-y-2 p-4 bg-primary/5 rounded-2xl border border-primary/20">
+      <div className="space-y-2 p-3 bg-primary/5 rounded-xl border border-primary/20">
         <div className="flex items-center gap-2 mb-1">
-          <div className="p-1.5 rounded-lg bg-primary text-primary-foreground">
+          <div className="p-1 rounded-lg bg-primary text-primary-foreground">
             <RotateCw className="w-3 h-3" />
           </div>
-          <Label className="text-xs font-black uppercase tracking-widest text-primary">
+          <Label className="text-[10px] font-black uppercase tracking-widest text-primary">
             A partir de quando?
           </Label>
         </div>
         <select
-          className="h-11 w-full rounded-xl border-2 border-primary/20 bg-background px-3 text-xs font-bold focus:ring-2 focus:ring-primary outline-none transition-all cursor-pointer hover:border-primary/40"
+          className="h-10 w-full rounded-xl border-2 border-primary/20 bg-background px-3 text-xs font-bold focus:ring-2 focus:ring-primary outline-none transition-all cursor-pointer hover:border-primary/40"
           value={applyScope}
           onChange={(e) => setApplyScope(e.target.value as 'this' | 'future' | 'all')}
         >
           <option value="this">Somente este mês</option>
           <option value="future">Este mês e todos os futuros</option>
-          <option value="all">Todo o histórico (inclui meses anteriores não pagos)</option>
+          <option value="all">Todo o histórico</option>
         </select>
-        <p className="text-[11px] text-primary/60 font-medium leading-tight px-1">
-          {applyScope === 'this' && 'Apenas este lançamento será alterado. Os demais permanecem intactos.'}
-          {applyScope === 'future' && 'Este e todos os próximos meses receberão o novo valor/data.'}
-          {applyScope === 'all' && '⚠️ Atenção: altera todo o grupo, inclusive meses não pagos anteriores.'}
-        </p>
       </div>
 
       {/* Ações */}
-      <div className="flex gap-3 pt-1">
+      <div className="flex gap-2 pt-2">
         <Button
           type="button"
           variant="outline"
           onClick={onClose}
-          className="flex-1 h-12 rounded-2xl font-bold"
+          className="flex-1 h-10 rounded-xl font-bold"
           disabled={isSaving}
         >
           Cancelar
@@ -135,12 +166,12 @@ export function EditBillForm({ bill, onClose, onSave }: EditBillFormProps) {
         <Button
           type="submit"
           disabled={isSaving}
-          className="flex-1 h-12 rounded-2xl font-black shadow-lg shadow-primary/20"
+          className="flex-1 h-10 rounded-xl font-black shadow-md shadow-primary/20"
         >
           {isSaving ? (
             <><Loader2 className="w-4 h-4 animate-spin mr-2" />Salvando...</>
           ) : (
-            'Confirmar Alteração'
+            'Confirmar'
           )}
         </Button>
       </div>

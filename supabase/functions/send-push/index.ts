@@ -2,10 +2,20 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8"
 import webpush from "npm:web-push"
 
+// Único usuário autorizado a disparar push (mesmo ID usado nas policies/RPCs de super admin).
+const SUPER_USER_ID = '5ab1df69-b67f-493c-b4dd-8f7b950049ac';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+}
+
+function jsonResponse(status: number, body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
 }
 
 serve(async (req) => {
@@ -16,11 +26,42 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    // Configurações do VAPID com fallbacks reais do .env local
-    const vapidPublicKey = Deno.env.get('WEBPUSH_PUBLIC_KEY') || Deno.env.get('VITE_WEBPUSH_PUBLIC_KEY') || 'BImytWeavw-TaMEIhM9phZqfuAOxQ0ncMGEd0lZJqqWiaENhCHHO0AIDv0YhkdrcyC4BkpMPlKl4Pg4B_ltoPn8';
-    const vapidPrivateKey = Deno.env.get('WEBPUSH_PRIVATE_KEY') || 'PWrzHZ9_VBBdvZhJ1nuHS9-OkgIbb-5ZpfNfbasEH-I';
+
+    // ── SEGURANÇA: exige um usuário autenticado e restringe o disparo
+    // de push ao Super Admin. Antes desta checagem, qualquer pessoa de
+    // posse da anon key (pública por natureza em qualquer app client-side)
+    // conseguia mandar push para todos os usuários ou para um userId
+    // arbitrário, já que a função rodava com a service role sem validar
+    // quem estava chamando.
+    const authHeader = req.headers.get('Authorization') ?? '';
+    const jwt = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+    if (!jwt) {
+      return jsonResponse(401, { error: 'Não autenticado.' });
+    }
+
+    const callerClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${jwt}` } },
+    });
+    const { data: userData, error: userError } = await callerClient.auth.getUser();
+
+    if (userError || !userData?.user || userData.user.id !== SUPER_USER_ID) {
+      return jsonResponse(403, { error: 'Acesso negado: apenas o Super Admin pode disparar notificações.' });
+    }
+
+    // Configurações do VAPID — precisam estar definidas como secrets da função
+    // (supabase secrets set WEBPUSH_PUBLIC_KEY=... WEBPUSH_PRIVATE_KEY=...).
+    // Sem fallback hardcoded: uma chave antiga vazou publicamente no
+    // histórico do Git e foi revogada; não reintroduzir valores fixos aqui.
+    const vapidPublicKey = Deno.env.get('WEBPUSH_PUBLIC_KEY');
+    const vapidPrivateKey = Deno.env.get('WEBPUSH_PRIVATE_KEY');
+
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      console.error('WEBPUSH_PUBLIC_KEY / WEBPUSH_PRIVATE_KEY não configuradas nos secrets da função.');
+      return jsonResponse(500, { error: 'Configuração de push ausente no servidor.' });
+    }
 
     webpush.setVapidDetails(
       'mailto:suporte@fluxofinanceiro.com',
@@ -34,15 +75,12 @@ serve(async (req) => {
     const { userId, broadcast, title, body: pushBody, type, url } = body;
 
     if (!pushBody) {
-      return new Response(JSON.stringify({ error: 'O corpo da mensagem (body) é obrigatório.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return jsonResponse(400, { error: 'O corpo da mensagem (body) é obrigatório.' });
     }
 
     // Busca as assinaturas no banco de dados
     let query = supabase.from('push_subscriptions').select('*');
-    
+
     if (!broadcast && userId && userId !== 'all') {
       query = query.eq('user_id', userId);
     }
@@ -54,10 +92,7 @@ serve(async (req) => {
     }
 
     if (!subscriptions || subscriptions.length === 0) {
-      return new Response(JSON.stringify({ success: true, message: 'Nenhuma assinatura ativa encontrada para envio.' }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return jsonResponse(200, { success: true, message: 'Nenhuma assinatura ativa encontrada para envio.' });
     }
 
     const payload = JSON.stringify({
@@ -95,26 +130,14 @@ serve(async (req) => {
     const results = await Promise.all(sendPromises);
     const successful = results.filter(r => r.success).length;
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        total: results.length,
-        sent: successful,
-        results
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
+    return jsonResponse(200, {
+      success: true,
+      total: results.length,
+      sent: successful,
+      results
+    });
   } catch (error: any) {
     console.error("Erro na execução da Edge Function:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
+    return jsonResponse(500, { error: error.message });
   }
 })

@@ -3,6 +3,7 @@ import { useFinanceStore } from '@/hooks/useFinanceStore';
 import { Transaction } from '@/types/finance';
 import { parseLocalDate } from '@/utils/dateUtils';
 import { buildCardInvoiceObligations } from '@/utils/invoiceObligations';
+import { addMonths } from 'date-fns';
 
 export function useEmergencyFund(currentMonthTransactions?: Transaction[]) {
   // Puxamos os dados centralizados diretamente da store de finanças
@@ -24,6 +25,16 @@ export function useEmergencyFund(currentMonthTransactions?: Transaction[]) {
     }
   });
 
+  // Estado local para o aporte mensal planejado (lido do localStorage com segurança)
+  const [monthlyDeposit, setMonthlyDepositState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('emergencyMonthlyDeposit');
+      return saved ? Number(saved) : 0;
+    } catch {
+      return 0;
+    }
+  });
+
   const setEmergencyMonths = useCallback((months: number) => {
     try {
       localStorage.setItem('emergencyMonths', String(months));
@@ -31,6 +42,15 @@ export function useEmergencyFund(currentMonthTransactions?: Transaction[]) {
       // Ignora erro de cota ou bloqueio de private mode
     }
     setEmergencyMonthsState(months);
+  }, []);
+
+  const setMonthlyDeposit = useCallback((amount: number) => {
+    try {
+      localStorage.setItem('emergencyMonthlyDeposit', String(amount));
+    } catch {
+      // Ignora erro de cota ou bloqueio de private mode
+    }
+    setMonthlyDepositState(amount);
   }, []);
 
   // useMemo garante que a matemática só rode se os dados relevantes mudarem
@@ -68,11 +88,6 @@ export function useEmergencyFund(currentMonthTransactions?: Transaction[]) {
         }
       }
 
-      // Verifica se a data nominal da transação pertence ao mês/ano ativo
-      const txDate = parseLocalDate(t.date.slice(0, 10));
-      const isCurrentMonth = txDate.getMonth() === targetMonth && txDate.getFullYear() === targetYear;
-      if (!isCurrentMonth) return false;
-
       // Regra do Gerenciador de Contas (despesas da gestão de contas):
       // Apenas recorrentes, parceladas, pagamentos de fatura ou filhas de recorrentes
       const isRecurringType = t.isRecurring || 
@@ -88,6 +103,11 @@ export function useEmergencyFund(currentMonthTransactions?: Transaction[]) {
       if (t.cardId && !t.isInvoicePayment && !t.isRecurring && t.transactionType !== 'recurring' && !t.originalId) {
         return false;
       }
+
+      // Verifica se a data nominal da transação pertence ao mês/ano ativo
+      const txDate = parseLocalDate(t.date.slice(0, 10));
+      const isCurrentMonth = txDate.getMonth() === targetMonth && txDate.getFullYear() === targetYear;
+      if (!isCurrentMonth) return false;
 
       return true;
     });
@@ -105,22 +125,42 @@ export function useEmergencyFund(currentMonthTransactions?: Transaction[]) {
     );
     const currentAmount = reserveAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
 
-    // 6. Calcula o progresso (limitado a 100% para não quebrar a UI)
+    // 6. Valor que ainda falta guardar (debitando o que já foi guardado)
+    const remainingAmount = Math.max(0, targetAmount - currentAmount);
+
+    // 7. Calcula o progresso (limitado a 100% para não quebrar a UI)
     const rawProgress = targetAmount > 0 ? (currentAmount / targetAmount) * 100 : 0;
     const progress = Math.min(rawProgress, 100);
+
+    // 8. Projeção de Prazo
+    let estimatedMonths: number | null = null;
+    let estimatedTargetDate: Date | null = null;
+
+    if (remainingAmount <= 0 && targetAmount > 0) {
+      estimatedMonths = 0;
+      estimatedTargetDate = new Date();
+    } else if (monthlyDeposit > 0 && remainingAmount > 0) {
+      estimatedMonths = Math.ceil(remainingAmount / monthlyDeposit);
+      estimatedTargetDate = addMonths(new Date(), estimatedMonths);
+    }
 
     return {
       monthlyFixed,
       targetAmount,
       currentAmount,
+      remainingAmount,
       progress,
       months: emergencyMonths,
+      monthlyDeposit,
+      estimatedMonths,
+      estimatedTargetDate,
       reserveAccounts
     };
-  }, [transactions, accounts, creditCards, viewDate, emergencyMonths]);
+  }, [transactions, accounts, creditCards, viewDate, emergencyMonths, monthlyDeposit]);
 
   return {
     ...emergencyData,
-    setEmergencyMonths
+    setEmergencyMonths,
+    setMonthlyDeposit
   };
 }

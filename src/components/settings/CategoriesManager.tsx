@@ -232,7 +232,7 @@ export function CategoriesManager() {
                             </DialogTitle>
                         </DialogHeader>
 
-                        <div className="px-6 py-6 space-y-6">
+                        <div className="px-4 sm:px-6 py-4 sm:py-6 space-y-4">
                             {/* Tipo */}
                             <div className="flex p-1 bg-muted/30 rounded-xl border border-border/30">
                                 {(['expense', 'income'] as const).map(t => (
@@ -383,6 +383,7 @@ function EditCategoryDialog({
     const [budgetLimit, setBudgetLimit] = useState<string>(category.budgetLimit ? String(category.budgetLimit) : '');
     const [newSubName, setNewSubName] = useState('');
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [mobileTab, setMobileTab] = useState<'details' | 'subs'>('details');
 
     const catSubs = [...subcategories.filter(sub => sub.categoryId === category.id)]
         .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
@@ -416,14 +417,47 @@ function EditCategoryDialog({
     return (
         <Dialog open={true} onOpenChange={onClose}>
             <DialogContent
-                className="w-[94vw] max-w-4xl rounded-[1.75rem] md:rounded-[2.5rem] p-0 border-none shadow-2xl bg-background overflow-hidden max-h-[90vh]"
+                className="w-[94vw] max-w-4xl rounded-[1.75rem] md:rounded-[2.5rem] p-0 border-none shadow-2xl bg-background overflow-hidden max-h-[90vh] flex flex-col"
                 aria-describedby={undefined}
             >
-                <div className="flex flex-col md:flex-row h-full max-h-[90vh]">
+                {/* Abas no Mobile */}
+                <div className="flex md:hidden p-2.5 border-b border-border/30 bg-muted/20 gap-1.5 shrink-0">
+                    <button
+                        type="button"
+                        onClick={() => setMobileTab('details')}
+                        className={cn(
+                            "flex-1 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all",
+                            mobileTab === 'details'
+                                ? "bg-primary text-primary-foreground shadow-sm"
+                                : "bg-background/60 text-muted-foreground hover:text-foreground"
+                        )}
+                    >
+                        Configurações
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setMobileTab('subs')}
+                        className={cn(
+                            "flex-1 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5",
+                            mobileTab === 'subs'
+                                ? "bg-primary text-primary-foreground shadow-sm"
+                                : "bg-background/60 text-muted-foreground hover:text-foreground"
+                        )}
+                    >
+                        <span>Subcategorias</span>
+                        <span className="text-[10px] bg-background/25 px-1.5 py-0.5 rounded-full font-bold">
+                            {catSubs.length}
+                        </span>
+                    </button>
+                </div>
 
+                <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
                     {/* Coluna esquerda: configurações */}
-                    <div className="md:w-[55%] overflow-y-auto p-6 md:p-8 space-y-6 border-b md:border-b-0 md:border-r border-border/20 bg-muted/5">
-                        <DialogHeader>
+                    <div className={cn(
+                        "md:w-[55%] overflow-y-auto p-4 md:p-6 space-y-4 border-b md:border-b-0 md:border-r border-border/20 bg-muted/5",
+                        mobileTab === 'details' ? 'block' : 'hidden md:block'
+                    )}>
+                        <DialogHeader className="hidden md:block">
                             <DialogTitle className="text-sm font-black uppercase tracking-widest text-primary">
                                 Editar Categoria
                             </DialogTitle>
@@ -518,7 +552,10 @@ function EditCategoryDialog({
                     </div>
 
                     {/* Coluna direita: subcategorias */}
-                    <div className="md:w-[45%] overflow-y-auto p-6 md:p-8 space-y-5 bg-background">
+                    <div className={cn(
+                        "md:w-[45%] overflow-y-auto p-4 md:p-6 space-y-4 bg-background",
+                        mobileTab === 'subs' ? 'block' : 'hidden md:block'
+                    )}>
                         <div className="flex items-center justify-between">
                             <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">
                                 Subcategorias

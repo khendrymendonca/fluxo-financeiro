@@ -524,7 +524,7 @@ export function BillsManager() {
             </div>
 
             {/* Lista de Contas */}
-            <div className={cn("grid gap-3 transition-opacity duration-200", isMutating > 0 && "pointer-events-none opacity-60")}>
+            <div className={cn("grid gap-3 transition-opacity duration-200 px-2 sm:px-0", isMutating > 0 && "pointer-events-none opacity-60")}>
                 {recurringTransactions.length === 0 ? (
                     <div className="card-elevated p-12 text-center text-muted-foreground">
                         <Receipt className="w-12 h-12 mx-auto mb-4 opacity-10" />
@@ -569,19 +569,8 @@ export function BillsManager() {
                                                 </div>
                                                 {category && (
                                                     <div className="flex items-center gap-1 shrink-0">
-                                                        <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                                                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: category.color }} />
                                                         <span className="truncate max-w-[80px]">{category.name}</span>
-                                                    </div>
-                                                )}
-                                                {transaction.accountId && !category && (
-                                                    <div className="flex items-center gap-1 shrink-0 font-bold">
-                                                        <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
-                                                        <ShieldAlert className="w-3 h-3" />
-                                                        <span className="truncate max-w-[100px]">{(() => {
-                                                            const acc = accounts.find(a => a.id === transaction.accountId);
-                                                            if (!acc) return '•';
-                                                            return acc.name ? `${(acc as any).institution ?? (acc as any).bank ?? ''} - ${acc.name}`.trim().replace(/^- /, '') : ((acc as any).institution ?? (acc as any).bank ?? acc.name);
-                                                        })()}</span>
                                                     </div>
                                                 )}
                                                 {transaction.cardId && (

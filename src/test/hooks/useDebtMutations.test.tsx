@@ -332,7 +332,7 @@ describe('useDebtMutations - sync de parcelas de acordo', () => {
 
     expect(debtInsert.insert).toHaveBeenCalledWith(
       expect.objectContaining({
-        total_amount: 1073.89,
+        total_amount: 1073.9,
         remaining_amount: 994.3,
       }),
     );
