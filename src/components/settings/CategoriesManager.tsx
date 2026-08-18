@@ -43,6 +43,14 @@ import {
 //   2. Nunca usar aspect-square + overflow-hidden juntos
 //   3. O card tem altura mínima fixa para simetria; o texto fica abaixo do ícone sem restrição de largura
 //   4. line-clamp-2 garante que nomes longos não quebram o layout mas aparecem completos em até 2 linhas
+//   5. hyphens-auto (+ lang="pt-BR") + break-words no nome: nomes de uma palavra
+//      só (ex: "Estacionamento") não têm espaço pra quebrar linha. hyphens-auto
+//      quebra na sílaba certa com hífen visível ("ESTACIONA-" / "MENTO"), como
+//      num jornal — sem isso, ou a palavra transborda e o line-clamp corta a
+//      última letra sem aviso ("Estacionament"), ou break-words sozinho quebra
+//      em qualquer ponto sem hífen, ficando com cara de duas palavras coladas.
+//      break-words continua como rede de segurança pra quando o navegador não
+//      encontra um ponto de hifenização válido pra alguma palavra.
 function CategoryCard({ cat, onClick }: { cat: Category; onClick: () => void }) {
     return (
         <button
@@ -58,7 +66,10 @@ function CategoryCard({ cat, onClick }: { cat: Category; onClick: () => void }) 
             </div>
 
             {/* Nome — largura total, quebra em até 2 linhas sem corte */}
-            <p className="font-black text-[9px] md:text-[10px] uppercase tracking-wider text-foreground text-center group-hover:text-primary transition-colors leading-tight line-clamp-2 w-full px-1">
+            <p
+                lang="pt-BR"
+                className="font-black text-[9px] md:text-[10px] uppercase tracking-wider text-foreground text-center group-hover:text-primary transition-colors leading-tight line-clamp-2 break-words [hyphens:auto] [-webkit-hyphens:auto] w-full px-1"
+            >
                 {cat.name}
             </p>
 
@@ -223,16 +234,22 @@ export function CategoriesManager() {
                     </DialogTrigger>
 
                     <DialogContent
-                        className="w-[92vw] max-w-sm rounded-[1.75rem] md:rounded-[2.5rem] p-0 border-none shadow-2xl bg-background overflow-y-auto max-h-[90vh]"
+                        // Estrutura flex (header fixo + corpo rolável + rodapé fixo): sem
+                        // "min-h-0" no corpo, o item trava no tamanho do conteúdo em vez de
+                        // encolher e rolar — o rodapé (botão "Criar Categoria") ficava
+                        // empurrado pra fora da área visível, no mobile e no web. max-h em
+                        // dvh, não vh: em mobile "vh" ignora a barra de endereço do navegador
+                        // e podia renderizar a modal mais alta que a área realmente visível.
+                        className="w-[92vw] max-w-sm sm:max-w-md md:max-w-lg rounded-[1.75rem] md:rounded-[2.5rem] p-0 border-none shadow-2xl bg-background overflow-hidden max-h-[90dvh] flex flex-col"
                         aria-describedby={undefined}
                     >
-                        <DialogHeader className="px-6 pt-7 pb-5 border-b border-border/20">
+                        <DialogHeader className="px-6 pt-7 pb-5 border-b border-border/20 shrink-0">
                             <DialogTitle className="text-sm font-black uppercase tracking-widest text-primary">
                                 Nova Categoria
                             </DialogTitle>
                         </DialogHeader>
 
-                        <div className="px-4 sm:px-6 py-4 sm:py-6 space-y-4">
+                        <div className="px-4 sm:px-6 py-4 sm:py-6 space-y-4 flex-1 overflow-y-auto min-h-0">
                             {/* Tipo */}
                             <div className="flex p-1 bg-muted/30 rounded-xl border border-border/30">
                                 {(['expense', 'income'] as const).map(t => (
@@ -293,7 +310,7 @@ export function CategoriesManager() {
                             </div>
                         </div>
 
-                        <div className="px-6 pb-6">
+                        <div className="px-6 py-4 border-t border-border/20 shrink-0">
                             <Button
                                 onClick={handleAddCategory}
                                 className="w-full h-12 rounded-xl font-black uppercase tracking-widest shadow-md hover:scale-[1.02] transition-all"
@@ -417,7 +434,8 @@ function EditCategoryDialog({
     return (
         <Dialog open={true} onOpenChange={onClose}>
             <DialogContent
-                className="w-[94vw] max-w-4xl rounded-[1.75rem] md:rounded-[2.5rem] p-0 border-none shadow-2xl bg-background overflow-hidden max-h-[90vh] flex flex-col"
+                // max-h em dvh, não vh — ver comentário no modal "Nova Categoria" acima.
+                className="w-[94vw] max-w-4xl rounded-[1.75rem] md:rounded-[2.5rem] p-0 border-none shadow-2xl bg-background overflow-hidden max-h-[90dvh] flex flex-col"
                 aria-describedby={undefined}
             >
                 {/* Abas no Mobile */}
