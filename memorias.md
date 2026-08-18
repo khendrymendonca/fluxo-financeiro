@@ -2079,6 +2079,11 @@ roundCurrency em debtAgreement.ts) para sempre arredondar os valores financeiros
       - **Cálculo de Prazo e Data de Conclusão**: O sistema projeta a quantidade de meses restantes (`Math.ceil(remainingAmount / monthlyDeposit)`), formatando em linguagem natural (ex: *"1 ano e 3 meses"*, *"8 meses"*) e exibindo a data prevista de conclusão (ex: *"Outubro de 2027"*).
       - **Reatividade a Variações de Custos Fixos**: Se o usuário cadastrar novas contas fixas, alterar valores ou ajustar a meta de meses (ex: de 6 para 12 meses), o valor total da reserva sobe proporcionalmente, atualizando o valor que falta e o tempo estimado da projeção em tempo real.
 
+  44. **Simplificação da Gestão de Categorias e Remoção de Agrupamento por Essencial/Estilo de Vida (18/08/2026)**:
+      - **Liberdade Total no Cadastro de Categorias**: Removemos a exigência de classificar categorias em "Essenciais", "Estilo de Vida" ou "Objetivos" em [CategoriesManager.tsx](file:///C:/Users/khendry.mendonca/OneDrive - TORP INDUSTRIA TEXTIL LTDA/Projeto/fluxo-financeiro/src/components/settings/CategoriesManager.tsx).
+      - **Visualização Unificada por Tipo**: As categorias agora são apresentadas de forma direta e limpa divididas exclusivamente em **Despesas** e **Receitas**, com listagem em ordem alfabética e contagem de itens cadastrados.
+      - **Formulários de Criação e Edição Simplificados**: Os modais de Nova Categoria e Edição de Categoria foram despoluídos, mantendo foco nos dados essenciais: Nome, Tipo, Ícone, Cor, Conta Fixa, Limite Mensal e Subcategorias, sem sobrecarga cognitiva para o usuário.
+
 
 
 
