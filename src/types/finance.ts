@@ -30,6 +30,7 @@ export interface Subcategory {
   categoryId: string;
   name: string;
   isActive: boolean;
+  icon?: string;
 }
 
 export interface Transaction {

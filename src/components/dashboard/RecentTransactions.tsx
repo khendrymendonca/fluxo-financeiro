@@ -5,7 +5,8 @@ import { ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatters';
 
 import { parseLocalDate } from '@/utils/dateUtils';
-import { getTransactionCategoryLabel } from '@/utils/transactionCategory';
+import { getTransactionCategoryBucket } from '@/utils/transactionCategory';
+import { IconRenderer } from '@/components/ui/IconSelector';
 
 interface RecentTransactionsProps {
   transactions: Transaction[];
@@ -22,10 +23,15 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
     });
   };
 
-  const { categories } = useFinanceStore();
+  const { categories, subcategories = [] } = useFinanceStore();
 
   const getCategory = (transaction: Transaction) => {
-    return { label: getTransactionCategoryLabel(transaction, categories, 'Outros') };
+    const bucket = getTransactionCategoryBucket(transaction, categories, 'Outros');
+    const matchedSubcategory = bucket.label !== 'Acordo'
+      ? subcategories.find(s => s.id === transaction.subcategoryId)
+      : undefined;
+    // Ícone da subcategoria prevalece sobre o da categoria-mãe, quando definido.
+    return { ...bucket, iconName: matchedSubcategory?.icon || bucket.category?.icon };
   };
 
   const getSourceLabel = (transaction: Transaction) => {
@@ -80,16 +86,30 @@ export function RecentTransactions({ transactions, accounts, creditCards }: Rece
               style={{ animationDelay: `${index * 30}ms` }}
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className={cn(
-                  "p-2 rounded-lg transition-all group-hover:scale-110 shrink-0",
-                  isIncome
-                    ? "bg-green-500/20 text-green-600 dark:bg-green-500/20 dark:text-green-400 md:dark:bg-emerald-500/10 md:dark:text-emerald-400"
-                    : "bg-red-500/20 text-red-600 dark:bg-red-500/20 dark:text-red-400 md:dark:bg-rose-500/10 md:dark:text-rose-400"
-                )}>
-                  {isIncome
-                    ? <ArrowUpRight className="w-4 h-4" />
-                    : <ArrowDownLeft className="w-4 h-4" />
-                  }
+                <div className="relative shrink-0">
+                  <div
+                    className={cn(
+                      "p-2 rounded-lg transition-all group-hover:scale-110",
+                      category.category ? "text-white" : (
+                        isIncome
+                          ? "bg-green-500/20 text-green-600 dark:bg-green-500/20 dark:text-green-400 md:dark:bg-emerald-500/10 md:dark:text-emerald-400"
+                          : "bg-red-500/20 text-red-600 dark:bg-red-500/20 dark:text-red-400 md:dark:bg-rose-500/10 md:dark:text-rose-400"
+                      )
+                    )}
+                    style={category.category ? { backgroundColor: category.category.color || '#71717a' } : undefined}
+                  >
+                    {category.category ? (
+                      <IconRenderer iconName={category.iconName || 'Tag'} className="w-4 h-4 stroke-[2px]" />
+                    ) : (
+                      isIncome ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownLeft className="w-4 h-4" />
+                    )}
+                  </div>
+                  <div className={cn(
+                    "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center ring-2 ring-card",
+                    isIncome ? "bg-green-600 dark:bg-emerald-500 text-white" : "bg-red-600 dark:bg-rose-500 text-white"
+                  )}>
+                    {isIncome ? <ArrowUpRight className="w-2 h-2" /> : <ArrowDownLeft className="w-2 h-2" />}
+                  </div>
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">

@@ -38,11 +38,13 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { EditBillForm } from './EditBillForm';
 import { getAccountOverdraftMetrics } from '@/utils/accountOverdraft';
 import { buildCanonicalCategoryFilterOptions, matchesCanonicalCategoryFilter } from '@/utils/categoryFilter';
-import { isRenegotiationTransaction } from '@/utils/transactionCategory';
+import { getTransactionCategoryBucket, isRenegotiationTransaction } from '@/utils/transactionCategory';
+import { IconRenderer } from '@/components/ui/IconSelector';
 
 export function BillsManager() {
     const {
         categories,
+        subcategories = [],
         accounts,
         creditCards,
         debts,
@@ -533,7 +535,18 @@ export function BillsManager() {
                 ) : (
                     recurringTransactions.map(transaction => {
                         const isLate = isDateOverdue(transaction.date, new Date()) && !transaction.isPaid;
-                        const category = categories.find(c => c.id === transaction.categoryId);
+                        const categoryBucket = getTransactionCategoryBucket(transaction, categories, 'Outros');
+                        const category = categoryBucket.category;
+                        const matchedSubcategory = categoryBucket.label !== 'Acordo'
+                            ? subcategories.find(s => s.id === transaction.subcategoryId)
+                            : undefined;
+                        // Ícone da subcategoria prevalece sobre o da categoria-mãe, quando definido.
+                        const displayIconName = matchedSubcategory?.icon || category?.icon;
+                        // Editar/Excluir somem em alguns lançamentos (fatura já paga, parcela de
+                        // dívida, etc.) — mas continuam ocupando o lugar (só ficam invisíveis) pra
+                        // o preço não pular de coluna dependendo de quais botões a linha tem.
+                        const canEdit = !(transaction.transactionType === 'installment' && transaction.debtId) && !transaction.isPaid && !transaction.isInvoicePayment;
+                        const canDelete = !transaction.debtId;
 
                         return (
                             <div key={transaction.id} className="flex flex-col gap-1">
@@ -546,11 +559,28 @@ export function BillsManager() {
                                         : "border-primary/30 dark:border-primary/20 border-l-primary"
                                 )}>
                                     <div className="flex items-center gap-4 min-w-0 flex-1">
-                                        <div className={cn("p-3 rounded-2xl shrink-0",
-                                            transaction.isInvoicePayment ? "bg-primary/10 text-primary" :
-                                                (transaction.type === 'expense' ? "bg-danger/10 text-danger" : "bg-success/10 text-success"))}>
-                                            {transaction.isInvoicePayment ? <CardIcon className="w-5 h-5" /> :
-                                                (transaction.type === 'expense' ? <ArrowDownCircle className="w-5 h-5" /> : <ArrowUpCircle className="w-5 h-5" />)}
+                                        {/* Ícone da categoria é o protagonista — tipo/status de pagamento vira selinho no canto */}
+                                        <div className="relative shrink-0">
+                                            <div className={cn("p-3 rounded-2xl",
+                                                category ? "text-white" : (
+                                                    transaction.isInvoicePayment ? "bg-primary/10 text-primary" :
+                                                        (transaction.type === 'expense' ? "bg-danger/10 text-danger" : "bg-success/10 text-success")
+                                                ))}
+                                                style={category ? { backgroundColor: category.color || '#71717a' } : undefined}
+                                            >
+                                                {category ? (
+                                                    <IconRenderer iconName={displayIconName || 'Tag'} className="w-5 h-5 stroke-[2px]" />
+                                                ) : (
+                                                    transaction.isInvoicePayment ? <CardIcon className="w-5 h-5" /> :
+                                                        (transaction.type === 'expense' ? <ArrowDownCircle className="w-5 h-5" /> : <ArrowUpCircle className="w-5 h-5" />)
+                                                )}
+                                            </div>
+                                            <div className={cn("absolute -bottom-1 -right-1 w-[18px] h-[18px] rounded-full flex items-center justify-center ring-2 ring-white dark:ring-zinc-900",
+                                                transaction.isInvoicePayment ? "bg-primary text-primary-foreground" :
+                                                    (transaction.type === 'expense' ? "bg-danger text-danger-foreground" : "bg-success text-success-foreground"))}>
+                                                {transaction.isInvoicePayment ? <CardIcon className="w-2.5 h-2.5" /> :
+                                                    (transaction.type === 'expense' ? <ArrowDownCircle className="w-2.5 h-2.5" /> : <ArrowUpCircle className="w-2.5 h-2.5" />)}
+                                            </div>
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2">
@@ -614,18 +644,21 @@ export function BillsManager() {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            {!(transaction.transactionType === 'installment' && transaction.debtId) && !transaction.isPaid && !transaction.isInvoicePayment && (
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    aria-label="Editar conta fixa"
-                                                    onClick={() => setEditingBill(transaction)}
-                                                    className="h-10 px-3 md:px-4 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 flex items-center gap-2 font-black uppercase text-[11px] tracking-wider"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                    <span className="hidden xs:inline">Editar</span>
-                                                </Button>
-                                            )}
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                aria-label="Editar conta fixa"
+                                                aria-hidden={!canEdit}
+                                                tabIndex={canEdit ? 0 : -1}
+                                                onClick={() => canEdit && setEditingBill(transaction)}
+                                                className={cn(
+                                                    "h-10 px-3 md:px-4 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 flex items-center gap-2 font-black uppercase text-[11px] tracking-wider",
+                                                    !canEdit && "invisible pointer-events-none"
+                                                )}
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                                <span className="hidden xs:inline">Editar</span>
+                                            </Button>
                                             {!transaction.isPaid ? (
                                                 <Button size="sm" variant="ghost"
                                                     onClick={() => {
@@ -657,15 +690,22 @@ export function BillsManager() {
                                                     <RotateCcw className="w-4 h-4" /> <span className="hidden xs:inline">Estornar</span>
                                                 </Button>
                                             )}
-                                            {!(transaction.debtId || transaction.transactionType === 'installment') && (
-                                                <Button size="sm" variant="ghost"
-                                                    onClick={() => setItemToDelete(transaction)}
-                                                    aria-label="Excluir lançamento"
-                                                    className="h-10 w-10 p-0 rounded-xl hover:bg-danger/10 text-danger shrink-0"
-                                                    title="Excluir lançamento">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
-                                            )}
+                                            {/* Parcelamentos (boleto/carnê) já podem ser excluídos aqui — o BulkDeleteDialog
+                                                abaixo pergunta o alcance (só esta parcela / futuras / grupo inteiro) e o
+                                                backend recalcula saldo/limite normalmente. Dívidas continuam bloqueadas
+                                                aqui porque são geridas só pelo DebtsManager. */}
+                                            <Button size="sm" variant="ghost"
+                                                onClick={() => canDelete && setItemToDelete(transaction)}
+                                                aria-label="Excluir lançamento"
+                                                aria-hidden={!canDelete}
+                                                tabIndex={canDelete ? 0 : -1}
+                                                className={cn(
+                                                    "h-10 w-10 p-0 rounded-xl hover:bg-danger/10 text-danger shrink-0",
+                                                    !canDelete && "invisible pointer-events-none"
+                                                )}
+                                                title="Excluir lançamento">
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
                                         </div>
                                     </div>
                                 </div>

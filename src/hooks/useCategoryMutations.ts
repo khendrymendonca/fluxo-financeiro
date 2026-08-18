@@ -108,8 +108,9 @@ export function useAddSubcategory() {
 
       const { data, error } = await supabase.from('subcategories').insert({
         name: safeName,
-        category_id: subcategory.categoryId
-      }).select('id, name, category_id, is_active');
+        category_id: subcategory.categoryId,
+        icon: subcategory.icon || null
+      }).select('id, name, category_id, is_active, icon');
 
       if (error) throw error;
       return data;
@@ -149,9 +150,12 @@ export function useUpdateSubcategory() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, name }: { id: string, name: string }) => {
-      const safeName = (name ?? '').trim().slice(0, 100);
-      const { data, error } = await supabase.from('subcategories').update({ name: safeName }).eq('id', id).select('id, name, category_id, is_active');
+    mutationFn: async ({ id, name, icon }: { id: string, name?: string, icon?: string | null }) => {
+      const updates: { name?: string; icon?: string | null } = {};
+      if (name !== undefined) updates.name = name.trim().slice(0, 100);
+      if (icon !== undefined) updates.icon = icon || null;
+
+      const { data, error } = await supabase.from('subcategories').update(updates).eq('id', id).select('id, name, category_id, is_active, icon');
 
       if (error) throw error;
       return data;

@@ -7,7 +7,7 @@ import { useToggleTransactionPaid } from '@/hooks/useTransactionMutations';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
-  CheckCircle2, Clock, Calendar, ShieldAlert, Receipt
+  CheckCircle2, Clock, Calendar, ShieldAlert, Receipt, Tag
 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { Portal } from '@/components/ui/Portal';
@@ -15,8 +15,9 @@ import { BulkDeleteDialog } from './BulkDeleteDialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { getAccountOverdraftMetrics } from '@/utils/accountOverdraft';
-import { getTransactionCategoryLabel } from '@/utils/transactionCategory';
+import { getTransactionCategoryBucket, getTransactionCategoryLabel } from '@/utils/transactionCategory';
 import { buildCanonicalCategoryFilterOptions, matchesCanonicalCategoryFilter } from '@/utils/categoryFilter';
+import { IconRenderer } from '@/components/ui/IconSelector';
 
 export interface TransactionListProps {
   transactions: Transaction[];
@@ -635,10 +636,15 @@ export function TransactionList({
                     item.isInvoicePayment ||
                     item.originalId
                   );
-                  const categoryLabel = getTransactionCategoryLabel(item, categories, 'Outros');
-                  const subcategoryName = categoryLabel !== 'Acordo'
-                    ? subcategories?.find((subcategory) => subcategory.id === item.subcategoryId)?.name
-                    : null;
+                  const categoryBucket = getTransactionCategoryBucket(item, categories, 'Outros');
+                  const categoryLabel = categoryBucket.label;
+                  const categoryIcon = categoryBucket.category;
+                  const matchedSubcategory = categoryLabel !== 'Acordo'
+                    ? subcategories?.find((subcategory) => subcategory.id === item.subcategoryId)
+                    : undefined;
+                  const subcategoryName = matchedSubcategory?.name;
+                  // Ícone da subcategoria prevalece sobre o da categoria-mãe, quando definido.
+                  const displayIconName = matchedSubcategory?.icon || categoryIcon?.icon;
                   const categoryDisplay = subcategoryName ? `${categoryLabel} · ${subcategoryName}` : categoryLabel;
                   const isFixedManagedItem = Boolean(
                     isManagedByBills &&
@@ -686,11 +692,30 @@ export function TransactionList({
                       }}>
                         {/* Lado esquerdo */}
                         <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
-                          <div className={cn("p-2.5 rounded-full border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 group-hover:border-gray-200 dark:group-hover:border-zinc-700 transition-colors",
-                            isPending ? "text-primary border-primary/20 bg-primary/5" : (isIncome ? "text-success bg-success/5 border-success/10" : "text-gray-400 dark:text-zinc-400"))}>
-                            {item.icon ? <item.icon className="w-5 h-5" /> : (
-                              isPending ? <Clock className="w-5 h-5" /> : (isIncome ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />)
-                            )}
+                          {/* Ícone da categoria é o protagonista aqui — a direção do dinheiro
+                              (entrada/saída/pendente) virou só o selinho no canto, não some. */}
+                          <div className="relative shrink-0">
+                            <div
+                              className={cn(
+                                "p-2.5 rounded-full border transition-colors",
+                                categoryIcon
+                                  ? "border-transparent text-white"
+                                  : "border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 text-gray-400 dark:text-zinc-400 group-hover:border-gray-200 dark:group-hover:border-zinc-700"
+                              )}
+                              style={categoryIcon ? { backgroundColor: categoryIcon.color || '#71717a' } : undefined}
+                            >
+                              {categoryIcon ? (
+                                <IconRenderer iconName={displayIconName || 'Tag'} className="w-5 h-5 stroke-[2px]" />
+                              ) : (
+                                <Tag className="w-5 h-5" />
+                              )}
+                            </div>
+                            <div className={cn(
+                              "absolute -bottom-1 -right-1 w-[18px] h-[18px] rounded-full flex items-center justify-center ring-2 ring-background",
+                              isPending ? "bg-primary text-primary-foreground" : (isIncome ? "bg-success text-success-foreground" : "bg-gray-400 dark:bg-zinc-600 text-white")
+                            )}>
+                              {isPending ? <Clock className="w-2.5 h-2.5" /> : (isIncome ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />)}
+                            </div>
                           </div>
                           <div className="min-w-0 flex-1 space-y-1.5">
                             <div className="flex min-w-0 items-start justify-between gap-3">

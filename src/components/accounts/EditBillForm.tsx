@@ -8,12 +8,13 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { parseLocalDate } from '@/utils/dateUtils';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { CategoryPickerPopover } from '@/components/ui/CategoryPickerPopover';
 
 interface EditBillFormProps {
   bill: Transaction;
   onClose: () => void;
   onSave: (
-    updates: { amount?: number; date?: string; description?: string; categoryId?: string | null },
+    updates: { amount?: number; date?: string; description?: string; categoryId?: string | null; subcategoryId?: string | null },
     applyScope: 'this' | 'future' | 'all',
     realId: string,
     referenceDate: string
@@ -21,9 +22,12 @@ interface EditBillFormProps {
 }
 
 export function EditBillForm({ bill, onClose, onSave }: EditBillFormProps) {
-  const { categories } = useFinanceStore();
+  const { categories, subcategories } = useFinanceStore();
   const [description, setDescription] = useState(bill.description ?? '');
   const [categoryId, setCategoryId] = useState<string | null>(bill.categoryId ?? null);
+  const [subcategoryId, setSubcategoryId] = useState<string | null>(
+    bill.subcategoryId ?? (bill as any).subcategory_id ?? null
+  );
   const [amount, setAmount] = useState(bill.amount.toFixed(2));
   const [date, setDate] = useState(bill.date?.slice(0, 10) ?? '');
   const [applyScope, setApplyScope] = useState<'this' | 'future' | 'all'>('future');
@@ -31,19 +35,21 @@ export function EditBillForm({ bill, onClose, onSave }: EditBillFormProps) {
 
   // Preservamos o ID exato (mesmo que seja virtual) para que o backend/mutações consigam detectar e desmembrar
   const idToUpdate = bill.id;
+  const initialSubcategoryId = bill.subcategoryId ?? (bill as any).subcategory_id ?? null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const parsedAmount = parseFloat(amount);
     if (!parsedAmount || parsedAmount <= 0) return;
 
-    const updates: { amount?: number; date?: string; description?: string; categoryId?: string | null } = {};
+    const updates: { amount?: number; date?: string; description?: string; categoryId?: string | null; subcategoryId?: string | null } = {};
 
     // Só envia o campo se mudou
     if (parsedAmount !== bill.amount) updates.amount = parsedAmount;
     if (date && date !== bill.date?.slice(0, 10)) updates.date = date;
     if (description && description !== bill.description) updates.description = description;
     if (categoryId !== bill.categoryId) updates.categoryId = categoryId;
+    if (subcategoryId !== initialSubcategoryId) updates.subcategoryId = subcategoryId;
 
     if (Object.keys(updates).length === 0) {
       onClose();
@@ -85,21 +91,31 @@ export function EditBillForm({ bill, onClose, onSave }: EditBillFormProps) {
 
       {/* Categoria */}
       <div className="space-y-1">
-        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-          Categoria
-        </Label>
-        <select
-          className="h-10 w-full rounded-xl border-2 font-bold px-3 focus:ring-2 focus:ring-primary outline-none transition-all cursor-pointer bg-background"
-          value={categoryId || ''}
-          onChange={(e) => setCategoryId(e.target.value || null)}
-        >
-          <option value="">Sem categoria</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center justify-between">
+          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            Categoria
+          </Label>
+          {categoryId && (
+            <button
+              type="button"
+              onClick={() => { setCategoryId(null); setSubcategoryId(null); }}
+              className="text-[10px] font-bold text-muted-foreground hover:text-danger transition-colors"
+            >
+              Remover categoria
+            </button>
+          )}
+        </div>
+        <CategoryPickerPopover
+          categories={categories}
+          subcategories={subcategories}
+          type={bill.type}
+          categoryId={categoryId}
+          subcategoryId={subcategoryId}
+          onSelect={(newCategoryId, newSubcategoryId) => {
+            setCategoryId(newCategoryId);
+            setSubcategoryId(newSubcategoryId);
+          }}
+        />
       </div>
 
       {/* Valor */}

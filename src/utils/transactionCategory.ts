@@ -9,7 +9,7 @@ export const LOGICAL_INVOICE_CATEGORY_KEY = 'logical:invoice-payment';
 type CategoryBucket = {
   key: string;
   label: string;
-  category?: Pick<Category, 'id' | 'name' | 'budgetLimit' | 'color'>;
+  category?: Pick<Category, 'id' | 'name' | 'budgetLimit' | 'color' | 'icon'>;
 };
 
 type CategoryTransaction = Pick<
@@ -60,7 +60,7 @@ export function isRenegotiationTransaction(transaction: Pick<Transaction, 'descr
 
 export function getTransactionCategoryBucket(
   transaction: CategoryTransaction,
-  categories: Pick<Category, 'id' | 'name' | 'budgetLimit' | 'color'>[],
+  categories: Pick<Category, 'id' | 'name' | 'budgetLimit' | 'color' | 'icon'>[],
   fallback = 'Sem Categoria'
 ): CategoryBucket {
   if (transaction.debtId) {

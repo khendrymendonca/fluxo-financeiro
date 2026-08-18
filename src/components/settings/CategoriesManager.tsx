@@ -6,9 +6,11 @@ import {
     useAddSubcategory,
     useDeleteSubcategory,
     useUpdateCategory,
+    useUpdateSubcategory,
 } from '@/hooks/useCategoryMutations';
 import { Category } from '@/types/finance';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -301,6 +303,7 @@ function EditCategoryDialog({
     const { mutate: deleteCategory } = useDeleteCategory();
     const { mutate: addSubcategory } = useAddSubcategory();
     const { mutate: deleteSubcategory } = useDeleteSubcategory();
+    const { mutate: updateSubcategory } = useUpdateSubcategory();
     const { data: subcategories = [] } = useSubcategories();
     const [name, setName] = useState(category.name);
     const [color, setColor] = useState(category.color);
@@ -508,12 +511,43 @@ function EditCategoryDialog({
                                 catSubs.map(sub => (
                                     <div
                                         key={sub.id}
-                                        className="flex items-center justify-between p-3.5 rounded-xl bg-muted/10 border border-border/20 hover:border-border/40 group/sub transition-all"
+                                        className="flex items-center justify-between p-3.5 rounded-xl bg-muted/10 border border-border/20 hover:border-border/40 group/sub transition-all gap-2"
                                     >
-                                        <span className="text-xs font-bold uppercase tracking-wide opacity-70">{sub.name}</span>
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <button
+                                                        type="button"
+                                                        title="Escolher ícone da subcategoria"
+                                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0 hover:scale-105 transition-transform"
+                                                        style={{ backgroundColor: category.color }}
+                                                    >
+                                                        <IconRenderer iconName={sub.icon || category.icon || 'Tag'} className="w-3.5 h-3.5 stroke-[2.2px]" />
+                                                    </button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-72 p-3 rounded-2xl" align="start">
+                                                    <IconSelector
+                                                        label="Ícone da subcategoria"
+                                                        selectedIcon={sub.icon || category.icon || 'Tag'}
+                                                        onSelect={(iconName) => updateSubcategory({ id: sub.id, icon: iconName })}
+                                                        color={category.color}
+                                                    />
+                                                    {sub.icon && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => updateSubcategory({ id: sub.id, icon: null })}
+                                                            className="mt-2 w-full text-center text-[10px] font-bold text-muted-foreground hover:text-danger transition-colors"
+                                                        >
+                                                            Usar ícone da categoria
+                                                        </button>
+                                                    )}
+                                                </PopoverContent>
+                                            </Popover>
+                                            <span className="text-xs font-bold uppercase tracking-wide opacity-70 truncate">{sub.name}</span>
+                                        </div>
                                         <button
                                             onClick={() => deleteSubcategory(sub.id)}
-                                            className="p-1.5 rounded-lg text-muted-foreground/20 hover:text-danger hover:bg-danger/5 opacity-0 group-hover/sub:opacity-100 transition-all"
+                                            className="p-1.5 rounded-lg text-muted-foreground/20 hover:text-danger hover:bg-danger/5 opacity-0 group-hover/sub:opacity-100 transition-all shrink-0"
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />
                                         </button>
