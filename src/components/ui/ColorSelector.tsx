@@ -64,14 +64,9 @@ export function ColorSelector({ selectedColor, onSelect, label, className }: Col
     return (
         <div className={cn("space-y-2", className)}>
             {label && (
-                <div className="flex items-center justify-between">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-0.5">
-                        {label}
-                    </Label>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
-                        {selectedColor}
-                    </span>
-                </div>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-0.5">
+                    {label}
+                </Label>
             )}
 
             {/* 10 Cores Rápidas com Tamanho Fixo e Borda de Alto Contraste */}
