@@ -4,6 +4,7 @@ import {
   getTransactionCategoryLabel,
   isRenegotiationTransaction,
   LOGICAL_AGREEMENT_CATEGORY_KEY,
+  LOGICAL_INVOICE_CATEGORY_KEY,
   LOGICAL_MISSING_CATEGORY_KEY_PREFIX,
   LOGICAL_RENEGOTIATION_CATEGORY_KEY,
   LOGICAL_UNCATEGORIZED_CATEGORY_KEY,
@@ -147,6 +148,47 @@ describe('transactionCategory', () => {
     ).toEqual({
       key: LOGICAL_AGREEMENT_CATEGORY_KEY,
       label: 'Acordo',
+    });
+  });
+
+  it('pagamento normal de fatura (isInvoicePayment) cai no balde genérico Cartão de Crédito', () => {
+    expect(
+      getTransactionCategoryBucket(
+        {
+          debtId: undefined,
+          categoryId: undefined,
+          description: 'Pagamento fatura Nubank 08/2026',
+          transactionType: 'punctual',
+          cardId: 'card-1',
+          invoiceMonthYear: '2026-08',
+          isInvoicePayment: true,
+        },
+        []
+      )
+    ).toEqual({
+      key: LOGICAL_INVOICE_CATEGORY_KEY,
+      label: 'Cartão de Crédito',
+    });
+  });
+
+  it('perna de crédito de abatimento (isInvoicePayment + categoria Abatimento) mostra a categoria real, não o balde genérico', () => {
+    expect(
+      getTransactionCategoryBucket(
+        {
+          debtId: undefined,
+          categoryId: 'cat-abatimento',
+          description: '[Entrada] Abatimento',
+          transactionType: 'punctual',
+          cardId: 'card-1',
+          invoiceMonthYear: '2026-08',
+          isInvoicePayment: true,
+        },
+        [{ id: 'cat-abatimento', name: 'Abatimento no Cartão' }]
+      )
+    ).toEqual({
+      key: 'category:cat-abatimento',
+      label: 'Abatimento no Cartão',
+      category: { id: 'cat-abatimento', name: 'Abatimento no Cartão' },
     });
   });
 

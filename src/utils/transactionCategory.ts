@@ -78,6 +78,22 @@ export function getTransactionCategoryBucket(
   }
 
   if (transaction.isInvoicePayment) {
+    // Pagamento normal de fatura não tem categoria própria — cai no balde
+    // genérico "Cartão de Crédito". Mas a perna de crédito de um abatimento
+    // (entra dinheiro reduzindo a fatura) também é isInvoicePayment=true, e
+    // ela TEM uma categoria explícita ("Abatimento no Cartão") — nesse caso
+    // a categoria real deve aparecer, não o balde genérico, senão a entrada
+    // e a saída do mesmo abatimento mostram categorias diferentes na tela.
+    const invoicePaymentCategory = categories.find((category) => category.id === transaction.categoryId);
+
+    if (invoicePaymentCategory && normalizeText(invoicePaymentCategory.name).includes('abatimento')) {
+      return {
+        key: `category:${invoicePaymentCategory.id}`,
+        label: invoicePaymentCategory.name,
+        category: invoicePaymentCategory,
+      };
+    }
+
     return {
       key: LOGICAL_INVOICE_CATEGORY_KEY,
       label: 'Cartão de Crédito',
