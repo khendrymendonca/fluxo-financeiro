@@ -3,7 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "./hooks/useTheme";
 import { ThemeColorProvider } from "./hooks/useThemeColor";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -47,6 +48,7 @@ const ReactQueryDevtools = enableQueryDevtools
 const AppRoutes = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     // Escuta o evento PASSWORD_RECOVERY do Supabase para redirecionar para a tela de redefinição
@@ -68,17 +70,21 @@ const AppRoutes = () => {
   return (
     <AppBootGate user={user} authLoading={loading}>
       <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
-        <Routes>
-          <Route path="/" element={user ? <Index /> : <AuthPage />} />
-          <Route path="/auth/confirmado" element={<EmailConfirmedPage />} />
-          <Route path="/auth/redefinir-senha" element={<EmailResetPasswordPage />} />
-          <Route path="/auth/convite" element={<InviteUserPage />} />
-          <Route path="/auth/acesso" element={<MagicLinkAccessPage />} />
-          <Route path="/auth/email-alterado" element={<EmailChangedPage />} />
-          <Route path="/auth/reautenticacao" element={<ReauthenticationPage />} />
-          <Route path="/super" element={user ? <SuperPage /> : <AuthPage />} />
-          <Route path="*" element={user ? <NotFound /> : <AuthPage />} />
-        </Routes>
+        {/* resetKey=pathname: se a rota mudar, o boundary esquece o erro
+            anterior — sair da tela quebrada não deixa o usuário preso nela. */}
+        <ErrorBoundary resetKey={location.pathname}>
+          <Routes>
+            <Route path="/" element={user ? <Index /> : <AuthPage />} />
+            <Route path="/auth/confirmado" element={<EmailConfirmedPage />} />
+            <Route path="/auth/redefinir-senha" element={<EmailResetPasswordPage />} />
+            <Route path="/auth/convite" element={<InviteUserPage />} />
+            <Route path="/auth/acesso" element={<MagicLinkAccessPage />} />
+            <Route path="/auth/email-alterado" element={<EmailChangedPage />} />
+            <Route path="/auth/reautenticacao" element={<ReauthenticationPage />} />
+            <Route path="/super" element={user ? <SuperPage /> : <AuthPage />} />
+            <Route path="*" element={user ? <NotFound /> : <AuthPage />} />
+          </Routes>
+        </ErrorBoundary>
       </div>
     </AppBootGate>
   );

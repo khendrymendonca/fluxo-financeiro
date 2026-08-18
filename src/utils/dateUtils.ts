@@ -8,6 +8,15 @@ export const parseLocalDate = (dateStr: string) => {
     const literalDate = dateStr.split('T')[0];
     const [year, month, day] = literalDate.split('-').map(Number);
 
+    // Guarda contra string em formato inesperado (year/month/day viram NaN):
+    // sem isso, "new Date(NaN, NaN, NaN)" retorna um Invalid Date que passa
+    // batido aqui, mas explode mais tarde em qualquer format(...) do
+    // date-fns ("RangeError: Invalid time value") — um crash sem stack
+    // trace útil em quem chamou, muito depois da causa real.
+    if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+        return new Date();
+    }
+
     return new Date(year, month - 1, day);
 };
 
