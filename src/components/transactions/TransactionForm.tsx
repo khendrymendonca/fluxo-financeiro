@@ -236,6 +236,14 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
 
   const selectedCategory = categories.find(c => c.id === categoryId);
   const isAbatementCategory = !!selectedCategory?.name.toLowerCase().includes('abatimento');
+  // Categoria "Abatimento no Cartão" pré-configurada pra todo usuário (migration
+  // 0048). Usada pra oferecer o atalho direto no passo 2 sem o usuário precisar
+  // achar/criar a categoria na mão — ela já vem com o nome certo, então toda a
+  // lógica existente de isAbatementCategory (seletor de cartão, conta de origem
+  // obrigatória) funciona sem precisar de nenhum TabType novo.
+  const abatementCategory = categories.find(
+    c => c.type === 'expense' && c.name.toLowerCase().includes('abatimento')
+  );
   const filteredCategories = categories.filter(c => c.type === type);
   const currentCategorySubcategories = subcategories.filter(s => s.categoryId === categoryId);
 
@@ -654,17 +662,27 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
   );
 
   const renderStep2 = () => {
-    const options = type === 'income'
+    const options: { id: string; tab: TabType; label: string; icon: typeof Coins; desc: string; presetCategoryId?: string }[] = type === 'income'
       ? [
-        { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Recebi hoje ou em data única.' },
-        { id: 'renda_fixa', label: 'Renda Fixa', icon: RotateCw, desc: 'Salário ou renda mensal automática.' },
-        { id: 'transfer', label: 'Transferência', icon: ArrowRightLeft, desc: 'Mover dinheiro entre contas.' },
+        { id: 'pontual', tab: 'pontual', label: 'Pontual', icon: Coins, desc: 'Recebi hoje ou em data única.' },
+        { id: 'renda_fixa', tab: 'renda_fixa', label: 'Renda Fixa', icon: RotateCw, desc: 'Salário ou renda mensal automática.' },
+        { id: 'transfer', tab: 'transfer', label: 'Transferência', icon: ArrowRightLeft, desc: 'Mover dinheiro entre contas.' },
       ]
       : [
-        { id: 'pontual', label: 'Pontual', icon: Coins, desc: 'Compra à vista no débito ou dinheiro.' },
-        { id: 'parcelamento', label: 'Parcelado', icon: CreditCard, desc: 'Compra no cartão, boleto ou carnê.' },
-        { id: 'fixo', label: 'Fixo', icon: RotateCw, desc: 'Contas que repetem todo mês.' },
-        { id: 'transfer', label: 'Transferência', icon: ArrowRightLeft, desc: 'Mover entre contas ou pagar cartão.' },
+        { id: 'pontual', tab: 'pontual', label: 'Pontual', icon: Coins, desc: 'Compra à vista no débito ou dinheiro.' },
+        { id: 'parcelamento', tab: 'parcelamento', label: 'Parcelado', icon: CreditCard, desc: 'Compra no cartão, boleto ou carnê.' },
+        { id: 'fixo', tab: 'fixo', label: 'Fixo', icon: RotateCw, desc: 'Contas que repetem todo mês.' },
+        { id: 'transfer', tab: 'transfer', label: 'Transferência', icon: ArrowRightLeft, desc: 'Mover entre contas ou pagar cartão.' },
+        ...(abatementCategory
+          ? [{
+              id: 'abatimento_cartao',
+              tab: 'pontual' as TabType,
+              label: 'Abatimento no Cartão',
+              icon: CreditCard,
+              desc: 'Pagar ou adiantar a fatura do cartão de crédito.',
+              presetCategoryId: abatementCategory.id,
+            }]
+          : []),
       ];
 
     return (
@@ -679,7 +697,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
           {options.map((opt) => (
             <button
               key={opt.id}
-              onClick={() => { setActiveTab(opt.id as TabType); setStep('DETAILS'); }}
+              onClick={() => { setActiveTab(opt.tab); setCategoryId(opt.presetCategoryId || ''); setStep('DETAILS'); }}
               className="flex items-center gap-4 p-4 rounded-2xl border-2 border-border bg-card hover:border-primary hover:bg-primary/5 transition-all group text-left"
             >
               <div className="p-3 rounded-xl bg-muted group-hover:bg-primary/10 group-hover:text-primary transition-colors">
@@ -733,12 +751,12 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
               <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/30 border border-border/50 mb-2">
                 <div className="flex items-center gap-2">
                   <div className={cn("p-2 rounded-xl", activeTab === 'transfer' ? "bg-primary text-primary-foreground" : type === 'income' ? "bg-success text-success-foreground" : "bg-danger text-danger-foreground")}>
-                    {activeTab === 'transfer' ? <ArrowRightLeft className="w-4 h-4" /> : activeTab === 'renda_fixa' ? <RotateCw className="w-4 h-4" /> : <Coins className="w-4 h-4" />}
+                    {activeTab === 'transfer' ? <ArrowRightLeft className="w-4 h-4" /> : activeTab === 'renda_fixa' ? <RotateCw className="w-4 h-4" /> : isAbatementCategory ? <CreditCard className="w-4 h-4" /> : <Coins className="w-4 h-4" />}
                   </div>
                   <div>
                     <p className="text-xs font-black uppercase tracking-widest opacity-50">{activeTab === 'transfer' ? 'TRANSFERÊNCIA' : type === 'income' ? 'RECEITA' : 'DESPESA'}</p>
                     <p className="text-sm font-black flex items-center gap-2">
-                      {activeTab === 'pontual' && 'Lançamento Pontual'}
+                      {activeTab === 'pontual' && (isAbatementCategory ? 'Abatimento no Cartão' : 'Lançamento Pontual')}
                       {activeTab === 'parcelamento' && 'Lançamento Parcelado'}
                       {activeTab === 'fixo' && 'Lançamento Fixo'}
                       {activeTab === 'transfer' && 'Transferência'}
