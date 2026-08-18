@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import ReportsDashboard, { buildCategoryExpenseRanking, buildProjectedReportPeriodData, buildReportPeriodData } from '@/pages/ReportsDashboard';
+import ReportsDashboard from '@/pages/ReportsDashboard';
+import { buildCategoryExpenseRanking, buildProjectedReportPeriodData, buildReportPeriodData } from '@/utils/reportCalculations';
 import { buildIncomeConsumption, buildPeriodComparison } from '@/utils/reportComparisons';
 import { Category, Transaction } from '@/types/finance';
 
