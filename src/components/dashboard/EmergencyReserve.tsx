@@ -135,8 +135,10 @@ export function EmergencyReserve({
                             <Shield className="w-6 h-6" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-black tracking-tight text-foreground">Reserva de Emergência</h3>
-                            <div className="flex items-center gap-2 mt-0.5">
+                            {/* Sem título aqui: a página já mostra "Reserva de Emergência" no
+                                PageHeader logo acima — repetir de novo neste card duplicava o
+                                texto na tela. */}
+                            <div className="flex items-center gap-2">
                                 {isEditing ? (
                                     <div className="flex items-center gap-1.5">
                                         <Input

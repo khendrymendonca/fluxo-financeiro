@@ -14,7 +14,11 @@ export interface FeatureDefinition {
 }
 
 export const FORCED_DISABLED_FEATURE_KEYS = [
-  // Todas as features estão liberadas para teste
+  // Desativada a pedido do Khendry em 18/08/2026 — tela "Sonhos & Projetos"
+  // (Metas) ainda não está pronta pra ficar visível. Remover daqui reativa
+  // pra todo mundo (nav, menu flutuante e a rota redirecionam pro dashboard
+  // enquanto estiver na lista).
+  'goals_manager',
 ] as const;
 
 export const FEATURES: FeatureDefinition[] = [
