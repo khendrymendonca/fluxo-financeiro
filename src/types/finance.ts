@@ -23,6 +23,8 @@ export interface Category {
   targetAmount?: number;
   isFixed?: boolean;
   budgetLimit?: number | null;
+  /** Categoria nativa do sistema (ex: "Abatimento no Cartão"), criada automaticamente e não editável/visível na Gestão de Categorias. */
+  isSystem?: boolean;
 }
 
 export interface Subcategory {

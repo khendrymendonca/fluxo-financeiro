@@ -132,6 +132,9 @@ export function CategoriesManager() {
 
     const filteredCategories = useMemo(() => {
         return categories
+            // Categorias nativas do sistema (ex: "Abatimento no Cartão") são criadas e geridas
+            // automaticamente — não aparecem nem podem ser editadas nesta tela.
+            .filter(c => !c.isSystem)
             .filter(c => c.type === activeTab)
             .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
     }, [categories, activeTab]);

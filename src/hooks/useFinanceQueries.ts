@@ -159,7 +159,7 @@ export function useCategories() {
 
       const { data, error } = await supabase
         .from('categories')
-        .select('id, name, type, icon, color, group_id, is_active, budget_group, is_fixed, budget_limit')
+        .select('id, name, type, icon, color, group_id, is_active, budget_group, is_fixed, budget_limit, is_system')
         .eq('user_id', user.id);
 
       if (error) throw error;
@@ -182,7 +182,8 @@ export function useCategories() {
           isActive: c.is_active,
           budgetGroup: c.budget_group,
           isFixed: c.is_fixed,
-          budgetLimit: c.budget_limit
+          budgetLimit: c.budget_limit,
+          isSystem: c.is_system ?? false
         };
       }) as Category[];
     },
