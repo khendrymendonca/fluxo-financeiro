@@ -646,6 +646,7 @@ export function useTransactionFormState({ accounts, creditCards, initialData, on
     openSubcategory, setOpenSubcategory,
     isAbatementCategory,
     abatementCategory,
+    selectedCategory,
     filteredCategories,
     currentCategorySubcategories,
 

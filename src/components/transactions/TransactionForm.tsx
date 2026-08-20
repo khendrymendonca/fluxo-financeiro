@@ -69,6 +69,7 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
     openSubcategory, setOpenSubcategory,
     isAbatementCategory,
     abatementCategory,
+    selectedCategory,
     filteredCategories,
     currentCategorySubcategories,
     getAccountViewBalance,
@@ -432,10 +433,10 @@ export function TransactionForm({ accounts, creditCards, initialData, onSubmit, 
                         <Popover open={openCategory} onOpenChange={setOpenCategory}>
                           <PopoverTrigger asChild>
                             <Button variant="outline" role="combobox" aria-expanded={openCategory}
-                              className={cn("w-full justify-between rounded-2xl h-12 border-2", !categoryId && "text-muted-foreground",
-                                type === 'income' && categoryId ? "border-success/30 text-success bg-success/5" :
-                                  type === 'expense' && categoryId ? "border-danger/30 text-danger bg-danger/5" : "")}>
-                              {categoryId ? filteredCategories.find(c => c.id === categoryId)?.name : "Selecione..."}
+                              className={cn("w-full justify-between rounded-2xl h-12 border-2", !selectedCategory && "text-muted-foreground",
+                                type === 'income' && selectedCategory ? "border-success/30 text-success bg-success/5" :
+                                  type === 'expense' && selectedCategory ? "border-danger/30 text-danger bg-danger/5" : "")}>
+                              {selectedCategory ? selectedCategory.name : "Selecione..."}
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                           </PopoverTrigger>
