@@ -399,8 +399,15 @@ export function IconSelector({ selectedIcon, onSelect, label, color = '#0D9488',
       {/* Grid de Ícones Compacto com Background Visível e Alto Contraste.
           Altura FIXA (não max-h): assim o card não muda de tamanho ao trocar de grupo/busca,
           o que fazia o popover "pular" de lugar (o Radix reposiciona quando o conteúdo redimensiona).
-          overflow-y-auto puro e simples: rola com a roda do mouse no desktop e com o dedo no celular. */}
-      <div className="p-2 bg-muted/15 rounded-xl border border-border/40 h-48 overflow-y-auto shadow-inner">
+          Este grid fica dentro de outra área que também rola (o corpo do modal / popover), então:
+          - overscroll-contain: o arrasto do dedo (ou a roda do mouse) tem que ficar "preso" rolando
+            ESTE grid primeiro, em vez de vazar pro scroll de fora assim que o dedo encosta aqui.
+          - -webkit-overflow-scrolling: touch: rolagem por toque com inércia mais confiável no iOS
+            quando há scroll aninhado (bug clássico do Safari em containers de scroll dentro de scroll). */}
+      <div
+        className="p-2 bg-muted/15 rounded-xl border border-border/40 h-48 overflow-y-auto overscroll-contain shadow-inner"
+        style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+      >
         {filteredIcons.length === 0 ? (
           <div className="py-4 text-center text-muted-foreground space-y-0.5">
             <p className="text-xs font-bold">Nenhum ícone encontrado</p>
