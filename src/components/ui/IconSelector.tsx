@@ -257,6 +257,42 @@ export function IconSelector({ selectedIcon, onSelect, label, color = '#0D9488',
   const [searchQuery, setSearchQuery] = useState<string>('');
   const tabsScrollRef = useRef<HTMLDivElement>(null);
   const tabButtonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
+  const touchYRef = useRef<number | null>(null);
+
+  // O grid de ícones fica sempre dentro de outra área que também rola (o corpo do
+  // modal de categoria, ou o popover de ícone da subcategoria). O Dialog/Popover do
+  // Radix usa a lib react-remove-scroll pra travar o scroll de fundo, e ela às vezes
+  // bloqueia a rolagem nativa (roda do mouse / dedo) de containers de scroll aninhados
+  // dentro dele — mesmo o container sendo genuinamente rolável (dá pra confirmar
+  // arrastando a barra de rolagem, que não passa por esse bloqueio).
+  // Por isso a rolagem aqui é feita manualmente via JS (scrollTop direto), que
+  // funciona independente desse bloqueio — não depende do comportamento nativo do
+  // navegador para o wheel/touch, só usa o evento pra saber a direção/distância.
+  const handleGridWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    e.currentTarget.scrollTop += e.deltaY;
+  };
+
+  const handleGridTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const grid = e.currentTarget;
+    touchYRef.current = e.touches[0].clientY;
+
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      if (touchYRef.current === null || moveEvent.touches.length === 0) return;
+      if (moveEvent.cancelable) moveEvent.preventDefault();
+      const currentY = moveEvent.touches[0].clientY;
+      grid.scrollTop += touchYRef.current - currentY;
+      touchYRef.current = currentY;
+    };
+
+    const handleTouchEnd = () => {
+      touchYRef.current = null;
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
+  };
 
   const getContrastColor = (hexColor: string) => {
     if (!hexColor || !hexColor.startsWith('#') || hexColor.length < 7) return '#ffffff';
@@ -399,14 +435,14 @@ export function IconSelector({ selectedIcon, onSelect, label, color = '#0D9488',
       {/* Grid de Ícones Compacto com Background Visível e Alto Contraste.
           Altura FIXA (não max-h): assim o card não muda de tamanho ao trocar de grupo/busca,
           o que fazia o popover "pular" de lugar (o Radix reposiciona quando o conteúdo redimensiona).
-          Este grid fica dentro de outra área que também rola (o corpo do modal / popover), então:
-          - overscroll-contain: o arrasto do dedo (ou a roda do mouse) tem que ficar "preso" rolando
-            ESTE grid primeiro, em vez de vazar pro scroll de fora assim que o dedo encosta aqui.
-          - -webkit-overflow-scrolling: touch: rolagem por toque com inércia mais confiável no iOS
-            quando há scroll aninhado (bug clássico do Safari em containers de scroll dentro de scroll). */}
+          onWheel/onTouchStart rolam o grid manualmente via JS (ver handleGridWheel /
+          handleGridTouchStart acima) — isso contorna o bloqueio que o react-remove-scroll
+          do Dialog/Popover às vezes aplica em containers de scroll aninhados. */}
       <div
         className="p-2 bg-muted/15 rounded-xl border border-border/40 h-48 overflow-y-auto overscroll-contain shadow-inner"
         style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+        onWheel={handleGridWheel}
+        onTouchStart={handleGridTouchStart}
       >
         {filteredIcons.length === 0 ? (
           <div className="py-4 text-center text-muted-foreground space-y-0.5">
