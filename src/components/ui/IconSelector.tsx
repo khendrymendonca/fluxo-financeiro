@@ -386,13 +386,8 @@ export function IconSelector({ selectedIcon, onSelect, label, color = '#0D9488',
         )}
       </div>
 
-      {/* Navegador de Categorias com Setas + Swipe Touch.
-          onMouseDown com preventDefault: no celular, se o usuário tinha acabado de usar a busca
-          (teclado aberto) e toca numa aba, o navegador tiraria o foco do campo de busca pra dar
-          foco no botão — isso fecha o teclado, o viewport cresce, e o Radix reposiciona o popover
-          inteiro (parecia que o popup "pulava" de lugar). Sem tirar o foco, o teclado não fecha e
-          o viewport não muda de tamanho no meio da troca de aba. */}
-      <div className="flex items-center gap-1 w-full" onMouseDown={(e) => e.preventDefault()}>
+      {/* Navegador de Categorias com Setas + Swipe Touch */}
+      <div className="flex items-center gap-1 w-full">
         <button
           type="button"
           onClick={handlePrevGroup}
@@ -448,7 +443,6 @@ export function IconSelector({ selectedIcon, onSelect, label, color = '#0D9488',
         style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
         onWheel={handleGridWheel}
         onTouchStart={handleGridTouchStart}
-        onMouseDown={(e) => e.preventDefault()}
       >
         {filteredIcons.length === 0 ? (
           <div className="py-4 text-center text-muted-foreground space-y-0.5">

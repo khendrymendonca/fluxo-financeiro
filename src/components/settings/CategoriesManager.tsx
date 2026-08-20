@@ -346,7 +346,14 @@ function SubcategoryRow({
                             <IconRenderer iconName={sub.icon || category.icon || 'Tag'} className="w-3.5 h-3.5 stroke-[2.2px]" />
                         </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-80 max-w-[90vw] p-3 rounded-2xl" align="start">
+                    <PopoverContent
+                        className="w-80 max-w-[90vw] p-3 rounded-2xl"
+                        align="start"
+                        // Sem isso, o Radix foca automaticamente o primeiro campo focável ao abrir
+                        // (a busca), o que no celular abre o teclado mesmo sem o usuário ter pedido
+                        // — mesmo que ele só queira navegar pelos grupos de ícone tocando nas abas.
+                        onOpenAutoFocus={(e) => e.preventDefault()}
+                    >
                         <IconSelector
                             label="Ícone da subcategoria"
                             selectedIcon={sub.icon || category.icon || 'Tag'}
