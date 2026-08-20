@@ -346,7 +346,7 @@ function SubcategoryRow({
                             <IconRenderer iconName={sub.icon || category.icon || 'Tag'} className="w-3.5 h-3.5 stroke-[2.2px]" />
                         </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-72 p-3 rounded-2xl" align="start">
+                    <PopoverContent className="w-80 max-w-[90vw] p-3 rounded-2xl" align="start">
                         <IconSelector
                             label="Ícone da subcategoria"
                             selectedIcon={sub.icon || category.icon || 'Tag'}
