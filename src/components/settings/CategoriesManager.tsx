@@ -8,7 +8,7 @@ import {
     useUpdateCategory,
     useUpdateSubcategory,
 } from '@/hooks/useCategoryMutations';
-import { Category } from '@/types/finance';
+import { Category, Subcategory } from '@/types/finance';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,8 @@ import {
     Layers,
     ArrowDownCircle,
     ArrowUpCircle,
+    Pencil,
+    Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/use-toast';
@@ -291,6 +293,120 @@ export function CategoriesManager() {
     );
 }
 
+// ─── LINHA DE SUBCATEGORIA (com edição de nome e ícone) ───────────────────────
+function SubcategoryRow({
+    sub,
+    category,
+    onUpdateIcon,
+    onUpdateName,
+    onDelete,
+}: {
+    sub: Subcategory;
+    category: Category;
+    onUpdateIcon: (iconName: string | null) => void;
+    onUpdateName: (name: string) => void;
+    onDelete: () => void;
+}) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [name, setName] = useState(sub.name);
+
+    useEffect(() => {
+        setName(sub.name);
+    }, [sub.name]);
+
+    const commit = () => {
+        const trimmed = name.trim();
+        if (trimmed && trimmed !== sub.name) {
+            onUpdateName(trimmed);
+        } else {
+            setName(sub.name);
+        }
+        setIsEditing(false);
+    };
+
+    const cancel = () => {
+        setName(sub.name);
+        setIsEditing(false);
+    };
+
+    return (
+        <div className="flex items-center justify-between p-3.5 rounded-xl bg-muted/10 border border-border/20 hover:border-border/40 group/sub transition-all gap-2">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <button
+                            type="button"
+                            title="Escolher ícone da subcategoria"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0 hover:scale-105 transition-transform"
+                            style={{ backgroundColor: category.color }}
+                        >
+                            <IconRenderer iconName={sub.icon || category.icon || 'Tag'} className="w-3.5 h-3.5 stroke-[2.2px]" />
+                        </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-3 rounded-2xl" align="start">
+                        <IconSelector
+                            label="Ícone da subcategoria"
+                            selectedIcon={sub.icon || category.icon || 'Tag'}
+                            onSelect={onUpdateIcon}
+                            color={category.color}
+                        />
+                        {sub.icon && (
+                            <button
+                                type="button"
+                                onClick={() => onUpdateIcon(null)}
+                                className="mt-2 w-full text-center text-[10px] font-bold text-muted-foreground hover:text-danger transition-colors"
+                            >
+                                Usar ícone da categoria
+                            </button>
+                        )}
+                    </PopoverContent>
+                </Popover>
+
+                {isEditing ? (
+                    <Input
+                        autoFocus
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        onBlur={commit}
+                        onKeyDown={e => {
+                            if (e.key === 'Enter') commit();
+                            if (e.key === 'Escape') cancel();
+                        }}
+                        className="h-8 rounded-lg border border-border/50 bg-background text-xs font-bold uppercase tracking-wide px-2.5"
+                    />
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => setIsEditing(true)}
+                        title="Editar nome da subcategoria"
+                        className="flex items-center gap-1.5 min-w-0 text-left group/name"
+                    >
+                        <span className="text-xs font-bold uppercase tracking-wide opacity-70 group-hover/name:opacity-100 truncate">{sub.name}</span>
+                        <Pencil className="w-3 h-3 text-muted-foreground/30 opacity-0 group-hover/sub:opacity-100 shrink-0 transition-opacity" />
+                    </button>
+                )}
+            </div>
+
+            {isEditing ? (
+                <button
+                    onClick={commit}
+                    className="p-1.5 rounded-lg text-success hover:bg-success/10 transition-all shrink-0"
+                    title="Salvar"
+                >
+                    <Check className="w-3.5 h-3.5" />
+                </button>
+            ) : (
+                <button
+                    onClick={onDelete}
+                    className="p-1.5 rounded-lg text-muted-foreground/20 hover:text-danger hover:bg-danger/5 opacity-0 group-hover/sub:opacity-100 transition-all shrink-0"
+                >
+                    <Trash2 className="w-3.5 h-3.5" />
+                </button>
+            )}
+        </div>
+    );
+}
+
 // ─── MODAL DE EDIÇÃO ──────────────────────────────────────────────────────────
 function EditCategoryDialog({
     category,
@@ -509,49 +625,14 @@ function EditCategoryDialog({
                                 </div>
                             ) : (
                                 catSubs.map(sub => (
-                                    <div
+                                    <SubcategoryRow
                                         key={sub.id}
-                                        className="flex items-center justify-between p-3.5 rounded-xl bg-muted/10 border border-border/20 hover:border-border/40 group/sub transition-all gap-2"
-                                    >
-                                        <div className="flex items-center gap-2.5 min-w-0">
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <button
-                                                        type="button"
-                                                        title="Escolher ícone da subcategoria"
-                                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0 hover:scale-105 transition-transform"
-                                                        style={{ backgroundColor: category.color }}
-                                                    >
-                                                        <IconRenderer iconName={sub.icon || category.icon || 'Tag'} className="w-3.5 h-3.5 stroke-[2.2px]" />
-                                                    </button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-72 p-3 rounded-2xl" align="start">
-                                                    <IconSelector
-                                                        label="Ícone da subcategoria"
-                                                        selectedIcon={sub.icon || category.icon || 'Tag'}
-                                                        onSelect={(iconName) => updateSubcategory({ id: sub.id, icon: iconName })}
-                                                        color={category.color}
-                                                    />
-                                                    {sub.icon && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => updateSubcategory({ id: sub.id, icon: null })}
-                                                            className="mt-2 w-full text-center text-[10px] font-bold text-muted-foreground hover:text-danger transition-colors"
-                                                        >
-                                                            Usar ícone da categoria
-                                                        </button>
-                                                    )}
-                                                </PopoverContent>
-                                            </Popover>
-                                            <span className="text-xs font-bold uppercase tracking-wide opacity-70 truncate">{sub.name}</span>
-                                        </div>
-                                        <button
-                                            onClick={() => deleteSubcategory(sub.id)}
-                                            className="p-1.5 rounded-lg text-muted-foreground/20 hover:text-danger hover:bg-danger/5 opacity-0 group-hover/sub:opacity-100 transition-all shrink-0"
-                                        >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
+                                        sub={sub}
+                                        category={category}
+                                        onUpdateIcon={(iconName) => updateSubcategory({ id: sub.id, icon: iconName })}
+                                        onUpdateName={(name) => updateSubcategory({ id: sub.id, name })}
+                                        onDelete={() => deleteSubcategory(sub.id)}
+                                    />
                                 ))
                             )}
                         </div>

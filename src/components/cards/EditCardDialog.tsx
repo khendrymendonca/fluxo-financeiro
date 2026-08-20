@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { CreditCard, CardTexture } from '@/types/finance';
 import { X, CalendarClock, Sparkles, Layers } from 'lucide-react';
 import { ColorSelector } from '@/components/ui/ColorSelector';
+import { IconSelector, IconRenderer } from '@/components/ui/IconSelector';
 import { CARD_TEXTURES } from '@/utils/cardTextures';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +24,7 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
     const [color, setColor] = useState(card.color);
     const [progressColor, setProgressColor] = useState(card.progressColor ?? "#ffffff");
     const [texture, setTexture] = useState<CardTexture>(card.texture || 'solid');
+    const [icon, setIcon] = useState<string | null>(card.icon ?? null);
     const [dueDay, setDueDay] = useState(card.dueDay.toString());
     const [closingDay, setClosingDay] = useState(card.closingDay.toString());
     const [showEffectiveDate, setShowEffectiveDate] = useState(false);
@@ -67,6 +69,7 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
             color,
             progressColor,
             texture,
+            icon,
             dueDay: newDue,
             closingDay: newClosing,
             history: updatedHistory
@@ -129,6 +132,40 @@ export function EditCardDialog({ card, isOpen, onClose, onSave }: EditCardDialog
                                 </button>
                             ))}
                         </div>
+                    </div>
+
+                    <div className="bg-muted/20 p-4 rounded-2xl border border-dashed border-border space-y-3">
+                        <div className="flex items-center justify-between">
+                            <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">
+                                Logomarca do Cartão
+                            </Label>
+                            {icon && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIcon(null)}
+                                    className="text-[10px] font-bold text-muted-foreground hover:text-danger transition-colors"
+                                >
+                                    Remover
+                                </button>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div
+                                className="w-11 h-11 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm border border-white/10"
+                                style={{ backgroundColor: color }}
+                            >
+                                <IconRenderer iconName={icon || 'CreditCard'} className="w-5 h-5" />
+                            </div>
+                            <p className="text-xs text-muted-foreground leading-snug">
+                                Escolha uma logomarca (ex: Nubank, Mastercard) ou deixe em branco para usar o padrão.
+                            </p>
+                        </div>
+                        <IconSelector
+                            selectedIcon={icon || 'CreditCard'}
+                            onSelect={setIcon}
+                            color={color}
+                            initialGroup="brands"
+                        />
                     </div>
 
                     <div className="bg-muted/20 p-4 rounded-2xl border border-dashed border-border">

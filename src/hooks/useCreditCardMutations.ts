@@ -14,6 +14,7 @@ interface CreditCardDbPayload {
   color?: string;
   texture?: string;
   progresscolor?: string;
+  icon?: string | null;
   due_day?: number;
   closing_day?: number;
   is_closing_date_fixed?: boolean;
@@ -38,6 +39,7 @@ export function useAddCreditCard() {
         color: card.color,
         texture: card.texture || 'solid',
         progresscolor: card.progressColor ?? null,
+        icon: card.icon ?? null,
         due_day: card.dueDay,
         closing_day: card.closingDay,
         is_closing_date_fixed: card.isClosingDateFixed ?? false,
@@ -80,6 +82,7 @@ export function useUpdateCreditCard() {
       if (updates.color !== undefined) dbPayload.color = updates.color;
       if (updates.texture !== undefined) dbPayload.texture = updates.texture;
       if (updates.progressColor !== undefined) dbPayload.progresscolor = updates.progressColor;
+      if (updates.icon !== undefined) dbPayload.icon = updates.icon;
       if (updates.dueDay !== undefined) dbPayload.due_day = updates.dueDay;
       if (updates.closingDay !== undefined) dbPayload.closing_day = updates.closingDay;
       if (updates.isClosingDateFixed !== undefined) dbPayload.is_closing_date_fixed = updates.isClosingDateFixed;

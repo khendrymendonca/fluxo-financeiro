@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Label } from './label';
 import { Input } from './input';
 import { Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BRAND_ICONS, BrandIconRenderer } from './BrandIcons';
 
 export interface IconItem {
   name: string;
@@ -19,6 +20,7 @@ export interface IconCategoryGroup {
 
 export const ICON_GROUPS: IconCategoryGroup[] = [
   { id: 'all', name: 'Todos' },
+  { id: 'brands', name: 'Marcas' },
   { id: 'finance', name: 'Financeiro' },
   { id: 'housing', name: 'Moradia' },
   { id: 'food', name: 'Alimentação' },
@@ -48,6 +50,14 @@ export const CATEGORY_ICONS: IconItem[] = [
   { name: 'ArrowLeftRight', label: 'Transferências / Pix', category: 'finance', keywords: ['pix', 'ted', 'doc', 'transferencia', 'envio'] },
   { name: 'Scale', label: 'Jurídico / Impostos', category: 'finance', keywords: ['justica', 'advogado', 'tributo', 'imposto', 'darf'] },
   { name: 'HandCoins', label: 'Empréstimo / Doação', category: 'finance', keywords: ['divida', 'emprestimo', 'financiamento', 'doacao', 'ajuda'] },
+  { name: 'Vault', label: 'Cofre / Reserva de Emergência', category: 'finance', keywords: ['reserva', 'emergencia', 'cofre', 'guardar'] },
+  { name: 'Percent', label: 'Percentual / Taxas', category: 'finance', keywords: ['taxa', 'porcentagem', 'juros', 'rendimento'] },
+  { name: 'ReceiptText', label: 'Extrato Detalhado', category: 'finance', keywords: ['extrato', 'fatura', 'detalhe', 'comprovante'] },
+  { name: 'BarChart3', label: 'Relatórios / Gráficos', category: 'finance', keywords: ['relatorio', 'grafico', 'analise', 'desempenho'] },
+  { name: 'PieChart', label: 'Distribuição de Gastos', category: 'finance', keywords: ['orcamento', 'divisao', 'categoria', 'proporcao'] },
+  { name: 'Target', label: 'Metas Financeiras', category: 'finance', keywords: ['meta', 'objetivo', 'planejamento'] },
+  { name: 'WalletCards', label: 'Cartões / Carteira Digital', category: 'finance', keywords: ['cartoes', 'carteira', 'multiplos cartoes'] },
+  { name: 'BadgeDollarSign', label: 'Bônus / Comissão', category: 'finance', keywords: ['bonus', 'comissao', 'premiacao', 'renda extra'] },
 
   // ─── MORADIA & CASA ───
   { name: 'Home', label: 'Moradia / Aluguel', category: 'housing', keywords: ['casa', 'apartamento', 'aluguel', 'condominio', 'iptu', 'lar'] },
@@ -71,6 +81,9 @@ export const CATEGORY_ICONS: IconItem[] = [
   { name: 'DoorOpen', label: 'Acesso / Mudança', category: 'housing', keywords: ['porta', 'entrada', 'mudanca'] },
   { name: 'Shield', label: 'Seguro Residencial', category: 'housing', keywords: ['seguro', 'protecao', 'alarme', 'cameras'] },
   { name: 'Sparkles', label: 'Organização / Cuidados', category: 'housing', keywords: ['faxina', 'organizacao', 'brilho'] },
+  { name: 'Router', label: 'Roteador / Rede Wi-Fi', category: 'housing', keywords: ['roteador', 'rede', 'internet', 'modem'] },
+  { name: 'Bug', label: 'Dedetização / Pragas', category: 'housing', keywords: ['dedetizacao', 'praga', 'inseto', 'controle'] },
+  { name: 'Snowflake', label: 'Ar-Condicionado / Climatização', category: 'housing', keywords: ['ar condicionado', 'climatizacao', 'refrigeracao', 'ventilador'] },
 
   // ─── ALIMENTAÇÃO & BEBIDAS ───
   { name: 'ShoppingCart', label: 'Supermercado', category: 'food', keywords: ['mercado', 'compras', 'feira', 'hortifruti', 'mercearia', 'compras do mes'] },
@@ -93,6 +106,12 @@ export const CATEGORY_ICONS: IconItem[] = [
   { name: 'Soup', label: 'Sopas & Caldos', category: 'food', keywords: ['sopa', 'caldo', 'restaurante'] },
   { name: 'Cherry', label: 'Hortifruti & Doces', category: 'food', keywords: ['cereja', 'frutas', 'doces'] },
   { name: 'Candy', label: 'Guloseimas & Bomboniere', category: 'food', keywords: ['doce', 'bala', 'chocolate', 'bomboniere'] },
+  { name: 'ChefHat', label: 'Chef & Alta Gastronomia', category: 'food', keywords: ['chef', 'culinaria', 'cozinha gourmet', 'aulas de culinaria'] },
+  { name: 'Croissant', label: 'Confeitaria Fina', category: 'food', keywords: ['padaria fina', 'confeitaria', 'croissant', 'boulangerie'] },
+  { name: 'Drumstick', label: 'Churrasco & Aves', category: 'food', keywords: ['churrasco', 'frango', 'aves', 'churrascaria'] },
+  { name: 'Milk', label: 'Laticínios', category: 'food', keywords: ['leite', 'queijo', 'iogurte', 'laticinios'] },
+  { name: 'Popcorn', label: 'Pipoca & Cinema em Casa', category: 'food', keywords: ['pipoca', 'lanche cinema', 'snacks'] },
+  { name: 'Martini', label: 'Drinks & Coquetéis', category: 'food', keywords: ['drink', 'coquetel', 'bar', 'happy hour'] },
 
   // ─── TRANSPORTE & VEÍCULOS ───
   { name: 'Car', label: 'Carro / Automóvel', category: 'transport', keywords: ['carro', 'veiculo', 'automovel', 'ipva', 'seguro auto', 'mecanico'] },
@@ -107,6 +126,11 @@ export const CATEGORY_ICONS: IconItem[] = [
   { name: 'Gauge', label: 'Revisão & Mecânica', category: 'transport', keywords: ['mecanico', 'revisao', 'oleo', 'pneu', 'balanceamento', 'oficina'] },
   { name: 'Compass', label: 'Passeios & Rotas', category: 'transport', keywords: ['estrada', 'pedagio', 'roteiro', 'viagem'] },
   { name: 'Ship', label: 'Barco / Balsa / Cruzeiro', category: 'transport', keywords: ['balsa', 'barco', 'navio', 'cruzeiro'] },
+  { name: 'CarFront', label: 'Vistoria & Documentação Veicular', category: 'transport', keywords: ['vistoria', 'licenciamento', 'documento carro', 'detran'] },
+  { name: 'Luggage', label: 'Bagagem & Malas', category: 'transport', keywords: ['bagagem', 'mala', 'viagem', 'despacho'] },
+  { name: 'ParkingCircle', label: 'Estacionamento Mensal', category: 'transport', keywords: ['estacionamento', 'vaga', 'mensalista', 'garagem'] },
+  { name: 'TrainFront', label: 'Trem Urbano / VLT', category: 'transport', keywords: ['trem urbano', 'vlt', 'monotrilho', 'transporte publico'] },
+  { name: 'Anchor', label: 'Náutica / Ancoragem', category: 'transport', keywords: ['nautica', 'marina', 'ancoragem', 'lancha'] },
 
   // ─── SAÚDE, CUIDADOS & BEM-ESTAR ───
   { name: 'Stethoscope', label: 'Médico & Consultas', category: 'health', keywords: ['medico', 'consulta', 'clinica', 'doutor', 'exame'] },
@@ -120,6 +144,8 @@ export const CATEGORY_ICONS: IconItem[] = [
   { name: 'Scissors', label: 'Barbearia & Salão', category: 'health', keywords: ['barba', 'cabelo', 'cabeleireiro', 'salao de beleza', 'manicure', 'estetica', 'corte'] },
   { name: 'Eye', label: 'Ótica & Oftalmologia', category: 'health', keywords: ['oculos', 'lente de contato', 'oftalmologista', 'otica', 'grau'] },
   { name: 'Hospital', label: 'Hospital & Emergência', category: 'health', keywords: ['pronto socorro', 'internacao', 'cirurgia', 'hospital'] },
+  { name: 'Bandage', label: 'Curativos & Primeiros Socorros', category: 'health', keywords: ['curativo', 'primeiros socorros', 'farmacia basica'] },
+  { name: 'ShieldPlus', label: 'Seguro Saúde / Plano', category: 'health', keywords: ['seguro saude', 'plano de saude', 'protecao'] },
 
   // ─── EDUCAÇÃO & TRABALHO ───
   { name: 'GraduationCap', label: 'Faculdade & Graduação', category: 'education', keywords: ['faculdade', 'universidade', 'pos graduacao', 'mba', 'diploma', 'mensalidade'] },
@@ -135,6 +161,10 @@ export const CATEGORY_ICONS: IconItem[] = [
   { name: 'Newspaper', label: 'Notícias & Assinaturas', category: 'education', keywords: ['jornal', 'revista', 'noticias', 'periodico'] },
   { name: 'Calculator', label: 'Contabilidade & Cálculos', category: 'education', keywords: ['contador', 'honorarios', 'calculadora', 'planejamento'] },
   { name: 'Presentation', label: 'Palestras & Eventos', category: 'education', keywords: ['congresso', 'seminario', 'apresentacao', 'palestra'] },
+  { name: 'Backpack', label: 'Material Escolar', category: 'education', keywords: ['mochila', 'material escolar', 'volta as aulas'] },
+  { name: 'School', label: 'Escola / Educação Infantil', category: 'education', keywords: ['escola', 'colegio', 'creche', 'educacao infantil'] },
+  { name: 'NotebookPen', label: 'Anotações & Redação', category: 'education', keywords: ['caderno', 'anotacao', 'redacao', 'estudo'] },
+  { name: 'ScrollText', label: 'Diploma & Documentos Acadêmicos', category: 'education', keywords: ['diploma', 'historico escolar', 'certidao'] },
 
   // ─── LAZER, HOBBIES & ENTRETENIMENTO ───
   { name: 'Gamepad2', label: 'Jogos & Videogame', category: 'lifestyle', keywords: ['game', 'jogos', 'playstation', 'xbox', 'nintendo', 'steam', 'gamer'] },
@@ -153,6 +183,10 @@ export const CATEGORY_ICONS: IconItem[] = [
   { name: 'Radio', label: 'Rádio & Transmissões', category: 'lifestyle', keywords: ['radio', 'audio', 'locucao'] },
   { name: 'Guitar', label: 'Instrumentos Musicais', category: 'lifestyle', keywords: ['violao', 'guitarra', 'instrumento', 'aulas de musica'] },
   { name: 'Mic', label: 'Karaokê & Voz', category: 'lifestyle', keywords: ['microfone', 'karaoke', 'gravacao'] },
+  { name: 'Rocket', label: 'Aventura & Adrenalina', category: 'lifestyle', keywords: ['aventura', 'radical', 'adrenalina', 'esporte radical'] },
+  { name: 'Puzzle', label: 'Jogos de Tabuleiro & Quebra-Cabeça', category: 'lifestyle', keywords: ['tabuleiro', 'quebra cabeca', 'jogos de mesa'] },
+  { name: 'Milestone', label: 'Conquistas & Marcos', category: 'lifestyle', keywords: ['conquista', 'marco', 'objetivo alcancado'] },
+  { name: 'Blocks', label: 'Brinquedos de Montar', category: 'lifestyle', keywords: ['lego', 'blocos', 'montar', 'brinquedo'] },
 
   // ─── FAMÍLIA, PETS & PESSOAL ───
   { name: 'Users', label: 'Família & Dependentes', category: 'family', keywords: ['familia', 'filhos', 'pensao', 'mesada', 'pais', 'conjuge'] },
@@ -167,6 +201,13 @@ export const CATEGORY_ICONS: IconItem[] = [
   { name: 'Glasses', label: 'Óculos & Visual', category: 'family', keywords: ['oculos de sol', 'estilo', 'acessorios'] },
   { name: 'Footprints', label: 'Calçados & Sapatos', category: 'family', keywords: ['sapato', 'tenis', 'chinelo', 'sandalia', 'calcado'] },
   { name: 'SmilePlus', label: 'Autoestima & Estética', category: 'family', keywords: ['botox', 'estetica', 'skincare', 'massagem', 'spa'] },
+  { name: 'UserPlus', label: 'Novo Membro / Adoção', category: 'family', keywords: ['adocao', 'novo membro', 'agregado'] },
+  { name: 'Handshake', label: 'Pensão & Acordos', category: 'family', keywords: ['pensao', 'acordo', 'divisao de despesas'] },
+  { name: 'HandHeart', label: 'Cuidados & Voluntariado', category: 'family', keywords: ['cuidador', 'voluntariado', 'ajuda ao proximo'] },
+  { name: 'PawPrint', label: 'Pet Genérico', category: 'family', keywords: ['pet', 'animal de estimacao', 'patinha'] },
+  { name: 'Rabbit', label: 'Coelho & Roedores', category: 'family', keywords: ['coelho', 'roedor', 'hamster', 'pet pequeno'] },
+  { name: 'Bird', label: 'Aves & Pássaros', category: 'family', keywords: ['passaro', 'ave', 'calopsita', 'gaiola'] },
+  { name: 'Turtle', label: 'Répteis & Aquário', category: 'family', keywords: ['tartaruga', 'reptil', 'aquario', 'peixe ornamental'] },
 
   // ─── FÉ & COMUNIDADE ───
   { name: 'Church', label: 'Dízimos & Ofertas', category: 'faith', keywords: ['igreja', 'dizimo', 'oferta', 'ministerio', 'culto', 'templo'] },
@@ -191,17 +232,28 @@ export const CATEGORY_ICONS: IconItem[] = [
   { name: 'Package', label: 'Compras Online & Entregas', category: 'services', keywords: ['mercado livre', 'shopee', 'shein', 'entrega', 'encomenda'] },
   { name: 'Bell', label: 'Notificações & Lembretes', category: 'services', keywords: ['aviso', 'notificacao', 'alerta'] },
   { name: 'QrCode', label: 'Pix & Pagamentos Digitais', category: 'services', keywords: ['pix', 'qrcode', 'pagamento digital'] },
+  { name: 'MonitorSmartphone', label: 'Multitelas & Combos Streaming', category: 'services', keywords: ['multitelas', 'combo streaming', 'assinatura combinada'] },
+  { name: 'Tablet', label: 'Tablet', category: 'services', keywords: ['tablet', 'ipad', 'eletronico'] },
+  { name: 'Keyboard', label: 'Periféricos de Computador', category: 'services', keywords: ['teclado', 'periferico', 'acessorio pc'] },
+  { name: 'Mouse', label: 'Mouse & Acessórios', category: 'services', keywords: ['mouse', 'periferico', 'acessorio pc'] },
+  { name: 'Printer', label: 'Impressora & Suprimentos', category: 'services', keywords: ['impressora', 'tinta', 'toner', 'papel'] },
+  { name: 'SquareStack', label: 'Pacotes de Assinaturas', category: 'services', keywords: ['pacote', 'assinaturas', 'agrupamento de servicos'] },
 ];
+
+// Lista combinada: ícones genéricos (Lucide) + logomarcas de marcas famosas, usada na busca e nos grupos "Todos"/"Marcas".
+export const ALL_ICONS: IconItem[] = [...CATEGORY_ICONS, ...BRAND_ICONS];
 
 interface IconSelectorProps {
   selectedIcon: string;
   onSelect: (iconName: string) => void;
   label?: string;
   color?: string;
+  /** Grupo inicial já aberto ao montar (ex: 'brands' para o seletor de ícone de cartão). Padrão: 'all'. */
+  initialGroup?: string;
 }
 
-export function IconSelector({ selectedIcon, onSelect, label, color = '#0D9488' }: IconSelectorProps) {
-  const [activeGroup, setActiveGroup] = useState<string>('all');
+export function IconSelector({ selectedIcon, onSelect, label, color = '#0D9488', initialGroup = 'all' }: IconSelectorProps) {
+  const [activeGroup, setActiveGroup] = useState<string>(initialGroup);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const tabsScrollRef = useRef<HTMLDivElement>(null);
   const tabButtonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
@@ -238,7 +290,7 @@ export function IconSelector({ selectedIcon, onSelect, label, color = '#0D9488' 
   };
 
   const filteredIcons = useMemo(() => {
-    let list = CATEGORY_ICONS;
+    let list: IconItem[] = ALL_ICONS;
 
     if (activeGroup !== 'all') {
       list = list.filter(item => item.category === activeGroup);
@@ -257,7 +309,7 @@ export function IconSelector({ selectedIcon, onSelect, label, color = '#0D9488' 
   }, [activeGroup, searchQuery]);
 
   const activeIconItem = useMemo(() => {
-    return CATEGORY_ICONS.find(i => i.name === selectedIcon) || {
+    return ALL_ICONS.find(i => i.name === selectedIcon) || {
       name: selectedIcon,
       label: selectedIcon,
       category: 'services'
@@ -354,7 +406,8 @@ export function IconSelector({ selectedIcon, onSelect, label, color = '#0D9488' 
         ) : (
           <div className="flex flex-wrap items-center justify-start gap-1.5">
             {filteredIcons.map((icon) => {
-              const IconComponent = (LucideIcons as any)[icon.name] || LucideIcons.Tag;
+              const isBrand = icon.name.startsWith('brand:');
+              const IconComponent = !isBrand ? ((LucideIcons as any)[icon.name] || LucideIcons.Tag) : null;
               const isSelected = selectedIcon === icon.name;
 
               return (
@@ -368,15 +421,19 @@ export function IconSelector({ selectedIcon, onSelect, label, color = '#0D9488' 
                       ? "shadow-sm scale-105 ring-2 ring-offset-1 ring-offset-background"
                       : "bg-background/80 hover:bg-background text-foreground/80 hover:text-foreground hover:scale-105 border border-border/40"
                   )}
-                  style={isSelected ? { 
-                    backgroundColor: color, 
-                    color: contrastColor, 
+                  style={isSelected ? {
+                    backgroundColor: color,
+                    color: contrastColor,
                     ringColor: color,
-                    boxShadow: color?.toLowerCase() === '#18181b' ? '0 0 0 2px rgba(255,255,255,0.4)' : undefined 
+                    boxShadow: color?.toLowerCase() === '#18181b' ? '0 0 0 2px rgba(255,255,255,0.4)' : undefined
                   } : {}}
                   title={icon.label}
                 >
-                  <IconComponent className={cn("w-4 h-4", isSelected ? "stroke-[2.5px]" : "stroke-[1.8px]")} />
+                  {isBrand ? (
+                    <BrandIconRenderer iconName={icon.name} className="w-4 h-4" />
+                  ) : (
+                    <IconComponent className={cn("w-4 h-4", isSelected ? "stroke-[2.5px]" : "stroke-[1.8px]")} />
+                  )}
                 </button>
               );
             })}
@@ -400,8 +457,11 @@ export function IconSelector({ selectedIcon, onSelect, label, color = '#0D9488' 
   );
 }
 
-// Helper para renderizar o ícone pelo nome
+// Helper para renderizar o ícone pelo nome (ícones genéricos Lucide ou logomarcas de marcas, prefixadas com "brand:")
 export function IconRenderer({ iconName, className, style }: { iconName: string; className?: string; style?: React.CSSProperties }) {
+  if (iconName?.startsWith('brand:')) {
+    return <BrandIconRenderer iconName={iconName} className={className} style={style} />;
+  }
   const IconComponent = (LucideIcons as any)[iconName] || LucideIcons.Tag;
   return <IconComponent className={className} style={style} />;
 }

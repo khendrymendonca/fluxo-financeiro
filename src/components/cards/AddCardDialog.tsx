@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/use-toast';
 import { ColorSelector, APP_COLORS } from '@/components/ui/ColorSelector';
+import { IconSelector, IconRenderer } from '@/components/ui/IconSelector';
 import { CARD_TEXTURES } from '@/utils/cardTextures';
 
 interface AddCardDialogProps {
@@ -23,6 +24,7 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
     const [color, setColor] = useState(APP_COLORS[0]);
     const [progressColor, setProgressColor] = useState('#ffffff');
     const [texture, setTexture] = useState<CardTexture>('solid');
+    const [icon, setIcon] = useState<string | null>(null);
     const [dueDay, setDueDay] = useState('10');
     const [closingDay, setClosingDay] = useState('3');
     const [isClosingDateFixed, setIsClosingDateFixed] = useState(true);
@@ -53,6 +55,7 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
             color,
             progressColor,
             texture,
+            icon,
             dueDay: parseInt(dueDay),
             closingDay: parseInt(closingDay),
             isClosingDateFixed,
@@ -67,6 +70,7 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
         setClosingDay('3');
         setTexture('solid');
         setProgressColor('#ffffff');
+        setIcon(null);
 
         onClose();
     };
@@ -175,6 +179,40 @@ export function AddCardDialog({ isOpen, onClose, onAdd }: AddCardDialogProps) {
                                 </button>
                             ))}
                         </div>
+                    </div>
+
+                    <div className="bg-muted/20 p-4 rounded-2xl border border-dashed border-border space-y-3">
+                        <div className="flex items-center justify-between">
+                            <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">
+                                Logomarca do Cartão
+                            </Label>
+                            {icon && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIcon(null)}
+                                    className="text-[10px] font-bold text-muted-foreground hover:text-danger transition-colors"
+                                >
+                                    Remover
+                                </button>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div
+                                className="w-11 h-11 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm border border-white/10"
+                                style={{ backgroundColor: color }}
+                            >
+                                <IconRenderer iconName={icon || 'CreditCard'} className="w-5 h-5" />
+                            </div>
+                            <p className="text-xs text-muted-foreground leading-snug">
+                                Escolha uma logomarca (ex: Nubank, Mastercard) ou deixe em branco para usar o padrão.
+                            </p>
+                        </div>
+                        <IconSelector
+                            selectedIcon={icon || 'CreditCard'}
+                            onSelect={setIcon}
+                            color={color}
+                            initialGroup="brands"
+                        />
                     </div>
 
                     <div className="bg-muted/20 p-4 rounded-2xl border border-dashed border-border">

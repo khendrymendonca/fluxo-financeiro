@@ -2,6 +2,7 @@ import { CreditCard as CardType } from '@/types/finance';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/utils/formatters';
 import { CARD_TEXTURES } from '@/utils/cardTextures';
+import { IconRenderer } from '@/components/ui/IconSelector';
 
 interface CreditCardVisualProps {
     card: CardType;
@@ -56,8 +57,13 @@ export function CreditCardVisual({
             <div className="relative z-10 flex flex-col justify-between h-full">
                 {/* Topo: Instituição */}
                 <div className="flex justify-between items-start">
-                    <div className="flex flex-col">
-                        <span className="text-xs font-black uppercase tracking-[0.2em] opacity-70 mb-1 drop-shadow-sm">
+                    <div className="flex items-center gap-2">
+                        {card.icon && (
+                            <div className="w-6 h-6 rounded-md bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0 shadow-sm">
+                                <IconRenderer iconName={card.icon} className="w-3.5 h-3.5 text-white" />
+                            </div>
+                        )}
+                        <span className="text-xs font-black uppercase tracking-[0.2em] opacity-70 drop-shadow-sm">
                             {cardBank}
                         </span>
                     </div>

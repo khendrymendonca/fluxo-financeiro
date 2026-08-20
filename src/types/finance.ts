@@ -93,6 +93,7 @@ export interface CreditCard {
   texture?: CardTexture;
   progressColor?: string;
   accentColor?: string;
+  icon?: string | null;
   isClosingDateFixed: boolean;
   isActive: boolean;
   history?: InvoiceConfig[];

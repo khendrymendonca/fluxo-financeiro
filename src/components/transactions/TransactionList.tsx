@@ -127,8 +127,10 @@ export function TransactionList({
   );
 
   const availableBanks = useMemo(() => {
-    return Array.from(new Set(accounts.map(a => a.bank).filter(Boolean)));
-  }, [accounts]);
+    const accountBanks = accounts.map(a => a.bank).filter(Boolean);
+    const cardBanks = creditCards.map(c => c.bank).filter(Boolean);
+    return Array.from(new Set([...accountBanks, ...cardBanks]));
+  }, [accounts, creditCards]);
 
   const getGroupDate = (item: any): string => {
     if (item.isRecurring) {
@@ -201,6 +203,14 @@ export function TransactionList({
       } else if (sourceFilter === 'card') {
         if (!t.cardId) return false;
         if (specificSourceId !== 'all' && t.cardId !== specificSourceId) return false;
+      } else if (selectedBank !== 'all') {
+        // Extrato completo (Todas), mas com filtro por banco: aceita tanto contas
+        // quanto cartões pertencentes ao banco selecionado, sem esconder o restante do extrato.
+        const bankAccountIds = accounts.filter(a => a.bank === selectedBank).map(a => a.id);
+        const bankCardIds = creditCards.filter(c => c.bank === selectedBank).map(c => c.id);
+        const matchesAccount = Boolean(t.accountId && bankAccountIds.includes(t.accountId));
+        const matchesCard = Boolean(t.cardId && bankCardIds.includes(t.cardId));
+        if (!matchesAccount && !matchesCard) return false;
       }
 
       // Filtro de Tipo (Pontual, Parcelado, Fixo)
@@ -498,8 +508,8 @@ export function TransactionList({
           </div>
         </div>
 
-        {/* Filtro Específico de Contas (Débito) */}
-        {sourceFilter === 'account' && (
+        {/* Filtro por Banco (disponível em "Todas" e "Débito", sem precisar esconder o extrato completo) */}
+        {sourceFilter !== 'card' && (
           <div className="space-y-3 pt-2 border-t border-border animate-in slide-in-from-top-1">
             {/* Linha 1: Selecionar Banco */}
             <div className="flex items-center gap-3">
@@ -507,7 +517,7 @@ export function TransactionList({
                 Selecionar Banco:
               </span>
               <div className="flex flex-wrap gap-2">
-                <button 
+                <button
                   onClick={() => { setSelectedBank('all'); setSpecificSourceId('all'); }}
                   className={cn("px-3 py-1 rounded-full text-xs font-black uppercase transition-all border",
                     selectedBank === 'all' ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}
@@ -515,8 +525,8 @@ export function TransactionList({
                   Todos os Bancos
                 </button>
                 {availableBanks.map((bank) => (
-                  <button 
-                    key={bank} 
+                  <button
+                    key={bank}
                     onClick={() => { setSelectedBank(bank); setSpecificSourceId('all'); }}
                     className={cn("px-3 py-1 rounded-full text-xs font-black uppercase transition-all border",
                       selectedBank === bank ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}
@@ -527,14 +537,14 @@ export function TransactionList({
               </div>
             </div>
 
-            {/* Linha 2: Selecionar Conta (Somente se o banco selecionado não for 'all') */}
-            {selectedBank !== 'all' && (
+            {/* Linha 2: Selecionar Conta (Somente na aba Débito, com o banco selecionado) */}
+            {sourceFilter === 'account' && selectedBank !== 'all' && (
               <div className="flex items-center gap-3 animate-in slide-in-from-top-1">
                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest min-w-[120px]">
                   Selecionar Conta:
                 </span>
                 <div className="flex flex-wrap gap-2">
-                  <button 
+                  <button
                     onClick={() => setSpecificSourceId('all')}
                     className={cn("px-3 py-1 rounded-full text-xs font-black uppercase transition-all border",
                       specificSourceId === 'all' ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}
@@ -544,8 +554,8 @@ export function TransactionList({
                   {accounts
                     .filter(acc => acc.bank === selectedBank)
                     .map((acc) => (
-                      <button 
-                        key={acc.id} 
+                      <button
+                        key={acc.id}
                         onClick={() => setSpecificSourceId(acc.id)}
                         className={cn("px-3 py-1 rounded-full text-xs font-black uppercase transition-all border flex items-center gap-2",
                           specificSourceId === acc.id ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}
@@ -556,6 +566,13 @@ export function TransactionList({
                     ))}
                 </div>
               </div>
+            )}
+
+            {/* Aviso: no modo "Todas", o filtro de banco considera contas e cartões desse banco, mantendo o extrato completo visível */}
+            {sourceFilter === 'all' && selectedBank !== 'all' && (
+              <p className="text-[11px] text-muted-foreground font-medium pl-[132px] -mt-1">
+                Mostrando contas e cartões de <span className="font-black text-foreground">{selectedBank}</span> no extrato completo.
+              </p>
             )}
           </div>
         )}
@@ -587,7 +604,17 @@ export function TransactionList({
                 >
                   <CreditCardMiniature color={card.color} texture={card.texture} />
                   <div className="flex flex-col">
-                    <span className="font-bold text-gray-900 dark:text-white leading-none">{card.name}</span>
+                    <span className="font-bold text-gray-900 dark:text-white leading-none flex items-center gap-1.5">
+                      {card.icon && (
+                        <span
+                          className="w-4 h-4 rounded flex items-center justify-center text-white shrink-0"
+                          style={{ backgroundColor: card.color }}
+                        >
+                          <IconRenderer iconName={card.icon} className="w-2.5 h-2.5" />
+                        </span>
+                      )}
+                      {card.name}
+                    </span>
                     <span className="text-[10px] text-muted-foreground font-semibold leading-none mt-1 uppercase">{card.bank}</span>
                   </div>
                 </button>
@@ -993,7 +1020,16 @@ export function TransactionList({
                         <button key={card.id} onClick={() => handleSubmitPayment(card.id, true)}
                           className="w-full p-3 rounded-xl border-2 border-border hover:border-primary/50 hover:bg-primary/5 hover:shadow-md active:scale-[0.98] transition-all text-left cursor-pointer">
                           <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: card.color }} />
+                            {card.icon ? (
+                              <div
+                                className="w-6 h-6 rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm"
+                                style={{ backgroundColor: card.color }}
+                              >
+                                <IconRenderer iconName={card.icon} className="w-3.5 h-3.5" />
+                              </div>
+                            ) : (
+                              <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: card.color }} />
+                            )}
                             <div>
                               <p className="font-bold text-sm leading-tight">{card.name}</p>
                               <p className="text-xs text-muted-foreground font-bold uppercase">{card.bank}</p>
