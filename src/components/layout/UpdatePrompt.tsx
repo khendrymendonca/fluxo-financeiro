@@ -49,11 +49,15 @@ export function UpdatePrompt() {
     setIsVisible(false);
   };
 
-  // SW já atualizou em background (skipWaiting: true no workbox)
-  // O botão apenas recarrega a página para o usuário ver a nova versão
+  // updateServiceWorker() só manda a mensagem de SKIP_WAITING pro novo SW assumir.
+  // O próprio vite-plugin-pwa já registra um listener de "controlling" (lá em
+  // register.ts) que dá o window.location.reload() sozinho assim que o novo SW
+  // assume. Chamar reload() aqui de novo criava DOIS reloads brigando: o nosso
+  // disparava quase na hora (o await só espera o registro, não o SW assumir de
+  // fato) e interrompia o reload automático no meio, deixando a tela em branco
+  // até o usuário recarregar manualmente.
   const handleUpdate = async () => {
     await updateServiceWorker(true);
-    window.location.reload();
   };
 
   if (!isVisible) return null;
