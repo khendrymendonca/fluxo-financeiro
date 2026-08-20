@@ -396,8 +396,12 @@ export function IconSelector({ selectedIcon, onSelect, label, color = '#0D9488',
         </button>
       </div>
 
-      {/* Grid de Ícones Compacto com Background Visível e Alto Contraste */}
-      <div className="p-2 bg-muted/15 rounded-xl border border-border/40 max-h-40 overflow-y-auto no-scrollbar shadow-inner">
+      {/* Grid de Ícones Compacto com Background Visível e Alto Contraste.
+          Altura FIXA (não max-h): assim o card não muda de tamanho ao trocar de grupo/busca,
+          o que evitava o popover "pular" de lugar (o Radix reposiciona quando o conteúdo redimensiona).
+          overscroll-contain impede que o scroll do mouse "vaze" pro popover por trás quando
+          o grid chega no topo/fim — sem isso, rolar os ícones acabava rolando o popover inteiro. */}
+      <div className="p-2 bg-muted/15 rounded-xl border border-border/40 h-56 overflow-y-auto overscroll-contain shadow-inner">
         {filteredIcons.length === 0 ? (
           <div className="py-4 text-center text-muted-foreground space-y-0.5">
             <p className="text-xs font-bold">Nenhum ícone encontrado</p>
