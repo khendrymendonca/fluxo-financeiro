@@ -582,10 +582,10 @@ export function useUpdateTransaction() {
         amount: updates.amount !== undefined ? Math.round(Number(updates.amount) * 100) / 100 : undefined,
         date: updates.date ? updates.date.slice(0, 10) : undefined,
         type: updates.type,
-        category_id: updates.categoryId,
-        subcategory_id: updates.subcategoryId || (updates as any).subcategory_id,
-        account_id: updates.accountId,
-        card_id: updates.cardId,
+        category_id: updates.categoryId !== undefined ? updates.categoryId : (updates as any).category_id,
+        subcategory_id: updates.subcategoryId !== undefined ? updates.subcategoryId : (updates as any).subcategory_id,
+        account_id: updates.accountId !== undefined ? updates.accountId : (updates as any).account_id,
+        card_id: updates.cardId !== undefined ? updates.cardId : (updates as any).card_id,
         is_paid: updates.isPaid,
         payment_date: updates.paymentDate,
         is_recurring: updates.isRecurring !== undefined ? updates.isRecurring : (updates as any).is_recurring,
@@ -613,16 +613,18 @@ export function useUpdateTransaction() {
       if (updates.isPaid === true && !nextAccountId && !nextCardId) {
         throw new Error('Selecione uma conta ou cartão para registrar o pagamento.');
       }
-
       const groupId = currentTx.installment_group_id;
       const originalId = currentTx.original_id || (currentTx.is_recurring ? currentTx.id : null);
 
       const isRecurringMother = !isVirtual && currentTx.is_recurring && !currentTx.original_id;
+      const dateChanged = updates.date !== undefined && updates.date.slice(0, 10) !== currentTx.date.slice(0, 10);
+      const cardChanged = updates.cardId !== undefined && updates.cardId !== currentTx.card_id;
+      const invoiceChanged = updates.invoiceMonthYear !== undefined && updates.invoiceMonthYear !== currentTx.invoice_month_year;
+
       const shouldRecalculateCardInstallmentGroup = Boolean(
         groupId &&
         effectiveCardId &&
-        (applyScope === 'all' || applyScope === 'future') &&
-        (updates.date !== undefined || updates.cardId !== undefined || updates.invoiceMonthYear !== undefined)
+        (applyScope === 'all' || applyScope === 'future')
       );
 
       // ======================================================================
@@ -652,8 +654,8 @@ export function useUpdateTransaction() {
           id: undefined,
           amount: updates.amount !== undefined ? Math.round(Number(updates.amount) * 100) / 100 : currentTx.amount,
           description: updates.description ?? currentTx.description,
-          category_id: updates.categoryId ?? currentTx.category_id,
-          subcategory_id: updates.subcategoryId ?? currentTx.subcategory_id ?? null,
+          category_id: updates.categoryId !== undefined ? updates.categoryId : currentTx.category_id,
+          subcategory_id: updates.subcategoryId !== undefined ? updates.subcategoryId : (currentTx.subcategory_id ?? null),
           account_id: updates.accountId !== undefined ? updates.accountId : currentTx.account_id,
           card_id: updates.cardId !== undefined ? updates.cardId : currentTx.card_id,
           invoice_month_year: finalInvoiceMonthYear !== undefined ? finalInvoiceMonthYear : currentTx.invoice_month_year,
@@ -661,12 +663,13 @@ export function useUpdateTransaction() {
           original_id: realId,
           is_recurring: false,
           transaction_type: 'punctual',
-          is_paid: updates.isPaid ?? false,
-          payment_date: updates.paymentDate ?? null,
+          is_paid: updates.isPaid !== undefined ? updates.isPaid : false,
+          payment_date: (updates.isPaid !== undefined ? updates.isPaid : false) ? targetDate : null,
           deleted_at: null,
           created_at: undefined,
         });
-        if (error) throw error;
+
+        if (error) { logSafeError('useUpdateTransaction (virtual this)', error); throw error; }
 
         // 🛡️ FIX DUPLICATA: Se a mãe está no mesmo mês do filho que acabamos de criar,
         // ela apareceria como transação REAL do mês E o filho também apareceria.
@@ -701,32 +704,27 @@ export function useUpdateTransaction() {
       // CASO B e D: isVirtual ou isRecurringMother + applyScope='future'
       // ======================================================================
       if (applyScope === 'future' && (isVirtual || isRecurringMother)) {
-        let targetDate = currentTx.date.slice(0, 10);
-        if (isVirtual) {
-          const parts = id.split('-virtual-');
-          if (parts.length === 2) {
-            const [yearStr, monthStr] = parts[1].split('-');
-            const year = parseInt(yearStr);
-            const month = parseInt(monthStr);
-            const originalDay = parseLocalDate(currentTx.date).getDate();
-            const lastDay = new Date(year, month + 1, 0).getDate();
-            const safeDay = Math.min(originalDay, lastDay);
-            targetDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
-          }
-        } else {
-          targetDate = updates.date ? updates.date.slice(0, 10) : currentTx.date.slice(0, 10);
+        let finalDate = updates.date ? updates.date.slice(0, 10) : currentTx.date.slice(0, 10);
+        
+        if (isVirtual && !updates.date) {
+           const virtualParts = id.split('-virtual-');
+           if (virtualParts.length === 2) {
+             const [yearStr, monthStr] = virtualParts[1].split('-');
+             const year = parseInt(yearStr);
+             const month = parseInt(monthStr);
+             const originalDay = parseLocalDate(currentTx.date).getDate();
+             const lastDay = new Date(year, month + 1, 0).getDate();
+             const safeDay = Math.min(originalDay, lastDay);
+             finalDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
+           }
         }
 
-        const finalDate = updates.date ? updates.date.slice(0, 10) : targetDate;
         const rootDate = currentTx.date.slice(0, 10);
 
-        // 🛡️ REFENO TECH LEAD: Só faz o 'Corte de Série' (split) se for em MÊS DIFERENTE.
-        // Se for no mesmo mês, apenas atualizamos o registro original (se físico) ou criamos materialização (se virtual).
-        const isSameMonthYear = finalDate.slice(0, 7) === rootDate.slice(0, 7);
-
-        if (isSameMonthYear) {
-          if (!isVirtual) {
-            const { error } = await supabase.from('transactions').update(dbUpdates).eq('id', id);
+        if (rootDate === finalDate) {
+          const { date: _ignoredDate, ...motherUpdates } = dbUpdates;
+          if (Object.keys(motherUpdates).length > 0) {
+            const { error } = await supabase.from('transactions').update(motherUpdates).eq('id', realId);
             if (error) throw error;
           } else {
             // Se for virtual no mesmo mês, apenas materializamos ela como pontual
@@ -839,7 +837,7 @@ export function useUpdateTransaction() {
           const installmentNumber = Number(row.installment_number || 1);
           const installmentTotal = Number(row.installment_total || currentTx.installment_total || installmentNumber);
 
-          if (baseDate) {
+          if (dateChanged && baseDate) {
             rowUpdates.date = format(addMonths(baseDate, installmentNumber - anchorInstallmentNumber), 'yyyy-MM-dd');
           } else {
             delete rowUpdates.date;
@@ -1345,3 +1343,118 @@ export const useBulkUpdateTransactions = () => {
     }
   });
 };
+
+export const useBulkUpdateTransactionCategory = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      selectedTransactions,
+      categoryId,
+      subcategoryId,
+    }: {
+      selectedTransactions: Transaction[];
+      categoryId: string;
+      subcategoryId?: string | null;
+    }) => {
+      if (!selectedTransactions || selectedTransactions.length === 0) return;
+
+      const payload = {
+        category_id: categoryId,
+        subcategory_id: subcategoryId || null,
+      };
+
+      const installmentGroupIds = new Set<string>();
+      const recurringParentIds = new Set<string>();
+      const debtIds = new Set<string>();
+      const individualTxIds = new Set<string>();
+
+      for (const tx of selectedTransactions) {
+        const anyTx = tx as any;
+        const instGroupId = tx.installmentGroupId || anyTx.installment_group_id;
+        const debtId = tx.debtId || anyTx.debt_id;
+
+        if (debtId) {
+          debtIds.add(debtId);
+        }
+
+        if (instGroupId) {
+          installmentGroupIds.add(instGroupId);
+        }
+
+        if (tx.isRecurring || anyTx.is_recurring) {
+          const realId = tx.originalId || tx.id;
+          recurringParentIds.add(realId);
+        } else if (tx.originalId) {
+          recurringParentIds.add(tx.originalId);
+        } else if (!instGroupId && !debtId) {
+          individualTxIds.add(tx.id);
+        }
+      }
+
+      // 1. Atualizar grupos de parcelamento (passadas, presentes e futuras no banco)
+      if (installmentGroupIds.size > 0) {
+        const { error } = await supabase
+          .from('transactions')
+          .update(payload)
+          .in('installment_group_id', Array.from(installmentGroupIds))
+          .is('deleted_at', null);
+
+        if (error) throw error;
+      }
+
+      // 2. Atualizar parcelas de dívidas/acordos
+      if (debtIds.size > 0) {
+        const { error } = await supabase
+          .from('transactions')
+          .update(payload)
+          .in('debt_id', Array.from(debtIds))
+          .is('deleted_at', null);
+
+        if (error) throw error;
+      }
+
+      // 3. Atualizar contas recorrentes / fixas (a mãe e todas as filhas baixadas ou geradas)
+      if (recurringParentIds.size > 0) {
+        const parentIdsList = Array.from(recurringParentIds);
+        const { error } = await supabase
+          .from('transactions')
+          .update(payload)
+          .or(`id.in.(${parentIdsList.join(',')}),original_id.in.(${parentIdsList.join(',')})`)
+          .is('deleted_at', null);
+
+        if (error) throw error;
+      }
+
+      // 4. Atualizar transações pontuais avulsas
+      if (individualTxIds.size > 0) {
+        const { error } = await supabase
+          .from('transactions')
+          .update(payload)
+          .in('id', Array.from(individualTxIds))
+          .is('deleted_at', null);
+
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      toast({
+        title: 'Categorias atualizadas!',
+        description: 'Os lançamentos e seus vínculos foram alinhados com sucesso.',
+      });
+    },
+    onError: (err: any) => {
+      logSafeError('useBulkUpdateTransactionCategory', err);
+      toast({
+        title: 'Erro ao alterar categoria',
+        description: err?.message || 'Ocorreu um erro ao atualizar os lançamentos.',
+        variant: 'destructive',
+      });
+    },
+  });
+};
+

@@ -1,0 +1,925 @@
+import React, { useState, useMemo } from 'react';
+import { useFinanceStore } from '@/hooks/useFinanceStore';
+import { PageHeader } from '@/components/ui/PageHeader';
+import {
+  PieChart as PieIcon,
+  TrendingDown,
+  Calendar,
+  Layers,
+  ChevronLeft,
+  ChevronRight,
+  Receipt,
+  CreditCard as CardIcon,
+  Wallet,
+  Activity,
+  ArrowUpRight,
+  TrendingUp,
+  Percent,
+  Clock
+} from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+import {
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+  subMonths,
+  addMonths,
+  format,
+  eachMonthOfInterval,
+  getDaysInMonth,
+  differenceInCalendarMonths,
+  differenceInCalendarDays,
+} from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { useTheme } from '@/hooks/useTheme';
+import { accentColors, useThemeColor } from '@/hooks/useThemeColor';
+import { formatCurrency } from '@/utils/formatters';
+import { parseLocalDate } from '@/utils/dateUtils';
+import { Transaction } from '@/types/finance';
+
+const PIE_COLORS = [
+  '#0d9488', // teal
+  '#0284c7', // sky
+  '#6366f1', // indigo
+  '#8b5cf6', // violet
+  '#ec4899', // pink
+  '#f59e0b', // amber
+  '#10b981', // emerald
+  '#64748b', // slate
+];
+
+type PeriodType = 'month' | 'semester' | 'year';
+
+export default function CostAnalysisPage() {
+  const { theme } = useTheme();
+  const { accentColor } = useThemeColor();
+  const {
+    transactions,
+    categories,
+    subcategories = [],
+    viewDate,
+    setViewDate,
+  } = useFinanceStore();
+
+  const isDarkTheme = useMemo(() => {
+    if (theme === 'dark' || theme === 'amoled') return true;
+    if (theme === 'system') {
+      return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  }, [theme]);
+
+  const activeAccent = useMemo(() => {
+    return accentColors.find((c) => c.id === accentColor) ?? accentColors[0];
+  }, [accentColor]);
+
+  const primaryGraphColor = isDarkTheme ? '#38bdf8' : `hsl(${activeAccent.hsl})`;
+
+  // Categorias de despesa disponíveis
+  const expenseCategories = useMemo(() => {
+    return categories
+      .filter((c) => c.type === 'expense' && c.isActive !== false && !c.isSystem)
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [categories]);
+
+  const [period, setPeriod] = useState<PeriodType>('month');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(() => {
+    return categories.find((c) => c.type === 'expense' && c.isActive !== false && !c.isSystem)?.id || '';
+  });
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>('all');
+  const [chartMode, setChartMode] = useState<'bar' | 'area' | 'line'>('bar');
+
+  // Se nenhuma categoria estiver selecionada e existirem categorias, seleciona a primeira
+  React.useEffect(() => {
+    if (!selectedCategoryId && expenseCategories.length > 0) {
+      setSelectedCategoryId(expenseCategories[0].id);
+    }
+  }, [expenseCategories, selectedCategoryId]);
+
+  // Reset de subcategoria caso mude a categoria
+  const handleCategoryChange = (val: string) => {
+    setSelectedCategoryId(val);
+    setSelectedSubcategoryId('all');
+  };
+
+  // Subcategorias da categoria ativa
+  const availableSubcategories = useMemo(() => {
+    if (!selectedCategoryId) return [];
+    return subcategories
+      .filter((s) => s.categoryId === selectedCategoryId && s.isActive !== false)
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [selectedCategoryId, subcategories]);
+
+  // Intervalo selecionado (Mês, Semestre ou Ano)
+  const currentInterval = useMemo(() => {
+    if (period === 'month') {
+      return {
+        start: startOfMonth(viewDate),
+        end: endOfMonth(viewDate),
+      };
+    }
+    if (period === 'semester') {
+      const isFirstHalf = viewDate.getMonth() < 6;
+      const start = new Date(viewDate.getFullYear(), isFirstHalf ? 0 : 6, 1);
+      const end = endOfMonth(new Date(viewDate.getFullYear(), isFirstHalf ? 5 : 11, 1));
+      return { start, end };
+    }
+    return {
+      start: startOfYear(viewDate),
+      end: endOfYear(viewDate),
+    };
+  }, [viewDate, period]);
+
+  // Navegação de período
+  const shiftPeriod = (dir: -1 | 1) => {
+    if (period === 'month') {
+      setViewDate(addMonths(viewDate, dir));
+    } else if (period === 'semester') {
+      setViewDate(addMonths(viewDate, dir * 6));
+    } else {
+      setViewDate(new Date(viewDate.getFullYear() + dir, 0, 1));
+    }
+  };
+
+  // Label do período atual
+  const periodLabel = useMemo(() => {
+    if (period === 'month') {
+      return format(viewDate, 'MMMM yyyy', { locale: ptBR });
+    }
+    if (period === 'semester') {
+      const sem = viewDate.getMonth() < 6 ? '1º Semestre' : '2º Semestre';
+      return `${sem} ${viewDate.getFullYear()}`;
+    }
+    return `${viewDate.getFullYear()}`;
+  }, [period, viewDate]);
+
+  // Função para verificar se uma transação é um gasto válido na tela de Análise de Custos:
+  // Independente de dinheiro ou cartão de crédito, capturamos o custo real
+  const isCostExpense = (t: Transaction): boolean => {
+    if (t.type !== 'expense') return false;
+    if (t.isTransfer) return false;
+    if (t.isInvoicePayment) return false; // Evita dupla contagem da fatura consolidada
+    if (t.deleted_at) return false;
+    return true;
+  };
+
+  // Transações no intervalo selecionado
+  const periodTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      if (!isCostExpense(t)) return false;
+      const tDate = parseLocalDate(t.date.slice(0, 10));
+      return tDate >= currentInterval.start && tDate <= currentInterval.end;
+    });
+  }, [transactions, currentInterval]);
+
+  // Transações do ano inteiro para calcular o impacto anual
+  const yearInterval = useMemo(() => {
+    return {
+      start: startOfYear(viewDate),
+      end: endOfYear(viewDate),
+    };
+  }, [viewDate]);
+
+  const yearTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      if (!isCostExpense(t)) return false;
+      const tDate = parseLocalDate(t.date.slice(0, 10));
+      return tDate >= yearInterval.start && tDate <= yearInterval.end;
+    });
+  }, [transactions, yearInterval]);
+
+  // Filtrar pelos parâmetros de Categoria / Subcategoria
+  const filterMatched = (t: Transaction): boolean => {
+    if (selectedCategoryId !== 'all' && t.categoryId !== selectedCategoryId) {
+      return false;
+    }
+    if (selectedSubcategoryId !== 'all') {
+      const subId = t.subcategoryId || (t as any).subcategory_id;
+      if (subId !== selectedSubcategoryId) return false;
+    }
+    return true;
+  };
+
+  // Itens correspondentes no período
+  const targetPeriodTransactions = useMemo(() => {
+    return periodTransactions.filter(filterMatched).sort((a, b) => {
+      return parseLocalDate(b.date.slice(0, 10)).getTime() - parseLocalDate(a.date.slice(0, 10)).getTime();
+    });
+  }, [periodTransactions, selectedCategoryId, selectedSubcategoryId]);
+
+  // Itens correspondentes no ano
+  const targetYearTransactions = useMemo(() => {
+    return yearTransactions.filter(filterMatched);
+  }, [yearTransactions, selectedCategoryId, selectedSubcategoryId]);
+
+  // Cálculos de totais
+  const targetPeriodTotal = useMemo(() => {
+    return targetPeriodTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  }, [targetPeriodTransactions]);
+
+  const totalPeriodExpenses = useMemo(() => {
+    return periodTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  }, [periodTransactions]);
+
+  const targetYearTotal = useMemo(() => {
+    return targetYearTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  }, [targetYearTransactions]);
+
+  const totalYearExpenses = useMemo(() => {
+    return yearTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  }, [yearTransactions]);
+
+  // Quantidade de dias no período para calcular a média diária
+  // Regra Estatística: se o primeiro registro da categoria/subcategoria no período começou após o início do período,
+  // contamos apenas a partir do dia do primeiro registro (ou início do período, o que for mais recente).
+  const firstRecordInPeriodDate = useMemo(() => {
+    if (targetPeriodTransactions.length === 0) return null;
+    let earliest = parseLocalDate(targetPeriodTransactions[0].date.slice(0, 10));
+    for (const t of targetPeriodTransactions) {
+      const d = parseLocalDate(t.date.slice(0, 10));
+      if (d < earliest) earliest = d;
+    }
+    return earliest;
+  }, [targetPeriodTransactions]);
+
+  const periodDaysCount = useMemo(() => {
+    if (period === 'month') {
+      if (!firstRecordInPeriodDate) return getDaysInMonth(viewDate);
+      const effectiveStart = firstRecordInPeriodDate > currentInterval.start
+        ? firstRecordInPeriodDate
+        : currentInterval.start;
+      const days = differenceInCalendarDays(currentInterval.end, effectiveStart) + 1;
+      return Math.max(1, days);
+    }
+    const effectiveStart = firstRecordInPeriodDate && firstRecordInPeriodDate > currentInterval.start
+      ? firstRecordInPeriodDate
+      : currentInterval.start;
+    const diffDays = differenceInCalendarDays(currentInterval.end, effectiveStart) + 1;
+    return Math.max(1, diffDays);
+  }, [period, viewDate, currentInterval, firstRecordInPeriodDate]);
+
+  // Quantidade de meses no período para calcular a média mensal
+  // Regra Estatística: a média deve considerar a partir do primeiro mês com registro.
+  // Exemplo: se o ano é avaliado e o primeiro gasto foi em Julho, calcula-se apenas de Julho até o mês de visualização (ex: Agosto = 2 meses).
+  const periodMonthsCount = useMemo(() => {
+    if (period === 'month') return 1;
+
+    if (!firstRecordInPeriodDate) {
+      return period === 'semester' ? 6 : 12;
+    }
+
+    // Primeiro mês com registro dentro do período (truncado para início do mês)
+    const firstMonthStart = startOfMonth(firstRecordInPeriodDate);
+    const effectiveMonthStart = firstMonthStart > currentInterval.start
+      ? firstMonthStart
+      : currentInterval.start;
+
+    // Até onde vai a contagem de meses: até o mês atual de visualização (ou fim do período)
+    const effectiveMonthEnd = startOfMonth(currentInterval.end < viewDate ? currentInterval.end : viewDate);
+
+    if (effectiveMonthEnd < effectiveMonthStart) {
+      return 1;
+    }
+
+    const months = differenceInCalendarMonths(effectiveMonthEnd, effectiveMonthStart) + 1;
+    return Math.max(1, months);
+  }, [period, firstRecordInPeriodDate, currentInterval, viewDate]);
+
+  // Métricas Principais
+  const dailyAverage = useMemo(() => {
+    return targetPeriodTotal / periodDaysCount;
+  }, [targetPeriodTotal, periodDaysCount]);
+
+  const monthlyAverage = useMemo(() => {
+    return targetPeriodTotal / periodMonthsCount;
+  }, [targetPeriodTotal, periodMonthsCount]);
+
+  // Representatividade / Impacto
+  const monthShare = useMemo(() => {
+    if (totalPeriodExpenses === 0) return 0;
+    return (targetPeriodTotal / totalPeriodExpenses) * 100;
+  }, [targetPeriodTotal, totalPeriodExpenses]);
+
+  const yearShare = useMemo(() => {
+    if (totalYearExpenses === 0) return 0;
+    return (targetYearTotal / totalYearExpenses) * 100;
+  }, [targetYearTotal, totalYearExpenses]);
+
+  // Histórico Mensal (Últimos 12 meses até o mês de visualização)
+  const historyData = useMemo(() => {
+    const months = eachMonthOfInterval({
+      start: subMonths(startOfMonth(viewDate), 11),
+      end: endOfMonth(viewDate),
+    });
+
+    return months.map((m) => {
+      const mStart = startOfMonth(m);
+      const mEnd = endOfMonth(m);
+      const monthTxs = transactions.filter((t) => {
+        if (!isCostExpense(t)) return false;
+        if (!filterMatched(t)) return false;
+        const d = parseLocalDate(t.date.slice(0, 10));
+        return d >= mStart && d <= mEnd;
+      });
+      const val = monthTxs.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+      return {
+        label: format(m, 'MMM/yy', { locale: ptBR }),
+        rawDate: m,
+        total: val,
+        isCurrent: m.getMonth() === viewDate.getMonth() && m.getFullYear() === viewDate.getFullYear(),
+      };
+    });
+  }, [transactions, viewDate, selectedCategoryId, selectedSubcategoryId]);
+
+  // Composição por Subcategorias (quando nenhuma subcategoria específica estiver selecionada)
+  const subcategoryBreakdown = useMemo(() => {
+    if (selectedSubcategoryId !== 'all') return [];
+
+    const map = new Map<string, number>();
+    let uncategorizedSum = 0;
+
+    targetPeriodTransactions.forEach((t) => {
+      const subId = t.subcategoryId || (t as any).subcategory_id;
+      if (subId) {
+        map.set(subId, (map.get(subId) || 0) + Number(t.amount || 0));
+      } else {
+        uncategorizedSum += Number(t.amount || 0);
+      }
+    });
+
+    const items = Array.from(map.entries()).map(([subId, value]) => {
+      const foundSub = availableSubcategories.find((s) => s.id === subId);
+      return {
+        id: subId,
+        name: foundSub ? foundSub.name : 'Outras',
+        value,
+      };
+    });
+
+    if (uncategorizedSum > 0) {
+      items.push({
+        id: 'no-sub',
+        name: 'Geral / Sem Subcategoria',
+        value: uncategorizedSum,
+      });
+    }
+
+    return items.sort((a, b) => b.value - a.value);
+  }, [selectedSubcategoryId, targetPeriodTransactions, availableSubcategories]);
+
+  // Nome do foco de análise
+  const activeCategoryObj = useMemo(() => {
+    return categories.find((c) => c.id === selectedCategoryId);
+  }, [categories, selectedCategoryId]);
+
+  const activeSubcategoryObj = useMemo(() => {
+    return subcategories.find((s) => s.id === selectedSubcategoryId);
+  }, [subcategories, selectedSubcategoryId]);
+
+  const currentFocusName = useMemo(() => {
+    if (activeSubcategoryObj) {
+      return `${activeCategoryObj?.name || 'Categoria'} › ${activeSubcategoryObj.name}`;
+    }
+    return activeCategoryObj?.name || 'Categoria';
+  }, [activeCategoryObj, activeSubcategoryObj]);
+
+  return (
+    <div className="space-y-6 pb-24 md:pb-12 max-w-7xl mx-auto animate-in fade-in duration-300">
+      {/* Cabeçalho */}
+      <PageHeader title="Análise de Custos" icon={PieIcon}>
+        {/* Seletor de Período */}
+        <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-zinc-800/60 p-1 rounded-2xl border border-gray-200/50 dark:border-zinc-800">
+          {(['month', 'semester', 'year'] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={cn(
+                'px-3 py-1.5 rounded-xl text-xs font-bold transition-all',
+                period === p
+                  ? 'bg-white dark:bg-zinc-900 text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {p === 'month' ? 'Mês' : p === 'semester' ? 'Semestre' : 'Ano'}
+            </button>
+          ))}
+        </div>
+
+        {/* Navegador de Data */}
+        <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl p-1 shadow-sm">
+          <button
+            onClick={() => shiftPeriod(-1)}
+            className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Período anterior"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-xs font-bold px-2 capitalize min-w-[110px] text-center">
+            {periodLabel}
+          </span>
+          <button
+            onClick={() => shiftPeriod(1)}
+            className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Próximo período"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </PageHeader>
+
+      {/* Barra de Filtros: Categoria e Subcategoria */}
+      <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-3xl p-4 sm:p-6 shadow-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Categoria */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-primary" />
+              Categoria
+            </label>
+            <Select value={selectedCategoryId} onValueChange={handleCategoryChange}>
+              <SelectTrigger className="h-11 rounded-2xl bg-gray-50 dark:bg-zinc-950/60 border-gray-100 dark:border-zinc-800 font-bold text-sm">
+                <SelectValue placeholder="Selecione uma categoria" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl max-h-72">
+                {expenseCategories.map((c) => (
+                  <SelectItem key={c.id} value={c.id} className="font-medium">
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Subcategoria */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-sky-500" />
+              Subcategoria
+            </label>
+            <Select
+              value={selectedSubcategoryId}
+              onValueChange={setSelectedSubcategoryId}
+              disabled={selectedCategoryId === 'all' || availableSubcategories.length === 0}
+            >
+              <SelectTrigger className="h-11 rounded-2xl bg-gray-50 dark:bg-zinc-950/60 border-gray-100 dark:border-zinc-800 font-bold text-sm disabled:opacity-50">
+                <SelectValue
+                  placeholder={
+                    selectedCategoryId === 'all'
+                      ? 'Selecione uma categoria primeiro'
+                      : availableSubcategories.length === 0
+                      ? 'Nenhuma subcategoria vinculada'
+                      : 'Todas as Subcategorias'
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl max-h-72">
+                <SelectItem value="all" className="font-bold">
+                  Todas as Subcategorias
+                </SelectItem>
+                {availableSubcategories.map((s) => (
+                  <SelectItem key={s.id} value={s.id} className="font-medium">
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Indicador do Escopo Ativo */}
+        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 truncate">
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
+            <span className="font-bold text-foreground truncate">{currentFocusName}</span>
+          </div>
+          <span className="font-medium shrink-0">
+            {targetPeriodTransactions.length}{' '}
+            {targetPeriodTransactions.length === 1 ? 'lançamento' : 'lançamentos'}
+          </span>
+        </div>
+      </div>
+
+      {/* Grid de Métricas Principais (Executivo) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Total Gasto no Período */}
+        <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-3xl p-4 sm:p-5 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Total no Período
+            </span>
+            <div className="w-7 h-7 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
+              <TrendingDown className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-xl sm:text-2xl font-black tabular-nums tracking-tight text-foreground">
+            {formatCurrency(targetPeriodTotal)}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1 font-medium truncate">
+            {periodLabel}
+          </p>
+        </div>
+
+        {/* Média Diária */}
+        <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-3xl p-4 sm:p-5 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Média Diária
+            </span>
+            <div className="w-7 h-7 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-xl sm:text-2xl font-black tabular-nums tracking-tight text-foreground">
+            {formatCurrency(dailyAverage)}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1 font-medium truncate">
+            {firstRecordInPeriodDate && period !== 'month'
+              ? `${periodDaysCount} dias (a partir do 1º registro)`
+              : `${periodDaysCount} dias no período`}
+          </p>
+        </div>
+
+        {/* Média Mensal */}
+        <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-3xl p-4 sm:p-5 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Média Mensal
+            </span>
+            <div className="w-7 h-7 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+              <Calendar className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-xl sm:text-2xl font-black tabular-nums tracking-tight text-foreground">
+            {formatCurrency(monthlyAverage)}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1 font-medium truncate">
+            {firstRecordInPeriodDate && period !== 'month'
+              ? `${periodMonthsCount} ${periodMonthsCount === 1 ? 'mês' : 'meses'} (desde o 1º gasto)`
+              : `${periodMonthsCount} ${periodMonthsCount === 1 ? 'mês base' : 'meses avaliados'}`}
+          </p>
+        </div>
+
+        {/* Impacto / Representatividade */}
+        <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-3xl p-4 sm:p-5 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              Impacto nos Gastos
+            </span>
+            <div className="w-7 h-7 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
+              <Percent className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-xl sm:text-2xl font-black tabular-nums tracking-tight text-foreground">
+            {monthShare.toFixed(1)}%
+          </p>
+          <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-1 font-medium">
+            <span>No Ano:</span>
+            <span className="font-bold text-foreground">{yearShare.toFixed(1)}%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Gráfico Principal: Evolução Histórica dos Últimos 12 Meses */}
+      <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-3xl p-4 sm:p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
+              <Activity className="w-5 h-5 text-primary" />
+              Evolução Histórica (12 Meses)
+            </h2>
+            <p className="text-xs text-muted-foreground font-medium">
+              Comparativo mês a mês do item selecionado
+            </p>
+          </div>
+
+          {/* Alternador de Tipo de Gráfico */}
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-zinc-800/60 p-1 rounded-xl border border-gray-200/50 dark:border-zinc-800 self-start sm:self-auto">
+            {(['bar', 'area', 'line'] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setChartMode(mode)}
+                className={cn(
+                  'px-2.5 py-1 rounded-lg text-xs font-bold capitalize transition-all',
+                  chartMode === mode
+                    ? 'bg-white dark:bg-zinc-900 text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {mode === 'bar' ? 'Barras' : mode === 'area' ? 'Área' : 'Linha'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="h-64 sm:h-72 w-full pt-4">
+          <ResponsiveContainer width="100%" height="100%">
+            {chartMode === 'bar' ? (
+              <BarChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.15} />
+                <XAxis
+                  dataKey="label"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11, fill: 'currentColor' }}
+                  className="text-muted-foreground"
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11, fill: 'currentColor' }}
+                  tickFormatter={(val) => `R$ ${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}`}
+                  className="text-muted-foreground"
+                />
+                <Tooltip
+                  formatter={(val: any) => [formatCurrency(Number(val)), 'Gasto']}
+                  labelStyle={{ fontWeight: 'bold' }}
+                  contentStyle={{
+                    backgroundColor: isDarkTheme ? '#18181b' : '#ffffff',
+                    borderRadius: '1rem',
+                    border: isDarkTheme ? '1px solid #27272a' : '1px solid #f4f4f5',
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+                  }}
+                />
+                <Bar dataKey="total" radius={[8, 8, 0, 0]}>
+                  {historyData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.isCurrent ? '#f43f5e' : primaryGraphColor}
+                      opacity={entry.isCurrent ? 1 : 0.75}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            ) : chartMode === 'area' ? (
+              <AreaChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="costGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={primaryGraphColor} stopOpacity={0.4} />
+                    <stop offset="95%" stopColor={primaryGraphColor} stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.15} />
+                <XAxis
+                  dataKey="label"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11, fill: 'currentColor' }}
+                  className="text-muted-foreground"
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11, fill: 'currentColor' }}
+                  tickFormatter={(val) => `R$ ${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}`}
+                  className="text-muted-foreground"
+                />
+                <Tooltip
+                  formatter={(val: any) => [formatCurrency(Number(val)), 'Gasto']}
+                  labelStyle={{ fontWeight: 'bold' }}
+                  contentStyle={{
+                    backgroundColor: isDarkTheme ? '#18181b' : '#ffffff',
+                    borderRadius: '1rem',
+                    border: isDarkTheme ? '1px solid #27272a' : '1px solid #f4f4f5',
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="total"
+                  stroke={primaryGraphColor}
+                  strokeWidth={2.5}
+                  fillOpacity={1}
+                  fill="url(#costGrad)"
+                />
+              </AreaChart>
+            ) : (
+              <LineChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.15} />
+                <XAxis
+                  dataKey="label"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11, fill: 'currentColor' }}
+                  className="text-muted-foreground"
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11, fill: 'currentColor' }}
+                  tickFormatter={(val) => `R$ ${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}`}
+                  className="text-muted-foreground"
+                />
+                <Tooltip
+                  formatter={(val: any) => [formatCurrency(Number(val)), 'Gasto']}
+                  labelStyle={{ fontWeight: 'bold' }}
+                  contentStyle={{
+                    backgroundColor: isDarkTheme ? '#18181b' : '#ffffff',
+                    borderRadius: '1rem',
+                    border: isDarkTheme ? '1px solid #27272a' : '1px solid #f4f4f5',
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="total"
+                  stroke={primaryGraphColor}
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: primaryGraphColor }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            )}
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Bloco Dinâmico: Distribuição das Subcategorias (Quando categoria geral estiver ativa) */}
+      {selectedSubcategoryId === 'all' && subcategoryBreakdown.length > 0 && (
+        <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-3xl p-4 sm:p-6 shadow-sm space-y-4">
+          <div>
+            <h2 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
+              <PieIcon className="w-5 h-5 text-sky-500" />
+              Detalhamento por Subcategorias
+            </h2>
+            <p className="text-xs text-muted-foreground font-medium">
+              Participação de cada subcategoria no custo total do período
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+            {/* Gráfico Donut */}
+            <div className="h-56 sm:h-64 w-full flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={subcategoryBreakdown}
+                    innerRadius={55}
+                    outerRadius={80}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {subcategoryBreakdown.map((entry, index) => (
+                      <Cell
+                        key={`cell-pie-${entry.id}`}
+                        fill={PIE_COLORS[index % PIE_COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(val: any) => [formatCurrency(Number(val)), 'Valor']}
+                    contentStyle={{
+                      backgroundColor: isDarkTheme ? '#18181b' : '#ffffff',
+                      borderRadius: '1rem',
+                      border: isDarkTheme ? '1px solid #27272a' : '1px solid #f4f4f5',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Lista Executiva de Subcategorias com % */}
+            <div className="space-y-2.5 max-h-64 overflow-y-auto pr-2">
+              {subcategoryBreakdown.map((item, index) => {
+                const pct = targetPeriodTotal > 0 ? (item.value / targetPeriodTotal) * 100 : 0;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      if (item.id !== 'no-sub') {
+                        setSelectedSubcategoryId(item.id);
+                      }
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 rounded-2xl bg-gray-50/50 dark:bg-zinc-950/40 border border-gray-100/80 dark:border-zinc-800 hover:border-primary/40 transition-colors text-left group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
+                      />
+                      <span className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">
+                        {item.name}
+                      </span>
+                    </div>
+                    <div className="text-right shrink-0 ml-2">
+                      <p className="text-xs font-black tabular-nums text-foreground">
+                        {formatCurrency(item.value)}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground font-bold">{pct.toFixed(1)}%</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Extrato Detalhado das Transações que Formam o Custo */}
+      <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-3xl p-4 sm:p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
+              <Receipt className="w-5 h-5 text-emerald-500" />
+              Lançamentos do Período
+            </h2>
+            <p className="text-xs text-muted-foreground font-medium">
+              Itens contabilizados (dinheiro, débito, boleto e cartão de crédito)
+            </p>
+          </div>
+          <span className="text-xs font-black tabular-nums bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-full text-muted-foreground">
+            {targetPeriodTransactions.length} itens
+          </span>
+        </div>
+
+        {targetPeriodTransactions.length === 0 ? (
+          <div className="py-12 text-center text-muted-foreground text-sm font-medium">
+            Nenhum lançamento encontrado para os filtros e período selecionados.
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100 dark:divide-zinc-800/80 max-h-96 overflow-y-auto">
+            {targetPeriodTransactions.map((tx) => {
+              const txDate = parseLocalDate(tx.date.slice(0, 10));
+              const isCard = !!tx.cardId;
+              const subObj = subcategories.find((s) => s.id === tx.subcategoryId);
+
+              return (
+                <div
+                  key={tx.id}
+                  className="py-3 px-1 flex items-center justify-between gap-3 hover:bg-gray-50/50 dark:hover:bg-zinc-950/40 rounded-2xl transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={cn(
+                        'w-9 h-9 rounded-2xl flex items-center justify-center shrink-0',
+                        isCard
+                          ? 'bg-purple-500/10 text-purple-500'
+                          : 'bg-emerald-500/10 text-emerald-500'
+                      )}
+                    >
+                      {isCard ? <CardIcon className="w-4 h-4" /> : <Wallet className="w-4 h-4" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-bold text-foreground truncate">
+                        {tx.description || 'Sem descrição'}
+                      </p>
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium mt-0.5">
+                        <span>{format(txDate, 'dd/MM/yyyy')}</span>
+                        {subObj && (
+                          <>
+                            <span>•</span>
+                            <span className="font-bold text-sky-600 dark:text-sky-400">
+                              {subObj.name}
+                            </span>
+                          </>
+                        )}
+                        <span>•</span>
+                        <span>{isCard ? 'Cartão' : 'Conta/Dinheiro'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <p className="text-xs sm:text-sm font-black tabular-nums text-rose-500">
+                      - {formatCurrency(Number(tx.amount || 0))}
+                    </p>
+                    <span
+                      className={cn(
+                        'text-[9px] font-bold uppercase tracking-wider',
+                        tx.isPaid ? 'text-emerald-500' : 'text-amber-500'
+                      )}
+                    >
+                      {tx.isPaid ? 'Pago' : 'Pendente'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

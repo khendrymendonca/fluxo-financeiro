@@ -141,6 +141,11 @@ function useFinanceProvider() {
     setSelectedIds(new Set(ids));
   }, []);
 
+  const resetSelectionMode = useCallback(() => {
+    setIsSelectionMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
   // --- Navigation ---
   const nextMonth = useCallback(() => setViewDate(prev => addMonths(prev, 1)), []);
   const prevMonth = useCallback(() => setViewDate(prev => subMonths(prev, 1)), []);
@@ -267,6 +272,7 @@ function useFinanceProvider() {
     toggleSelectId,
     clearSelection,
     selectAll,
+    resetSelectionMode,
 
     addTransaction: addTransactionMutation.mutateAsync,
     updateTransaction: (data: { id: string, updates: Partial<Transaction>, cardClosingDay?: number, cardDueDay?: number, currentCardId?: string | null, applyScope?: 'this' | 'future' | 'all' }) =>

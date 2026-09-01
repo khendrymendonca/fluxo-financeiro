@@ -123,11 +123,18 @@ export const FEATURES: FeatureDefinition[] = [
     enabledByDefault: true, // Pro / Família
   },
   {
+    key: 'cost_analysis',
+    label: 'Análise de Custos',
+    description: 'Análise detalhada de custos por categoria e subcategoria',
+    type: 'screen',
+    enabledByDefault: true,
+  },
+  {
     key: 'export_data',
     label: 'Exportação de Dados',
     description: 'Exportar transações e relatórios em CSV ou PDF',
     type: 'premium',
-    enabledByDefault: true, // Pro / Família
+    enabledByDefault: true,
   },
 
   // ── Limites de uso ───────────────────────────────────────

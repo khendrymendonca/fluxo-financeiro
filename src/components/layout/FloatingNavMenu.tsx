@@ -8,7 +8,7 @@ import {
   LayoutDashboard, ArrowUpDown, Receipt, CreditCard,
   Wallet, Rocket, TrendingDown, LineChart,
   Settings, Settings2, Database, Calculator, User, Shield,
-  TrendingUp
+  TrendingUp, PieChart
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -23,6 +23,7 @@ const SHORTCUT_META: Record<ShortcutId, { icon: any; label: string; featureKey?:
   goals:        { icon: Rocket,         label: 'Metas',       featureKey: 'goals_manager' },
   debts:        { icon: TrendingDown,   label: 'Dívidas',     featureKey: 'debts_manager' },
   reports:      { icon: LineChart,      label: 'Gráficos',    featureKey: 'reports_dashboard' },
+  'cost-analysis': { icon: PieChart,    label: 'Custos',      featureKey: 'cost_analysis' },
   categories:   { icon: Settings2,      label: 'Categ.' },
   export:       { icon: Database,       label: 'Dados' },
   simulator:    { icon: Calculator,     label: 'Simulador',   featureKey: 'simulator' },

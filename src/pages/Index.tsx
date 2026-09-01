@@ -64,7 +64,7 @@ import EmergencyFund from './EmergencyFund';
 import { BillsManager } from '@/components/accounts/BillsManager';
 import { HealthScore } from '@/components/dashboard/HealthScore';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
-import { ExportManager } from '@/components/dashboard/ExportManager';
+import CostAnalysisPage from './CostAnalysisPage';
 import {
   Sheet,
   SheetContent,
@@ -78,7 +78,7 @@ import { MobileTopHeader } from '@/components/layout/MobileTopHeader';
 import { getGreetingForHour, getUserFirstName, getUserInitial } from '@/utils/userIdentity';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
-type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'export' | 'emergency' | 'menu' | 'profile';
+type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'cost-analysis' | 'export' | 'emergency' | 'menu' | 'profile';
 
 // Mapa de views que requerem feature flag
 const PROTECTED_VIEWS: Record<string, string> = {
@@ -90,6 +90,7 @@ const PROTECTED_VIEWS: Record<string, string> = {
   debts: 'debts_manager',
   emergency: 'emergency_fund',
   reports: 'reports_dashboard',
+  'cost-analysis': 'cost_analysis',
   simulator: 'simulator',
   export: 'export_data',
 };
@@ -178,8 +179,13 @@ export default function Index() {
     togglePaid,
     depositToGoal,
     totalPendingOutflows,
-    viewDate
+    viewDate,
+    resetSelectionMode
   } = useFinanceStore();
+
+  useEffect(() => {
+    resetSelectionMode();
+  }, [currentView, viewMode, viewDate, resetSelectionMode]);
 
   const { cashflow, categoryExpenses } = useDashboardMetrics(viewDate, currentMonthTransactions);
   const { ...emergencyData } = useEmergencyFund(currentMonthTransactions);
@@ -472,10 +478,11 @@ export default function Index() {
             <EmergencyFund />
           </ViewGuard>
         );
+      case 'cost-analysis':
       case 'export':
         return (
-          <ViewGuard view="export">
-            <ExportManager />
+          <ViewGuard view="cost-analysis">
+            <CostAnalysisPage />
           </ViewGuard>
         );
       case 'profile':

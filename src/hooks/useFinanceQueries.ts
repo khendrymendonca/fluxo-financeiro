@@ -38,10 +38,20 @@ export function useTransactions(viewDate: Date) {
       if (typeof import.meta !== 'undefined' && import.meta.env?.MODE !== 'test') {
         (async () => {
           try {
-            const { data: cats } = await supabase
+            // Aborta silenciosamente se a sessão expirou — evita 401 no Supabase
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (!sessionData?.session) return;
+
+            const { data: cats, error: catsError } = await supabase
               .from('categories')
               .select('id, name')
               .eq('user_id', user.id);
+
+            // Erro de auth (401/403): abortar silenciosamente
+            if (catsError) {
+              if (catsError.code === 'PGRST301' || (catsError as any)?.status === 401) return;
+              throw catsError;
+            }
             
             if (cats && cats.length > 0) {
               const abatementCat = cats.find(c => c.name.toLowerCase().includes('abatimento'));

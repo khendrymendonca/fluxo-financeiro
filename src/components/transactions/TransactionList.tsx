@@ -1,21 +1,22 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { formatCurrency } from '@/utils/formatters';
 import { ArrowUpRight, ArrowDownRight, Trash2, Pencil, FastForward, ChevronDown, ChevronUp, Plus, RotateCcw, ArrowRight, Filter } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { useToggleTransactionPaid } from '@/hooks/useTransactionMutations';
+import { useToggleTransactionPaid, useBulkUpdateTransactionCategory } from '@/hooks/useTransactionMutations';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
-  CheckCircle2, Clock, Calendar, ShieldAlert, Receipt, Tag
+  CheckCircle2, Clock, Calendar, ShieldAlert, Receipt, Tag, Tags, CheckSquare2, X
 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { Portal } from '@/components/ui/Portal';
 import { BulkDeleteDialog } from './BulkDeleteDialog';
+import { BulkCategoryDialog } from './BulkCategoryDialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { getAccountOverdraftMetrics } from '@/utils/accountOverdraft';
-import { getTransactionCategoryBucket, getTransactionCategoryLabel } from '@/utils/transactionCategory';
+import { getTransactionCategoryBucket, getTransactionCategoryLabel, isFixedCategoryTransaction } from '@/utils/transactionCategory';
 import { buildCanonicalCategoryFilterOptions, matchesCanonicalCategoryFilter } from '@/utils/categoryFilter';
 import { IconRenderer } from '@/components/ui/IconSelector';
 
@@ -86,6 +87,8 @@ export function TransactionList({
 
   // Bulk Delete State
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  // Bulk Category State
+  const [showBulkCategoryDialog, setShowBulkCategoryDialog] = useState(false);
 
   const {
     categories,
@@ -98,12 +101,23 @@ export function TransactionList({
     toggleSelectionMode,
     toggleSelectId,
     clearSelection,
+    selectAll,
     deleteTransaction,
     bulkDeleteTransactions,
     isDeletingTransaction,
     isBulkDeleting
   } = useFinanceStore();
   const { mutateAsync: togglePaidMutation } = useToggleTransactionPaid();
+  const { mutateAsync: bulkUpdateCategoryMutation, isPending: isUpdatingCategory } = useBulkUpdateTransactionCategory();
+
+  // Ativa o modo de seleção + seleciona o item pressionado (mobile long-press / hover)
+  const activateSelectionWithItem = useCallback((id: string) => {
+    if (!isSelectionMode) {
+      toggleSelectionMode();
+    }
+    // Garante que o item pressionado fica selecionado após o modo ser ativado
+    setTimeout(() => toggleSelectId(id), 0);
+  }, [isSelectionMode, toggleSelectionMode, toggleSelectId]);
 
   const formatDate = (dateString: string) =>
     parseLocalDate(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -495,16 +509,7 @@ export function TransactionList({
               );
             })()}
 
-            {/* Botão de Remoção em Massa */}
-            <Button
-              variant={isSelectionMode ? "default" : "outline"}
-              onClick={toggleSelectionMode}
-              className={cn("h-9 px-4 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all shrink-0",
-                isSelectionMode ? "bg-primary text-white" : "border-danger/30 text-danger hover:bg-danger/10")}
-            >
-              <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-              {isSelectionMode ? 'Cancelar' : 'Remover lançamentos'}
-            </Button>
+
           </div>
         </div>
 
@@ -693,30 +698,64 @@ export function TransactionList({
                     item.installmentNumber && item.installmentTotal ? `${item.installmentNumber}/${item.installmentTotal}` : null,
                   ].filter((badge): badge is string => Boolean(badge));
 
+                  // Long-press para mobile
+                  let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+                  const handleTouchStart = () => {
+                    longPressTimer = setTimeout(() => {
+                      longPressTimer = null;
+                      try { navigator.vibrate?.(40); } catch { /* noop */ }
+                      activateSelectionWithItem(item.id);
+                    }, 500);
+                  };
+                  const handleTouchEnd = () => {
+                    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+                  };
+
+                  const isFixed = isFixedCategoryTransaction(item as any);
+
                   return (
                     <div key={item.id} className="group relative">
-                      {isSelectionMode && (
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
-                          <Checkbox
-                            checked={selectedIds.has(item.id)}
-                            onCheckedChange={() => toggleSelectId(item.id)}
-                            className="w-5 h-5 border-2"
-                          />
-                        </div>
-                      )}
-                      <div className={cn(
-                        "flex flex-col gap-3 p-4 transition-all active:bg-white/5 cursor-pointer sm:flex-row sm:items-center sm:justify-between",
-                        isSelectionMode && "pl-14",
-                        isManagedByBills && !isSelectionMode && "cursor-default"
-                      )} onClick={() => {
-                        if (isSelectionMode) toggleSelectId(item.id);
-                        else if (!isManagedByBills) onEdit(item as Transaction);
-                        else toast({
-                          title: "Lançamento Protegido",
-                          description: "Este item é gerenciado pela Gestão de Contas. Para editar, use o estorno ou altere o lançamento mestre.",
-                          variant: "default"
-                        });
-                      }}>
+                      {/* Checkbox: sempre visível no modo seleção, aparece no hover desktop quando fora do modo */}
+                      <div
+                        className={cn(
+                          "absolute left-3 top-1/2 -translate-y-1/2 z-10 transition-all duration-150",
+                          isSelectionMode
+                            ? "opacity-100 pointer-events-auto"
+                            : "opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
+                        )}
+                        onClick={(e) => { e.stopPropagation(); }}
+                      >
+                        <Checkbox
+                          checked={selectedIds.has(item.id)}
+                          disabled={isFixed}
+                          onCheckedChange={() => {
+                            if (isFixed) return;
+                            if (!isSelectionMode) activateSelectionWithItem(item.id);
+                            else toggleSelectId(item.id);
+                          }}
+                          className="w-5 h-5 border-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                        />
+                      </div>
+                      <div
+                        className={cn(
+                          "flex flex-col gap-3 p-4 transition-all active:bg-white/5 cursor-pointer sm:flex-row sm:items-center sm:justify-between pl-11 sm:pl-11",
+                          selectedIds.has(item.id) && "bg-primary/5",
+                          isManagedByBills && !isSelectionMode && "cursor-default"
+                        )}
+                        onTouchStart={handleTouchStart}
+                        onTouchEnd={handleTouchEnd}
+                        onTouchMove={handleTouchEnd}
+                        onClick={() => {
+                          if (isSelectionMode) {
+                            if (!isFixed) toggleSelectId(item.id);
+                          }
+                          else if (!isManagedByBills) onEdit(item as Transaction);
+                          else toast({
+                            title: "Lançamento Protegido",
+                            description: "Este item é gerenciado pela Gestão de Contas. Para editar, use o estorno ou altere o lançamento mestre.",
+                            variant: "default"
+                          });
+                        }}>
                         {/* Lado esquerdo */}
                         <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
                           {/* Ícone da categoria é o protagonista aqui — a direção do dinheiro
@@ -1095,33 +1134,67 @@ export function TransactionList({
 
       {/* Floating Bulk Action Bar */}
       {
-        isSelectionMode && selectedIds.size > 0 && (
+        isSelectionMode && (
           <Portal>
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-300">
-              <div className="bg-foreground text-background px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-6 border border-background/10">
-                <div className="flex flex-col">
-                  <span className="text-xs font-black uppercase opacity-70 tracking-tighter">Selecionados</span>
-                  <span className="text-lg font-black leading-none">{selectedIds.size}</span>
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300 w-full max-w-[95vw] sm:max-w-fit px-4 sm:px-0">
+              <div className="bg-zinc-950/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-white/10 dark:border-white/5 text-white px-5 py-3 rounded-2xl shadow-2xl flex flex-wrap items-center gap-3 justify-between sm:justify-start sm:gap-6">
+                <div className="flex flex-col leading-tight">
+                  <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Selecionados</span>
+                  <span className="text-xl font-black leading-none">{selectedIds.size}</span>
                 </div>
 
-                <div className="h-8 w-px bg-background/20" />
+                <div className="h-8 w-px bg-white/10 hidden sm:block" />
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                  {(() => {
+                    const selectableItems = filteredItems.filter(i => !isFixedCategoryTransaction(i as any));
+                    return (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => selectAll(selectableItems.map(i => i.id))}
+                        className="hover:bg-white/10 text-zinc-300 hover:text-white font-bold text-xs gap-1.5 rounded-xl transition-colors"
+                      >
+                        <CheckSquare2 className="w-3.5 h-3.5" />
+                        <span className="hidden xs:inline">Todos ({selectableItems.length})</span>
+                      </Button>
+                    );
+                  })()}
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={clearSelection}
-                    className="hover:bg-background/10 text-background font-bold text-xs"
+                    className="hover:bg-white/10 text-zinc-300 hover:text-white font-bold text-xs rounded-xl transition-colors"
                   >
                     Limpar
                   </Button>
                   <Button
-                    variant="destructive"
+                    variant="default"
                     size="sm"
+                    disabled={selectedIds.size === 0}
+                    onClick={() => setShowBulkCategoryDialog(true)}
+                    className="bg-white text-zinc-950 hover:bg-zinc-200 border-0 font-bold text-xs gap-1.5 px-4 rounded-xl disabled:opacity-40 transition-colors shadow-none"
+                  >
+                    <Tags className="w-3.5 h-3.5" />
+                    <span className="hidden xs:inline">Alterar</span> Categoria
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={selectedIds.size === 0}
                     onClick={() => setShowBulkDeleteDialog(true)}
-                    className="bg-danger hover:bg-danger/90 text-white font-black uppercase text-xs tracking-widest px-6 rounded-xl"
+                    className="bg-danger/10 text-danger hover:bg-danger hover:text-white font-black uppercase text-[10px] sm:text-xs tracking-widest px-3 sm:px-4 rounded-xl disabled:opacity-40 transition-all border-0"
                   >
                     Remover
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleSelectionMode}
+                    className="hover:bg-white/10 text-zinc-400 hover:text-white font-bold text-xs rounded-xl ml-1 transition-colors"
+                  >
+                    <X className="w-4 h-4 sm:hidden" />
+                    <span className="hidden sm:inline">Cancelar</span>
                   </Button>
                 </div>
               </div>
@@ -1129,6 +1202,31 @@ export function TransactionList({
           </Portal>
         )
       }
+
+      {/* Bulk Category Dialog */}
+      <BulkCategoryDialog
+        isOpen={showBulkCategoryDialog}
+        onClose={() => setShowBulkCategoryDialog(false)}
+        isPending={isUpdatingCategory}
+        selectedTransactions={Array.from(selectedIds)
+          .map(id => displayItems.find(i => i.id === id))
+          .filter(Boolean) as Transaction[]}
+        categories={categories}
+        subcategories={subcategories}
+        onConfirm={async (categoryId, subcategoryId) => {
+          const selectedTxs = Array.from(selectedIds)
+            .map(id => displayItems.find(i => i.id === id))
+            .filter(Boolean) as Transaction[];
+
+          await bulkUpdateCategoryMutation({
+            selectedTransactions: selectedTxs,
+            categoryId,
+            subcategoryId,
+          });
+
+          toggleSelectionMode(); // Sai do modo de seleção após atualizar
+        }}
+      />
 
       {/* Bulk Delete Dialog */}
       <BulkDeleteDialog

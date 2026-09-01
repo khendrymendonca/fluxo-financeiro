@@ -22,7 +22,8 @@ import {
   Target,
   ChevronDown,
   TrendingUp,
-  UserCircle
+  UserCircle,
+  PieChart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
@@ -66,9 +67,9 @@ const navGroups = [
   {
     label: 'Análise',
     items: [
-      { id: 'reports', icon: BarChart3, label: 'Relatórios', featureKey: 'reports_dashboard' },
-      { id: 'categories', icon: Settings2, label: 'Categorias' },
-      { id: 'export', icon: Database, label: 'Exportar', featureKey: 'export_data' },
+       { id: 'reports', icon: BarChart3, label: 'Relatórios', featureKey: 'reports_dashboard' },
+       { id: 'cost-analysis', icon: PieChart, label: 'Análise de Custos', featureKey: 'cost_analysis' },
+       { id: 'categories', icon: Settings2, label: 'Categorias' },
     ],
   },
   {
@@ -113,7 +114,11 @@ function NavGroupDropdown({
   const handleOpen = () => {
     if (btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 6, left: rect.left });
+      const menuWidth = 220;
+      // Garante que o menu não transborde para a direita da janela nem sobreponha outros elementos
+      const maxLeft = typeof window !== 'undefined' ? window.innerWidth - menuWidth - 16 : rect.left;
+      const left = Math.max(16, Math.min(rect.left, maxLeft));
+      setPos({ top: rect.bottom + 6, left });
     }
     if (open) {
       onClose();
@@ -146,10 +151,10 @@ function NavGroupDropdown({
           {/* Overlay para fechar ao clicar fora */}
           <div className="fixed inset-0 z-40" onClick={onClose} />
 
-          {/* Dropdown — posicionado via fixed com coordenadas reais */}
+          {/* Dropdown — posicionado via fixed com coordenadas reais seguras */}
           <div
             className={cn(
-              "fixed z-50 min-w-[200px]",
+              "fixed z-50 min-w-[200px] max-w-[240px]",
               "bg-card border border-border rounded-2xl shadow-xl p-1.5",
               "flex flex-col gap-0.5",
               "animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-150"
@@ -319,11 +324,11 @@ export function NavigationRail({ currentView, onNavigate }: NavigationRailProps)
 
       {/* Lado Direito: Saudação + Tema + Perfil */}
       <div className="flex items-center gap-4 shrink-0">
-        <div className="hidden lg:block min-w-0 text-right">
+        <div className="hidden lg:block min-w-0 max-w-[140px] xl:max-w-[180px] text-right">
           <p className="truncate text-[10px] font-black text-muted-foreground leading-none mb-1">
             {greeting}
           </p>
-          <p className="truncate text-sm font-black text-foreground leading-none">
+          <p className="truncate text-sm font-black text-foreground leading-none" title={profileName}>
             {profileName}
           </p>
         </div>

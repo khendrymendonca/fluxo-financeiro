@@ -71,6 +71,14 @@ export function getTransactionCategoryBucket(
   }
 
   if (isRenegotiationTransaction(transaction)) {
+    const explicitCategory = transaction.categoryId ? categories.find(c => c.id === transaction.categoryId) : undefined;
+    if (explicitCategory) {
+      return {
+        key: `category:${explicitCategory.id}`,
+        label: explicitCategory.name,
+        category: explicitCategory,
+      };
+    }
     return {
       key: LOGICAL_RENEGOTIATION_CATEGORY_KEY,
       label: 'Renegociação',
@@ -144,4 +152,12 @@ export function getTransactionCategoryLabel(
   fallback = 'Sem Categoria'
 ) {
   return getTransactionCategoryBucket(transaction, categories, fallback).label;
+}
+
+export function isFixedCategoryTransaction(transaction: Pick<Transaction, 'isInvoicePayment' | 'isTransfer' | 'debtId' | 'description' | 'transactionType' | 'cardId' | 'invoiceMonthYear'>) {
+  return Boolean(
+    transaction.isInvoicePayment || 
+    transaction.isTransfer || 
+    transaction.debtId
+  );
 }

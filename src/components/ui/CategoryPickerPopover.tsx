@@ -52,7 +52,7 @@ export function CategoryPickerPopover({
   const [open, setOpen] = useState(false);
 
   const filteredCategories = useMemo(
-    () => categories.filter(c => c.isActive !== false && (!type || c.type === type)),
+    () => categories.filter(c => c.isActive !== false && (!type || c.type === type) && !c.isSystem),
     [categories, type]
   );
 

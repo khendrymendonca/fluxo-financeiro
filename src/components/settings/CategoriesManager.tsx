@@ -24,6 +24,7 @@ import {
     ArrowUpCircle,
     Pencil,
     Check,
+    Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/use-toast';
@@ -130,21 +131,40 @@ export function CategoriesManager() {
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [activeTab, setActiveTab] = useState<'expense' | 'income'>('expense');
 
+    const { data: subcategories = [] } = useSubcategories();
+    const [searchTerm, setSearchTerm] = useState('');
+
     const filteredCategories = useMemo(() => {
         return categories
             // Categorias nativas do sistema (ex: "Abatimento no Cartão") são criadas e geridas
             // automaticamente — não aparecem nem podem ser editadas nesta tela.
             .filter(c => !c.isSystem)
             .filter(c => c.type === activeTab)
+            .filter(c => {
+                if (!searchTerm.trim()) return true;
+                const term = searchTerm.toLowerCase();
+                const matchesCategory = c.name.toLowerCase().includes(term);
+                const matchesSub = subcategories.some(sub => sub.categoryId === c.id && sub.name.toLowerCase().includes(term));
+                return matchesCategory || matchesSub;
+            })
             .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-    }, [categories, activeTab]);
+    }, [categories, subcategories, activeTab, searchTerm]);
 
     const handleAddCategory = () => {
-        if (!newCatName.trim()) {
-            toast({ title: 'Digite o nome da categoria', variant: 'destructive' });
+        if (!newCatName.trim()) return;
+        
+        const reservedNames = ['cartão de crédito', 'cartao de credito', 'abatimento no cartão', 'abatimento no cartao', 'acordo', 'transferência', 'transferencia'];
+        if (reservedNames.includes(newCatName.trim().toLowerCase())) {
+            toast({
+                title: 'Nome reservado',
+                description: 'Este nome é reservado para uso interno do sistema. Escolha outro nome.',
+                variant: 'destructive',
+            });
             return;
         }
-        const groupId = categoryGroups[0]?.id || null;
+
+        const groupId = categoryGroups.length > 0 ? categoryGroups[0].id : undefined;
+
         addCategory({
             name: newCatName.trim(),
             type: newCatType,
@@ -200,12 +220,22 @@ export function CategoriesManager() {
                     </div>
                 </div>
 
-                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                    <DialogTrigger asChild>
-                        <Button className="h-12 md:h-14 px-6 md:px-8 rounded-xl md:rounded-2xl font-black uppercase tracking-widest flex items-center gap-3 shadow-md bg-primary text-white hover:bg-primary/90 transition-all active:scale-95">
-                            <Plus className="w-4 h-4 md:w-5 md:h-5" /> Nova Categoria
-                        </Button>
-                    </DialogTrigger>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                    <div className="relative flex-1 sm:w-64">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
+                        <Input 
+                            placeholder="Buscar categoria..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 h-12 md:h-14 rounded-xl md:rounded-2xl bg-muted/10 border-border/20 focus:bg-background transition-all font-bold text-sm w-full"
+                        />
+                    </div>
+                    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="h-12 md:h-14 px-6 md:px-8 rounded-xl md:rounded-2xl font-black uppercase tracking-widest flex items-center gap-3 shadow-md bg-primary text-white hover:bg-primary/90 transition-all active:scale-95 shrink-0">
+                                <Plus className="w-4 h-4 md:w-5 md:h-5" /> Nova
+                            </Button>
+                        </DialogTrigger>
 
                     <DialogContent
                         className="w-[92vw] max-w-sm sm:max-w-md md:max-w-lg rounded-[1.75rem] md:rounded-[2.5rem] p-0 border-none shadow-2xl bg-background overflow-hidden max-h-[90dvh] flex flex-col"
@@ -265,6 +295,7 @@ export function CategoriesManager() {
                         </div>
                     </DialogContent>
                 </Dialog>
+                </div>
             </div>
 
             {hasCategories ? (
@@ -319,6 +350,19 @@ function SubcategoryRow({
 
     const commit = () => {
         const trimmed = name.trim();
+        const reservedNames = ['cartão de crédito', 'cartao de credito', 'abatimento no cartão', 'abatimento no cartao', 'acordo', 'transferência', 'transferencia'];
+        
+        if (trimmed && reservedNames.includes(trimmed.toLowerCase())) {
+            toast({
+                title: 'Nome reservado',
+                description: 'Este nome é reservado para uso interno do sistema.',
+                variant: 'destructive',
+            });
+            setName(sub.name);
+            setIsEditing(false);
+            return;
+        }
+
         if (trimmed && trimmed !== sub.name) {
             onUpdateName(trimmed);
         } else {
@@ -445,6 +489,17 @@ function EditCategoryDialog({
 
     const handleSave = () => {
         if (!name.trim()) return;
+
+        const reservedNames = ['cartão de crédito', 'cartao de credito', 'abatimento no cartão', 'abatimento no cartao', 'acordo', 'transferência', 'transferencia'];
+        if (reservedNames.includes(name.trim().toLowerCase())) {
+            toast({
+                title: 'Nome reservado',
+                description: 'Este nome é reservado para uso interno do sistema.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
         updateCategory(
             { 
                 id: category.id, 
@@ -464,6 +519,17 @@ function EditCategoryDialog({
 
     const handleAddSub = () => {
         if (!newSubName.trim()) return;
+
+        const reservedNames = ['cartão de crédito', 'cartao de credito', 'abatimento no cartão', 'abatimento no cartao', 'acordo', 'transferência', 'transferencia'];
+        if (reservedNames.includes(newSubName.trim().toLowerCase())) {
+            toast({
+                title: 'Nome reservado',
+                description: 'Este nome é reservado para uso interno do sistema. Escolha outro nome.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
         addSubcategory({ categoryId: category.id, name: newSubName.trim(), isActive: true });
         setNewSubName('');
     };

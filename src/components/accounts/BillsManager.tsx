@@ -1,14 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useFinanceStore } from '@/hooks/useFinanceStore';
-import { useUpdateTransaction, useDeleteTransaction, useAddTransaction, useToggleTransactionPaid, useBulkUpdateTransactions } from '@/hooks/useTransactionMutations';
+import { useUpdateTransaction, useDeleteTransaction, useAddTransaction, useToggleTransactionPaid, useBulkUpdateTransactions, useBulkUpdateTransactionCategory } from '@/hooks/useTransactionMutations';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Receipt, Plus, Trash2, CheckCircle2, Clock, Calendar,
     AlertCircle, ArrowUpCircle, ArrowDownCircle, Filter,
-    ShieldAlert, CreditCard as CardIcon, RotateCcw, Pencil, X
+    ShieldAlert, CreditCard as CardIcon, RotateCcw, Pencil, X, Tags, CheckSquare2, Loader2
 } from 'lucide-react';
 import { Portal } from '@/components/ui/Portal';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
@@ -20,6 +21,7 @@ import { calcInvoiceMonthYearForCard } from '@/utils/creditCardUtils';
 import { buildCardInvoiceObligations } from '@/utils/invoiceObligations';
 import { MonthSelector } from '@/components/dashboard/MonthSelector';
 import { BulkDeleteDialog } from '../transactions/BulkDeleteDialog';
+import { BulkCategoryDialog } from '../transactions/BulkCategoryDialog';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -38,7 +40,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { EditBillForm } from './EditBillForm';
 import { getAccountOverdraftMetrics } from '@/utils/accountOverdraft';
 import { buildCanonicalCategoryFilterOptions, matchesCanonicalCategoryFilter } from '@/utils/categoryFilter';
-import { getTransactionCategoryBucket, isRenegotiationTransaction } from '@/utils/transactionCategory';
+import { getTransactionCategoryBucket, isRenegotiationTransaction, isFixedCategoryTransaction } from '@/utils/transactionCategory';
 import { IconRenderer } from '@/components/ui/IconSelector';
 
 export function BillsManager() {
@@ -51,7 +53,13 @@ export function BillsManager() {
         viewDate,
         viewMode,
         currentMonthTransactions,
-        transactions
+        transactions,
+        isSelectionMode,
+        selectedIds,
+        toggleSelectionMode,
+        toggleSelectId,
+        clearSelection,
+        selectAll,
     } = useFinanceStore();
 
     const { mutateAsync: updateTransactionMutation } = useUpdateTransaction();
@@ -59,6 +67,7 @@ export function BillsManager() {
     const { mutateAsync: addTransactionMutation } = useAddTransaction();
     const { mutateAsync: togglePaidMutation } = useToggleTransactionPaid();
     const { mutateAsync: bulkUpdateMutation } = useBulkUpdateTransactions();
+    const { mutateAsync: bulkUpdateCategoryMutation, isPending: isUpdatingCategory } = useBulkUpdateTransactionCategory();
     const isMutating = useIsMutating({ mutationKey: ['togglePaid'] });
 
     const viewDateStr = format(viewDate, 'yyyy-MM');
@@ -79,6 +88,7 @@ export function BillsManager() {
     const [editingBill, setEditingBill] = useState<Transaction | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [settledTransactionIds, setSettledTransactionIds] = useState<Set<string>>(() => new Set());
+    const [showBulkCategoryDialog, setShowBulkCategoryDialog] = useState(false);
 
     const [itemToDelete, setItemToDelete] = useState<Transaction | null>(null);
     const [billToConfirm, setBillToConfirm] = useState<{
@@ -88,6 +98,14 @@ export function BillsManager() {
         accountId?: string;
         cardId?: string;
     } | null>(null);
+
+    // Ativa seleção + seleciona o item (mobile long-press)
+    const activateSelectionWithItem = useCallback((id: string) => {
+        if (!isSelectionMode) {
+            toggleSelectionMode();
+        }
+        setTimeout(() => toggleSelectId(id), 0);
+    }, [isSelectionMode, toggleSelectionMode, toggleSelectId]);
 
     const getEffectivePaymentAmount = (transaction: Transaction) => {
         const parsed = Number.parseFloat(paymentAmount);
@@ -159,6 +177,10 @@ export function BillsManager() {
             const monthLabel = format(invoiceDate, 'MM/yyyy');
             const mutations: Partial<Transaction>[] = [];
 
+            const cartaoCategory = categories.find(c => c.name.toLowerCase() === 'cartão de crédito')?.id || null;
+            const abatimentoCategory = categories.find(c => c.name.toLowerCase().includes('abatimento'))?.id || null;
+            const isAbatimento = invoiceSettlementMode === 'installment';
+
             if (invoiceSettlementMode === 'total' || invoiceSettlementMode === 'partial' || hasDownPayment) {
                 mutations.push({
                     description: invoiceSettlementMode === 'installment'
@@ -175,7 +197,7 @@ export function BillsManager() {
                     cardId: invoice.cardId,
                     isInvoicePayment: true,
                     invoiceMonthYear: invoice.invoiceMonthYear,
-                    categoryId: null,
+                    categoryId: isAbatimento ? abatimentoCategory : cartaoCategory,
                     subcategoryId: null,
                 });
             }
@@ -195,7 +217,7 @@ export function BillsManager() {
                     cardId: invoice.cardId,
                     isInvoicePayment: false,
                     invoiceMonthYear: nextMonth,
-                    categoryId: null,
+                    categoryId: abatimentoCategory,
                     subcategoryId: null,
                 });
             }
@@ -221,7 +243,7 @@ export function BillsManager() {
                         installmentGroupId: groupId,
                         installmentNumber: index + 1,
                         installmentTotal: installmentCount,
-                        categoryId: null,
+                        categoryId: abatimentoCategory,
                         subcategoryId: null,
                     });
                 }
@@ -548,16 +570,68 @@ export function BillsManager() {
                         const canEdit = !(transaction.transactionType === 'installment' && transaction.debtId) && !transaction.isPaid && !transaction.isInvoicePayment;
                         const canDelete = !transaction.debtId;
 
+                        // Long-press mobile: ativa seleção ao segurar o card
+                        let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+                        const handleTouchStart = () => {
+                            longPressTimer = setTimeout(() => {
+                                longPressTimer = null;
+                                try { navigator.vibrate?.(40); } catch { /* noop */ }
+                                activateSelectionWithItem(transaction.id);
+                            }, 500);
+                        };
+                        const handleTouchEnd = () => {
+                            if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+                        };
+
                         return (
-                            <div key={transaction.id} className="flex flex-col gap-1">
-                                <div className={cn(
-                                    "bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm dark:shadow-none flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 transition-all hover:translate-x-1 border border-l-4",
-                                    transaction.isPaid 
-                                      ? "border-gray-100 dark:border-zinc-800 border-l-success opacity-80" 
-                                      : isLate 
-                                        ? "border-zinc-400 dark:border-zinc-700 border-l-zinc-500 dark:border-l-zinc-600 bg-zinc-50/50 dark:bg-zinc-900/50" 
-                                        : "border-primary/30 dark:border-primary/20 border-l-primary"
-                                )}>
+                            <div key={transaction.id} className="flex flex-col gap-1 group relative">
+                                {/* Checkbox: visível no hover desktop ou sempre no modo seleção */}
+                                {(() => {
+                                    const isFixed = isFixedCategoryTransaction(transaction as any);
+                                    return (
+                                        <div
+                                            className={cn(
+                                                "absolute left-3 top-5 z-10 transition-all duration-150",
+                                                isSelectionMode || selectedIds.has(transaction.id)
+                                                    ? "opacity-100 pointer-events-auto"
+                                                    : "opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
+                                            )}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <Checkbox
+                                                checked={selectedIds.has(transaction.id)}
+                                                disabled={isFixed}
+                                                onCheckedChange={() => {
+                                                    if (isFixed) return;
+                                                    if (!isSelectionMode) activateSelectionWithItem(transaction.id);
+                                                    else toggleSelectId(transaction.id);
+                                                }}
+                                                className="w-5 h-5 border-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                                            />
+                                        </div>
+                                    );
+                                })()}
+                                <div
+                                    className={cn(
+                                        "bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm dark:shadow-none flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 transition-all border border-l-4",
+                                        !isSelectionMode && "hover:translate-x-1",
+                                        isSelectionMode && "pl-11",
+                                        selectedIds.has(transaction.id) && "bg-primary/5 border-primary/30",
+                                        transaction.isPaid
+                                          ? "border-gray-100 dark:border-zinc-800 border-l-success opacity-80"
+                                          : isLate
+                                            ? "border-zinc-400 dark:border-zinc-700 border-l-zinc-500 dark:border-l-zinc-600 bg-zinc-50/50 dark:bg-zinc-900/50"
+                                            : "border-primary/30 dark:border-primary/20 border-l-primary"
+                                    )}
+                                    onTouchStart={handleTouchStart}
+                                    onTouchEnd={handleTouchEnd}
+                                    onTouchMove={handleTouchEnd}
+                                    onClick={() => {
+                                        if (isSelectionMode && !isFixedCategoryTransaction(transaction as any)) {
+                                            toggleSelectId(transaction.id);
+                                        }
+                                    }}
+                                >
                                     <div className="flex items-center gap-4 min-w-0 flex-1">
                                         {/* Ícone da categoria é o protagonista — tipo/status de pagamento vira selinho no canto */}
                                         <div className="relative shrink-0">
@@ -714,6 +788,74 @@ export function BillsManager() {
                     })
                 )}
             </div>
+
+            {/* Barra flutuante de seleção em massa */}
+            {isSelectionMode && (
+                <Portal>
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300 w-full max-w-[95vw] sm:max-w-fit px-4 sm:px-0">
+                        <div className="bg-zinc-950/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-white/10 dark:border-white/5 text-white px-5 py-3 rounded-2xl shadow-2xl flex flex-wrap items-center gap-3 justify-between sm:justify-start sm:gap-6">
+                            <div className="flex flex-col leading-tight">
+                                <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Selecionados</span>
+                                <span className="text-xl font-black leading-none">{selectedIds.size}</span>
+                            </div>
+                            <div className="h-8 w-px bg-white/10 hidden sm:block" />
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                {(() => {
+                                    const selectableItems = recurringTransactions.filter(t => !isFixedCategoryTransaction(t as any));
+                                    return (
+                                        <Button variant="ghost" size="sm"
+                                            onClick={() => selectAll(selectableItems.map(t => t.id))}
+                                            className="hover:bg-white/10 text-zinc-300 hover:text-white font-bold text-xs gap-1.5 rounded-xl transition-colors">
+                                            <CheckSquare2 className="w-3.5 h-3.5" />
+                                            <span className="hidden xs:inline">Todos ({selectableItems.length})</span>
+                                        </Button>
+                                    );
+                                })()}
+                                <Button variant="ghost" size="sm" onClick={clearSelection}
+                                    className="hover:bg-white/10 text-zinc-300 hover:text-white font-bold text-xs rounded-xl transition-colors">
+                                    Limpar
+                                </Button>
+                                <Button variant="default" size="sm"
+                                    disabled={selectedIds.size === 0}
+                                    onClick={() => setShowBulkCategoryDialog(true)}
+                                    className="bg-white text-zinc-950 hover:bg-zinc-200 border-0 font-bold text-xs gap-1.5 px-4 rounded-xl disabled:opacity-40 transition-colors shadow-none">
+                                    <Tags className="w-3.5 h-3.5" />
+                                    <span className="hidden xs:inline">Alterar</span> Categoria
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={toggleSelectionMode}
+                                    className="hover:bg-white/10 text-zinc-400 hover:text-white font-bold text-xs rounded-xl ml-1 transition-colors">
+                                    <X className="w-4 h-4 sm:hidden" />
+                                    <span className="hidden sm:inline">Cancelar</span>
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </Portal>
+            )}
+
+            {/* Diálogo de Alteração de Categoria em Massa */}
+            <BulkCategoryDialog
+                isOpen={showBulkCategoryDialog}
+                onClose={() => setShowBulkCategoryDialog(false)}
+                isPending={isUpdatingCategory}
+                selectedTransactions={Array.from(selectedIds)
+                    .map(id => recurringTransactions.find(t => t.id === id))
+                    .filter(Boolean) as Transaction[]}
+                categories={categories}
+                subcategories={subcategories}
+                onConfirm={async (categoryId, subcategoryId) => {
+                    const selectedTxs = Array.from(selectedIds)
+                        .map(id => recurringTransactions.find(t => t.id === id))
+                        .filter(Boolean) as Transaction[];
+                    await bulkUpdateCategoryMutation({
+                        selectedTransactions: selectedTxs,
+                        categoryId,
+                        subcategoryId,
+                    });
+                    toggleSelectionMode();
+                    setShowBulkCategoryDialog(false);
+                }}
+            />
 
             {/* Modal de Pagamento */}
             {isPaying && (

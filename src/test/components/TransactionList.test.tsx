@@ -133,6 +133,7 @@ async function renderTransactionListWithOpenPayment(amount: number, onPayBill: R
 
   vi.doMock('@/hooks/useTransactionMutations', () => ({
     useToggleTransactionPaid: () => ({ mutateAsync: vi.fn() }),
+    useBulkUpdateTransactionCategory: () => ({ mutateAsync: vi.fn(), isPending: false }),
   }));
 
   vi.doMock('@/components/ui/use-toast', () => ({
@@ -173,6 +174,7 @@ async function renderTransactionListForFiltering(transactions: Transaction[], ca
 
   vi.doMock('@/hooks/useTransactionMutations', () => ({
     useToggleTransactionPaid: () => ({ mutateAsync: vi.fn() }),
+    useBulkUpdateTransactionCategory: () => ({ mutateAsync: vi.fn(), isPending: false }),
   }));
 
   vi.doMock('@/components/ui/use-toast', () => ({
@@ -212,6 +214,7 @@ describe('TransactionList - fluxo interno de pagamento', () => {
 
     vi.doMock('@/hooks/useTransactionMutations', () => ({
       useToggleTransactionPaid: () => ({ mutateAsync: vi.fn() }),
+      useBulkUpdateTransactionCategory: () => ({ mutateAsync: vi.fn(), isPending: false }),
     }));
 
     vi.doMock('@/components/ui/use-toast', () => ({
@@ -321,6 +324,7 @@ describe('TransactionList - fluxo interno de pagamento', () => {
 
     vi.doMock('@/hooks/useTransactionMutations', () => ({
       useToggleTransactionPaid: () => ({ mutateAsync: vi.fn() }),
+      useBulkUpdateTransactionCategory: () => ({ mutateAsync: vi.fn(), isPending: false }),
     }));
 
     vi.doMock('@/components/ui/use-toast', () => ({
@@ -387,6 +391,7 @@ describe('TransactionList - fluxo interno de pagamento', () => {
 
     vi.doMock('@/hooks/useTransactionMutations', () => ({
       useToggleTransactionPaid: () => ({ mutateAsync: vi.fn() }),
+      useBulkUpdateTransactionCategory: () => ({ mutateAsync: vi.fn(), isPending: false }),
     }));
 
     vi.doMock('@/components/ui/use-toast', () => ({
@@ -446,6 +451,7 @@ describe('TransactionList - fluxo interno de pagamento', () => {
 
     vi.doMock('@/hooks/useTransactionMutations', () => ({
       useToggleTransactionPaid: () => ({ mutateAsync: vi.fn() }),
+      useBulkUpdateTransactionCategory: () => ({ mutateAsync: vi.fn(), isPending: false }),
     }));
 
     vi.doMock('@/components/ui/use-toast', () => ({
@@ -532,6 +538,7 @@ describe('TransactionList - fluxo interno de pagamento', () => {
 
     vi.doMock('@/hooks/useTransactionMutations', () => ({
       useToggleTransactionPaid: () => ({ mutateAsync: vi.fn() }),
+      useBulkUpdateTransactionCategory: () => ({ mutateAsync: vi.fn(), isPending: false }),
     }));
 
     vi.doMock('@/components/ui/use-toast', () => ({
@@ -593,6 +600,7 @@ describe('TransactionList - fluxo interno de pagamento', () => {
 
     vi.doMock('@/hooks/useTransactionMutations', () => ({
       useToggleTransactionPaid: () => ({ mutateAsync: vi.fn() }),
+      useBulkUpdateTransactionCategory: () => ({ mutateAsync: vi.fn(), isPending: false }),
     }));
 
     vi.doMock('@/components/ui/use-toast', () => ({
@@ -660,6 +668,7 @@ describe('TransactionList - fluxo interno de pagamento', () => {
 
     vi.doMock('@/hooks/useTransactionMutations', () => ({
       useToggleTransactionPaid: () => ({ mutateAsync: vi.fn() }),
+      useBulkUpdateTransactionCategory: () => ({ mutateAsync: vi.fn(), isPending: false }),
     }));
 
     vi.doMock('@/components/ui/use-toast', () => ({
@@ -740,6 +749,7 @@ describe('TransactionList - fluxo interno de pagamento', () => {
 
     vi.doMock('@/hooks/useTransactionMutations', () => ({
       useToggleTransactionPaid: () => ({ mutateAsync: togglePaidMock }),
+      useBulkUpdateTransactionCategory: () => ({ mutateAsync: vi.fn(), isPending: false }),
     }));
 
     vi.doMock('@/components/ui/use-toast', () => ({
@@ -911,4 +921,70 @@ describe('TransactionList - fluxo interno de pagamento', () => {
     expect(screen.getByText('Despesa sem categoria')).toBeInTheDocument();
     expect(screen.queryByText('Renegociação de Pendências (1/9)')).not.toBeInTheDocument();
   });
+
+  it('exibe o botao Alterar Categoria no modo de selecao e permite abrir o dialogo', async () => {
+    vi.resetModules();
+
+    const bulkUpdateCategoryMock = vi.fn(async () => undefined);
+
+    vi.doMock('@/hooks/useFinanceStore', () => ({
+      useFinanceStore: () => ({
+        ...financeStoreState,
+        isSelectionMode: true,
+        selectedIds: new Set(['tx-select-1']),
+      }),
+    }));
+
+    vi.doMock('@/hooks/useTransactionMutations', () => ({
+      useToggleTransactionPaid: () => ({ mutateAsync: vi.fn() }),
+      useBulkUpdateTransactionCategory: () => ({
+        mutateAsync: bulkUpdateCategoryMock,
+        isPending: false,
+      }),
+    }));
+
+    vi.doMock('@/components/ui/use-toast', () => ({
+      toast: vi.fn(),
+    }));
+
+    const { TransactionList } = await import('@/components/transactions/TransactionList');
+
+    render(
+      <TransactionList
+        transactions={[
+          {
+            id: 'tx-select-1',
+            userId: 'user-1',
+            description: 'Compra supermercado',
+            amount: 250,
+            type: 'expense',
+            transactionType: 'punctual',
+            date: '2026-04-10',
+            isPaid: true,
+            accountId: 'acc-1',
+            categoryId: 'cat-1',
+          },
+        ]}
+        onEdit={vi.fn()}
+        onPayBill={vi.fn(async () => undefined)}
+      />,
+      { wrapper }
+    );
+
+    // Botão de Alterar Categoria deve estar presente na barra de ação flutuante
+    const alterCategoryButton = screen.getByRole('button', { name: /Alterar Categoria/i });
+    expect(alterCategoryButton).toBeInTheDocument();
+
+    // Clica para abrir o diálogo
+    fireEvent.click(alterCategoryButton);
+
+    // O diálogo de Alterar Categoria deve ser aberto
+    expect(screen.getByRole('heading', { name: /Alterar Categoria/i })).toBeInTheDocument();
+    expect(screen.getByText(/Defina a nova categoria para os/i)).toBeInTheDocument();
+
+    vi.doUnmock('@/hooks/useFinanceStore');
+    vi.doUnmock('@/hooks/useTransactionMutations');
+    vi.doUnmock('@/components/ui/use-toast');
+  });
 });
+
