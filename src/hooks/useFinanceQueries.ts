@@ -213,7 +213,8 @@ export function useSubcategories() {
       return (data || []).map((s: any) => ({
         ...s,
         categoryId: s.category_id,
-        isActive: s.is_active
+        isActive: s.is_active,
+        budgetLimit: s.budget_limit
       })) as Subcategory[];
     },
     enabled: !!user,

@@ -33,6 +33,7 @@ export interface Subcategory {
   name: string;
   isActive: boolean;
   icon?: string;
+  budgetLimit?: number | null;
 }
 
 export interface Transaction {

@@ -220,7 +220,10 @@ export function useTransactionFormState({ accounts, creditCards, initialData, on
   const abatementCategory = categories.find(
     c => c.type === 'expense' && c.name.toLowerCase().includes('abatimento')
   );
-  const filteredCategories = categories.filter(c => c.type === type && !c.isSystem);
+  const filteredCategories = categories.filter(c => 
+    (!c.isSystem && c.type === type) || 
+    (c.isSystem && c.name === 'Ajuste de Saldo')
+  );
   const currentCategorySubcategories = subcategories.filter(s => s.categoryId === categoryId);
 
   useEffect(() => {

@@ -81,16 +81,16 @@ export function AppLayout({ children, sidebar, headerMobile, bottomNav, fab }: A
 
       {/* ── HEADER MOBILE ── */}
       <header className={cn(
-        "md:hidden flex-shrink-0 sticky top-0 z-50 bg-background border-b border-border flex items-center justify-between px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.875rem)]",
+        "md:hidden flex-shrink-0 sticky top-0 z-50 bg-background border-b border-border flex items-center justify-between px-3 sm:px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.875rem)] w-full max-w-full overflow-x-hidden",
         !headerMobile && "hidden"
       )}>
         {headerMobile}
       </header>
 
       {/* ── CONTEÚDO PRINCIPAL ── */}
-      <main className="flex-1 flex flex-col overflow-hidden relative bg-inherit">
-        <div className={cn("flex-1 overflow-y-auto", "p-4 md:p-8 pb-24 md:pb-8")}>
-          <div className="max-w-7xl mx-auto">
+      <main className="flex-1 flex flex-col overflow-hidden relative bg-inherit w-full max-w-full min-w-0">
+        <div className={cn("flex-1 overflow-y-auto overflow-x-hidden", "p-3 sm:p-4 md:p-8 pb-24 md:pb-8 w-full max-w-full")}>
+          <div className="max-w-7xl mx-auto w-full min-w-0">
             {children}
           </div>
         </div>

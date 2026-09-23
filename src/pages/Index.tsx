@@ -501,7 +501,7 @@ export default function Index() {
         />
       }
       headerMobile={
-        <div className="w-full">
+        <div className="w-full max-w-full min-w-0">
           <MobileTopHeader
             greeting={mobileGreeting}
             userName={userName}

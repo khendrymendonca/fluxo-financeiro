@@ -1079,7 +1079,7 @@ export default function ReportsDashboard() {
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
                   <YAxis hide domain={[0, 'auto']} />
                   <Tooltip
-                    cursor={{ fill: 'rgba(0,0,0,0.02)' }}
+                    cursor={{ fill: 'transparent' }}
                     content={({ active, payload, label }) => {
                       if (!active || !payload?.length) return null;
                       const point = payload[0]?.payload as ConsumptionTrendPoint | undefined;
@@ -1347,7 +1347,7 @@ export default function ReportsDashboard() {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#A1A1AA' }} dy={10} />
                       <YAxis hide domain={catChartDomain} />
-                      <Tooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} formatter={(value) => formatCurrency(Number(value))} />
+                      <Tooltip cursor={{ fill: 'transparent' }} formatter={(value) => formatCurrency(Number(value))} />
                       {selectedCategory.budgetLimit && selectedCategory.budgetLimit > 0 && (
                         <ReferenceLine 
                           y={selectedCategory.budgetLimit} 

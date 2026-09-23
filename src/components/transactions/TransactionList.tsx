@@ -347,10 +347,10 @@ export function TransactionList({
 
       {/* Filtros */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm dark:shadow-none border border-gray-100 dark:border-zinc-800 space-y-4">
-        <div className="flex items-center justify-between gap-4 w-full overflow-x-auto no-scrollbar pb-1 md:pb-0">
-          <div className="flex items-center gap-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-4 w-full pb-1 md:pb-0">
+          <div className="flex flex-wrap items-center gap-3">
             {/* Receita/Despesa */}
-            <div className="relative flex p-0.5 bg-gray-100 dark:bg-zinc-800 rounded-xl w-[200px] h-9 items-center">
+            <div className="relative flex p-0.5 bg-gray-100 dark:bg-zinc-800 rounded-xl w-full sm:w-[200px] h-9 items-center">
               <div 
                 className="absolute top-0.5 bottom-0.5 bg-white dark:bg-zinc-700 rounded-lg shadow-sm transition-all duration-200 ease-out" 
                 style={{
@@ -375,7 +375,7 @@ export function TransactionList({
             </div>
 
             {/* Origem */}
-            <div className="relative flex p-0.5 bg-gray-100 dark:bg-zinc-800 rounded-xl w-[220px] h-9 items-center">
+            <div className="relative flex p-0.5 bg-gray-100 dark:bg-zinc-800 rounded-xl w-full sm:w-[220px] h-9 items-center">
               <div 
                 className="absolute top-0.5 bottom-0.5 bg-white dark:bg-zinc-700 rounded-lg shadow-sm transition-all duration-200 ease-out" 
                 style={{
@@ -415,7 +415,7 @@ export function TransactionList({
             </div>
 
             {/* Tipo */}
-            <div className="relative flex p-0.5 bg-gray-100 dark:bg-zinc-800 rounded-xl w-[320px] h-9 items-center">
+            <div className="relative flex p-0.5 bg-gray-100 dark:bg-zinc-800 rounded-xl w-full sm:w-[320px] h-9 items-center">
               <div 
                 className="absolute top-0.5 bottom-0.5 bg-white dark:bg-zinc-700 rounded-lg shadow-sm transition-all duration-200 ease-out" 
                 style={{
@@ -440,7 +440,7 @@ export function TransactionList({
             </div>
 
             {/* Categorias Select */}
-            <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-800 shrink-0">
+            <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-800 w-full md:w-auto">
               <Filter className="h-4 w-4 text-muted-foreground" />
               <Select value={selectedCategoryKey} onValueChange={(val) => { setSelectedCategoryKey(val); setSelectedSubcategoryId('all'); }}>
                 <SelectTrigger className="w-auto h-auto bg-transparent border-0 shadow-none focus:ring-0 text-sm font-bold text-foreground p-0 gap-2">
@@ -491,7 +491,7 @@ export function TransactionList({
               const activeSubcategories = activeCategoryId ? subcategories.filter(s => s.categoryId === activeCategoryId && s.isActive !== false) : [];
               if (!activeCategoryId || activeSubcategories.length === 0) return null;
               return (
-                <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-800 shrink-0 animate-in fade-in duration-200">
+                <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-800 w-full md:w-auto animate-in fade-in duration-200">
                   <Select value={selectedSubcategoryId} onValueChange={setSelectedSubcategoryId}>
                     <SelectTrigger className="w-auto h-auto bg-transparent border-0 shadow-none focus:ring-0 text-sm font-bold text-foreground p-0 gap-2">
                       <SelectValue placeholder="Todas as subcategorias" />
@@ -517,59 +517,47 @@ export function TransactionList({
         {sourceFilter !== 'card' && (
           <div className="space-y-3 pt-2 border-t border-border animate-in slide-in-from-top-1">
             {/* Linha 1: Selecionar Banco */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest min-w-[120px]">
                 Selecionar Banco:
               </span>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => { setSelectedBank('all'); setSpecificSourceId('all'); }}
-                  className={cn("px-3 py-1 rounded-full text-xs font-black uppercase transition-all border",
-                    selectedBank === 'all' ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}
-                >
-                  Todos os Bancos
-                </button>
-                {availableBanks.map((bank) => (
-                  <button
-                    key={bank}
-                    onClick={() => { setSelectedBank(bank); setSpecificSourceId('all'); }}
-                    className={cn("px-3 py-1 rounded-full text-xs font-black uppercase transition-all border",
-                      selectedBank === bank ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}
-                  >
-                    {bank}
-                  </button>
-                ))}
-              </div>
+              <Select value={selectedBank} onValueChange={(val) => { setSelectedBank(val); setSpecificSourceId('all'); }}>
+                <SelectTrigger className="w-full md:w-[220px] h-10 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 font-bold text-xs">
+                  <SelectValue placeholder="Todos os Bancos" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="all">Todos os Bancos</SelectItem>
+                  {availableBanks.map((bank) => (
+                    <SelectItem key={bank} value={bank}>{bank}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Linha 2: Selecionar Conta (Somente na aba Débito, com o banco selecionado) */}
             {sourceFilter === 'account' && selectedBank !== 'all' && (
-              <div className="flex items-center gap-3 animate-in slide-in-from-top-1">
+              <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 animate-in slide-in-from-top-1">
                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest min-w-[120px]">
                   Selecionar Conta:
                 </span>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setSpecificSourceId('all')}
-                    className={cn("px-3 py-1 rounded-full text-xs font-black uppercase transition-all border",
-                      specificSourceId === 'all' ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}
-                  >
-                    Todas deste Banco
-                  </button>
-                  {accounts
-                    .filter(acc => acc.bank === selectedBank)
-                    .map((acc) => (
-                      <button
-                        key={acc.id}
-                        onClick={() => setSpecificSourceId(acc.id)}
-                        className={cn("px-3 py-1 rounded-full text-xs font-black uppercase transition-all border flex items-center gap-2",
-                          specificSourceId === acc.id ? "bg-primary text-white border-primary" : "bg-transparent text-muted-foreground border-border hover:border-primary")}
-                      >
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: acc.color }} />
-                        {acc.bank ? `${acc.bank} - ${acc.name}` : acc.name}
-                      </button>
-                    ))}
-                </div>
+                <Select value={specificSourceId} onValueChange={setSpecificSourceId}>
+                  <SelectTrigger className="w-full md:w-[220px] h-10 rounded-xl bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 font-bold text-xs">
+                    <SelectValue placeholder="Todas deste Banco" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="all">Todas deste Banco</SelectItem>
+                    {accounts
+                      .filter(acc => acc.bank === selectedBank)
+                      .map((acc) => (
+                        <SelectItem key={acc.id} value={acc.id}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: acc.color }} />
+                            <span>{acc.bank ? `${acc.bank} - ${acc.name}` : acc.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 

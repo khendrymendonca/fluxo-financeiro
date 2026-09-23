@@ -161,10 +161,12 @@ export function AccountsManager({
         const diferenca = parsedNewBalance - currentRealBalance;
         const type = diferenca > 0 ? 'income' : 'expense';
 
-        // ??? Busca categoria de ajuste ou a primeira compatível
-        let adjustmentCategoryId = categories.find(c => c.name.toLowerCase().includes('ajuste'))?.id;
+        // Busca a categoria nativa de "Ajuste de Saldo"
+        let adjustmentCategoryId = categories.find(c => c.name === 'Ajuste de Saldo' && c.isSystem)?.id;
+        
+        // Fallback apenas por segurança caso algo dê errado
         if (!adjustmentCategoryId) {
-          adjustmentCategoryId = categories.find(c => c.type === type)?.id || categories[0]?.id;
+          adjustmentCategoryId = categories.find(c => c.name.toLowerCase().includes('ajuste'))?.id || categories.find(c => c.type === type)?.id || categories[0]?.id;
         }
 
         if (!adjustmentCategoryId) {

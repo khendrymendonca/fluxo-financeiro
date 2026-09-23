@@ -327,26 +327,29 @@ export function CategoriesManager() {
     );
 }
 
-// ─── LINHA DE SUBCATEGORIA (com edição de nome e ícone) ───────────────────────
 function SubcategoryRow({
     sub,
     category,
     onUpdateIcon,
     onUpdateName,
+    onUpdateBudgetLimit,
     onDelete,
 }: {
     sub: Subcategory;
     category: Category;
     onUpdateIcon: (iconName: string | null) => void;
     onUpdateName: (name: string) => void;
+    onUpdateBudgetLimit: (limit: number | null) => void;
     onDelete: () => void;
 }) {
     const [isEditing, setIsEditing] = useState(false);
     const [name, setName] = useState(sub.name);
+    const [budgetLimit, setBudgetLimit] = useState<string>(sub.budgetLimit ? String(sub.budgetLimit) : '');
 
     useEffect(() => {
         setName(sub.name);
-    }, [sub.name]);
+        setBudgetLimit(sub.budgetLimit ? String(sub.budgetLimit) : '');
+    }, [sub]);
 
     const commit = () => {
         const trimmed = name.trim();
@@ -359,43 +362,100 @@ function SubcategoryRow({
                 variant: 'destructive',
             });
             setName(sub.name);
+            setBudgetLimit(sub.budgetLimit ? String(sub.budgetLimit) : '');
             setIsEditing(false);
             return;
         }
 
-        if (trimmed && trimmed !== sub.name) {
+        if (trimmed && (trimmed !== sub.name || budgetLimit !== (sub.budgetLimit ? String(sub.budgetLimit) : ''))) {
             onUpdateName(trimmed);
+            onUpdateBudgetLimit(budgetLimit ? parseFloat(budgetLimit) : null);
         } else {
             setName(sub.name);
+            setBudgetLimit(sub.budgetLimit ? String(sub.budgetLimit) : '');
         }
         setIsEditing(false);
     };
 
     const cancel = () => {
         setName(sub.name);
+        setBudgetLimit(sub.budgetLimit ? String(sub.budgetLimit) : '');
         setIsEditing(false);
     };
 
+    if (isEditing) {
+        return (
+            <div className="flex flex-col gap-3 p-3.5 rounded-xl bg-background border border-primary/30 shadow-sm animate-in fade-in duration-200">
+                <div className="space-y-1.5">
+                    <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Nome</Label>
+                    <Input
+                        autoFocus
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        onKeyDown={e => {
+                            if (e.key === 'Enter') commit();
+                            if (e.key === 'Escape') cancel();
+                        }}
+                        className="h-10 rounded-lg border border-border/50 bg-muted/10 text-xs font-bold uppercase tracking-wide px-3"
+                    />
+                </div>
+                
+                <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                        <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Orçamento (R$)</Label>
+                        {category.budgetLimit && (
+                            <div className="flex gap-1">
+                                {[10, 25, 50].map(pct => (
+                                    <button 
+                                        key={pct}
+                                        type="button"
+                                        onClick={() => setBudgetLimit(String((category.budgetLimit! * pct) / 100))}
+                                        className="px-1.5 py-0.5 text-[8px] font-black bg-muted hover:bg-primary hover:text-white rounded transition-colors"
+                                    >
+                                        {pct}%
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <Input 
+                        type="number"
+                        value={budgetLimit} 
+                        onChange={e => setBudgetLimit(e.target.value)} 
+                        onKeyDown={e => {
+                            if (e.key === 'Enter') commit();
+                            if (e.key === 'Escape') cancel();
+                        }}
+                        className="h-10 rounded-lg border border-border/50 bg-muted/10 text-xs font-bold px-3" 
+                        placeholder="Sem teto definido"
+                    />
+                </div>
+
+                <div className="flex justify-end gap-2 mt-1">
+                    <Button variant="ghost" size="sm" onClick={cancel} className="h-8 text-xs font-bold">Cancelar</Button>
+                    <Button size="sm" onClick={commit} className="h-8 text-xs font-bold uppercase tracking-widest">Salvar</Button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex items-center justify-between p-3.5 rounded-xl bg-muted/10 border border-border/20 hover:border-border/40 group/sub transition-all gap-2">
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
                 <Popover>
                     <PopoverTrigger asChild>
                         <button
                             type="button"
                             title="Escolher ícone da subcategoria"
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0 hover:scale-105 transition-transform"
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 hover:scale-105 transition-transform shadow-sm"
                             style={{ backgroundColor: category.color }}
                         >
-                            <IconRenderer iconName={sub.icon || category.icon || 'Tag'} className="w-3.5 h-3.5 stroke-[2.2px]" />
+                            <IconRenderer iconName={sub.icon || category.icon || 'Tag'} className="w-4 h-4 stroke-[2.2px]" />
                         </button>
                     </PopoverTrigger>
                     <PopoverContent
                         className="w-80 max-w-[90vw] p-3 rounded-2xl"
                         align="start"
-                        // Sem isso, o Radix foca automaticamente o primeiro campo focável ao abrir
-                        // (a busca), o que no celular abre o teclado mesmo sem o usuário ter pedido
-                        // — mesmo que ele só queira navegar pelos grupos de ícone tocando nas abas.
                         onOpenAutoFocus={(e) => e.preventDefault()}
                     >
                         <IconSelector
@@ -416,47 +476,34 @@ function SubcategoryRow({
                     </PopoverContent>
                 </Popover>
 
-                {isEditing ? (
-                    <Input
-                        autoFocus
-                        value={name}
-                        onChange={e => setName(e.target.value)}
-                        onBlur={commit}
-                        onKeyDown={e => {
-                            if (e.key === 'Enter') commit();
-                            if (e.key === 'Escape') cancel();
-                        }}
-                        className="h-8 rounded-lg border border-border/50 bg-background text-xs font-bold uppercase tracking-wide px-2.5"
-                    />
-                ) : (
-                    <button
-                        type="button"
-                        onClick={() => setIsEditing(true)}
-                        title="Editar nome da subcategoria"
-                        className="flex items-center gap-1.5 min-w-0 text-left group/name"
-                    >
-                        <span className="text-xs font-bold uppercase tracking-wide opacity-70 group-hover/name:opacity-100 truncate">{sub.name}</span>
+                <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    title="Editar subcategoria"
+                    className="flex flex-col min-w-0 text-left group/name flex-1"
+                >
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold uppercase tracking-wide opacity-80 group-hover/name:opacity-100 truncate">{sub.name}</span>
                         <Pencil className="w-3 h-3 text-muted-foreground/30 opacity-0 group-hover/sub:opacity-100 shrink-0 transition-opacity" />
-                    </button>
-                )}
+                    </div>
+                    {sub.budgetLimit ? (
+                        <span className="text-[10px] font-black text-muted-foreground mt-0.5">
+                            TETO: R$ {sub.budgetLimit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                    ) : (
+                        <span className="text-[9px] font-bold text-muted-foreground/50 mt-0.5 uppercase tracking-widest">
+                            Sem limite
+                        </span>
+                    )}
+                </button>
             </div>
 
-            {isEditing ? (
-                <button
-                    onClick={commit}
-                    className="p-1.5 rounded-lg text-success hover:bg-success/10 transition-all shrink-0"
-                    title="Salvar"
-                >
-                    <Check className="w-3.5 h-3.5" />
-                </button>
-            ) : (
-                <button
-                    onClick={onDelete}
-                    className="p-1.5 rounded-lg text-muted-foreground/20 hover:text-danger hover:bg-danger/5 opacity-0 group-hover/sub:opacity-100 transition-all shrink-0"
-                >
-                    <Trash2 className="w-3.5 h-3.5" />
-                </button>
-            )}
+            <button
+                onClick={onDelete}
+                className="p-2 rounded-lg text-muted-foreground/30 hover:text-danger hover:bg-danger/10 opacity-0 group-hover/sub:opacity-100 transition-all shrink-0"
+            >
+                <Trash2 className="w-4 h-4" />
+            </button>
         </div>
     );
 }
@@ -707,6 +754,7 @@ function EditCategoryDialog({
                                         category={category}
                                         onUpdateIcon={(iconName) => updateSubcategory({ id: sub.id, icon: iconName })}
                                         onUpdateName={(name) => updateSubcategory({ id: sub.id, name })}
+                                        onUpdateBudgetLimit={(limit) => updateSubcategory({ id: sub.id, budgetLimit: limit })}
                                         onDelete={() => deleteSubcategory(sub.id)}
                                     />
                                 ))

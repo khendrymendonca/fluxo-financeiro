@@ -39,6 +39,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  LabelList,
+  ReferenceLine,
 } from 'recharts';
 import {
   startOfMonth,
@@ -110,7 +112,7 @@ export default function CostAnalysisPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(() => {
     return categories.find((c) => c.type === 'expense' && c.isActive !== false && !c.isSystem)?.id || '';
   });
-  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>('all');
+  const [selectedSubcategoryIds, setSelectedSubcategoryIds] = useState<string[]>([]);
   const [chartMode, setChartMode] = useState<'bar' | 'area' | 'line'>('bar');
 
   // Se nenhuma categoria estiver selecionada e existirem categorias, seleciona a primeira
@@ -123,7 +125,13 @@ export default function CostAnalysisPage() {
   // Reset de subcategoria caso mude a categoria
   const handleCategoryChange = (val: string) => {
     setSelectedCategoryId(val);
-    setSelectedSubcategoryId('all');
+    setSelectedSubcategoryIds([]);
+  };
+
+  const toggleSubcategory = (id: string) => {
+    setSelectedSubcategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
   };
 
   // Subcategorias da categoria ativa
@@ -217,9 +225,9 @@ export default function CostAnalysisPage() {
     if (selectedCategoryId !== 'all' && t.categoryId !== selectedCategoryId) {
       return false;
     }
-    if (selectedSubcategoryId !== 'all') {
+    if (selectedSubcategoryIds.length > 0) {
       const subId = t.subcategoryId || (t as any).subcategory_id;
-      if (subId !== selectedSubcategoryId) return false;
+      if (!subId || !selectedSubcategoryIds.includes(subId)) return false;
     }
     return true;
   };
@@ -229,12 +237,12 @@ export default function CostAnalysisPage() {
     return periodTransactions.filter(filterMatched).sort((a, b) => {
       return parseLocalDate(b.date.slice(0, 10)).getTime() - parseLocalDate(a.date.slice(0, 10)).getTime();
     });
-  }, [periodTransactions, selectedCategoryId, selectedSubcategoryId]);
+  }, [periodTransactions, selectedCategoryId, selectedSubcategoryIds]);
 
   // Itens correspondentes no ano
   const targetYearTransactions = useMemo(() => {
     return yearTransactions.filter(filterMatched);
-  }, [yearTransactions, selectedCategoryId, selectedSubcategoryId]);
+  }, [yearTransactions, selectedCategoryId, selectedSubcategoryIds]);
 
   // Cálculos de totais
   const targetPeriodTotal = useMemo(() => {
@@ -354,12 +362,10 @@ export default function CostAnalysisPage() {
         isCurrent: m.getMonth() === viewDate.getMonth() && m.getFullYear() === viewDate.getFullYear(),
       };
     });
-  }, [transactions, viewDate, selectedCategoryId, selectedSubcategoryId]);
+  }, [transactions, viewDate, selectedCategoryId, selectedSubcategoryIds]);
 
-  // Composição por Subcategorias (quando nenhuma subcategoria específica estiver selecionada)
+  // Composição por Subcategorias
   const subcategoryBreakdown = useMemo(() => {
-    if (selectedSubcategoryId !== 'all') return [];
-
     const map = new Map<string, number>();
     let uncategorizedSum = 0;
 
@@ -390,23 +396,41 @@ export default function CostAnalysisPage() {
     }
 
     return items.sort((a, b) => b.value - a.value);
-  }, [selectedSubcategoryId, targetPeriodTransactions, availableSubcategories]);
+  }, [targetPeriodTransactions, availableSubcategories]);
 
   // Nome do foco de análise
   const activeCategoryObj = useMemo(() => {
     return categories.find((c) => c.id === selectedCategoryId);
   }, [categories, selectedCategoryId]);
 
-  const activeSubcategoryObj = useMemo(() => {
-    return subcategories.find((s) => s.id === selectedSubcategoryId);
-  }, [subcategories, selectedSubcategoryId]);
-
   const currentFocusName = useMemo(() => {
-    if (activeSubcategoryObj) {
-      return `${activeCategoryObj?.name || 'Categoria'} › ${activeSubcategoryObj.name}`;
+    if (selectedSubcategoryIds.length === 1) {
+      const activeSubcategoryObj = subcategories.find((s) => s.id === selectedSubcategoryIds[0]);
+      return `${activeCategoryObj?.name || 'Categoria'} › ${activeSubcategoryObj?.name || 'Subcategoria'}`;
+    }
+    if (selectedSubcategoryIds.length > 1) {
+      return `${activeCategoryObj?.name || 'Categoria'} › Várias Subcategorias`;
     }
     return activeCategoryObj?.name || 'Categoria';
-  }, [activeCategoryObj, activeSubcategoryObj]);
+  }, [activeCategoryObj, selectedSubcategoryIds, subcategories]);
+
+  const monthlyBudgetLimit = useMemo(() => {
+    if (selectedSubcategoryIds.length === 1) {
+       const sub = subcategories.find((s) => s.id === selectedSubcategoryIds[0]);
+       return sub?.budgetLimit || null;
+    }
+    if (selectedSubcategoryIds.length === 0 && activeCategoryObj) {
+       return activeCategoryObj.budgetLimit || null;
+    }
+    return null;
+  }, [selectedSubcategoryIds, subcategories, activeCategoryObj]);
+
+  const activeBudgetLimit = useMemo(() => {
+    if (!monthlyBudgetLimit) return null;
+    if (period === 'semester') return monthlyBudgetLimit * 6;
+    if (period === 'year') return monthlyBudgetLimit * 12;
+    return monthlyBudgetLimit;
+  }, [monthlyBudgetLimit, period]);
 
   return (
     <div className="space-y-6 pb-24 md:pb-12 max-w-7xl mx-auto animate-in fade-in duration-300">
@@ -454,60 +478,73 @@ export default function CostAnalysisPage() {
 
       {/* Barra de Filtros: Categoria e Subcategoria */}
       <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-3xl p-4 sm:p-6 shadow-sm">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-6">
           {/* Categoria */}
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-primary" />
               Categoria
             </label>
-            <Select value={selectedCategoryId} onValueChange={handleCategoryChange}>
-              <SelectTrigger className="h-11 rounded-2xl bg-gray-50 dark:bg-zinc-950/60 border-gray-100 dark:border-zinc-800 font-bold text-sm">
-                <SelectValue placeholder="Selecione uma categoria" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl max-h-72">
-                {expenseCategories.map((c) => (
-                  <SelectItem key={c.id} value={c.id} className="font-medium">
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap gap-2">
+              {expenseCategories.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => handleCategoryChange(c.id)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-xl text-xs font-bold transition-all border',
+                    selectedCategoryId === c.id
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground hover:border-primary/50'
+                  )}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Subcategoria */}
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-sky-500" />
-              Subcategoria
+              Subcategorias (Múltipla Seleção)
             </label>
-            <Select
-              value={selectedSubcategoryId}
-              onValueChange={setSelectedSubcategoryId}
-              disabled={selectedCategoryId === 'all' || availableSubcategories.length === 0}
-            >
-              <SelectTrigger className="h-11 rounded-2xl bg-gray-50 dark:bg-zinc-950/60 border-gray-100 dark:border-zinc-800 font-bold text-sm disabled:opacity-50">
-                <SelectValue
-                  placeholder={
-                    selectedCategoryId === 'all'
-                      ? 'Selecione uma categoria primeiro'
-                      : availableSubcategories.length === 0
-                      ? 'Nenhuma subcategoria vinculada'
-                      : 'Todas as Subcategorias'
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl max-h-72">
-                <SelectItem value="all" className="font-bold">
-                  Todas as Subcategorias
-                </SelectItem>
-                {availableSubcategories.map((s) => (
-                  <SelectItem key={s.id} value={s.id} className="font-medium">
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {availableSubcategories.length === 0 ? (
+              <div className="text-xs text-muted-foreground font-medium p-1">
+                Nenhuma subcategoria vinculada
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedSubcategoryIds([])}
+                  className={cn(
+                    'px-3 py-1.5 rounded-xl text-xs font-bold transition-all border',
+                    selectedSubcategoryIds.length === 0
+                      ? 'bg-sky-500 text-white border-sky-500'
+                      : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground hover:border-sky-500/50'
+                  )}
+                >
+                  Todas
+                </button>
+                {availableSubcategories.map((s) => {
+                  const isSelected = selectedSubcategoryIds.includes(s.id);
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => toggleSubcategory(s.id)}
+                      className={cn(
+                        'px-3 py-1.5 rounded-xl text-xs font-bold transition-all border',
+                        isSelected
+                          ? 'bg-sky-500 text-white border-sky-500'
+                          : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground hover:border-sky-500/50'
+                      )}
+                    >
+                      {s.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -536,12 +573,37 @@ export default function CostAnalysisPage() {
               <TrendingDown className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-black tabular-nums tracking-tight text-foreground">
-            {formatCurrency(targetPeriodTotal)}
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-1 font-medium truncate">
-            {periodLabel}
-          </p>
+          <div>
+            <p className="text-xl sm:text-2xl font-black tabular-nums tracking-tight text-foreground">
+              {formatCurrency(targetPeriodTotal)}
+            </p>
+            {activeBudgetLimit ? (
+              <div className="mt-2.5 space-y-1.5">
+                <div className="flex justify-between items-center text-[10px] font-bold">
+                    <span className="text-muted-foreground">Teto: {formatCurrency(activeBudgetLimit)}</span>
+                    <span className={cn(
+                        "tabular-nums",
+                        targetPeriodTotal > activeBudgetLimit ? "text-rose-500" : "text-emerald-500"
+                    )}>
+                        {((targetPeriodTotal / activeBudgetLimit) * 100).toFixed(1)}%
+                    </span>
+                </div>
+                <div className="h-1.5 w-full bg-muted/50 rounded-full overflow-hidden">
+                    <div 
+                        className={cn(
+                            "h-full rounded-full transition-all",
+                            targetPeriodTotal > activeBudgetLimit ? "bg-rose-500" : "bg-emerald-500"
+                        )}
+                        style={{ width: `${Math.min((targetPeriodTotal / activeBudgetLimit) * 100, 100)}%` }}
+                    />
+                </div>
+              </div>
+            ) : (
+              <p className="text-[11px] text-muted-foreground mt-1 font-medium truncate">
+                {periodLabel}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Média Diária */}
@@ -639,7 +701,7 @@ export default function CostAnalysisPage() {
         <div className="h-64 sm:h-72 w-full pt-4">
           <ResponsiveContainer width="100%" height="100%">
             {chartMode === 'bar' ? (
-              <BarChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={historyData} margin={{ top: 30, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.15} />
                 <XAxis
                   dataKey="label"
@@ -649,23 +711,51 @@ export default function CostAnalysisPage() {
                   className="text-muted-foreground"
                 />
                 <YAxis
+                  width={40}
                   tickLine={false}
                   axisLine={false}
-                  tick={{ fontSize: 11, fill: 'currentColor' }}
-                  tickFormatter={(val) => `R$ ${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}`}
+                  tick={{ fontSize: 10, fill: 'currentColor' }}
+                  tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}k` : val.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
                   className="text-muted-foreground"
                 />
                 <Tooltip
-                  formatter={(val: any) => [formatCurrency(Number(val)), 'Gasto']}
-                  labelStyle={{ fontWeight: 'bold' }}
-                  contentStyle={{
-                    backgroundColor: isDarkTheme ? '#18181b' : '#ffffff',
-                    borderRadius: '1rem',
-                    border: isDarkTheme ? '1px solid #27272a' : '1px solid #f4f4f5',
-                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+                  cursor={{ fill: 'rgba(128,128,128,0.1)' }}
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-card text-card-foreground shadow-lg rounded-xl p-3 border border-border/40 text-xs">
+                          <p className="font-bold mb-1">{label}</p>
+                          <p className="font-black text-primary">
+                            {formatCurrency(Number(payload[0].value))}
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
                   }}
                 />
+                {monthlyBudgetLimit && (
+                  <ReferenceLine
+                    y={monthlyBudgetLimit}
+                    stroke="#f43f5e"
+                    strokeDasharray="3 3"
+                    label={{
+                      position: 'insideTopLeft',
+                      value: 'Orçamento',
+                      fill: '#f43f5e',
+                      fontSize: 10,
+                      fontWeight: 'bold'
+                    }}
+                  />
+                )}
                 <Bar dataKey="total" radius={[8, 8, 0, 0]}>
+                  <LabelList
+                    dataKey="total"
+                    position="top"
+                    formatter={(val: number) => val > 0 ? formatCurrency(val) : ''}
+                    style={{ fill: 'currentColor', fontSize: 10, fontWeight: 'bold' }}
+                    className="text-muted-foreground"
+                  />
                   {historyData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
@@ -676,7 +766,7 @@ export default function CostAnalysisPage() {
                 </Bar>
               </BarChart>
             ) : chartMode === 'area' ? (
-              <AreaChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={historyData} margin={{ top: 30, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="costGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={primaryGraphColor} stopOpacity={0.4} />
@@ -692,21 +782,42 @@ export default function CostAnalysisPage() {
                   className="text-muted-foreground"
                 />
                 <YAxis
+                  width={40}
                   tickLine={false}
                   axisLine={false}
-                  tick={{ fontSize: 11, fill: 'currentColor' }}
-                  tickFormatter={(val) => `R$ ${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}`}
+                  tick={{ fontSize: 10, fill: 'currentColor' }}
+                  tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}k` : val.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
                   className="text-muted-foreground"
                 />
                 <Tooltip
-                  formatter={(val: any) => [formatCurrency(Number(val)), 'Gasto']}
-                  labelStyle={{ fontWeight: 'bold' }}
-                  contentStyle={{
-                    backgroundColor: isDarkTheme ? '#18181b' : '#ffffff',
-                    borderRadius: '1rem',
-                    border: isDarkTheme ? '1px solid #27272a' : '1px solid #f4f4f5',
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-card text-card-foreground shadow-lg rounded-xl p-3 border border-border/40 text-xs">
+                          <p className="font-bold mb-1">{label}</p>
+                          <p className="font-black text-primary">
+                            {formatCurrency(Number(payload[0].value))}
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
                   }}
                 />
+                {monthlyBudgetLimit && (
+                  <ReferenceLine
+                    y={monthlyBudgetLimit}
+                    stroke="#f43f5e"
+                    strokeDasharray="3 3"
+                    label={{
+                      position: 'insideTopLeft',
+                      value: 'Orçamento',
+                      fill: '#f43f5e',
+                      fontSize: 10,
+                      fontWeight: 'bold'
+                    }}
+                  />
+                )}
                 <Area
                   type="monotone"
                   dataKey="total"
@@ -717,7 +828,7 @@ export default function CostAnalysisPage() {
                 />
               </AreaChart>
             ) : (
-              <LineChart data={historyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <LineChart data={historyData} margin={{ top: 30, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.15} />
                 <XAxis
                   dataKey="label"
@@ -727,21 +838,42 @@ export default function CostAnalysisPage() {
                   className="text-muted-foreground"
                 />
                 <YAxis
+                  width={40}
                   tickLine={false}
                   axisLine={false}
-                  tick={{ fontSize: 11, fill: 'currentColor' }}
-                  tickFormatter={(val) => `R$ ${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}`}
+                  tick={{ fontSize: 10, fill: 'currentColor' }}
+                  tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}k` : val.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
                   className="text-muted-foreground"
                 />
                 <Tooltip
-                  formatter={(val: any) => [formatCurrency(Number(val)), 'Gasto']}
-                  labelStyle={{ fontWeight: 'bold' }}
-                  contentStyle={{
-                    backgroundColor: isDarkTheme ? '#18181b' : '#ffffff',
-                    borderRadius: '1rem',
-                    border: isDarkTheme ? '1px solid #27272a' : '1px solid #f4f4f5',
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-card text-card-foreground shadow-lg rounded-xl p-3 border border-border/40 text-xs">
+                          <p className="font-bold mb-1">{label}</p>
+                          <p className="font-black text-primary">
+                            {formatCurrency(Number(payload[0].value))}
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
                   }}
                 />
+                {monthlyBudgetLimit && (
+                  <ReferenceLine
+                    y={monthlyBudgetLimit}
+                    stroke="#f43f5e"
+                    strokeDasharray="3 3"
+                    label={{
+                      position: 'insideTopLeft',
+                      value: 'Orçamento',
+                      fill: '#f43f5e',
+                      fontSize: 10,
+                      fontWeight: 'bold'
+                    }}
+                  />
+                )}
                 <Line
                   type="monotone"
                   dataKey="total"
@@ -756,8 +888,8 @@ export default function CostAnalysisPage() {
         </div>
       </div>
 
-      {/* Bloco Dinâmico: Distribuição das Subcategorias (Quando categoria geral estiver ativa) */}
-      {selectedSubcategoryId === 'all' && subcategoryBreakdown.length > 0 && (
+      {/* Bloco Dinâmico: Distribuição das Subcategorias */}
+      {subcategoryBreakdown.length > 0 && (
         <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-3xl p-4 sm:p-6 shadow-sm space-y-4">
           <div>
             <h2 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
@@ -809,7 +941,7 @@ export default function CostAnalysisPage() {
                     key={item.id}
                     onClick={() => {
                       if (item.id !== 'no-sub') {
-                        setSelectedSubcategoryId(item.id);
+                        toggleSubcategory(item.id);
                       }
                     }}
                     className="w-full flex items-center justify-between p-2.5 rounded-2xl bg-gray-50/50 dark:bg-zinc-950/40 border border-gray-100/80 dark:border-zinc-800 hover:border-primary/40 transition-colors text-left group"

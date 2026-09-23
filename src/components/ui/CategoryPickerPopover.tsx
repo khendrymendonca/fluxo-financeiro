@@ -52,7 +52,14 @@ export function CategoryPickerPopover({
   const [open, setOpen] = useState(false);
 
   const filteredCategories = useMemo(
-    () => categories.filter(c => c.isActive !== false && (!type || c.type === type) && !c.isSystem),
+    () => categories.filter(c => 
+      c.isActive !== false && 
+      (
+        // Allow if it matches type and isn't system, OR if it's the special 'Ajuste de Saldo' system category
+        (!c.isSystem && (!type || c.type === type)) ||
+        (c.isSystem && c.name === 'Ajuste de Saldo')
+      )
+    ),
     [categories, type]
   );
 

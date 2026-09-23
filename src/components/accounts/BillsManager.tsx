@@ -451,28 +451,27 @@ export function BillsManager() {
         .reduce((acc, t) => acc + t.amount, 0);
 
     return (
-        <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
+        <div className="space-y-6 animate-fade-in max-w-5xl mx-auto w-full min-w-0 max-w-full overflow-x-hidden">
 
             {/* Header & Stats */}
             <PageHeader title="Gestão de Contas" icon={Receipt}>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3 min-w-0 w-full sm:w-auto">
                     <MonthSelector />
-                    <div className="px-4 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 shadow-sm dark:shadow-none">
-                        <p className="text-xs uppercase font-bold text-gray-500 dark:text-zinc-500">A Pagar Pendente</p>
-                        <p className="text-lg font-bold text-danger">{formatCurrency(totalPendingPayable)}</p>
+                    <div className="px-4 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 shadow-sm dark:shadow-none min-w-0">
+                        <p className="text-xs uppercase font-bold text-gray-500 dark:text-zinc-500 truncate">A Pagar Pendente</p>
+                        <p className="text-lg font-bold text-danger truncate">{formatCurrency(totalPendingPayable)}</p>
                     </div>
                 </div>
             </PageHeader>
 
-            {/* Busca e Filtros */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="relative flex-1 max-w-md">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 min-w-0 w-full">
+                <div className="relative flex-1 w-full max-w-md min-w-0">
                     <input
                         type="text"
                         placeholder="Pesquisar contas ou categorias..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full h-11 pl-4 pr-10 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-900 dark:text-zinc-50 focus:border-primary focus:ring-0 transition-all outline-none font-medium text-sm"
+                        className="w-full h-11 pl-4 pr-10 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-900 dark:text-zinc-50 focus:border-primary focus:ring-0 transition-all outline-none font-medium text-sm min-w-0"
                     />
                     {searchQuery && (
                         <button
@@ -484,9 +483,9 @@ export function BillsManager() {
                     )}
                 </div>
 
-                <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                    <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-800">
-                        <Filter className="h-4 w-4 text-muted-foreground" />
+                <div className="flex flex-col gap-3 md:flex-row md:items-center min-w-0 w-full md:w-auto">
+                    <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-800 min-w-0">
+                        <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
                         <Select value={selectedCategoryKey} onValueChange={setSelectedCategoryKey}>
                             <SelectTrigger className="w-auto h-auto bg-transparent border-0 shadow-none focus:ring-0 text-sm font-bold text-foreground p-0 gap-2">
                                 <SelectValue placeholder="Todas as categorias" />
@@ -530,14 +529,14 @@ export function BillsManager() {
                         </Select>
                     </div>
 
-                    <div className="flex items-center gap-2 p-1 bg-muted rounded-2xl w-full overflow-x-auto no-scrollbar md:w-fit">
+                    <div className="flex flex-wrap items-center gap-2 p-1 bg-muted rounded-2xl w-full md:w-fit">
                         {([
                             { id: 'all', label: 'Todas', icon: Filter },
                             { id: 'expense', label: 'A Pagar', icon: ArrowDownCircle },
                             { id: 'income', label: 'A Receber', icon: ArrowUpCircle },
                         ] as const).map(btn => (
                             <button key={btn.id} onClick={() => setFilter(btn.id)}
-                                className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all",
+                                className={cn("flex-1 justify-center flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all",
                                     filter === btn.id ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}>
                                 <btn.icon className="w-4 h-4" />
                                 {btn.label}
@@ -548,7 +547,7 @@ export function BillsManager() {
             </div>
 
             {/* Lista de Contas */}
-            <div className={cn("grid gap-3 transition-opacity duration-200 px-2 sm:px-0", isMutating > 0 && "pointer-events-none opacity-60")}>
+            <div className={cn("grid gap-3 transition-opacity duration-200 w-full min-w-0 max-w-full", isMutating > 0 && "pointer-events-none opacity-60")}>
                 {recurringTransactions.length === 0 ? (
                     <div className="card-elevated p-12 text-center text-muted-foreground">
                         <Receipt className="w-12 h-12 mx-auto mb-4 opacity-10" />
@@ -613,7 +612,7 @@ export function BillsManager() {
                                 })()}
                                 <div
                                     className={cn(
-                                        "bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm dark:shadow-none flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 transition-all border border-l-4",
+                                        "bg-white dark:bg-zinc-900 rounded-2xl p-3 sm:p-4 shadow-sm dark:shadow-none flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 transition-all border border-l-4",
                                         !isSelectionMode && "hover:translate-x-1",
                                         isSelectionMode && "pl-11",
                                         selectedIds.has(transaction.id) && "bg-primary/5 border-primary/30",
@@ -696,28 +695,28 @@ export function BillsManager() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between md:justify-end w-full md:w-auto mt-2 md:mt-0 gap-3 md:gap-4">
+                                    <div className="flex items-center justify-between md:justify-end w-full md:w-auto mt-2 pt-2.5 border-t border-gray-100/80 dark:border-zinc-800/80 md:border-t-0 md:pt-0 md:mt-0 gap-2 sm:gap-3 md:gap-4">
                                         <div className="text-left md:text-right shrink-0">
-                                            <p className={cn("text-base md:text-lg font-black", transaction.type === 'expense' ? "text-danger" : "text-success")}>
+                                            <p className={cn("text-base font-black leading-tight", transaction.type === 'expense' ? "text-danger" : "text-success")}>
                                                 {formatCurrency(transaction.amount)}
                                             </p>
-                                            <div className="flex items-center gap-1 justify-start md:justify-end">
+                                            <div className="flex items-center gap-1 justify-start md:justify-end mt-0.5">
                                                 {transaction.isPaid ? (
-                                                    <span className="flex items-center gap-1 text-xs font-bold text-success uppercase">
+                                                    <span className="flex items-center gap-1 text-[11px] sm:text-xs font-bold text-success uppercase">
                                                         <CheckCircle2 className="w-3 h-3" /> Pago
                                                     </span>
                                                 ) : isLate ? (
-                                                    <span className="flex items-center gap-1 text-xs font-bold text-danger uppercase animate-pulse">
+                                                    <span className="flex items-center gap-1 text-[11px] sm:text-xs font-bold text-danger uppercase animate-pulse">
                                                         <AlertCircle className="w-3 h-3" /> Atrasado
                                                     </span>
                                                 ) : (
-                                                    <span className="flex items-center gap-1 text-xs font-bold text-info uppercase">
+                                                    <span className="flex items-center gap-1 text-[11px] sm:text-xs font-bold text-info uppercase">
                                                         <Clock className="w-3 h-3" /> Pendente
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
@@ -726,12 +725,12 @@ export function BillsManager() {
                                                 tabIndex={canEdit ? 0 : -1}
                                                 onClick={() => canEdit && setEditingBill(transaction)}
                                                 className={cn(
-                                                    "h-10 px-3 md:px-4 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 flex items-center gap-2 font-black uppercase text-[11px] tracking-wider",
+                                                    "h-8 w-8 sm:h-10 sm:w-auto sm:px-4 p-0 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 flex justify-center items-center gap-2 font-black uppercase text-[11px] tracking-wider shrink-0",
                                                     !canEdit && "invisible pointer-events-none"
                                                 )}
                                             >
-                                                <Pencil className="w-4 h-4" />
-                                                <span className="hidden xs:inline">Editar</span>
+                                                <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                                <span className="hidden sm:inline">Editar</span>
                                             </Button>
                                             {!transaction.isPaid ? (
                                                 <Button size="sm" variant="ghost"
@@ -745,8 +744,8 @@ export function BillsManager() {
                                                         });
                                                     }}
                                                     aria-label="Baixar conta"
-                                                    className="h-10 px-3 md:px-4 rounded-xl bg-success/5 text-success hover:bg-success/10 flex items-center gap-2 font-black uppercase text-xs tracking-wider">
-                                                    <CheckCircle2 className="w-4 h-4" /> <span className="hidden xs:inline">Baixar</span>
+                                                    className="h-8 w-8 sm:h-10 sm:w-auto sm:px-4 p-0 rounded-xl bg-success/5 text-success hover:bg-success/10 flex justify-center items-center gap-2 font-black uppercase text-xs tracking-wider shrink-0">
+                                                    <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Baixar</span>
                                                 </Button>
                                             ) : (
                                                 <Button size="sm" variant="ghost"
@@ -760,8 +759,8 @@ export function BillsManager() {
                                                         toast({ title: 'Pagamento estornado com sucesso.' });
                                                     }}
                                                     aria-label="Estornar conta"
-                                                    className="h-10 px-3 md:px-4 rounded-xl bg-amber-500/5 text-amber-600 hover:bg-amber-500/10 flex items-center gap-2 font-black uppercase text-xs tracking-wider">
-                                                    <RotateCcw className="w-4 h-4" /> <span className="hidden xs:inline">Estornar</span>
+                                                    className="h-8 w-8 sm:h-10 sm:w-auto sm:px-4 p-0 rounded-xl bg-amber-500/5 text-amber-600 hover:bg-amber-500/10 flex justify-center items-center gap-2 font-black uppercase text-xs tracking-wider shrink-0">
+                                                    <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Estornar</span>
                                                 </Button>
                                             )}
                                             {/* Parcelamentos (boleto/carnê) já podem ser excluídos aqui — o BulkDeleteDialog
@@ -774,11 +773,11 @@ export function BillsManager() {
                                                 aria-hidden={!canDelete}
                                                 tabIndex={canDelete ? 0 : -1}
                                                 className={cn(
-                                                    "h-10 w-10 p-0 rounded-xl hover:bg-danger/10 text-danger shrink-0",
+                                                    "h-8 w-8 sm:h-10 sm:w-10 p-0 rounded-xl hover:bg-danger/10 text-danger shrink-0",
                                                     !canDelete && "invisible pointer-events-none"
                                                 )}
                                                 title="Excluir lançamento">
-                                                <Trash2 className="w-4 h-4" />
+                                                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                             </Button>
                                         </div>
                                     </div>
@@ -807,7 +806,7 @@ export function BillsManager() {
                                             onClick={() => selectAll(selectableItems.map(t => t.id))}
                                             className="hover:bg-white/10 text-zinc-300 hover:text-white font-bold text-xs gap-1.5 rounded-xl transition-colors">
                                             <CheckSquare2 className="w-3.5 h-3.5" />
-                                            <span className="hidden xs:inline">Todos ({selectableItems.length})</span>
+                                            <span className="hidden sm:inline">Todos ({selectableItems.length})</span>
                                         </Button>
                                     );
                                 })()}
@@ -820,7 +819,7 @@ export function BillsManager() {
                                     onClick={() => setShowBulkCategoryDialog(true)}
                                     className="bg-white text-zinc-950 hover:bg-zinc-200 border-0 font-bold text-xs gap-1.5 px-4 rounded-xl disabled:opacity-40 transition-colors shadow-none">
                                     <Tags className="w-3.5 h-3.5" />
-                                    <span className="hidden xs:inline">Alterar</span> Categoria
+                                    <span className="hidden sm:inline">Alterar</span> Categoria
                                 </Button>
                                 <Button variant="ghost" size="sm" onClick={toggleSelectionMode}
                                     className="hover:bg-white/10 text-zinc-400 hover:text-white font-bold text-xs rounded-xl ml-1 transition-colors">

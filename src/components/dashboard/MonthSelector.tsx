@@ -84,16 +84,16 @@ export function MonthSelector({ modes = DEFAULT_MODES }: MonthSelectorProps) {
       </div>
 
       {effectiveViewMode === 'all' ? null : (
-        <div className="flex items-center gap-2 bg-card p-1 rounded-xl shadow-sm border border-border">
-          <Button variant="ghost" size="icon" onClick={handlePrev} className="h-8 w-8 rounded-lg">
+        <div className="flex items-center gap-1 sm:gap-2 bg-card p-1 rounded-xl shadow-sm border border-border min-w-0">
+          <Button variant="ghost" size="icon" onClick={handlePrev} className="h-8 w-8 rounded-lg shrink-0">
             <ChevronLeft className="w-4 h-4" />
           </Button>
 
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" className="h-8 min-w-[160px] font-medium rounded-lg">
-                <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
-                {selectorLabel}
+              <Button variant="ghost" className="h-8 min-w-[130px] sm:min-w-[160px] font-medium rounded-lg shrink-0 px-2 sm:px-4">
+                <Calendar className="w-4 h-4 mr-1 sm:mr-2 text-muted-foreground shrink-0" />
+                <span className="truncate">{selectorLabel}</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto rounded-2xl p-3 shadow-xl" align="center">

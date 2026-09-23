@@ -23,7 +23,7 @@ export function PageHeader({ title, icon: Icon, className, children }: PageHeade
                 </h1>
             </div>
             {children && (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                     {children}
                 </div>
             )}
