@@ -32,7 +32,7 @@ export const FEATURES: FeatureDefinition[] = [
   },
   {
     key: 'accounts',
-    label: 'Gestão de Contas',
+    label: 'Contas Recorrentes',
     description: 'Contas bancárias e contas fixas',
     type: 'screen',
     enabledByDefault: true,
@@ -69,6 +69,13 @@ export const FEATURES: FeatureDefinition[] = [
     key: 'reports_dashboard',
     label: 'Relatórios',
     description: 'Gráficos e relatórios financeiros',
+    type: 'screen',
+    enabledByDefault: true,
+  },
+  {
+    key: 'cost_analysis',
+    label: 'Análise de Custos',
+    description: 'Relatórios analíticos de custos e representatividade',
     type: 'screen',
     enabledByDefault: true,
   },

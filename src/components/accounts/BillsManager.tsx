@@ -426,7 +426,7 @@ export function BillsManager() {
         const isOverduePending = isBefore(txDate, overdueBoundary) && !t.isPaid;
         if (!isCurrentMonth && !isOverduePending) return false;
 
-        // Regra da Gestão de Contas: itens reais já pagos saem da lista principal e residem no extrato.
+        // Regra da Contas Recorrentes: itens reais já pagos saem da lista principal e residem no extrato.
         if (!t.isVirtual && t.isPaid) return false;
 
         // Busca por Texto
@@ -454,7 +454,7 @@ export function BillsManager() {
         <div className="space-y-6 animate-fade-in max-w-5xl mx-auto w-full min-w-0 max-w-full overflow-x-hidden">
 
             {/* Header & Stats */}
-            <PageHeader title="Gestão de Contas" icon={Receipt}>
+            <PageHeader title="Contas Recorrentes" icon={Receipt}>
                 <div className="flex flex-wrap items-center gap-3 min-w-0 w-full sm:w-auto">
                     <MonthSelector />
                     <div className="px-4 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 shadow-sm dark:shadow-none min-w-0">

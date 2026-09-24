@@ -49,9 +49,9 @@ const navGroups = [
   {
     label: 'Financeiro',
     items: [
-      { id: 'bills', icon: Receipt, label: 'Gestão de Contas', featureKey: 'accounts' },
+      { id: 'bills', icon: Receipt, label: 'Contas Recorrentes', featureKey: 'accounts' },
       { id: 'cards', icon: CardIcon, label: 'Cartões', featureKey: 'cards_dashboard' },
-      { id: 'accounts', icon: Wallet, label: 'Minhas Contas', featureKey: 'accounts' },
+      { id: 'accounts', icon: Wallet, label: 'Carteira', featureKey: 'accounts' },
       { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos', featureKey: 'transactions' },
     ],
   },

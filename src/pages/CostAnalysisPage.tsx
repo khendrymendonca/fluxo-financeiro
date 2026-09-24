@@ -15,7 +15,8 @@ import {
   ArrowUpRight,
   TrendingUp,
   Percent,
-  Clock
+  Clock,
+  ChevronDown
 } from 'lucide-react';
 import {
   Select,
@@ -24,6 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   LineChart,
   Line,
@@ -58,6 +64,7 @@ import {
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { accentColors, useThemeColor } from '@/hooks/useThemeColor';
 import { formatCurrency } from '@/utils/formatters';
 import { parseLocalDate } from '@/utils/dateUtils';
@@ -79,6 +86,7 @@ type PeriodType = 'month' | 'semester' | 'year';
 export default function CostAnalysisPage() {
   const { theme } = useTheme();
   const { accentColor } = useThemeColor();
+  const isMobile = useIsMobile();
   const {
     transactions,
     categories,
@@ -364,6 +372,10 @@ export default function CostAnalysisPage() {
     });
   }, [transactions, viewDate, selectedCategoryId, selectedSubcategoryIds]);
 
+  const displayedHistoryData = useMemo(() => {
+    return isMobile ? historyData.slice(-3) : historyData;
+  }, [historyData, isMobile]);
+
   // Composição por Subcategorias
   const subcategoryBreakdown = useMemo(() => {
     const map = new Map<string, number>();
@@ -485,7 +497,28 @@ export default function CostAnalysisPage() {
               <Layers className="w-3.5 h-3.5 text-primary" />
               Categoria
             </label>
-            <div className="flex flex-wrap gap-2">
+
+            {/* Versão Mobile: Select / Dropdown */}
+            <div className="block md:hidden">
+              <Select
+                value={selectedCategoryId}
+                onValueChange={(val) => handleCategoryChange(val)}
+              >
+                <SelectTrigger className="w-full bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 rounded-xl h-11 text-sm font-bold shadow-sm">
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72 rounded-xl">
+                  {expenseCategories.map((c) => (
+                    <SelectItem key={c.id} value={c.id} className="font-medium text-sm">
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Versão Desktop: Grade Flex */}
+            <div className="hidden md:flex flex-wrap gap-2">
               {expenseCategories.map((c) => (
                 <button
                   key={c.id}
@@ -493,7 +526,7 @@ export default function CostAnalysisPage() {
                   className={cn(
                     'px-3 py-1.5 rounded-xl text-xs font-bold transition-all border',
                     selectedCategoryId === c.id
-                      ? 'bg-primary text-primary-foreground border-primary'
+                      ? 'bg-primary text-primary-foreground border-primary shadow-md'
                       : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground hover:border-primary/50'
                   )}
                 >
@@ -507,43 +540,94 @@ export default function CostAnalysisPage() {
           <div className="space-y-2">
             <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-sky-500" />
-              Subcategorias (Múltipla Seleção)
+              Subcategorias
             </label>
             {availableSubcategories.length === 0 ? (
               <div className="text-xs text-muted-foreground font-medium p-1">
                 Nenhuma subcategoria vinculada
               </div>
             ) : (
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setSelectedSubcategoryIds([])}
-                  className={cn(
-                    'px-3 py-1.5 rounded-xl text-xs font-bold transition-all border',
-                    selectedSubcategoryIds.length === 0
-                      ? 'bg-sky-500 text-white border-sky-500'
-                      : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground hover:border-sky-500/50'
-                  )}
-                >
-                  Todas
-                </button>
-                {availableSubcategories.map((s) => {
-                  const isSelected = selectedSubcategoryIds.includes(s.id);
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => toggleSubcategory(s.id)}
-                      className={cn(
-                        'px-3 py-1.5 rounded-xl text-xs font-bold transition-all border',
-                        isSelected
-                          ? 'bg-sky-500 text-white border-sky-500'
-                          : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground hover:border-sky-500/50'
-                      )}
-                    >
-                      {s.name}
-                    </button>
-                  );
-                })}
-              </div>
+              <>
+                {/* Versão Mobile (Menu Suspenso Múltiplo - Popover) */}
+                <div className="block md:hidden">
+                  <Popover>
+                    <PopoverTrigger className="flex w-full items-center justify-between bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl h-11 px-3 text-sm font-bold shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/20">
+                      <span className={selectedSubcategoryIds.length === 0 ? 'text-muted-foreground font-normal' : 'text-foreground'}>
+                        {selectedSubcategoryIds.length === 0 
+                          ? 'Todas as Subcategorias' 
+                          : `${selectedSubcategoryIds.length} subcategoria(s) selecionada(s)`}
+                      </span>
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[calc(100vw-32px)] max-h-72 overflow-y-auto rounded-xl p-3 border-gray-200 dark:border-zinc-800 shadow-xl" align="start">
+                      <div className="flex flex-col gap-1.5">
+                        <button
+                          onClick={() => setSelectedSubcategoryIds([])}
+                          className={cn(
+                            'w-full text-left px-3 py-2.5 rounded-lg text-sm font-bold transition-all',
+                            selectedSubcategoryIds.length === 0
+                              ? 'bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400'
+                              : 'text-muted-foreground hover:bg-gray-100 dark:hover:bg-zinc-800'
+                          )}
+                        >
+                          Todas as Subcategorias
+                        </button>
+                        <div className="h-px bg-border/50 my-1 w-full" />
+                        {availableSubcategories.map((s) => {
+                          const isSelected = selectedSubcategoryIds.includes(s.id);
+                          return (
+                            <button
+                              key={s.id}
+                              onClick={() => toggleSubcategory(s.id)}
+                              className={cn(
+                                'flex items-center justify-between w-full text-left px-3 py-2.5 rounded-lg text-sm font-bold transition-all',
+                                isSelected
+                                  ? 'bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400'
+                                  : 'text-muted-foreground hover:bg-gray-100 dark:hover:bg-zinc-800'
+                              )}
+                            >
+                              <span>{s.name}</span>
+                              {isSelected && <div className="w-2 h-2 rounded-full bg-sky-500" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Versão Desktop (Grade Flex) */}
+                <div className="hidden md:flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setSelectedSubcategoryIds([])}
+                    className={cn(
+                      'px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shrink-0',
+                      selectedSubcategoryIds.length === 0
+                        ? 'bg-sky-500 text-white border-sky-500 shadow-md'
+                        : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground hover:border-sky-500/50'
+                    )}
+                  >
+                    Todas
+                  </button>
+                  {availableSubcategories.map((s) => {
+                    const isSelected = selectedSubcategoryIds.includes(s.id);
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => toggleSubcategory(s.id)}
+                        className={cn(
+                          'px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shrink-0',
+                          isSelected
+                            ? 'bg-sky-500 text-white border-sky-500 shadow-md'
+                            : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-muted-foreground hover:border-sky-500/50'
+                        )}
+                      >
+                        {s.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -650,7 +734,7 @@ export default function CostAnalysisPage() {
         <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/80 rounded-3xl p-4 sm:p-5 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              Impacto nos Gastos
+              Impacto
             </span>
             <div className="w-7 h-7 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
               <Percent className="w-4 h-4" />
@@ -701,7 +785,7 @@ export default function CostAnalysisPage() {
         <div className="h-64 sm:h-72 w-full pt-4">
           <ResponsiveContainer width="100%" height="100%">
             {chartMode === 'bar' ? (
-              <BarChart data={historyData} margin={{ top: 30, right: 10, left: 0, bottom: 0 }}>
+              <BarChart data={displayedHistoryData} margin={{ top: 30, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.15} />
                 <XAxis
                   dataKey="label"
@@ -766,7 +850,7 @@ export default function CostAnalysisPage() {
                 </Bar>
               </BarChart>
             ) : chartMode === 'area' ? (
-              <AreaChart data={historyData} margin={{ top: 30, right: 10, left: 0, bottom: 0 }}>
+              <AreaChart data={displayedHistoryData} margin={{ top: 30, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="costGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={primaryGraphColor} stopOpacity={0.4} />
@@ -828,7 +912,7 @@ export default function CostAnalysisPage() {
                 />
               </AreaChart>
             ) : (
-              <LineChart data={historyData} margin={{ top: 30, right: 10, left: 0, bottom: 0 }}>
+              <LineChart data={displayedHistoryData} margin={{ top: 30, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.15} />
                 <XAxis
                   dataKey="label"
@@ -977,13 +1061,7 @@ export default function CostAnalysisPage() {
               <Receipt className="w-5 h-5 text-emerald-500" />
               Lançamentos do Período
             </h2>
-            <p className="text-xs text-muted-foreground font-medium">
-              Itens contabilizados (dinheiro, débito, boleto e cartão de crédito)
-            </p>
           </div>
-          <span className="text-xs font-black tabular-nums bg-gray-100 dark:bg-zinc-800 px-3 py-1 rounded-full text-muted-foreground">
-            {targetPeriodTransactions.length} itens
-          </span>
         </div>
 
         {targetPeriodTransactions.length === 0 ? (

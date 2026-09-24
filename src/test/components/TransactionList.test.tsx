@@ -360,7 +360,7 @@ describe('TransactionList - fluxo interno de pagamento', () => {
     expect(screen.getByText('Internet paga')).toBeInTheDocument();
     const row = screen.getByText('Internet paga').closest('.group') as HTMLElement;
     expect(within(row).getByText('Fixo')).toBeInTheDocument();
-    expect(within(row).getByText('Gestão de Contas')).toBeInTheDocument();
+    expect(within(row).getByText('Contas Recorrentes')).toBeInTheDocument();
 
     vi.doUnmock('@/hooks/useFinanceStore');
     vi.doUnmock('@/hooks/useTransactionMutations');
@@ -435,7 +435,7 @@ describe('TransactionList - fluxo interno de pagamento', () => {
       installmentGroupId: 'group-card-1',
       cardId: 'card-1',
     }));
-    expect(screen.queryByText('Gestão de Contas')).not.toBeInTheDocument();
+    expect(screen.queryByText('Contas Recorrentes')).not.toBeInTheDocument();
 
     vi.doUnmock('@/hooks/useFinanceStore');
     vi.doUnmock('@/hooks/useTransactionMutations');

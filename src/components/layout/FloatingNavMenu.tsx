@@ -1,6 +1,7 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { LayoutGrid, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AppLogo } from '@/components/branding/AppLogo';
 import { useMobileShortcuts, ShortcutId } from '@/hooks/useMobileShortcuts';
 import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { FORCED_DISABLED_FEATURE_KEYS } from '@/config/features';
@@ -18,14 +19,13 @@ const SHORTCUT_META: Record<ShortcutId, { icon: any; label: string; featureKey?:
   dashboard:    { icon: LayoutDashboard, label: 'Início' },
   transactions: { icon: ArrowUpDown,    label: 'Lançamentos', featureKey: 'transactions' },
   cards:        { icon: CreditCard,     label: 'Cartões',     featureKey: 'cards_dashboard' },
-  bills:        { icon: Receipt,        label: 'Fixas',       featureKey: 'accounts' },
+  bills:        { icon: Receipt,        label: 'Contas Recorrentes',       featureKey: 'accounts' },
   accounts:     { icon: Wallet,         label: 'Contas',      featureKey: 'accounts' },
   goals:        { icon: Rocket,         label: 'Metas',       featureKey: 'goals_manager' },
   debts:        { icon: TrendingDown,   label: 'Dívidas',     featureKey: 'debts_manager' },
   reports:      { icon: LineChart,      label: 'Gráficos',    featureKey: 'reports_dashboard' },
   'cost-analysis': { icon: PieChart,    label: 'Custos',      featureKey: 'cost_analysis' },
   categories:   { icon: Settings2,      label: 'Categ.' },
-  export:       { icon: Database,       label: 'Dados' },
   simulator:    { icon: Calculator,     label: 'Simulador',   featureKey: 'simulator' },
   emergency:    { icon: Shield,         label: 'Reserva',     featureKey: 'emergency_fund' },
   projection:   { icon: TrendingUp,     label: 'Projeção',    featureKey: 'debt_strategy' },
@@ -160,7 +160,7 @@ export function FloatingNavMenu({ activeView, onNavigate }: FloatingNavMenuProps
           {isOpen ? (
             <X className="w-7 h-7" />
           ) : (
-            <LayoutGrid className="w-7 h-7" />
+            <AppLogo className="w-8 h-8 text-white grayscale brightness-200" />
           )}
           
           {!isOpen && (

@@ -81,7 +81,7 @@ export function BulkCategoryDialog({
           {(hasInstallments || hasRecurring) && (
             <Alert className="bg-primary/5 border-primary/20 text-xs leading-relaxed">
               <AlertCircle className="h-4 w-4 text-primary shrink-0" />
-              <AlertTitle className="text-xs font-semibold text-primary">Sincronização com Gestão de Contas</AlertTitle>
+              <AlertTitle className="text-xs font-semibold text-primary">Sincronização com Contas Recorrentes</AlertTitle>
               <AlertDescription className="text-muted-foreground mt-1">
                 Sua seleção possui lançamentos parcelados ou recorrentes. Ao atualizar, todas as parcelas e projeções vinculadas serão alinhadas para manter a coerência contábil.
               </AlertDescription>

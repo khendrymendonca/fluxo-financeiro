@@ -182,7 +182,7 @@ describe('CardsDashboard - limite Free', () => {
     expect(screen.queryByRole('button', { name: /^pagar fatura$/i })).not.toBeInTheDocument();
     expect(screen.queryByText('Abater Fatura')).not.toBeInTheDocument();
     expect(screen.queryByText('Parcelar Fatura')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText(/Gerenciar na Gestão de Contas/i));
+    fireEvent.click(screen.getByText(/Gerenciar na Contas Recorrentes/i));
     expect(window.location.href).toContain('/?view=bills');
     expect(screen.getByText('Tela demonstrativa')).toBeInTheDocument();
   });
@@ -292,7 +292,7 @@ describe('CardsDashboard - limite Free', () => {
     expect(screen.getAllByText(/77%/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Compra A')).toBeInTheDocument();
     expect(screen.getByText('Compra B')).toBeInTheDocument();
-    expect(screen.getByText(/Gerenciar na Gestão de Contas/i)).toBeInTheDocument();
+    expect(screen.getByText(/Gerenciar na Contas Recorrentes/i)).toBeInTheDocument();
     expect(screen.queryByText(/Total lançado/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Valor pago/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Diferença a conciliar/i)).not.toBeInTheDocument();

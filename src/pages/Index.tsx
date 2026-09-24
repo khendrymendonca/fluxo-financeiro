@@ -27,7 +27,8 @@ import {
   Eye,
   EyeOff,
   Users,
-  Printer
+  Printer,
+  PieChart
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFeatureFlag, useIsSuperAdmin, useGlobalFlag } from '@/hooks/useFeatureFlags';
@@ -78,7 +79,7 @@ import { MobileTopHeader } from '@/components/layout/MobileTopHeader';
 import { getGreetingForHour, getUserFirstName, getUserInitial } from '@/utils/userIdentity';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
-type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'cost-analysis' | 'export' | 'emergency' | 'menu' | 'profile';
+type ViewType = 'dashboard' | 'transactions' | 'bills' | 'cards' | 'accounts' | 'goals' | 'reports' | 'debts' | 'simulator' | 'categories' | 'cost-analysis' | 'emergency' | 'menu' | 'profile';
 
 // Mapa de views que requerem feature flag
 const PROTECTED_VIEWS: Record<string, string> = {
@@ -92,7 +93,6 @@ const PROTECTED_VIEWS: Record<string, string> = {
   reports: 'reports_dashboard',
   'cost-analysis': 'cost_analysis',
   simulator: 'simulator',
-  export: 'export_data',
 };
 
 function ViewGuard({
@@ -267,14 +267,14 @@ export default function Index() {
     { id: 'dashboard', icon: Home, label: 'Início' },
     { id: 'transactions', icon: ArrowUpDown, label: 'Lançamentos', featureKey: 'transactions' },
     { id: 'cards', icon: CardIcon, label: 'Cartões', featureKey: 'cards_dashboard' },
-    { id: 'bills', icon: Receipt, label: 'Gestão de Contas', featureKey: 'accounts' },
-    { id: 'accounts', icon: Wallet, label: 'Minhas Contas (Carteira)', featureKey: 'accounts' },
+    { id: 'bills', icon: Receipt, label: 'Contas Recorrentes', featureKey: 'accounts' },
+    { id: 'accounts', icon: Wallet, label: 'Carteira', featureKey: 'accounts' },
     { id: 'emergency', icon: Shield, label: 'Reserva de Emergência', featureKey: 'emergency_fund' },
     { id: 'debts', icon: History, label: 'Acordos', featureKey: 'debts_manager' },
     { id: 'reports', icon: BarChart3, label: 'Relatórios', featureKey: 'reports_dashboard' },
+    { id: 'cost-analysis', icon: PieChart, label: 'Análise de Custos', featureKey: 'cost_analysis' },
     { id: 'categories', icon: Settings2, label: 'Categorias' },
     { id: 'simulator', icon: Calculator, label: 'Simulador', featureKey: 'simulator' },
-    { id: 'export', icon: Database, label: 'Exportar', featureKey: 'export_data' },
     { id: 'profile', icon: Settings, label: 'Ajustes de Perfil' },
   ];
 
@@ -479,7 +479,6 @@ export default function Index() {
           </ViewGuard>
         );
       case 'cost-analysis':
-      case 'export':
         return (
           <ViewGuard view="cost-analysis">
             <CostAnalysisPage />

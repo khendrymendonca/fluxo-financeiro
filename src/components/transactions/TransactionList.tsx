@@ -166,7 +166,7 @@ export function TransactionList({
     .filter(t => {
       // Pagamentos de fatura devem aparecer no extrato.
 
-      // 2. Bloqueia projeções virtuais — pertencem à Gestão de Contas
+      // 2. Bloqueia projeções virtuais — pertencem à Contas Recorrentes
       if (t.isVirtual) return false;
 
       // 3. REGRA DO EXTRATO: recorrentes/fixos só aparecem após serem pagos
@@ -647,7 +647,7 @@ export function TransactionList({
                     ? getFutureInstallments(item.installmentGroupId, item.installmentNumber || 0)
                     : [];
 
-                  // 🛡️ REGRA DE INTEGRIDADE: Lançamentos originados na Gestão de Contas são "bloqueados" no Extrato.
+                  // 🛡️ REGRA DE INTEGRIDADE: Lançamentos originados na Contas Recorrentes são "bloqueados" no Extrato.
                   // A única ação permitida é o Estorno. Cópia e Edição são proibidas aqui.
                   const isManagedByBills = Boolean(
                     item.isRecurring ||
@@ -681,7 +681,7 @@ export function TransactionList({
                     isTransferItem ? 'Transferência' : null,
                     item.debtId ? 'Acordo' : null,
                     isFixedManagedItem ? 'Fixo' : null,
-                    isManagedByBills ? 'Gestão de Contas' : null,
+                    isManagedByBills ? 'Contas Recorrentes' : null,
                     item.installmentGroupId || (item.installmentTotal && item.installmentTotal > 1) ? 'Parcelado' : null,
                     item.installmentNumber && item.installmentTotal ? `${item.installmentNumber}/${item.installmentTotal}` : null,
                   ].filter((badge): badge is string => Boolean(badge));
@@ -740,7 +740,7 @@ export function TransactionList({
                           else if (!isManagedByBills) onEdit(item as Transaction);
                           else toast({
                             title: "Lançamento Protegido",
-                            description: "Este item é gerenciado pela Gestão de Contas. Para editar, use o estorno ou altere o lançamento mestre.",
+                            description: "Este item é gerenciado pela Contas Recorrentes. Para editar, use o estorno ou altere o lançamento mestre.",
                             variant: "default"
                           });
                         }}>
@@ -811,7 +811,7 @@ export function TransactionList({
 
                           {/* Ações protegidas */}
                           <div className="flex items-center gap-2">
-                            {/* Botão Estornar (Apenas Gerenciados pela Gestão de Contas) */}
+                            {/* Botão Estornar (Apenas Gerenciados pela Contas Recorrentes) */}
                             {isManagedByBills && onUndoPayment && (
                               <button
                                 onClick={async (e) => {

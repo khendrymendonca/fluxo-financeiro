@@ -455,7 +455,7 @@ export function DebtsManager({
 
                       <div className="p-3 rounded-xl bg-success/5 border border-success/10 text-center">
                         <p className="text-xs font-bold text-success select-none">
-                          As parcelas deste acordo estão na sua Gestão de Contas para pagamento.
+                          As parcelas deste acordo estão na sua Contas Recorrentes para pagamento.
                         </p>
                       </div>
                     </div>
@@ -615,7 +615,7 @@ export function DebtsManager({
                         <div>
                           <Label htmlFor="agreement-entry-paid">Entrada paga no ato?</Label>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Se desligado, a entrada vira obrigação pendente na Gestão de Contas.
+                            Se desligado, a entrada vira obrigação pendente na Contas Recorrentes.
                           </p>
                         </div>
                         <Switch

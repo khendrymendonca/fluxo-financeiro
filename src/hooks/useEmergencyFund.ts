@@ -65,7 +65,7 @@ export function useEmergencyFund(currentMonthTransactions?: Transaction[]) {
     // 2. Unir as transações normais/projetadas com as faturas virtuais do cartão
     const allTransactions = [...transactions, ...virtualInvoices];
 
-    // 3. Filtrar as despesas da Gestão de Contas que vencem no mês corrente (nominal)
+    // 3. Filtrar as despesas da Contas Recorrentes que vencem no mês corrente (nominal)
     const targetMonth = viewDate.getMonth();
     const targetYear = viewDate.getFullYear();
 
@@ -112,10 +112,10 @@ export function useEmergencyFund(currentMonthTransactions?: Transaction[]) {
       return true;
     });
 
-    // O custo fixo mensal é a soma do valor de todas as despesas listadas na Gestão de Contas
+    // O custo fixo mensal é a soma do valor de todas as despesas listadas na Contas Recorrentes
     const monthlyFixed = monthlyBills.reduce((acc, curr) => acc + Number(curr.amount), 0);
 
-    // 4. Meta de Reserva (Gastos da Gestão de Contas x Meses Desejados)
+    // 4. Meta de Reserva (Gastos da Contas Recorrentes x Meses Desejados)
     const targetAmount = monthlyFixed * emergencyMonths;
 
     // 5. Soma o que já está guardado nas contas de reserva

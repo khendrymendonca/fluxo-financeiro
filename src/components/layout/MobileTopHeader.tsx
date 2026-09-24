@@ -1,4 +1,3 @@
-import { AppLogo } from '@/components/branding/AppLogo';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import {
@@ -56,40 +55,35 @@ export function MobileTopHeader({
 
   return (
     <div className="flex w-full items-center justify-between gap-3">
-      <button
-        onClick={onGoHome}
-        className="flex min-w-0 items-center gap-3 text-left text-primary transition-opacity hover:opacity-85"
-        aria-label="Ir para o início"
-      >
-        {modoTorcida ? (
-          <AppLogo className="h-10 w-26 shrink-0" />
-        ) : (
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/8 shadow-sm shadow-primary/10">
-            <AppLogo className="h-7 w-7" />
-          </div>
-        )}
-        <div className="min-w-0">
+      {/* Esquerda: Menu Sanduíche + Saudação/Nome */}
+      <div className="flex items-center gap-3 min-w-0">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onOpenNavigation}
+          className="h-11 w-11 shrink-0 rounded-2xl border border-border/70 bg-card/80 shadow-sm"
+          aria-label="Abrir menu de navegação"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+
+        <button
+          onClick={onGoHome}
+          className="flex min-w-0 flex-col text-left transition-opacity hover:opacity-85"
+          aria-label="Ir para o início"
+        >
           <p className="truncate text-xs font-bold uppercase tracking-[0.24em] text-muted-foreground">
             {greeting}
           </p>
           <p className="truncate text-lg font-black leading-tight text-foreground">
             {userName}
           </p>
-        </div>
-      </button>
+        </button>
+      </div>
 
+      {/* Direita: Avatar */}
       <div className="flex shrink-0 items-center gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={onOpenNavigation}
-          className="h-11 w-11 rounded-2xl border border-border/70 bg-card/80 shadow-sm"
-          aria-label="Abrir menu de navegação"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -106,7 +100,7 @@ export function MobileTopHeader({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48 rounded-2xl">
             {isSuperAdmin && (
-              <DropdownMenuItem className="font-bold text-white focus:text-white focus:bg-primary/10 cursor-pointer" onClick={() => navigate('/super')}>
+              <DropdownMenuItem className="font-bold text-primary focus:text-primary focus:bg-primary/10 cursor-pointer" onClick={() => navigate('/super')}>
                 <Shield className="mr-2 h-4 w-4" />
                 Painel Super
               </DropdownMenuItem>

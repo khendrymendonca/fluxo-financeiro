@@ -394,7 +394,7 @@ export default function CardsDashboard() {
                           onClick={openAccountsManagement}
                           className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-black uppercase text-xs tracking-widest px-6 h-11 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
                         >
-                          Gerenciar na Gestão de Contas
+                          Gerenciar na Contas Recorrentes
                         </Button>
                       )}
                     </div>
@@ -421,7 +421,7 @@ export default function CardsDashboard() {
                 <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
                   <p className="text-xs font-black uppercase tracking-widest text-primary">Tela demonstrativa</p>
                   <p className="mt-1 text-xs font-semibold text-muted-foreground">
-                    Pagamento, baixa, abatimento e parcelamento de fatura são executados somente na Gestão de Contas.
+                    Pagamento, baixa, abatimento e parcelamento de fatura são executados somente na Contas Recorrentes.
                   </p>
                 </div>
                 {/* Gráfico de evolução */}
@@ -685,7 +685,7 @@ export default function CardsDashboard() {
               <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
                 <p className="text-xs font-black uppercase tracking-widest text-primary">Tela demonstrativa</p>
                 <p className="mt-1 text-xs font-semibold text-muted-foreground">
-                  Pagamento, baixa, abatimento e parcelamento de fatura são executados somente na Gestão de Contas.
+                  Pagamento, baixa, abatimento e parcelamento de fatura são executados somente na Contas Recorrentes.
                 </p>
               </div>
               {/* Gráfico mobile */}
